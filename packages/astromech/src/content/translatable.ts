@@ -9,7 +9,7 @@ import type { DataField } from '@/types/fields';
 import type { JsonObject, ResolvedConfig, ResourceType } from '@/types/index';
 import { defaultContentLocale } from '@/config/content-locale';
 import { flattenFieldNodes } from '@/fields/flatten';
-import { RESOURCE_SPECS } from './resources';
+import { RESOURCE_CONFIG } from './resources';
 
 /** The read `inheritSharedFields` needs: one locale of one item. */
 type ContentReader = {
@@ -107,9 +107,11 @@ function sharedFieldNames(
     target: string | undefined,
     names: readonly string[] | undefined
 ): string[] {
-    const spec = RESOURCE_SPECS[resource];
-    if (!spec.translatable(config, target)) return [];
-    const definitions: DataField[] = flattenFieldNodes(spec.fields(config, target));
+    const resourceConfig = RESOURCE_CONFIG[resource];
+    if (!resourceConfig.translatable(config, target)) return [];
+    const definitions: DataField[] = flattenFieldNodes(
+        resourceConfig.fields(config, target)
+    );
     return definitions
         .filter(
             (field) =>

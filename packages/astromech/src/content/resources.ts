@@ -1,7 +1,7 @@
 /**
- * One spec per resource: what the shared helpers in `content/` read to treat an
+ * One config per resource type: what the shared helpers in `content/` read to treat an
  * entry, a global, a user and a media item alike. What the four do not share
- * stays in each module; `DECISIONS.md` says why the spec holds no repository.
+ * stays in each module; `DECISIONS.md` says why the config holds no repository.
  */
 
 import type {
@@ -23,7 +23,7 @@ import { userSchema } from '@/users/schema';
  * A resource as the shared helpers see it. `target` names the entry type or the
  * global's key where a call has one; users and media ignore it.
  */
-export type ResourceSpec = {
+export type ResourceConfig = {
     kind: ResourceType;
     /** How a message names the target: `Entry type 'post'`, `Media`. */
     name(target?: string): string;
@@ -43,9 +43,9 @@ export type ResourceSpec = {
     outputSchema: z.ZodType;
 };
 
-/** Every resource's spec, keyed by kind, so a missing resource is a type error. */
-export const RESOURCE_SPECS: {
-    readonly [K in ResourceType]: ResourceSpec & { kind: K };
+/** Every resource type's config, keyed by type, so a missing resource is a type error. */
+export const RESOURCE_CONFIG: {
+    readonly [K in ResourceType]: ResourceConfig & { kind: K };
 } = {
     entry: {
         kind: 'entry',
@@ -109,7 +109,7 @@ export const RESOURCE_SPECS: {
 
 /** The columns a list of `resource` may order by. */
 export function sortableColumns(resource: ResourceType): readonly string[] {
-    return RESOURCE_SPECS[resource].sortable;
+    return RESOURCE_CONFIG[resource].sortable;
 }
 
 /** Whether `resource` keeps a content row per locale; `target` names the entry type or global. */
@@ -118,5 +118,5 @@ export function isTranslatable(
     config: ResolvedConfig,
     target?: string
 ): boolean {
-    return RESOURCE_SPECS[resource].translatable(config, target);
+    return RESOURCE_CONFIG[resource].translatable(config, target);
 }

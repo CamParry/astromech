@@ -83,12 +83,12 @@ A REST route keeps a flat body under this: the route spec declares
 ## Resources
 
 Entries, globals, media and users share their behaviour through `content/`, read
-off `RESOURCE_SPECS` in `content/resources.ts`.
+off `RESOURCE_CONFIG` in `content/resources.ts`.
 
 - **A caller names the resource.** A `content/` helper takes `resource: 'user'`
-  and looks up the spec itself; only `content/` imports `RESOURCE_SPECS`
-  (lint-enforced). A single spec member a module needs gets a named accessor in
-  `content/resources.ts`.
+  and looks up its resource config itself; only `content/` imports
+  `RESOURCE_CONFIG` (lint-enforced). A single member a module needs gets a named
+  accessor in `content/resources.ts`.
 
 - **A helper a second resource needs moves to `content/`.** Copying it into the
   second module is how the four drifted apart.

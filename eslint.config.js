@@ -111,16 +111,16 @@ const ambientReadExceptions = [
 // all five; each module's own block bans the other four.
 const modulesWithInternal = ['entries', 'globals', 'media', 'users', 'notifications'];
 
-// `RESOURCE_SPECS` is read only inside `content/` (DECISIONS.md, "A caller names
-// the resource; `content/` reads its spec"). The `content/` block drops this ban.
-const noResourceSpecsImport = {
+// `RESOURCE_CONFIG` is read only inside `content/` (DECISIONS.md, "A caller names
+// the resource; `content/` reads its config"). The `content/` block drops this ban.
+const noResourceConfigImport = {
     regex: '^(@/|(\\.{1,2}/)+(.*/)?)content/resources$',
-    importNames: ['RESOURCE_SPECS'],
+    importNames: ['RESOURCE_CONFIG'],
     message:
-        "RESOURCE_SPECS is internal to content/. Pass the resource by name (`resource: 'user'`) to a content/ helper, or add a named accessor to content/resources.ts.",
+        "RESOURCE_CONFIG is internal to content/. Pass the resource by name (`resource: 'user'`) to a content/ helper, or add a named accessor to content/resources.ts.",
 };
 
-function restrictedCoreImports(modules, { allowResourceSpecs = false } = {}) {
+function restrictedCoreImports(modules, { allowResourceConfig = false } = {}) {
     return [
         'error',
         {
@@ -130,7 +130,7 @@ function restrictedCoreImports(modules, { allowResourceSpecs = false } = {}) {
                     message:
                         'A module\'s internal/ is private to it. Import from the module root, or move the helper there if another module needs it (see DECISIONS.md, "A module\'s internal/ is private to it").',
                 },
-                ...(allowResourceSpecs ? [] : [noResourceSpecsImport]),
+                ...(allowResourceConfig ? [] : [noResourceConfigImport]),
             ],
         },
     ];
@@ -281,7 +281,7 @@ export default tseslint.config(
         rules: {
             '@typescript-eslint/no-restricted-imports': restrictedCoreImports(
                 modulesWithInternal,
-                { allowResourceSpecs: true }
+                { allowResourceConfig: true }
             ),
         },
     },

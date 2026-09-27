@@ -20,7 +20,7 @@ import { parseFields } from '@/fields/parse-fields';
 import { mergePatch, projectToSchema } from '@/fields/values';
 import { parseOutput } from '@/services/parse-method-output';
 import { pruneDanglingRelations } from './dangling-relations';
-import { RESOURCE_SPECS } from './resources';
+import { RESOURCE_CONFIG } from './resources';
 import { isUniqueAmong } from './unique';
 
 /** What the field parse needs to know about the write, beyond the values. */
@@ -97,7 +97,7 @@ export async function prepareFields(input: PrepareFieldsInput): Promise<JsonObje
             ...(input.operation === 'update'
                 ? {
                       existing: parseOutput(
-                          RESOURCE_SPECS[resource].outputSchema,
+                          RESOURCE_CONFIG[resource].outputSchema,
                           input.existing,
                           `The ${resource} a field validator reads`
                       ),
@@ -127,13 +127,13 @@ export function fieldParseContext(
     write: FieldWrite & { coerceOnly?: ReadonlySet<string> | undefined }
 ): Parameters<typeof parseFields>[2] {
     const { resource, config, target } = write;
-    const spec = RESOURCE_SPECS[resource];
-    const validate = spec.validate(config, target);
+    const resourceConfig = RESOURCE_CONFIG[resource];
+    const validate = resourceConfig.validate(config, target);
     return {
         operation: write.operation,
         validation: entryValidationMode({
             status: write.status,
-            hasStatuses: spec.hasStatuses(config, target),
+            hasStatuses: resourceConfig.hasStatuses(config, target),
         }),
         resource: {
             kind: resource,
@@ -157,7 +157,7 @@ export function definitionsOf({
     config: ResolvedConfig;
     target?: string | undefined;
 }): DataField[] {
-    return flattenFieldNodes(RESOURCE_SPECS[resource].fields(config, target));
+    return flattenFieldNodes(RESOURCE_CONFIG[resource].fields(config, target));
 }
 
 /** Root field names a patch sends; an `undefined` value is absent. */

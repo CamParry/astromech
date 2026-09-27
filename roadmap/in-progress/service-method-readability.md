@@ -20,8 +20,13 @@ same shape, not only to `createUser`.
 - [x] **The shared `content/` helpers take the resource by name.** A call passes
       `resource: 'user'` and the helper looks up what it needs, so
       `RESOURCE_SPECS` is internal to `content/`.
-- [ ] **Rename `RESOURCE_SPECS` and `ResourceSpec`.** "Resource spec" was never
-      agreed vocabulary; the new name is still being chosen.
+- [x] **The per-resource table is `RESOURCE_CONFIG`, typed `ResourceConfig`.**
+      "Resource spec" was never agreed vocabulary; `TERMINOLOGY.md` has
+      "Resource type" and its config.
+- [ ] **Move `RESOURCE_TYPES` beside `RESOURCE_CONFIG`.** Blocked: the list sits
+      in `types/domain.ts` because `content/schema.ts` builds `usageSchema` from
+      it, and `content/resources.ts` imports the resource schemas that import
+      `content/schema.ts`, so the move leaves the list undefined at load time.
 
 The `scan` argument is left as it is: `backlog.md` asks whether `unique` fields
 stay at all.

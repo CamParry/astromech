@@ -21,7 +21,7 @@ export type JsonObject = { [key: string]: JsonValue };
 export type JsonArray = JsonValue[];
 
 /**
- * Every resource kind: what carries fields and runs the field pipeline. The
+ * Every resource type: what carries fields and runs the field pipeline. The
  * relationships index's source column and `TargetKind` (`fields/references.ts`),
  * the relation-eligible subset, are built from it.
  */

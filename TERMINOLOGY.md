@@ -150,6 +150,12 @@ version rows are not part of it. The repository's decoder builds it
 `UserRow`, `StoredUser`, `UserEntity`, `UserInstance` or `UserInternal`, and
 not `UserOutput` or `PublicUser` for the public type.
 
+**Resource type.** Which of the four a resource is: entry, global, user or
+media. Each type has one resource config (`RESOURCE_CONFIG`), what the shared
+content helpers read to treat the four alike: its field tree, whether it is
+translatable, its sortable and versioned columns, and its public shape. Not
+"resource spec" or "resource model".
+
 **Schema.** Request validation, or a whole-shape aggregate. Never the table
 declarations, which are tables. A method's output schema is the public shape of
 what it returns (`userSchema`, in the resource's `schema.ts`): parsing the

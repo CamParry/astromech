@@ -23,13 +23,14 @@ export const createUser = defineServiceMethod({
         const { data } = params;
         const { config, user } = ctx;
         const userId = user?.id ?? null;
+        const locale = defaultContentLocale(config);
 
         const fields = await prepareFields({
             resource: 'user',
             config,
             operation: 'create',
             user,
-            scan: () => userRepository.findByLocale(defaultContentLocale(config)),
+            scan: () => userRepository.findByLocale(locale),
             values: data.fields ?? {},
         });
 

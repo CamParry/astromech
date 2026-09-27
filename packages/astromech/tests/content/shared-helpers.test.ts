@@ -1,5 +1,5 @@
 /**
- * The edges of the helpers the resources share: what a spec answers for a
+ * The edges of the helpers the resources share: what a resource config answers for a
  * target nothing declares, and the early returns of the translatable, index,
  * uniqueness, restore and usage helpers, and that each version snapshot
  * carries exactly the columns a version stores.
@@ -13,7 +13,7 @@ import { currentServices } from '@/app-context/services';
 import { pruneDanglingRelations } from '@/content/dangling-relations';
 import { mergeContentReferences } from '@/content/relationships';
 import { relationshipRepository } from '@/content/repository/relationships';
-import { RESOURCE_SPECS } from '@/content/resources';
+import { RESOURCE_CONFIG } from '@/content/resources';
 import { inheritSharedFields, propagateSharedFields } from '@/content/translatable';
 import { isUniqueAmong } from '@/content/unique';
 import { listUsage } from '@/content/usage';
@@ -52,41 +52,43 @@ beforeEach(async () => {
     config = setupTestConfig(makeConfig());
 });
 
-describe('RESOURCE_SPECS', () => {
+describe('RESOURCE_CONFIG', () => {
     it.each(RESOURCE_TYPES)('%s answers for a target nothing declares', (kind) => {
-        const spec = RESOURCE_SPECS[kind];
-        expect(spec.kind).toBe(kind);
-        expect(spec.fields(config, 'nope')).toEqual([]);
-        expect(spec.translatable(config, 'nope')).toBe(false);
-        expect(spec.validate(config, 'nope')).toBeUndefined();
-        expect(typeof spec.name()).toBe('string');
+        const resourceConfig = RESOURCE_CONFIG[kind];
+        expect(resourceConfig.kind).toBe(kind);
+        expect(resourceConfig.fields(config, 'nope')).toEqual([]);
+        expect(resourceConfig.translatable(config, 'nope')).toBe(false);
+        expect(resourceConfig.validate(config, 'nope')).toBeUndefined();
+        expect(typeof resourceConfig.name()).toBe('string');
     });
 
     it.each(RESOURCE_TYPES)('%s answers for a call that names no target', (kind) => {
-        const spec = RESOURCE_SPECS[kind];
-        expect(spec.fields(config)).toEqual(
-            kind === 'entry' || kind === 'global' ? [] : spec.fields(config, 'any')
+        const resourceConfig = RESOURCE_CONFIG[kind];
+        expect(resourceConfig.fields(config)).toEqual(
+            kind === 'entry' || kind === 'global'
+                ? []
+                : resourceConfig.fields(config, 'any')
         );
-        expect(spec.translatable(config)).toBe(false);
-        expect(spec.validate(config)).toBeUndefined();
-        expect(spec.name()).not.toContain('undefined');
+        expect(resourceConfig.translatable(config)).toBe(false);
+        expect(resourceConfig.validate(config)).toBeUndefined();
+        expect(resourceConfig.name()).not.toContain('undefined');
     });
 
     it('treats an undeclared entry type as having statuses, and a global as not', () => {
-        expect(RESOURCE_SPECS.global.hasStatuses(config, 'nope')).toBe(false);
-        expect(RESOURCE_SPECS.entry.hasStatuses(config)).toBe(true);
-        expect(RESOURCE_SPECS.global.hasStatuses(config)).toBe(false);
-        expect(RESOURCE_SPECS.user.hasStatuses(config)).toBe(false);
-        expect(RESOURCE_SPECS.media.hasStatuses(config)).toBe(false);
+        expect(RESOURCE_CONFIG.global.hasStatuses(config, 'nope')).toBe(false);
+        expect(RESOURCE_CONFIG.entry.hasStatuses(config)).toBe(true);
+        expect(RESOURCE_CONFIG.global.hasStatuses(config)).toBe(false);
+        expect(RESOURCE_CONFIG.user.hasStatuses(config)).toBe(false);
+        expect(RESOURCE_CONFIG.media.hasStatuses(config)).toBe(false);
     });
 
     it('reads a declared target', () => {
-        expect(RESOURCE_SPECS.entry.translatable(config, 'post')).toBe(true);
-        expect(RESOURCE_SPECS.global.translatable(config, 'site')).toBe(true);
-        expect(RESOURCE_SPECS.global.fields(config, 'site').map((f) => f.name)).toEqual([
+        expect(RESOURCE_CONFIG.entry.translatable(config, 'post')).toBe(true);
+        expect(RESOURCE_CONFIG.global.translatable(config, 'site')).toBe(true);
+        expect(RESOURCE_CONFIG.global.fields(config, 'site').map((f) => f.name)).toEqual([
             'brand',
         ]);
-        expect(RESOURCE_SPECS.entry.name('post')).toBe("Entry type 'post'");
+        expect(RESOURCE_CONFIG.entry.name('post')).toBe("Entry type 'post'");
     });
 });
 
@@ -188,7 +190,7 @@ describe('isUniqueAmong', () => {
 });
 
 describe('version snapshots', () => {
-    it('carry the spec’s versioned columns and `fields`, nothing else', () => {
+    it('carry the resource config’s versioned columns and `fields`, nothing else', () => {
         const snapshots = {
             entry: entrySnapshotSchema,
             global: globalSnapshotSchema,
@@ -197,7 +199,7 @@ describe('version snapshots', () => {
         };
         for (const kind of RESOURCE_TYPES) {
             expect(Object.keys(snapshots[kind].shape).sort(), kind).toEqual(
-                [...RESOURCE_SPECS[kind].versionedColumns, 'fields'].sort()
+                [...RESOURCE_CONFIG[kind].versionedColumns, 'fields'].sort()
             );
         }
     });

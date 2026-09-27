@@ -12,7 +12,7 @@ import { noopStorage } from '@tests/fixtures';
 import { createTestDb, makeTestConfig, setupTestConfig } from '@tests/harness';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { currentServices } from '@/app-context/services';
-import { RESOURCE_SPECS } from '@/content/resources';
+import { RESOURCE_CONFIG } from '@/content/resources';
 import { getDb } from '@/database/registry';
 import { mediaRepository } from '@/media/repository';
 import { setStorageDriver } from '@/storage/registry';
@@ -190,7 +190,7 @@ describe.each(RESOURCE_TYPES)('%s', (kind) => {
     it('reads and writes in its public shape, with no internal keys', async () => {
         const id = await adapter.save({ title: 'One' });
         const publicKeys = Object.keys(
-            (RESOURCE_SPECS[kind].outputSchema as z.ZodObject).shape
+            (RESOURCE_CONFIG[kind].outputSchema as z.ZodObject).shape
         ).sort();
 
         for (const result of [await adapter.read(id), await adapter.update(id, {})]) {
@@ -274,7 +274,7 @@ describe.each(RESOURCE_TYPES)('%s', (kind) => {
 
     it('answers an unknown sort with 400, or has no list', async () => {
         if (adapter.list === undefined) {
-            expect(RESOURCE_SPECS[kind].sortable).toEqual([]);
+            expect(RESOURCE_CONFIG[kind].sortable).toEqual([]);
             return;
         }
         await expect(adapter.list({ nope: 'asc' })).rejects.toMatchObject({

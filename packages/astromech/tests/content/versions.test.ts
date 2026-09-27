@@ -1,5 +1,5 @@
 /**
- * `snapshotVersion` credits the user it is handed and keeps the spec's versioned
+ * `snapshotVersion` credits the user it is handed and keeps the resource config's versioned
  * columns. The author is a parameter, so these run with no request, no database
  * and no config.
  */
@@ -78,7 +78,7 @@ describe('snapshotVersion', () => {
         expect(written[0]?.version).toBe(1);
     });
 
-    it('writes the spec’s versioned columns and no others', async () => {
+    it('writes the resource config’s versioned columns and no others', async () => {
         const { versions, written } = recordingVersions();
 
         await snapshotVersion(
@@ -99,7 +99,7 @@ describe('changesVersionedContent', () => {
         expect(changesVersionedContent('media', current, { alt: 'B' })).toBe(true);
     });
 
-    it('ignores a column the spec does not version', () => {
+    it('ignores a column the resource config does not version', () => {
         const current = { fields: {}, status: 'unpublished' };
         expect(
             changesVersionedContent('entry', current, {

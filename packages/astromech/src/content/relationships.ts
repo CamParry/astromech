@@ -14,7 +14,7 @@ import type { JsonObject, ResolvedConfig, ResourceType } from '@/types/index';
 import { relationshipRepository } from '@/content/repository/relationships';
 import { flattenFieldNodes } from '@/fields/flatten';
 import { findReferences } from '@/fields/references';
-import { RESOURCE_SPECS } from './resources';
+import { RESOURCE_CONFIG } from './resources';
 
 /** The resource: where its stored rows come from and how they join. */
 type ContentRelationshipsShape = {
@@ -100,7 +100,7 @@ export function createContentRelationships(shape: ContentRelationshipsShape): {
         const sourceType = shape.sourceType?.(resourceRow) ?? null;
         // A target no longer declared has no fields, so it holds no references.
         const definitions = flattenFieldNodes(
-            RESOURCE_SPECS[shape.kind].fields(config, sourceType ?? undefined)
+            RESOURCE_CONFIG[shape.kind].fields(config, sourceType ?? undefined)
         );
         return {
             // A resource with a staged row is still live, so the source is

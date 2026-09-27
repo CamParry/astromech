@@ -10,7 +10,7 @@ import type { JsonObject, ResourceType, User, VersionMetadata } from '@/types/in
 import { transaction } from '@/database/transaction';
 import { ResourceNotFoundError } from '@/errors/resource';
 import { deepEqual } from '@/utilities/deep-equal';
-import { RESOURCE_SPECS } from './resources';
+import { RESOURCE_CONFIG } from './resources';
 
 /** A content row as the helpers read it: its row id, fields and own columns. */
 type VersionedRecord = { contentId: ContentRowId; fields: JsonObject } & Record<
@@ -64,7 +64,7 @@ export async function readVersion<S extends object>(params: {
         id: params.address.id,
     });
     const snapshot = {
-        ...pick(row, RESOURCE_SPECS[resource].versionedColumns),
+        ...pick(row, RESOURCE_CONFIG[resource].versionedColumns),
         fields: row.fields,
     };
     return {
@@ -90,7 +90,7 @@ export async function snapshotVersion(
 ): Promise<void> {
     const latestNumber = await versions.latestNumber(record.contentId);
     await versions.create({
-        ...pick(record, RESOURCE_SPECS[resource].versionedColumns),
+        ...pick(record, RESOURCE_CONFIG[resource].versionedColumns),
         contentId: record.contentId,
         version: latestNumber + 1,
         fields: record.fields,
@@ -108,7 +108,7 @@ export function changesVersionedContent(
     current: { fields: JsonObject } & Record<string, unknown>,
     next: { fields?: JsonObject | undefined } & Record<string, unknown>
 ): boolean {
-    for (const column of RESOURCE_SPECS[resource].versionedColumns) {
+    for (const column of RESOURCE_CONFIG[resource].versionedColumns) {
         if (next[column] !== undefined && next[column] !== current[column]) return true;
     }
     return next.fields !== undefined && !deepEqual(current.fields, next.fields);
@@ -140,7 +140,7 @@ export async function restoreVersion<R, V extends StoredVersion>(params: {
         id: params.address.id,
     });
     const fields = (version.fields as JsonObject | null) ?? current.fields;
-    const columns = pick(version, RESOURCE_SPECS[resource].versionedColumns);
+    const columns = pick(version, RESOURCE_CONFIG[resource].versionedColumns);
     return transaction(async () => {
         await snapshotVersion(resource, versions, current, params.user);
         return params.write({ fields, columns });
