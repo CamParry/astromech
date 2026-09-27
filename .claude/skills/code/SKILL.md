@@ -20,6 +20,44 @@ Names are not a place to be creative. Before naming anything, find what this exa
 - **The lookup verbs are fixed.** `get*` returns the thing and throws when it is absent (`getConfig`), with no `OrThrow` suffix — that suffix belongs to the `registry.ts` primitive, not to callers built on it. `resolve*` returns the thing or `undefined` (`resolveEntryType`). `find*` returns the thing or `null`, for a database read (a repository's `findOne`, after Prisma's `findUnique` and Payload's `find`). `assert*` returns `void`, matching TypeScript's own `asserts x is T`. `require*` is reserved for middleware (`requireAuth`). `methods/get.ts` `getEntry` returning `null` is the one exception, because a missing entry on the public read path is a 404 rather than a fault.
 - **Watch the generic suffixes, don't ban them.** `handler`, `engine`, `service`, `util`, `helper`, `manager` are real ecosystem words and this codebase already uses several — `handler` for a request handler, `@astromech/schema-engine` for a body of core machinery, `utilities/` and `support/` for genuinely miscellaneous small functions. Use them where they carry their normal meaning. Be wary only of reaching for one because the thing resists a more specific name; when a `Manager` or `Helper` would sit next to a name that actually describes the work, prefer the specific one.
 
+## Service method files
+
+One method per file under `<module>/methods/`, every file the same shape, so
+reading one teaches the rest. `users/methods/create.ts` is the reference.
+
+- **Layout.** Imports; the method's doc comment; `export const <verbNoun> =
+defineServiceMethod({ … })`; then any private helper the handler uses. No
+  file header and no other export: a helper another file needs lives in
+  `<module>/internal/` or `content/`.
+- **Declaration keys in this order:** `summary`, `input`, `binaryInput`,
+  `output`, `access`, `requires`, `mutates`, `destructive`, `idempotent`,
+  `handler`.
+- **`input` is inline**: `z.strictObject({ … })` over the module's `schema.ts`.
+  No per-method `*Input` builder. A value checked against config (a role, a
+  locale) is checked in the schema (`roleSlugSchema`), not the handler.
+- **`access` is a permission string** (`'users:create'`). When the permission
+  depends on the call, such as an entry's `type` or a global's `key`, it is the
+  module's rule from `<module>/internal/access.ts`, named `<resource>Access`:
+  `entryAccess('create')`.
+- **The handler runs in this order**, skipping steps it has no use for:
+    1. Inputs: destructure `params`, then `const { config, user } = ctx`, then
+       `const userId = user?.id ?? null`, then values derived from config (the
+       locale, the entry type). One value per line; no call nested in a call.
+    2. Load and check: read the rows the write needs; throw not-found or a rule
+       error.
+    3. Prepare: build what is written (`prepareFields`, slug, hash). Slow work
+       stays outside the transaction.
+    4. The before hook.
+    5. The writes, in one `transaction` when there is more than one.
+    6. The after hook.
+    7. Return.
+       A batch method's handler delegates to `<module>/internal/*-batch.ts`, which
+       keeps the same order.
+- **Comments:** the declaration's doc comment says what the method does beyond
+  its `summary`. Inside the handler, a `//` note only where the code would
+  otherwise read as wrong. Three lines each at most. Don't explain why writes
+  share a transaction, what a named helper does, or what `summary` says.
+
 ## Method signatures
 
 The handlers under `<module>/methods/` follow two rules, so any one of them
@@ -120,6 +158,7 @@ off `RESOURCE_CONFIG` in `content/resources.ts`.
 
 ## Comments
 
+- **Method files follow the tighter rule** under "Service method files".
 - **A doc block above every exported function, type, and the file itself.** Write it as a JSDoc `/** … */` block, not a run of `//` lines. This is open-source; a reader needs to know what each public thing does. Private local helpers may skip the block when the name already says it.
 - **`//` is for inline notes only.** Don't write a file header, type doc, or function doc as a run of `//` lines.
 - **Three lines of text maximum**, file headers included. This is a hard cap: content that overflows (cross-references, layer models, prior art) belongs in `ARCHITECTURE.md` or `DECISIONS.md`, so trim it out rather than relocating it into a longer header.
