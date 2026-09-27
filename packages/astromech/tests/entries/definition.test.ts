@@ -11,6 +11,7 @@ import {
     makeTestConfig,
     setupTestConfig,
 } from '@tests/harness';
+import { inputKeys } from '@tests/strict-input';
 import { beforeEach, describe, expect, it } from 'vitest';
 import { createAppContext } from '@/app-context/app-context';
 import { getDb } from '@/database/registry';
@@ -113,6 +114,20 @@ describe('entryCatalogue', () => {
 
         for (const [key, permission] of Object.entries(PERMISSIONS)) {
             expect(catalogue[key as keyof EntriesService].access, key).toBe(permission);
+        }
+    });
+
+    it('declares the same keys as each method’s own input, titled or not', () => {
+        for (const titled of [true, false]) {
+            const catalogue = entryCatalogue({ typeId: 'posts', titled });
+            for (const [key, method] of Object.entries(entriesDefinition.catalogue)) {
+                const own = inputKeys(method.input);
+                expect(own.length, key).toBeGreaterThan(0);
+                expect(
+                    inputKeys(catalogue[key as keyof EntriesService].input),
+                    key
+                ).toEqual(own);
+            }
         }
     });
 

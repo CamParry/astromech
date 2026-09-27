@@ -17,12 +17,7 @@ import { entrySchema } from '../../schema';
  */
 export const restoreEntryVersion = defineServiceMethod({
     summary: 'Roll an entry back to an earlier version.',
-    input: z.strictObject({
-        type: z.string(),
-        id: z.string(),
-        locale: z.string().optional(),
-        version: z.number().int(),
-    }),
+    input: restoreEntryVersionInput({ type: z.string() }),
     output: entrySchema,
     access: entryGate('update'),
     requires: 'versioning',
@@ -61,3 +56,16 @@ export const restoreEntryVersion = defineServiceMethod({
         });
     },
 });
+
+/**
+ * `entries.restoreVersion`'s input, with `type` as given: any type id on the method, one
+ * type's literal in that type's catalogue.
+ */
+export function restoreEntryVersionInput<T extends z.ZodType>({ type }: { type: T }) {
+    return z.strictObject({
+        type,
+        id: z.string(),
+        locale: z.string().optional(),
+        version: z.number().int(),
+    });
+}

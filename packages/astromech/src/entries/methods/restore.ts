@@ -16,12 +16,7 @@ const restoreOne = fromBatch(restoreEntryBatch);
  */
 export const restoreEntries = defineServiceMethod({
     summary: 'Restore a trashed entry.',
-    input: oneOrMany(
-        z.strictObject({
-            type: z.string(),
-            ...batchAddress,
-        })
-    ),
+    input: restoreEntriesInput({ type: z.string() }),
     output: z.union([entrySchema, z.array(entrySchema)]),
     access: entryGate('update'),
     requires: 'trash',
@@ -31,3 +26,11 @@ export const restoreEntries = defineServiceMethod({
         return restoreOne(params, ctx);
     },
 });
+
+/**
+ * `entries.restore`'s input, with `type` as given: any type id on the method, one
+ * type's literal in that type's catalogue.
+ */
+export function restoreEntriesInput<T extends z.ZodType>({ type }: { type: T }) {
+    return oneOrMany(z.strictObject({ type, ...batchAddress }));
+}

@@ -20,9 +20,7 @@ export const DEFAULT_PREVIEW_TOKEN_TTL_MS = 7 * 24 * 60 * 60 * 1000;
  */
 export const issuePreviewToken = defineServiceMethod({
     summary: 'Issue a preview token for an entry.',
-    input: z
-        .strictObject({ type: z.string(), id: z.string() })
-        .extend(previewTokenSchema.shape),
+    input: issuePreviewTokenInput({ type: z.string() }),
     output: z.object({ token: z.string() }),
     access: entryGate('update'),
     requires: 'staging',
@@ -58,7 +56,7 @@ export const issuePreviewToken = defineServiceMethod({
  */
 export const revokePreviewToken = defineServiceMethod({
     summary: 'Revoke the preview token of an entry.',
-    input: z.strictObject({ type: z.string(), id: z.string() }),
+    input: revokePreviewTokenInput({ type: z.string() }),
     output: z.void(),
     access: entryGate('update'),
     requires: 'staging',
@@ -69,3 +67,20 @@ export const revokePreviewToken = defineServiceMethod({
         await entryRepository.previewToken.clear(id);
     },
 });
+
+/**
+ * `entries.issuePreviewToken`'s input, with `type` as given: any type id on the
+ * method, one type's literal in that type's catalogue. `previewTokenSchema`
+ * coerces an ISO string, which is what a JSON caller sends.
+ */
+export function issuePreviewTokenInput<T extends z.ZodType>({ type }: { type: T }) {
+    return z.strictObject({ type, id: z.string() }).extend(previewTokenSchema.shape);
+}
+
+/**
+ * `entries.revokePreviewToken`'s input, with `type` as given: any type id on the
+ * method, one type's literal in that type's catalogue.
+ */
+export function revokePreviewTokenInput<T extends z.ZodType>({ type }: { type: T }) {
+    return z.strictObject({ type, id: z.string() });
+}

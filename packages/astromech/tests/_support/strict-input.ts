@@ -1,6 +1,6 @@
 /**
- * Finds the objects in a method's input schema that accept a key they do not
- * declare. Reads Zod's internal `_zod.def` rather than importing Zod, so a
+ * Walks a method's input schema for the objects that accept a key they do not
+ * declare, and for every key it declares. Reads Zod's internal `_zod.def`, so a
  * package that resolves core through `dist` can use it too.
  */
 
@@ -47,19 +47,55 @@ export function openInputObjects(inputs: MethodInputs): string[] {
     return open;
 }
 
-function walk(schema: unknown, path: string, open: string[], seen: Set<unknown>): void {
-    const def = defOf(schema);
-    if (def === undefined || seen.has(schema)) return;
-    seen.add(schema);
+/**
+ * Every key `schema` declares, at any depth, as a sorted list of dotted paths
+ * (`data.title`, `items[].id`). A record's keys are data, so none are listed.
+ */
+export function inputKeys(schema: unknown): string[] {
+    const keys = new Set<string>();
+    walk(schema, '', [], new Set(), (path) => keys.add(path));
+    return [...keys].sort();
+}
 
+/**
+ * Walk `schema`, noting each open object in `open` and passing each declared
+ * key's path to `onKey`. `ancestors` holds the schemas above this one, so a
+ * recursive schema ends while a schema shared by two keys is walked under both.
+ */
+function walk(
+    schema: unknown,
+    path: string,
+    open: string[],
+    ancestors: Set<unknown>,
+    onKey?: (path: string) => void
+): void {
+    const def = defOf(schema);
+    if (def === undefined || ancestors.has(schema)) return;
+    ancestors.add(schema);
+    try {
+        walkDef(def, path, open, ancestors, onKey);
+    } finally {
+        ancestors.delete(schema);
+    }
+}
+
+function walkDef(
+    def: SchemaDef,
+    path: string,
+    open: string[],
+    ancestors: Set<unknown>,
+    onKey: ((path: string) => void) | undefined
+): void {
     const next = (child: unknown, suffix = ''): void =>
-        walk(child, `${path}${suffix}`, open, seen);
+        walk(child, `${path}${suffix}`, open, ancestors, onKey);
 
     switch (def.type) {
         case 'object':
             if (defOf(def.catchall)?.type !== 'never') open.push(path);
             for (const [key, child] of Object.entries(def.shape ?? {})) {
-                next(child, `.${key}`);
+                const keyPath = path === '' ? key : `${path}.${key}`;
+                onKey?.(keyPath);
+                walk(child, keyPath, open, ancestors, onKey);
             }
             return;
         case 'record':

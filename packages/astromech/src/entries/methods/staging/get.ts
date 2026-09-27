@@ -14,11 +14,7 @@ import { stagedEntrySchema } from '../../schema';
  */
 export const getStagedEntry = defineServiceMethod({
     summary: 'Get the staged change of an entry.',
-    input: z.strictObject({
-        type: z.string(),
-        id: z.string(),
-        locale: z.string().optional(),
-    }),
+    input: getStagedEntryInput({ type: z.string() }),
     output: stagedEntrySchema.nullable(),
     access: entryGate('read'),
     requires: 'staging',
@@ -31,3 +27,11 @@ export const getStagedEntry = defineServiceMethod({
         return { ...staged, diverged: hasDiverged(canonical, staged) };
     },
 });
+
+/**
+ * `entries.getStaged`'s input, with `type` as given: any type id on the method, one
+ * type's literal in that type's catalogue.
+ */
+export function getStagedEntryInput<T extends z.ZodType>({ type }: { type: T }) {
+    return z.strictObject({ type, id: z.string(), locale: z.string().optional() });
+}

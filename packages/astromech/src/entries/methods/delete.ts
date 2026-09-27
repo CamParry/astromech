@@ -14,12 +14,7 @@ const deleteOne = fromBatch(deleteEntryBatch);
  */
 export const deleteEntries = defineServiceMethod({
     summary: 'Delete an entry.',
-    input: oneOrMany(
-        z.strictObject({
-            type: z.string(),
-            ...batchAddress,
-        })
-    ),
+    input: deleteEntriesInput({ type: z.string() }),
     output: z.void(),
     access: entryGate('delete'),
     mutates: true,
@@ -28,3 +23,11 @@ export const deleteEntries = defineServiceMethod({
         return deleteOne(params, ctx);
     },
 });
+
+/**
+ * `entries.delete`'s input, with `type` as given: any type id on the method, one
+ * type's literal in that type's catalogue.
+ */
+export function deleteEntriesInput<T extends z.ZodType>({ type }: { type: T }) {
+    return oneOrMany(z.strictObject({ type, ...batchAddress }));
+}

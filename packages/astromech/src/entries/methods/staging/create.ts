@@ -15,11 +15,7 @@ import { entrySchema } from '../../schema';
  */
 export const createStagedEntry = defineServiceMethod({
     summary: 'Stage a change to an entry.',
-    input: z.strictObject({
-        type: z.string(),
-        id: z.string(),
-        locale: z.string().optional(),
-    }),
+    input: createStagedEntryInput({ type: z.string() }),
     output: entrySchema,
     access: entryGate('update'),
     requires: 'staging',
@@ -56,3 +52,11 @@ export const createStagedEntry = defineServiceMethod({
         });
     },
 });
+
+/**
+ * `entries.createStaged`'s input, with `type` as given: any type id on the method, one
+ * type's literal in that type's catalogue.
+ */
+export function createStagedEntryInput<T extends z.ZodType>({ type }: { type: T }) {
+    return z.strictObject({ type, id: z.string(), locale: z.string().optional() });
+}

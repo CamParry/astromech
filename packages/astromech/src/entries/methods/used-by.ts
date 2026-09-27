@@ -12,7 +12,7 @@ import { getEntryResource } from '../internal/read-entry';
  */
 export const listEntryUsage = defineServiceMethod({
     summary: 'List the entries, globals, users and media items that reference an entry.',
-    input: z.strictObject({ type: z.string(), id: z.string() }),
+    input: listEntryUsageInput({ type: z.string() }),
     output: z.array(usageSchema),
     access: entryGate('read'),
     mutates: false,
@@ -22,3 +22,11 @@ export const listEntryUsage = defineServiceMethod({
         return listUsage(ctx.config, { id: params.id, kind: 'entry' });
     },
 });
+
+/**
+ * `entries.usedBy`'s input, with `type` as given: any type id on the method, one
+ * type's literal in that type's catalogue.
+ */
+export function listEntryUsageInput<T extends z.ZodType>({ type }: { type: T }) {
+    return z.strictObject({ type, id: z.string() });
+}

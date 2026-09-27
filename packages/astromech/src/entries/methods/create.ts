@@ -24,7 +24,7 @@ export const createEntry = defineServiceMethod({
     summary: 'Create an entry.',
     // The titleless payload, since one schema covers every type here; the
     // handler re-parses under the type's own, which is the stricter one.
-    input: z.strictObject({ type: z.string(), data: createEntryPayloadSchema }),
+    input: createEntryInput({ type: z.string(), data: createEntryPayloadSchema }),
     output: entrySchema,
     access: entryGate('create'),
     mutates: true,
@@ -109,3 +109,18 @@ export const createEntry = defineServiceMethod({
         return entry;
     },
 });
+
+/**
+ * `entries.create`'s input, with `type` and `data` as given: any type id and the
+ * titleless payload on the method, one type's literal and its own create schema
+ * in that type's catalogue.
+ */
+export function createEntryInput<T extends z.ZodType, D extends z.ZodType>({
+    type,
+    data,
+}: {
+    type: T;
+    data: D;
+}) {
+    return z.strictObject({ type, data });
+}

@@ -21,11 +21,7 @@ import { entrySchema } from '../../schema';
  */
 export const mergeStagedEntry = defineServiceMethod({
     summary: 'Merge the staged change into an entry.',
-    input: z.strictObject({
-        type: z.string(),
-        id: z.string(),
-        locale: z.string().optional(),
-    }),
+    input: mergeStagedEntryInput({ type: z.string() }),
     output: entrySchema,
     access: entryGate('publish'),
     requires: 'staging',
@@ -93,3 +89,11 @@ export const mergeStagedEntry = defineServiceMethod({
         });
     },
 });
+
+/**
+ * `entries.mergeStaged`'s input, with `type` as given: any type id on the method, one
+ * type's literal in that type's catalogue.
+ */
+export function mergeStagedEntryInput<T extends z.ZodType>({ type }: { type: T }) {
+    return z.strictObject({ type, id: z.string(), locale: z.string().optional() });
+}

@@ -14,11 +14,7 @@ import { entryRepository } from '../../repository/entries-table';
  */
 export const listEntryVersions = defineServiceMethod({
     summary: 'List the version history of an entry.',
-    input: z.strictObject({
-        type: z.string(),
-        id: z.string(),
-        locale: z.string().optional(),
-    }),
+    input: listEntryVersionsInput({ type: z.string() }),
     output: z.array(versionMetadataSchema),
     access: entryGate('read'),
     requires: 'versioning',
@@ -28,3 +24,11 @@ export const listEntryVersions = defineServiceMethod({
         return listVersions(entryRepository.versions, entry);
     },
 });
+
+/**
+ * `entries.versions`'s input, with `type` as given: any type id on the method, one
+ * type's literal in that type's catalogue.
+ */
+export function listEntryVersionsInput<T extends z.ZodType>({ type }: { type: T }) {
+    return z.strictObject({ type, id: z.string(), locale: z.string().optional() });
+}

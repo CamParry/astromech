@@ -24,17 +24,10 @@ const scheduleOne = fromBatch(scheduleEntryBatch);
 /** What every status method answers: the entry it moved, or the list of them. */
 const entryOrEntries = z.union([entrySchema, z.array(entrySchema)]);
 
-/** The `{ type, id | ids, locale }` every status method is addressed by. */
-const localisedBatch = z.strictObject({
-    type: z.string(),
-    ...batchAddress,
-    locale: z.string().optional(),
-});
-
 /** Publishes one entry or a list of them. */
 export const publishEntries = defineServiceMethod({
     summary: 'Publish an entry.',
-    input: oneOrMany(localisedBatch),
+    input: publishEntriesInput({ type: z.string() }),
     output: entryOrEntries,
     access: entryGate('publish'),
     requires: 'statuses',
@@ -48,7 +41,7 @@ export const publishEntries = defineServiceMethod({
 /** Unpublishes one entry or a list of them. */
 export const unpublishEntries = defineServiceMethod({
     summary: 'Unpublish an entry.',
-    input: oneOrMany(localisedBatch),
+    input: unpublishEntriesInput({ type: z.string() }),
     output: entryOrEntries,
     access: entryGate('publish'),
     requires: 'statuses',
@@ -65,7 +58,7 @@ export const unpublishEntries = defineServiceMethod({
 /** Schedules one entry or a list of them to publish at `publishedAt`. */
 export const scheduleEntries = defineServiceMethod({
     summary: 'Schedule an entry to publish at a future time.',
-    input: oneOrMany(localisedBatch.extend(scheduleEntrySchema.shape)),
+    input: scheduleEntriesInput({ type: z.string() }),
     output: entryOrEntries,
     access: entryGate('publish'),
     requires: 'statuses',
@@ -75,3 +68,32 @@ export const scheduleEntries = defineServiceMethod({
         return scheduleOne(params, ctx);
     },
 });
+
+/**
+ * `entries.publish`'s input, with `type` as given: any type id on the method, one
+ * type's literal in that type's catalogue.
+ */
+export function publishEntriesInput<T extends z.ZodType>({ type }: { type: T }) {
+    return oneOrMany(localisedBatch(type));
+}
+
+/**
+ * `entries.unpublish`'s input, with `type` as given: any type id on the method,
+ * one type's literal in that type's catalogue.
+ */
+export function unpublishEntriesInput<T extends z.ZodType>({ type }: { type: T }) {
+    return oneOrMany(localisedBatch(type));
+}
+
+/**
+ * `entries.schedule`'s input, with `type` as given: any type id on the method,
+ * one type's literal in that type's catalogue.
+ */
+export function scheduleEntriesInput<T extends z.ZodType>({ type }: { type: T }) {
+    return oneOrMany(localisedBatch(type).extend(scheduleEntrySchema.shape));
+}
+
+/** The `{ type, id | ids, locale }` every status method is addressed by. */
+function localisedBatch<T extends z.ZodType>(type: T) {
+    return z.strictObject({ type, ...batchAddress, locale: z.string().optional() });
+}

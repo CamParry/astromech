@@ -20,21 +20,11 @@ import { entrySchema } from '../schema';
  * trashed rows throws, since the public shape can never return them.
  */
 export const queryEntries = defineServiceMethod({
-    summary: 'List entries of one type.',
-    input: z.strictObject({
+    summary: 'List entries of one type or several.',
+    input: queryEntriesInput({
         // One type or several: a cross-type listing names them all, and the
         // permission is checked per type the call touches.
         type: z.union([z.string(), z.array(z.string())]),
-        search: z.string().optional(),
-        where: z.record(z.string(), z.unknown()).optional(),
-        trashed: z.boolean().optional(),
-        page: z.number().optional(),
-        limit: z.union([z.number(), z.literal('all')]).optional(),
-        sort: sortSchema,
-        locale: z.string().optional(),
-        full: z.boolean().optional(),
-        previewToken: z.string().optional(),
-        staged: z.boolean().optional(),
     }),
     output: queryResultSchema(entrySchema),
     access: entryGate('read'),
@@ -130,6 +120,27 @@ export const queryEntries = defineServiceMethod({
         return { data: visibleData, pagination };
     },
 });
+
+/**
+ * `entries.query`'s input, with `type` as given: any type id or list of them on
+ * the method, and one type's literal in that type's catalogue
+ * (`entries/catalogue.ts`), so the two cannot declare different keys.
+ */
+export function queryEntriesInput<T extends z.ZodType>({ type }: { type: T }) {
+    return z.strictObject({
+        type,
+        search: z.string().optional(),
+        where: z.record(z.string(), z.unknown()).optional(),
+        trashed: z.boolean().optional(),
+        page: z.number().optional(),
+        limit: z.union([z.number(), z.literal('all')]).optional(),
+        sort: sortSchema,
+        locale: z.string().optional(),
+        full: z.boolean().optional(),
+        previewToken: z.string().optional(),
+        staged: z.boolean().optional(),
+    });
+}
 
 /**
  * Check `where: { references }` against the queried types' schemas before it

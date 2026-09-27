@@ -6,17 +6,31 @@
 import type { Capability } from '@/entries/capabilities';
 import type { EntriesService, ServiceMethodContract } from '@/types/index';
 import { z } from '@hono/zod-openapi';
-import { sortSchema } from '@/content/list';
 import { isCapability } from '@/entries/capabilities';
 import { resolveAccess } from '@/permissions/access';
-import { batchAddress, oneOrMany } from './internal/from-batch';
+import { createEntryInput } from './methods/create';
+import { deleteEntriesInput } from './methods/delete';
+import { duplicateEntryInput } from './methods/duplicate';
+import { getEntryInput } from './methods/get';
+import { issuePreviewTokenInput, revokePreviewTokenInput } from './methods/preview/token';
+import { queryEntriesInput } from './methods/query';
+import { restoreEntriesInput } from './methods/restore';
+import { createStagedEntryInput } from './methods/staging/create';
+import { deleteStagedEntryInput } from './methods/staging/delete';
+import { getStagedEntryInput } from './methods/staging/get';
+import { mergeStagedEntryInput } from './methods/staging/merge';
 import {
-    createEntrySchema,
-    duplicateOverridesSchema,
-    previewTokenSchema,
-    scheduleEntrySchema,
-    updateEntrySchema,
-} from './schema';
+    publishEntriesInput,
+    scheduleEntriesInput,
+    unpublishEntriesInput,
+} from './methods/status';
+import { emptyTrashInput, trashEntriesInput } from './methods/trash';
+import { updateEntriesInput } from './methods/update';
+import { listEntryUsageInput } from './methods/used-by';
+import { getEntryVersionInput } from './methods/versions/get';
+import { listEntryVersionsInput } from './methods/versions/list';
+import { restoreEntryVersionInput } from './methods/versions/restore';
+import { createEntrySchema, updateEntrySchema } from './schema';
 import { entriesDefinition } from './service';
 
 /** A key on `EntriesService` — the manifest name is `entries.<key>`. */
@@ -139,82 +153,38 @@ function entryMethodSummary(method: EntryMethodName, type: string): string {
     }
 }
 
-const limitParam = z.union([z.number(), z.literal('all')]);
-
 /**
- * The call schema each method takes for one type: the type is a literal, and the
- * create and update payloads are the schemas that type actually validates with.
+ * The call schema each method takes for one type: each method's own input
+ * builder with `type` as a literal, and the create and update payloads as the
+ * schemas that type actually validates with.
  */
 function entryInputSchemas(
     typeId: string,
     titled: boolean
 ): Record<EntryMethodName, z.ZodType> {
     const type = z.literal(typeId);
-    const id = z.string();
-    const canonical = z.strictObject({ type, id });
-    /** A content-level method addresses one locale of the entry. */
-    const locale = z.string().optional();
-    const localised = z.strictObject({ type, id, locale });
-
     return {
-        query: z.strictObject({
-            type,
-            search: z.string().optional(),
-            where: z.record(z.string(), z.unknown()).optional(),
-            trashed: z.boolean().optional(),
-            page: z.number().optional(),
-            limit: limitParam.optional(),
-            sort: sortSchema,
-            locale: z.string().optional(),
-            full: z.boolean().optional(),
-            previewToken: z.string().optional(),
-            staged: z.boolean().optional(),
-        }),
-        get: z.strictObject({
-            type,
-            id,
-            locale: z.string().optional(),
-            full: z.boolean().optional(),
-            previewToken: z.string().optional(),
-            staged: z.boolean().optional(),
-        }),
-        create: z.strictObject({ type, data: createEntrySchema({ titled }) }),
-        update: oneOrMany(
-            z.strictObject({
-                type,
-                ...batchAddress,
-                locale,
-                staged: z.boolean().optional(),
-                data: updateEntrySchema({ titled }),
-            })
-        ),
-        delete: oneOrMany(z.strictObject({ type, ...batchAddress })),
-        duplicate: z.strictObject({
-            type,
-            id,
-            overrides: duplicateOverridesSchema.optional(),
-        }),
-        trash: oneOrMany(z.strictObject({ type, ...batchAddress })),
-        restore: oneOrMany(z.strictObject({ type, ...batchAddress })),
-        emptyTrash: z.strictObject({ type }),
-        versions: localised,
-        getVersion: localised.extend({ version: z.number().int() }),
-        restoreVersion: localised.extend({ version: z.number().int() }),
-        publish: oneOrMany(z.strictObject({ type, ...batchAddress, locale })),
-        unpublish: oneOrMany(z.strictObject({ type, ...batchAddress, locale })),
-        schedule: oneOrMany(
-            z
-                .strictObject({ type, ...batchAddress, locale })
-                .extend(scheduleEntrySchema.shape)
-        ),
-        usedBy: canonical,
-        createStaged: localised,
-        getStaged: localised,
-        mergeStaged: localised,
-        deleteStaged: localised,
-        // `previewTokenSchema` coerces an ISO string, which is what a JSON
-        // caller sends and what the REST route has always accepted.
-        issuePreviewToken: z.strictObject({ type, id }).extend(previewTokenSchema.shape),
-        revokePreviewToken: canonical,
+        query: queryEntriesInput({ type }),
+        get: getEntryInput({ type }),
+        create: createEntryInput({ type, data: createEntrySchema({ titled }) }),
+        update: updateEntriesInput({ type, data: updateEntrySchema({ titled }) }),
+        delete: deleteEntriesInput({ type }),
+        duplicate: duplicateEntryInput({ type }),
+        trash: trashEntriesInput({ type }),
+        restore: restoreEntriesInput({ type }),
+        emptyTrash: emptyTrashInput({ type }),
+        versions: listEntryVersionsInput({ type }),
+        getVersion: getEntryVersionInput({ type }),
+        restoreVersion: restoreEntryVersionInput({ type }),
+        publish: publishEntriesInput({ type }),
+        unpublish: unpublishEntriesInput({ type }),
+        schedule: scheduleEntriesInput({ type }),
+        usedBy: listEntryUsageInput({ type }),
+        createStaged: createStagedEntryInput({ type }),
+        getStaged: getStagedEntryInput({ type }),
+        mergeStaged: mergeStagedEntryInput({ type }),
+        deleteStaged: deleteStagedEntryInput({ type }),
+        issuePreviewToken: issuePreviewTokenInput({ type }),
+        revokePreviewToken: revokePreviewTokenInput({ type }),
     };
 }
