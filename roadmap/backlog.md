@@ -16,6 +16,7 @@ Finished items are deleted rather than ticked; the record of what shipped is in
 ### Fields
 
 - [ ] `columns.field(name, { sortable: true })` sends a sort the entries repository refuses with a 400 (`UnknownSortKeyError`), and `entries-list-page.tsx` re-sorts each page in the browser by string comparison. Implement field sort in the repository or drop `sortable`; delete the client sort either way
+- [ ] Decide whether a field's `unique` option stays. Field values are stored as JSON, so no database constraint backs it: two concurrent writes can both pass the check, and every write with a unique field scans the resource's rows in that locale (the `scan` argument to `prepareFields`). Settle how common the need is before keeping the machinery
 
 ### Search
 
@@ -24,6 +25,7 @@ Finished items are deleted rather than ticked; the record of what shipped is in
 
 ### Method manifest and the AI surface
 
+- [ ] Values that come from config are plain strings in the OpenAPI document and the method manifest: a user's `role` validates against the configured roles at parse time, but the schema cannot list them, since each method's `input` is built before the config. Consider building the documented schemas from the config so such values become enums
 - [ ] Media ingest over JSON-RPC: `media.upload`/`replace` take a `File`, so they are the one thing the MCP/AI surface cannot call. Needs a path or base64 ingest method, declared as its own descriptor rather than by loosening `binaryInput`
 - [ ] MCP tool-list size: the demo projects 144 tools, and `transport/mcp/server.ts` sends every one of them as a fixed prompt prefix to any MCP client. The assistant no longer has this problem — it takes a filtered surface (`ctx.methods.tools({ readOnly })`) and relies on deferred tool search to keep the rest findable — so what is left is whether the MCP server should filter too, and on what: source, entry type, or a client-supplied selection
 - [ ] Reconcile entry `destructive` semantics: `entries.publish` collapses publish+unpublish into one action, so "unpublish is destructive" can't be expressed. Revisit when the permission model gains an `unpublish` action
