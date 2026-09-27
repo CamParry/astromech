@@ -30,6 +30,12 @@ async function saveSite(): Promise<void> {
     await api.publish({ key: 'site' });
 }
 
+/** A staged change of `site` whose title reads `title`. */
+async function stageSite(title: string): Promise<void> {
+    await api.createStaged({ key: 'site' });
+    await api.update({ key: 'site', staged: true, data: { fields: { title } } });
+}
+
 describe('createStaged', () => {
     it('copies the canonical content into an unpublished staged row', async () => {
         await saveSite();
@@ -40,10 +46,12 @@ describe('createStaged', () => {
         expect(staged.fields).toEqual({ title: 'Live', brand: 'Acme' });
     });
 
-    it('patches `data.fields` over the copy', async () => {
+    it('is edited by a staged update, patched over the copy', async () => {
         await saveSite();
-        const staged = await api.createStaged({
+        await api.createStaged({ key: 'site' });
+        const staged = await api.update({
             key: 'site',
+            staged: true,
             data: { fields: { title: 'Draft' } },
         });
 
@@ -51,6 +59,18 @@ describe('createStaged', () => {
         // The canonical is untouched.
         const live = await api.get({ key: 'site', full: true });
         expect(live?.fields['title']).toBe('Live');
+    });
+
+    it('takes no `data`, so nothing unparsed reaches the staged row', async () => {
+        await saveSite();
+
+        await expect(
+            api.createStaged({
+                key: 'site',
+                data: { fields: { title: 42, undeclared: 'x' } },
+            } as never)
+        ).rejects.toThrow(ValidationError);
+        expect(await api.getStaged({ key: 'site' })).toBeNull();
     });
 
     it('refuses a second staged change for the same locale', async () => {
@@ -84,7 +104,7 @@ describe('getStaged', () => {
         await saveSite();
         expect(await api.getStaged({ key: 'site' })).toBeNull();
 
-        await api.createStaged({ key: 'site', data: { fields: { title: 'Draft' } } });
+        await stageSite('Draft');
         const staged = await api.getStaged({ key: 'site' });
         expect(staged?.fields['title']).toBe('Draft');
         expect(staged?.staged).toBe(true);
@@ -92,7 +112,7 @@ describe('getStaged', () => {
 
     it('is also reachable through get with staged + full', async () => {
         await saveSite();
-        await api.createStaged({ key: 'site', data: { fields: { title: 'Draft' } } });
+        await stageSite('Draft');
 
         const staged = await api.get({ key: 'site', staged: true, full: true });
         expect(staged?.fields['title']).toBe('Draft');
@@ -286,7 +306,7 @@ describe('update with staged', () => {
 describe('mergeStaged', () => {
     it('copies the staged fields onto the canonical, snapshots it and clears the staged row', async () => {
         await saveSite();
-        await api.createStaged({ key: 'site', data: { fields: { title: 'Draft' } } });
+        await stageSite('Draft');
 
         const merged = await api.mergeStaged({ key: 'site' });
 
@@ -324,8 +344,10 @@ describe('mergeStaged', () => {
         await api.publish({ key: 'announcement' });
         // Editing a staged row validates at the draft stage, so clearing a
         // required field is allowed there.
-        await api.createStaged({
+        await api.createStaged({ key: 'announcement' });
+        await api.update({
             key: 'announcement',
+            staged: true,
             data: { fields: { headline: null } },
         });
 
@@ -343,7 +365,7 @@ describe('mergeStaged', () => {
 describe('deleteStaged', () => {
     it('discards the staged row, leaving the canonical alone', async () => {
         await saveSite();
-        await api.createStaged({ key: 'site', data: { fields: { title: 'Draft' } } });
+        await stageSite('Draft');
 
         await api.deleteStaged({ key: 'site' });
 

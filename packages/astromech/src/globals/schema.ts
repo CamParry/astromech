@@ -35,14 +35,6 @@ export const localised = z.strictObject({ key, locale });
 export const versionAddress = localised.extend({ version: z.number().int() });
 
 /**
- * The `globals.createStaged` call input. Named because the bespoke `POST
- * /:key/staged` route parses its body against it directly.
- */
-export const createStagedGlobalSchema = localised.extend({
-    data: updateGlobalSchema.pick({ fields: true }).optional(),
-});
-
-/**
  * One editor-owned, exactly-one, site-wide piece of content, in one locale: the
  * public `Global`. A global is addressed by its config `key` everywhere public;
  * `id` is the row it was saved as, so a relation has the shape every resource offers.

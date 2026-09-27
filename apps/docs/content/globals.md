@@ -238,7 +238,9 @@ await app.globals.update({
 await app.globals.mergeStaged({ key: 'site', locale: 'en' });
 ```
 
-`getStaged` reads it, `deleteStaged` discards it. A staged change is never
+`createStaged` copies the live locale as it stands and takes no field values;
+edit the copy with `update` and `staged: true`, which validates like any other
+write. `getStaged` reads it, `deleteStaged` discards it. A staged change is never
 published, so reading one needs `full: true` and the read permission.
 `getStaged` also answers `diverged: true` when the live version in that locale
 was saved after the staged change was made, so a merge would overwrite that

@@ -28,7 +28,7 @@ the repository copies.
     - [ ] The scheduler publishes with one bulk write
           (`entries/repository/maintenance.ts`), so no update hook fires when a
           scheduled row goes live.
-- [ ] **`globals.createStaged` stores fields unvalidated.** It merges `data.fields`
+- [x] **`globals.createStaged` stores fields unvalidated.** It merges `data.fields`
       over the canonical and stores the result without the field parse
       (`globals/methods/staging/create.ts`), so no validation, no repeater ids,
       and an index built from raw input. Drop `data`, as `entries.createStaged`

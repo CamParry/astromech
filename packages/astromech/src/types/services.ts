@@ -336,15 +336,11 @@ export type GlobalsService = {
     }): Promise<Global>;
     /**
      * Stage a change: copy this locale's content into a second, linked row,
-     * with `data.fields` patched over the copy. Needs the `staging` capability
-     * and an already-saved locale; throws `StagedChangeExistsError` when one
-     * already exists.
+     * which `update` with `staged: true` then edits. Needs the `staging`
+     * capability and an already-saved locale; throws `StagedChangeExistsError`
+     * when one already exists.
      */
-    createStaged(params: {
-        key: string;
-        locale?: string;
-        data?: Pick<GlobalUpdateData, 'fields'>;
-    }): Promise<Global>;
+    createStaged(params: { key: string; locale?: string }): Promise<Global>;
     /**
      * This locale's staged change, or null. Needs the `staging` capability.
      * `diverged` is true when the canonical was written after the staged change

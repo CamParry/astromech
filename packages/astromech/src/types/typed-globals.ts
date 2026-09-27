@@ -110,13 +110,8 @@ export type TypedGlobalsServiceFor<GlobalMap> = {
     createStaged<K extends keyof GlobalMap>(params: {
         key: K;
         locale?: string;
-        data?: { fields: Partial<FieldsForMap<GlobalMap, K>> };
     }): Promise<TypedGlobal<FieldsForMap<GlobalMap, K>>>;
-    createStaged(params: {
-        key: string;
-        locale?: string;
-        data?: Pick<GlobalUpdateData, 'fields'>;
-    }): Promise<Global>;
+    createStaged(params: { key: string; locale?: string }): Promise<Global>;
 
     getStaged<K extends keyof GlobalMap>(params: {
         key: K;

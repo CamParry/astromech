@@ -90,8 +90,10 @@ describe('global relationships', () => {
 
     it('marks a reference only the staged change holds as staged', async () => {
         await globalsService.update({ key: 'site', data: { fields: { home: postId } } });
-        await globalsService.createStaged({
+        await globalsService.createStaged({ key: 'site' });
+        await globalsService.update({
             key: 'site',
+            staged: true,
             data: { fields: { logo: mediaId } },
         });
 

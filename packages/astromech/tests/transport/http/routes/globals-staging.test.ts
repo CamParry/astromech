@@ -26,6 +26,16 @@ async function data(res: Response): Promise<Global> {
     return ((await res.json()) as { data: Global }).data;
 }
 
+/** A staged change of `site` whose title reads `Next`. */
+async function stageNext(): Promise<void> {
+    expect((await app().request('/globals/site/staged', json({}))).status).toBe(201);
+    const res = await app().request(
+        '/globals/site?staged=true',
+        put({ fields: { title: 'Next' } })
+    );
+    expect(res.status).toBe(200);
+}
+
 describe('POST /globals/:key/staged', () => {
     it('201s with a copy of the canonical row', async () => {
         const res = await app().request('/globals/site/staged', json({}));
@@ -35,19 +45,10 @@ describe('POST /globals/:key/staged', () => {
         expect(global.fields).toEqual({ title: 'Live' });
     });
 
-    it('patches the body’s `data` over the copy', async () => {
+    it('422s a body with `data`: a staged update edits the copy', async () => {
         const res = await app().request(
             '/globals/site/staged',
             json({ data: { fields: { title: 'Next' } } })
-        );
-        expect(res.status).toBe(201);
-        expect((await data(res)).fields).toEqual({ title: 'Next' });
-    });
-
-    it('422s a `data` the update schema rejects', async () => {
-        const res = await app().request(
-            '/globals/site/staged',
-            json({ data: { fields: 'nope' } })
         );
         expect(res.status).toBe(422);
     });
@@ -77,10 +78,7 @@ describe('GET /globals/:key/staged', () => {
     });
 
     it('is also reachable as ?staged=true on the read route', async () => {
-        await app().request(
-            '/globals/site/staged',
-            json({ data: { fields: { title: 'Next' } } })
-        );
+        await stageNext();
 
         const res = await app().request('/globals/site?staged=true&full=true');
         expect(res.status).toBe(200);
@@ -128,10 +126,7 @@ describe('PUT /globals/:key?staged=true', () => {
 
 describe('POST /globals/:key/staged/merge', () => {
     it('makes the staged fields the canonical ones', async () => {
-        await app().request(
-            '/globals/site/staged',
-            json({ data: { fields: { title: 'Next' } } })
-        );
+        await stageNext();
 
         const res = await app().request('/globals/site/staged/merge', json({}));
         expect(res.status).toBe(200);
