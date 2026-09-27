@@ -13,7 +13,7 @@ the repository copies.
       date. The class: `publishedAt` is stamped in six places under three rules
       (`update-batch.ts` twice, `entries/methods/create.ts`,
       `entries/methods/duplicate.ts`, `globals/methods/update.ts`,
-      `globals/methods/status.ts`). Give it one helper in `content/`, and decide
+      `globals/methods/publish.ts`). Give it one helper in `content/`, and decide
       whether a status change fires the update hooks: an entry's does, a
       global's does not. The same class, found reading the code:
     - [x] Publishing a scheduled global keeps its future `publishedAt`, so it
