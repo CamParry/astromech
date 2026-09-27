@@ -16,7 +16,6 @@ import { mediaSchema } from '../schema';
 export const uploadMedia = defineServiceMethod({
     summary: 'Upload a new media file.',
     input: z.strictObject({ file: z.instanceof(File) }),
-    // A `File` has no JSON Schema, so JSON-only transports must skip this method.
     binaryInput: true,
     output: mediaSchema,
     access: 'media:upload',
