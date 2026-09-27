@@ -17,7 +17,7 @@ import { entrySchema } from '../../schema';
  */
 export const restoreEntryVersion = defineServiceMethod({
     summary: 'Roll an entry back to an earlier version.',
-    input: z.object({
+    input: z.strictObject({
         type: z.string(),
         id: z.string(),
         locale: z.string().optional(),

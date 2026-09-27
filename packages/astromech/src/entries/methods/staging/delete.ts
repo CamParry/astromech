@@ -12,7 +12,7 @@ import { entryRepository } from '../../repository/entries-table';
  */
 export const deleteStagedEntry = defineServiceMethod({
     summary: 'Discard the staged change of an entry.',
-    input: z.object({
+    input: z.strictObject({
         type: z.string(),
         id: z.string(),
         locale: z.string().optional(),

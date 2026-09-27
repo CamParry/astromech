@@ -17,7 +17,7 @@ import { createUserSchema, userSchema } from '../schema';
  */
 export const createUser = defineServiceMethod({
     summary: 'Create a new CMS user.',
-    input: z.object({ data: createUserSchema }),
+    input: z.strictObject({ data: createUserSchema }),
     output: userSchema,
     access: 'users:create',
     mutates: true,

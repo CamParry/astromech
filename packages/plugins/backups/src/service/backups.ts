@@ -96,7 +96,7 @@ export function createBackupsService(defaultKeep: number) {
         delete: defineServiceMethod({
             access: { permission: 'delete' },
             summary: 'Delete a backup run and its stored artifact.',
-            input: z.object({ id: z.string() }),
+            input: z.strictObject({ id: z.string() }),
             output: deleteRunResultSchema,
             mutates: true,
             destructive: true,

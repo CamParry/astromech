@@ -240,6 +240,17 @@ describe('POST /rpc/:id', () => {
         expect(Object.keys(body.error.details.fields)).toContain('data.email');
     });
 
+    it('422s an argument the method does not take, naming it', async () => {
+        const app = await freshApp();
+        const res = await call(app, 'users.get', { id: signedInUser.id, expand: true });
+        expect(res.status).toBe(422);
+        const body = (await res.json()) as {
+            error: { code: string; details: { fields: Record<string, string[]> } };
+        };
+        expect(body.error.code).toBe('VALIDATION_FAILED');
+        expect(body.error.details.fields).toEqual({ expand: ['Unknown key'] });
+    });
+
     it('400s an entries.query whose where names an unknown key', async () => {
         const app = await freshApp();
         const res = await call(app, 'entries.post.query', {

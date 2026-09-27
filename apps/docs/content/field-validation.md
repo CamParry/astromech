@@ -324,6 +324,13 @@ A resource-level message travels alongside them as `details.form`, an array of
 strings. The key is omitted entirely when there are none, so a response with
 only field errors looks exactly as it always has.
 
+A key the method does not take is refused the same way, under its own path
+with the message `Unknown key`. A `PUT /api/entries/posts/:id` whose body wraps
+the payload in `{ "data": … }` answers `"data": ["Unknown key"]` rather than
+saving nothing. A key inside `fields` is not refused: a field removed from the
+config is dropped on save. A `GET` or `DELETE` ignores a query parameter the
+method does not take, so a cache buster or a tracking parameter is harmless.
+
 ## Accessibility
 
 A field's error is associated with its control through `aria-invalid` and

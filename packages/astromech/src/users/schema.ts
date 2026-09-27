@@ -6,7 +6,7 @@ import { withFallback } from '@/services/fallback';
 import { jsonObject, unparsedJsonObject } from '@/services/json';
 
 export const createUserSchema = z
-    .object({
+    .strictObject({
         email: z.string().email('Must be a valid email address'),
         name: z.string().min(1, 'Name is required'),
         fields: jsonObject.optional(),
@@ -20,7 +20,7 @@ export const createUserSchema = z
     .openapi('CreateUser');
 
 export const updateUserSchema = z
-    .object({
+    .strictObject({
         email: z.string().email('Must be a valid email address').optional(),
         name: z.string().min(1, 'Name cannot be empty').optional(),
         fields: jsonObject.optional(),
@@ -33,7 +33,7 @@ export const updateUserSchema = z
  * the HTTP route reads these off the query string, so this exists purely so the
  * method manifest can describe how the method is called.
  */
-export const userQuerySchema = z.object({
+export const userQuerySchema = z.strictObject({
     locale: z.string().optional(),
     search: z.string().optional(),
     page: z.number().optional(),

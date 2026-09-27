@@ -75,6 +75,12 @@ const fooPlugin: PluginDefinition = {
             mutates: true,
             handler: barHandler,
         },
+        baz: {
+            access: 'public',
+            input: z.strictObject({ id: z.string() }),
+            mutates: false,
+            handler: async () => 'ran',
+        },
     },
 };
 
@@ -92,6 +98,16 @@ const pluginMethod: PluginManifestMethod = {
     destructive: false,
     idempotent: false,
     input: objectSchema,
+};
+
+const publicPluginMethod: PluginManifestMethod = {
+    ...pluginMethod,
+    id: 'plugins.foo.baz',
+    name: 'plugins.foo.baz',
+    method: 'baz',
+    access: 'public',
+    permission: null,
+    mutates: false,
 };
 
 const binaryMethod: CoreManifestMethod = {
@@ -164,6 +180,17 @@ describe('buildScopedDispatch', () => {
 
         await expect(tool.invoke({})).rejects.toThrow(PermissionDeniedError);
         expect(barHandler).not.toHaveBeenCalled();
+    });
+
+    it('refuses a key the method does not take, naming it in the error message', async () => {
+        // The AI tool loop and MCP hand the model the message alone, so it has
+        // to say what to correct.
+        setupTestConfig({ ...makeTestConfig(), plugins: [fooPlugin] });
+        const tool = scopedTool(publicPluginMethod, role('users:read'));
+
+        await expect(tool.invoke({ id: 'a', extra: 1 })).rejects.toThrow(
+            'Validation failed:\n  extra: Unknown key'
+        );
     });
 
     it('skips exactly what buildDispatch skips, with the same reason', () => {

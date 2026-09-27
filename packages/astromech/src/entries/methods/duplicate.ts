@@ -17,7 +17,7 @@ import { duplicateOverridesSchema, entrySchema } from '../schema';
  */
 export const duplicateEntry = defineServiceMethod({
     summary: 'Copy an entry into a new one.',
-    input: z.object({
+    input: z.strictObject({
         type: z.string(),
         id: z.string(),
         overrides: duplicateOverridesSchema.optional(),

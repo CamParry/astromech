@@ -15,7 +15,7 @@ import { entrySchema } from '../../schema';
  */
 export const createStagedEntry = defineServiceMethod({
     summary: 'Stage a change to an entry.',
-    input: z.object({
+    input: z.strictObject({
         type: z.string(),
         id: z.string(),
         locale: z.string().optional(),

@@ -14,7 +14,7 @@ import { BulkOperationError } from '@/entries/errors';
 import { resolveNodeEnv } from '@/env';
 import { ApiError } from '@/errors/api-error';
 import { PermissionDeniedError } from '@/errors/permission';
-import { ValidationError } from '@/errors/validation';
+import { fieldErrorsFromIssues, ValidationError } from '@/errors/validation';
 
 export type ApiErrorDetails = {
     fields?: Record<string, string[]>;
@@ -113,23 +113,15 @@ function validationFailed(
  *
  * The failure is reported under the names the CALLER sent, not the names of the
  * method's argument object: `bodyKey` names the key the request body was
- * validated under, and is stripped from the front of each field path.
+ * validated under, and is stripped from the front of each field path. An
+ * unknown key is reported under its own path.
  */
 export function fromZodError(
     c: Context,
     err: { issues: readonly ZodIssue[] },
     bodyKey?: string
 ): Response {
-    const fields: Record<string, string[]> = {};
-    for (const issue of err.issues) {
-        const path =
-            bodyKey !== undefined && issue.path[0] === bodyKey
-                ? issue.path.slice(1)
-                : issue.path;
-        const key = path.join('.') || '_';
-        (fields[key] ??= []).push(issue.message);
-    }
-    return validationFailed(c, fields);
+    return validationFailed(c, fieldErrorsFromIssues(err.issues, bodyKey));
 }
 
 /**
@@ -137,13 +129,7 @@ export function fromZodError(
  * pre-shaped, envelope (Zod) errors derive theirs from the issues.
  */
 function fieldErrorsFrom(err: ValidationError): Record<string, string[]> {
-    if (err.fields) return err.fields;
-    const fields: Record<string, string[]> = {};
-    for (const issue of err.issues) {
-        const key = issue.path.join('.') || '_';
-        (fields[key] ??= []).push(issue.message);
-    }
-    return fields;
+    return err.fields ?? fieldErrorsFromIssues(err.issues);
 }
 
 /**

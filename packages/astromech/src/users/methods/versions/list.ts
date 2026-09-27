@@ -13,7 +13,7 @@ import { userRepository } from '../../repository';
  */
 export const listUserVersions = defineServiceMethod({
     summary: 'List the saved versions of one locale of a user’s fields.',
-    input: z.object({ id: z.string(), locale: z.string().optional() }),
+    input: z.strictObject({ id: z.string(), locale: z.string().optional() }),
     output: z.array(versionMetadataSchema),
     access: 'users:read',
     mutates: false,

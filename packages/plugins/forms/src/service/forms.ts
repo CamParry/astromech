@@ -77,7 +77,7 @@ export function createFormsService(
         get: defineServiceMethod({
             access: 'public',
             summary: 'Fetch a published form’s public definition by slug.',
-            input: z.object({ slug: z.string() }),
+            input: z.strictObject({ slug: z.string() }),
             output: publicFormSchema.nullable(),
             mutates: false,
             handler: async (input, ctx): Promise<PublicForm | null> => {
@@ -199,11 +199,12 @@ export function createFormsService(
  * argument object only — `data` is validated at call time against the form's
  * own compiled fields, which no static schema can know.
  */
-const submitInputSchema = z.object({
+const submitInputSchema = z.strictObject({
     slug: z.string(),
     data: z.record(z.string(), z.unknown()),
     token: z.string().optional(),
-    meta: submissionMetaSchema.optional(),
+    // A strict copy, so the output schema still strips a stored `meta`.
+    meta: z.strictObject(submissionMetaSchema.shape).optional(),
 });
 
 const NOT_ACCEPTING = 'This form is not accepting submissions';

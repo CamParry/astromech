@@ -18,7 +18,7 @@ export class ValidationError extends Error {
     public readonly form?: string[] | undefined;
 
     constructor(issues: ZodIssue[], fields?: FieldErrors, form?: string[]) {
-        super('Validation failed');
+        super(describeFailure(fields ?? fieldErrorsFromIssues(issues), form));
         this.name = 'ValidationError';
         this.issues = issues;
         this.fields = fields;
@@ -47,6 +47,48 @@ export class ValidationError extends Error {
         ] as ZodIssue[];
         return new ValidationError(issues, fields, form);
     }
+}
+
+/**
+ * The per-field messages `issues` report, keyed by dotted path, with `_` for
+ * the input as a whole. An unknown key is reported under its own path, so a
+ * caller learns which key to drop. `prefix` is a leading key left off each path.
+ */
+export function fieldErrorsFromIssues(
+    issues: readonly ZodIssue[],
+    prefix?: string
+): FieldErrors {
+    const fields: FieldErrors = {};
+    const add = (path: readonly PropertyKey[], message: string): void => {
+        const reported =
+            prefix !== undefined && path[0] === prefix ? path.slice(1) : path;
+        const key = reported.map(String).join('.') || '_';
+        (fields[key] ??= []).push(message);
+    };
+    for (const issue of issues) {
+        if (issue.code === ZodIssueCode.unrecognized_keys) {
+            for (const key of issue.keys) add([...issue.path, key], 'Unknown key');
+        } else {
+            add(issue.path, issue.message);
+        }
+    }
+    return fields;
+}
+
+/**
+ * The error's message: "Validation failed", then each form message and each
+ * `field: message`, so a caller reading only the message (a tool result, the
+ * CLI, a log) can still correct the call. The HTTP body keeps the bare phrase.
+ */
+function describeFailure(fields: FieldErrors, form: readonly string[] = []): string {
+    const lines = [
+        ...form,
+        ...Object.entries(fields).flatMap(([field, messages]) =>
+            messages.map((message) => `${field}: ${message}`)
+        ),
+    ];
+    if (lines.length === 0) return 'Validation failed';
+    return `Validation failed:\n${lines.map((line) => `  ${line}`).join('\n')}`;
 }
 
 /**

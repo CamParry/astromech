@@ -14,7 +14,7 @@ import { userVersionSchema } from '../../schema';
  */
 export const getUserVersion = defineServiceMethod({
     summary: 'Read one saved version of one locale of a user’s fields.',
-    input: z.object({
+    input: z.strictObject({
         id: z.string(),
         locale: z.string().optional(),
         version: z.number().int(),

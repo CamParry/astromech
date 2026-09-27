@@ -13,7 +13,7 @@ import { mediaRepository } from '../../repository';
  */
 export const listMediaVersions = defineServiceMethod({
     summary: 'List the saved versions of one locale of a media item.',
-    input: z.object({ id: z.string(), locale: z.string().optional() }),
+    input: z.strictObject({ id: z.string(), locale: z.string().optional() }),
     output: z.array(versionMetadataSchema),
     access: 'media:read',
     mutates: false,

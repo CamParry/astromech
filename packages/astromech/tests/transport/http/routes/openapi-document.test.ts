@@ -187,6 +187,33 @@ describe('the emitted document', () => {
     });
 });
 
+describe('the documented request bodies', () => {
+    it('refuse a key the method does not declare, as the server does', () => {
+        const doc = document();
+        const checked: string[] = [];
+        const open: string[] = [];
+        for (const [path, operations] of Object.entries(doc.paths)) {
+            for (const [verb, operation] of Object.entries(operations)) {
+                const schema = operation.requestBody?.content['application/json'].schema;
+                if (schema === undefined) continue;
+                const resolved =
+                    schema.$ref === undefined
+                        ? schema
+                        : component(
+                              doc,
+                              schema.$ref.replace('#/components/schemas/', '')
+                          );
+                if (resolved.type !== 'object') continue;
+                checked.push(`${verb} ${path}`);
+                if (resolved.additionalProperties !== false) open.push(`${verb} ${path}`);
+            }
+        }
+
+        expect(checked.length).toBeGreaterThan(10);
+        expect(open).toEqual([]);
+    });
+});
+
 describe('the documented responses', () => {
     // Every core method declares an output, so every route but a 204 has a body.
     it('gives every route a response body from its method’s output', () => {

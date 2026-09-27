@@ -20,7 +20,7 @@ export const updateEntries = defineServiceMethod({
         'Update an entry. Fields merge: omitted fields keep their current ' +
         'value, and arrays are replaced whole.',
     input: oneOrMany(
-        z.object({
+        z.strictObject({
             type: z.string(),
             ...batchAddress,
             locale: z.string().optional(),

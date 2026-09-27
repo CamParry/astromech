@@ -24,7 +24,7 @@ export const createEntry = defineServiceMethod({
     summary: 'Create an entry.',
     // The titleless payload, since one schema covers every type here; the
     // handler re-parses under the type's own, which is the stricter one.
-    input: z.object({ type: z.string(), data: createEntryPayloadSchema }),
+    input: z.strictObject({ type: z.string(), data: createEntryPayloadSchema }),
     output: entrySchema,
     access: entryGate('create'),
     mutates: true,

@@ -25,7 +25,7 @@ const scheduleOne = fromBatch(scheduleEntryBatch);
 const entryOrEntries = z.union([entrySchema, z.array(entrySchema)]);
 
 /** The `{ type, id | ids, locale }` every status method is addressed by. */
-const localisedBatch = z.object({
+const localisedBatch = z.strictObject({
     type: z.string(),
     ...batchAddress,
     locale: z.string().optional(),

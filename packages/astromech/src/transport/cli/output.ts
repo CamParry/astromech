@@ -43,24 +43,15 @@ export async function parseJsonArg(value: string): Promise<unknown> {
 }
 
 /**
- * The error to print for a failed call. A `ValidationError` prints as its
- * messages rather than "Validation failed": the method's own input parse as its
- * issues, and a field-pipeline or rule failure as each field's messages.
+ * The error to print for a failed call. The method's own input parse prints as
+ * its issues; a field-pipeline or rule failure already lists each field's
+ * messages in its own message, so it prints as it is.
  */
 export function describeCallError(error: unknown): unknown {
-    if (!(error instanceof ValidationError)) return error;
-    if (error.fields === undefined) {
-        return new Error(
-            `Invalid arguments:\n${z.prettifyError(new z.ZodError(error.issues))}`
-        );
-    }
-    const lines = [
-        ...(error.form ?? []),
-        ...Object.entries(error.fields).flatMap(([field, messages]) =>
-            messages.map((message) => `${field}: ${message}`)
-        ),
-    ];
-    return new Error(`Validation failed:\n${lines.map((l) => `  ${l}`).join('\n')}`);
+    if (!(error instanceof ValidationError) || error.fields !== undefined) return error;
+    return new Error(
+        `Invalid arguments:\n${z.prettifyError(new z.ZodError(error.issues))}`
+    );
 }
 
 /** Write a generated file at `out`, relative to the working directory, creating its folder. */

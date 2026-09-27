@@ -17,10 +17,22 @@ server does.
 - [ ] **Plugin routes are not in the OpenAPI document.** `/api/plugins/*` is a
       plain Hono router. Declaring `output` on a plugin method types and parses
       its result but does not document it over HTTP.
-- [ ] **Unknown input keys are dropped without an error.** Input schemas strip
-      unknown keys, so `PUT /entries/:type/:id` with the payload wrapped in
-      `{ data: … }` answers 200 and changes nothing. Decide whether method
-      inputs refuse unknown keys (`z.strictObject`), and where that would
-      break a caller.
+- [x] **Unknown input keys are refused.** Every core and first-party plugin
+      method input is a `z.strictObject`, so an unknown key answers 422 naming
+      it, and a `GET` or `DELETE` ignores query params its method does not declare.
 - [x] **The version tables' unused `status` column is dropped.** A version
       holds content, not publication state (`DECISIONS.md`).
+
+## Found while building
+
+- [ ] **The entry method inputs exist twice.** Each method's runtime schema in
+      `packages/astromech/src/entries/methods/` has a per-type copy in
+      `packages/astromech/src/entries/catalogue.ts`, which the method manifest
+      and the OpenAPI document read. Derive the per-type catalogue from the
+      runtime schemas, so the two cannot disagree.
+- [ ] **A hook's extra key answers the caller's 422.** A `global:beforeUpdate`
+      hook that returns `data` with a key the input does not declare now fails
+      the re-parse in `packages/astromech/src/globals/methods/update.ts`, so
+      the caller gets a 422 for the hook's mistake. No first-party hook does
+      this. Decide whether a hook's output failing the parse is a 500 naming
+      the hook.

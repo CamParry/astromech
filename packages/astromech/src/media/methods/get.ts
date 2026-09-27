@@ -14,7 +14,7 @@ import { mediaSchema } from '../schema';
  */
 export const getMedia = defineServiceMethod({
     summary: 'Read one media item by id.',
-    input: z.object({ id: z.string(), locale: z.string().optional() }),
+    input: z.strictObject({ id: z.string(), locale: z.string().optional() }),
     output: mediaSchema.nullable(),
     access: 'media:read',
     mutates: false,

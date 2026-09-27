@@ -94,6 +94,18 @@ describe('parseQueryParams — search, locale and trashed', () => {
     });
 });
 
+describe('parseQueryParams — params the method does not take', () => {
+    it('ignores them, so a cache buster or a tracking param still answers', async () => {
+        expect((await get('?_=1&utm_source=x')).data).toHaveLength(3);
+    });
+
+    it('ignores `dir` when the method takes no `sort`', async () => {
+        const [first] = (await api.query({ type: 'post' })).data;
+        const res = await app().request(`/entries/post/${first?.id ?? ''}?dir=sideways`);
+        expect(res.status).toBe(200);
+    });
+});
+
 describe('parseQueryParams — the staged and previewToken pair', () => {
     it('accepts staged as "true" or "1"', async () => {
         for (const value of ['true', '1']) {

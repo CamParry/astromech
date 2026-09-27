@@ -9,7 +9,7 @@ import { notificationSchema } from '../schema';
 /** The caller's own undismissed notifications, newest first. */
 export const listNotifications = defineServiceMethod({
     summary: 'List your own notifications, newest first.',
-    input: z.object({}),
+    input: z.strictObject({}),
     output: z.array(notificationSchema),
     access: 'public',
     sessionScoped: true,

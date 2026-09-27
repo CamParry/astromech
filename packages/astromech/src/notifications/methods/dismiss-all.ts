@@ -6,7 +6,7 @@ import { notificationRepository } from '../repository';
 /** Clear the caller's whole inbox, and nobody else's. */
 export const dismissAllNotifications = defineServiceMethod({
     summary: 'Dismiss every one of your own notifications.',
-    input: z.object({}),
+    input: z.strictObject({}),
     output: z.void(),
     access: 'public',
     sessionScoped: true,

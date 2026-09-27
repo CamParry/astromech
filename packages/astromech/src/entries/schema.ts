@@ -31,7 +31,7 @@ export const optionalDate = z
  * is read off. Every key is optional here; a titled type narrows `title` on
  * top of it, which is the one difference between the two.
  */
-export const createEntryPayloadSchema = z.object({
+export const createEntryPayloadSchema = z.strictObject({
     title: z.string().optional(),
     slug: slugField,
     locale: z.string().min(1).optional(),
@@ -40,7 +40,7 @@ export const createEntryPayloadSchema = z.object({
     publishedAt: optionalDate,
 });
 
-const titledCreateEntryPayloadSchema = z.object({
+const titledCreateEntryPayloadSchema = z.strictObject({
     ...createEntryPayloadSchema.shape,
     title: z.string().min(1, 'Title is required'),
 });
@@ -58,7 +58,7 @@ export function createEntrySchema({ titled }: { titled: boolean }) {
  * The update payload a titleless type takes, and the shape `EntryUpdateData`
  * is read off. A titled type narrows `title` on top of it.
  */
-export const updateEntryPayloadSchema = z.object({
+export const updateEntryPayloadSchema = z.strictObject({
     title: z.string().optional(),
     slug: slugField,
     fields: jsonObject.optional(),
@@ -66,7 +66,7 @@ export const updateEntryPayloadSchema = z.object({
     publishedAt: optionalDate,
 });
 
-const titledUpdateEntryPayloadSchema = z.object({
+const titledUpdateEntryPayloadSchema = z.strictObject({
     ...updateEntryPayloadSchema.shape,
     title: z.string().min(1, 'Title cannot be empty').optional(),
 });
@@ -80,7 +80,7 @@ export function updateEntrySchema({ titled }: { titled: boolean }) {
     return schema.openapi('UpdateEntry');
 }
 
-export const scheduleEntrySchema = z.object({
+export const scheduleEntrySchema = z.strictObject({
     publishedAt: z.union([
         z.date(),
         z
@@ -96,7 +96,7 @@ export const scheduleEntrySchema = z.object({
  * two copies of a schema is how the two end up describing different things.
  */
 export const duplicateOverridesSchema = z
-    .object({
+    .strictObject({
         title: z.string().min(1).optional(),
         slug: slugField,
         locale: z.string().min(1).optional(),
@@ -110,7 +110,7 @@ export const duplicateOverridesSchema = z
  * entries accepts, so a JSON caller (MCP, the AI tool-loop) does not write a
  * string into a date column.
  */
-export const previewTokenSchema = z.object({ expiresAt: optionalDate });
+export const previewTokenSchema = z.strictObject({ expiresAt: optionalDate });
 
 /**
  * One locale of an entry of any type, as every read answers it: the public

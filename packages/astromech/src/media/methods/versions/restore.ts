@@ -16,7 +16,7 @@ import { mediaSchema } from '../../schema';
  */
 export const restoreMediaVersion = defineServiceMethod({
     summary: 'Restore one locale of a media item to a saved version.',
-    input: z.object({
+    input: z.strictObject({
         id: z.string(),
         locale: z.string().optional(),
         version: z.number().int(),

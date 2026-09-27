@@ -17,7 +17,7 @@ const restoreOne = fromBatch(restoreEntryBatch);
 export const restoreEntries = defineServiceMethod({
     summary: 'Restore a trashed entry.',
     input: oneOrMany(
-        z.object({
+        z.strictObject({
             type: z.string(),
             ...batchAddress,
         })

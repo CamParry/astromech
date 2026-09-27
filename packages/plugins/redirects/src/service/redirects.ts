@@ -16,7 +16,7 @@ import { createRedirectsRepository, REDIRECT_SORTABLE } from '../repository';
 const DEFAULT_PAGE_SIZE = 20;
 const MAX_PAGE_SIZE = 100;
 
-const idInput = z.object({ id: z.string() });
+const idInput = z.strictObject({ id: z.string() });
 const dataInput = z.record(z.string(), z.unknown());
 
 /** What `lookup` answers for a path with an enabled rule. */
@@ -47,7 +47,7 @@ export const redirectsService = {
     lookup: defineServiceMethod({
         access: 'public',
         summary: 'Look up the redirect target for an incoming path.',
-        input: z.object({ from: z.string() }),
+        input: z.strictObject({ from: z.string() }),
         output: redirectMatchSchema.nullable(),
         mutates: false,
         handler: async ({ from }, ctx): Promise<RedirectMatch | null> => {
@@ -61,7 +61,7 @@ export const redirectsService = {
     list: defineServiceMethod({
         access: { permission: 'read' },
         summary: 'List redirect rules, searched by path, sorted and paged.',
-        input: z.object({
+        input: z.strictObject({
             search: z.string().optional(),
             sort: z
                 .record(z.string(), z.enum(['asc', 'desc']))
@@ -107,7 +107,7 @@ export const redirectsService = {
     create: defineServiceMethod({
         access: { permission: 'create' },
         summary: 'Create a redirect rule.',
-        input: z.object({ data: dataInput }),
+        input: z.strictObject({ data: dataInput }),
         output: redirectSchema,
         mutates: true,
         handler: async ({ data }, ctx): Promise<RedirectRow> => {
@@ -121,7 +121,7 @@ export const redirectsService = {
     update: defineServiceMethod({
         access: { permission: 'update' },
         summary: 'Update a redirect rule. Fields left out keep their values.',
-        input: z.object({ id: z.string(), data: dataInput }),
+        input: z.strictObject({ id: z.string(), data: dataInput }),
         output: redirectSchema.nullable(),
         mutates: true,
         handler: async ({ id, data }, ctx): Promise<RedirectRow | null> => {

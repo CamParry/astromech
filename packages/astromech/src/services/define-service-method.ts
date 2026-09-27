@@ -41,5 +41,5 @@ export function defineServiceMethod(method: object): object {
  * receives `undefined` rather than the empty object.
  */
 export function noInput(): zod.ZodType<undefined> {
-    return zod.object({}).transform(() => undefined);
+    return zod.strictObject({}).transform(() => undefined);
 }

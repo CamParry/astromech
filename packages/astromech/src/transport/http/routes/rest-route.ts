@@ -77,14 +77,15 @@ async function handleRestRoute(
     contract: ServiceMethodContract,
     missingTarget: MissingTarget | undefined
 ): Promise<Response> {
+    const shape = inputShape(contract.input);
     // `dir` is the one query param no method reads, so the wire checks it.
     const dir = c.req.query('dir');
-    if (dir !== undefined && dir !== 'asc' && dir !== 'desc') {
+    if ('sort' in shape && dir !== undefined && dir !== 'asc' && dir !== 'desc') {
         return badRequest(c, '`dir` must be `asc` or `desc`');
     }
     const urlArgs = {
-        ...queryArgs(c, route, contract.input),
-        ...pathArgs(c, contract.input),
+        ...queryArgs(c, route, shape),
+        ...pathArgs(c, shape),
     };
 
     // Checked before the body is read, so a caller that may not call this method
@@ -114,21 +115,23 @@ async function handleRestRoute(
 }
 
 /**
- * The arguments the query string carries: every param on a `GET` or `DELETE`,
- * the row's `queryArgs` on a `POST` or `PUT`. A value the method's input declares
- * a boolean or a number is converted; anything it cannot read is passed on
- * as sent, for the method's parse to refuse.
+ * The arguments the query string carries: on a `GET` or `DELETE`, each param
+ * the method's input declares, and none it does not (a cache buster, a tracking
+ * param); on a `POST` or `PUT`, the row's `queryArgs`. A value the input
+ * declares a boolean or a number is converted; anything it cannot read is
+ * passed on as sent, for the method's parse to refuse.
  */
 function queryArgs(
     c: Context<Env>,
     route: HttpRouteSpec,
-    input: z.ZodType
+    shape: Record<string, z.ZodType>
 ): Record<string, unknown> {
-    const shape = inputShape(input);
     const readsAll = route.verb === 'get' || route.verb === 'delete';
     const names = new Set(route.queryArgs ?? []);
     const query = Object.fromEntries(
-        Object.entries(c.req.query()).filter(([name]) => readsAll || names.has(name))
+        Object.entries(c.req.query()).filter(([name]) =>
+            readsAll ? declaresQueryParam(shape, name) : names.has(name)
+        )
     );
 
     const args = fromQueryParams(query);
@@ -139,11 +142,23 @@ function queryArgs(
 }
 
 /**
+ * Whether the input declares the argument query param `name` travels as:
+ * `where[field]` as `where`, `dir` as `sort`, and any other param as itself.
+ */
+function declaresQueryParam(shape: Record<string, z.ZodType>, name: string): boolean {
+    if (/^where\[[^\]]+\]$/.test(name)) return 'where' in shape;
+    if (name === 'dir') return 'sort' in shape;
+    return name in shape;
+}
+
+/**
  * The arguments the path carries, converted as the query string's are: a
  * version is addressed by its number (`/versions/3`), which arrives as a string.
  */
-function pathArgs(c: Context<Env>, input: z.ZodType): Record<string, unknown> {
-    const shape = inputShape(input);
+function pathArgs(
+    c: Context<Env>,
+    shape: Record<string, z.ZodType>
+): Record<string, unknown> {
     return Object.fromEntries(
         Object.entries(c.req.param()).map(([name, value]) => [
             name,
@@ -443,7 +458,8 @@ function requestBody(
     if (route.client === 'list') onUrl.add('id');
     const rest = Object.entries(input.shape).filter(([name]) => !onUrl.has(name));
     if (rest.length === 0) return undefined;
-    return z.object(Object.fromEntries(rest));
+    // Strict, as the input is: the body refuses a key it does not declare.
+    return z.strictObject(Object.fromEntries(rest));
 }
 
 /**

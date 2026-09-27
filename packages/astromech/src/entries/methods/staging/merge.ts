@@ -21,7 +21,7 @@ import { entrySchema } from '../../schema';
  */
 export const mergeStagedEntry = defineServiceMethod({
     summary: 'Merge the staged change into an entry.',
-    input: z.object({
+    input: z.strictObject({
         type: z.string(),
         id: z.string(),
         locale: z.string().optional(),

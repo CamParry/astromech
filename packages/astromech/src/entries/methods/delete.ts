@@ -15,7 +15,7 @@ const deleteOne = fromBatch(deleteEntryBatch);
 export const deleteEntries = defineServiceMethod({
     summary: 'Delete an entry.',
     input: oneOrMany(
-        z.object({
+        z.strictObject({
             type: z.string(),
             ...batchAddress,
         })

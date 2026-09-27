@@ -9,7 +9,7 @@ import { jsonObject, unparsedJsonObject } from '@/services/json';
  * global has no title or slug.
  */
 export const updateGlobalSchema = z
-    .object({
+    .strictObject({
         fields: jsonObject.optional(),
         status: statusSchema.optional(),
         publishedAt: optionalDate,
@@ -29,7 +29,7 @@ const key = z.string();
 const locale = z.string().optional();
 
 /** A content-level method addresses one locale of the global. */
-export const localised = z.object({ key, locale });
+export const localised = z.strictObject({ key, locale });
 
 /** A version method addresses one version of one locale, by its number. */
 export const versionAddress = localised.extend({ version: z.number().int() });

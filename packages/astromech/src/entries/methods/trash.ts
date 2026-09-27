@@ -18,7 +18,7 @@ const trashOne = fromBatch(trashEntryBatch);
 export const trashEntries = defineServiceMethod({
     summary: 'Move an entry to the trash (reversible).',
     input: oneOrMany(
-        z.object({
+        z.strictObject({
             type: z.string(),
             ...batchAddress,
         })
@@ -42,7 +42,7 @@ export const trashEntries = defineServiceMethod({
  */
 export const emptyTrash = defineServiceMethod({
     summary: 'Permanently delete every trashed entry of one type.',
-    input: z.object({ type: z.string() }),
+    input: z.strictObject({ type: z.string() }),
     output: z.void(),
     access: entryGate('delete'),
     requires: 'trash',

@@ -131,7 +131,7 @@ export const seoService = {
     getMeta: defineServiceMethod({
         access: 'public',
         summary: 'Resolve the SEO meta tags for one entry by type + slug.',
-        input: z.object({ type: z.string(), slug: z.string() }),
+        input: z.strictObject({ type: z.string(), slug: z.string() }),
         output: seoResolvedMetaSchema.nullable(),
         mutates: false,
         handler: async (input, ctx): Promise<SeoResolvedMeta | null> => {

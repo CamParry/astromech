@@ -16,7 +16,7 @@ import { entryVersionSchema } from '../../schema';
  */
 export const getEntryVersion = defineServiceMethod({
     summary: 'Read one version of an entry.',
-    input: z.object({
+    input: z.strictObject({
         type: z.string(),
         id: z.string(),
         locale: z.string().optional(),

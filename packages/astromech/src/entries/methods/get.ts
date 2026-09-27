@@ -20,7 +20,7 @@ import { entrySchema } from '../schema';
  */
 export const getEntry = defineServiceMethod({
     summary: 'Read an entry.',
-    input: z.object({
+    input: z.strictObject({
         type: z.string(),
         id: z.string(),
         locale: z.string().optional(),

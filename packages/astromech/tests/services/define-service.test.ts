@@ -160,20 +160,21 @@ describe('defineService input validation', () => {
         expect(await service.run(undefined)).toBe('undefined');
     });
 
-    it('strips a key the schema does not declare', async () => {
+    it('refuses a key a strict input does not declare, naming it', () => {
         const service = bindOne<{ id: string }, Record<string, unknown>>(
             defineServiceMethod({
                 access: 'public',
-                input: z.object({ id: z.string() }),
+                input: z.strictObject({ id: z.string() }),
                 output: z.record(z.string(), z.unknown()),
                 mutates: false,
                 handler: async (input): Promise<Record<string, unknown>> => input,
             })
         );
 
-        expect(
-            await service.run({ id: 'a', smuggled: true } as unknown as { id: string })
-        ).toEqual({ id: 'a' });
+        const call = () =>
+            service.run({ id: 'a', smuggled: true } as unknown as { id: string });
+        expect(call).toThrow(ValidationError);
+        expect(call).toThrow('smuggled: Unknown key');
     });
 });
 

@@ -6,7 +6,7 @@ import { jsonObject, unparsedJsonObject } from '@/services/json';
 import { MEDIA_MIME_TYPE_FILTERS } from '@/types/query';
 
 export const updateMediaSchema = z
-    .object({
+    .strictObject({
         alt: z.string().nullable().optional(),
         title: z.string().nullable().optional(),
         caption: z.string().nullable().optional(),
@@ -15,7 +15,7 @@ export const updateMediaSchema = z
     .openapi('UpdateMedia');
 
 /** The `where` filter a media query accepts: one mime-type class. */
-const where = z.object({
+const where = z.strictObject({
     mimeType: z.enum(MEDIA_MIME_TYPE_FILTERS).optional(),
 });
 
@@ -24,7 +24,7 @@ const where = z.object({
  * the HTTP route reads these off the query string, so this exists purely so the
  * method manifest can describe how the method is called.
  */
-export const mediaQuerySchema = z.object({
+export const mediaQuerySchema = z.strictObject({
     locale: z.string().optional(),
     search: z.string().optional(),
     where: where.optional(),

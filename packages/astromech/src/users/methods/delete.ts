@@ -11,7 +11,7 @@ import { userRepository } from '../repository';
  */
 export const deleteUser = defineServiceMethod({
     summary: 'Delete a CMS user.',
-    input: z.object({ id: z.string() }),
+    input: z.strictObject({ id: z.string() }),
     output: z.void(),
     access: 'users:delete',
     mutates: true,

@@ -254,6 +254,26 @@ describe('PUT /entries/:type/:id', () => {
         expect(body.error.details.fields['title']).toEqual(['Title cannot be empty']);
     });
 
+    it('422s a payload wrapped in `{ data }`, naming the key, and changes nothing', async () => {
+        const created = await api.create({
+            type: 'post',
+            data: { title: 'Before', slug: 'b3' },
+        });
+        const res = await app().request(`/entries/post/${created.id}`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ data: { title: 'After' } }),
+        });
+        expect(res.status).toBe(422);
+        const body = (await res.json()) as {
+            error: { code: string; details: { fields: Record<string, string[]> } };
+        };
+        expect(body.error.code).toBe('VALIDATION_FAILED');
+        expect(body.error.details.fields).toEqual({ data: ['Unknown key'] });
+        const stored = await api.get({ type: 'post', id: created.id, full: true });
+        expect(stored?.title).toBe('Before');
+    });
+
     it('409s a status on a type without the statuses capability', async () => {
         const created = await api.create({
             type: 'snippet',

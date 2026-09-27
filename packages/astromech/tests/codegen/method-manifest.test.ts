@@ -199,6 +199,16 @@ describe('generateMethodManifest — core methods', () => {
         }
     });
 
+    it('should mark every core and entry input as refusing unknown keys', () => {
+        const { methods } = parseManifest([]);
+        const inputs = methods.filter((m) => m['source'] !== 'plugin');
+        expect(inputs.length).toBeGreaterThan(40);
+        for (const m of inputs) {
+            const input = m['input'] as { additionalProperties?: unknown };
+            expect(input.additionalProperties, String(m['id'])).toBe(false);
+        }
+    });
+
     it('should derive names from the catalogue key, never "(unnamed)"', () => {
         const { methods } = parseManifest();
         expect(methods.map((m) => m['name'])).not.toContain('(unnamed)');

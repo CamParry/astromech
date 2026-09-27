@@ -106,7 +106,7 @@ export function createMenusService(configs: MenuConfig[]) {
         get: defineServiceMethod({
             access: 'public',
             summary: 'Resolve a configured menu into a nested tree of menu items.',
-            input: z.object({ key: z.string(), locale: z.string().optional() }),
+            input: z.strictObject({ key: z.string(), locale: z.string().optional() }),
             output: z.array(menuItemSchema).nullable(),
             mutates: false,
             handler: async (input, ctx): Promise<MenuItem[] | null> => {

@@ -9,17 +9,21 @@ import type { FakeApprovals } from '../loop/fake-approvals';
 import type { FakeSessions } from '../sessions/fake-sessions';
 import type { ToolDefinition } from 'astromech';
 import type * as Astromech from 'astromech';
+import { methodInputs, openInputObjects } from '@tests/strict-input';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { createSessionsService } from '../../src/service/sessions';
 import { approvalRow, fakeApprovals } from '../loop/fake-approvals';
 import { fakeSessions } from '../sessions/fake-sessions';
 
-vi.mock('astromech', async (importOriginal) => ({
-    // The real Zod, so each method's output schema can be parsed here.
-    z: (await importOriginal<typeof Astromech>()).z,
-    defineServiceMethod: (method: unknown) => method,
-    noInput: () => undefined,
-}));
+vi.mock('astromech', async (importOriginal) => {
+    const astromech = await importOriginal<typeof Astromech>();
+    // The real Zod and `noInput`, so each method's schemas can be read here.
+    return {
+        z: astromech.z,
+        defineServiceMethod: (method: unknown) => method,
+        noInput: astromech.noInput,
+    };
+});
 
 vi.mock('../../src/sessions/repository', () => ({
     createSessionsRepository: () => sessions.storage,
@@ -174,5 +178,14 @@ describe('clearSession', () => {
 
     it('refuses a caller with no identity', async () => {
         await expect(call('clearSession', null)).rejects.toThrow('Sign in');
+    });
+});
+
+describe('method inputs', () => {
+    it("refuse unknown keys, as core's do", () => {
+        const inputs = methodInputs(createSessionsService(OPTIONS));
+
+        expect(Object.keys(inputs).length).toBeGreaterThan(0);
+        expect(openInputObjects(inputs)).toEqual([]);
     });
 });

@@ -14,7 +14,7 @@ import { userSchema } from '../schema';
  */
 export const getUser = defineServiceMethod({
     summary: 'Read one user by id.',
-    input: z.object({ id: z.string(), locale: z.string().optional() }),
+    input: z.strictObject({ id: z.string(), locale: z.string().optional() }),
     output: userSchema.nullable(),
     access: 'users:read',
     mutates: false,

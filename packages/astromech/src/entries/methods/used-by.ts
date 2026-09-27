@@ -12,7 +12,7 @@ import { getEntryResource } from '../internal/read-entry';
  */
 export const listEntryUsage = defineServiceMethod({
     summary: 'List the entries, globals, users and media items that reference an entry.',
-    input: z.object({ type: z.string(), id: z.string() }),
+    input: z.strictObject({ type: z.string(), id: z.string() }),
     output: z.array(usageSchema),
     access: entryGate('read'),
     mutates: false,

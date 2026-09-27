@@ -129,11 +129,12 @@ describe('the scoped handle', () => {
         expect(await tool('count', bob).invoke({})).toBe(1);
     });
 
-    it('ignores a caller-supplied userId rather than trusting it', async () => {
+    it('refuses a caller-supplied userId rather than trusting it', async () => {
         await notify({ target: { user: alice }, type: 'info', title: 'a', message: 'm' });
 
-        const rows = await tool('list', bob).invoke({ userId: alice });
-        expect(rows).toEqual([]);
+        await expect(tool('list', bob).invoke({ userId: alice })).rejects.toThrow(
+            'userId: Unknown key'
+        );
     });
 
     it('dismisses only the caller’s own row', async () => {

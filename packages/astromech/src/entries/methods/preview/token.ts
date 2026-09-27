@@ -21,7 +21,7 @@ export const DEFAULT_PREVIEW_TOKEN_TTL_MS = 7 * 24 * 60 * 60 * 1000;
 export const issuePreviewToken = defineServiceMethod({
     summary: 'Issue a preview token for an entry.',
     input: z
-        .object({ type: z.string(), id: z.string() })
+        .strictObject({ type: z.string(), id: z.string() })
         .extend(previewTokenSchema.shape),
     output: z.object({ token: z.string() }),
     access: entryGate('update'),
@@ -58,7 +58,7 @@ export const issuePreviewToken = defineServiceMethod({
  */
 export const revokePreviewToken = defineServiceMethod({
     summary: 'Revoke the preview token of an entry.',
-    input: z.object({ type: z.string(), id: z.string() }),
+    input: z.strictObject({ type: z.string(), id: z.string() }),
     output: z.void(),
     access: entryGate('update'),
     requires: 'staging',

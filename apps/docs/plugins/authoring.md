@@ -1301,9 +1301,12 @@ export const ratingService = {
 Zod schema for the whole argument object (`noInput()` for a method that takes
 none). It is parsed before your handler runs, wherever the call came from, so
 the handler receives a validated value and must not re-parse it; a bad call
-throws a validation error in process and answers `422` over HTTP. `mutates`
-says whether the call changes stored state, with the optional `destructive` and
-`idempotent` refining it.
+throws a validation error in process and answers `422` over HTTP. Build each
+object in it with `z.strictObject`, as core and the first-party plugins do, so a
+key the caller did not mean to send is refused and named rather than dropped; a
+`z.record`, such as a map of field values, stays open. `mutates` says whether
+the call changes stored state, with the optional `destructive` and `idempotent`
+refining it.
 
 Both input types come from that schema, so the handler's parameter needs no
 annotation: it is the schema's parsed shape, with defaults applied and strings

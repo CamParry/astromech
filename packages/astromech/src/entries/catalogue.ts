@@ -151,13 +151,13 @@ function entryInputSchemas(
 ): Record<EntryMethodName, z.ZodType> {
     const type = z.literal(typeId);
     const id = z.string();
-    const canonical = z.object({ type, id });
+    const canonical = z.strictObject({ type, id });
     /** A content-level method addresses one locale of the entry. */
     const locale = z.string().optional();
-    const localised = z.object({ type, id, locale });
+    const localised = z.strictObject({ type, id, locale });
 
     return {
-        query: z.object({
+        query: z.strictObject({
             type,
             search: z.string().optional(),
             where: z.record(z.string(), z.unknown()).optional(),
@@ -170,7 +170,7 @@ function entryInputSchemas(
             previewToken: z.string().optional(),
             staged: z.boolean().optional(),
         }),
-        get: z.object({
+        get: z.strictObject({
             type,
             id,
             locale: z.string().optional(),
@@ -178,9 +178,9 @@ function entryInputSchemas(
             previewToken: z.string().optional(),
             staged: z.boolean().optional(),
         }),
-        create: z.object({ type, data: createEntrySchema({ titled }) }),
+        create: z.strictObject({ type, data: createEntrySchema({ titled }) }),
         update: oneOrMany(
-            z.object({
+            z.strictObject({
                 type,
                 ...batchAddress,
                 locale,
@@ -188,22 +188,24 @@ function entryInputSchemas(
                 data: updateEntrySchema({ titled }),
             })
         ),
-        delete: oneOrMany(z.object({ type, ...batchAddress })),
-        duplicate: z.object({
+        delete: oneOrMany(z.strictObject({ type, ...batchAddress })),
+        duplicate: z.strictObject({
             type,
             id,
             overrides: duplicateOverridesSchema.optional(),
         }),
-        trash: oneOrMany(z.object({ type, ...batchAddress })),
-        restore: oneOrMany(z.object({ type, ...batchAddress })),
-        emptyTrash: z.object({ type }),
+        trash: oneOrMany(z.strictObject({ type, ...batchAddress })),
+        restore: oneOrMany(z.strictObject({ type, ...batchAddress })),
+        emptyTrash: z.strictObject({ type }),
         versions: localised,
         getVersion: localised.extend({ version: z.number().int() }),
         restoreVersion: localised.extend({ version: z.number().int() }),
-        publish: oneOrMany(z.object({ type, ...batchAddress, locale })),
-        unpublish: oneOrMany(z.object({ type, ...batchAddress, locale })),
+        publish: oneOrMany(z.strictObject({ type, ...batchAddress, locale })),
+        unpublish: oneOrMany(z.strictObject({ type, ...batchAddress, locale })),
         schedule: oneOrMany(
-            z.object({ type, ...batchAddress, locale }).extend(scheduleEntrySchema.shape)
+            z
+                .strictObject({ type, ...batchAddress, locale })
+                .extend(scheduleEntrySchema.shape)
         ),
         usedBy: canonical,
         createStaged: localised,
@@ -212,7 +214,7 @@ function entryInputSchemas(
         deleteStaged: localised,
         // `previewTokenSchema` coerces an ISO string, which is what a JSON
         // caller sends and what the REST route has always accepted.
-        issuePreviewToken: z.object({ type, id }).extend(previewTokenSchema.shape),
+        issuePreviewToken: z.strictObject({ type, id }).extend(previewTokenSchema.shape),
         revokePreviewToken: canonical,
     };
 }

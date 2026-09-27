@@ -13,7 +13,7 @@ import { variantPrefix } from '../serving/image/url';
 /** Swap a media item's file, keeping its id, URL shape and metadata row. */
 export const replaceMedia = defineServiceMethod({
     summary: 'Replace a media item’s file, keeping its id, URL and metadata.',
-    input: z.object({ id: z.string(), file: z.instanceof(File) }),
+    input: z.strictObject({ id: z.string(), file: z.instanceof(File) }),
     binaryInput: true,
     output: mediaSchema,
     access: 'media:upload',

@@ -25,7 +25,7 @@ export const updateUser = defineServiceMethod({
     summary:
         'Update a user’s profile or role. Fields merge: omitted fields keep ' +
         'their current value, and arrays are replaced whole.',
-    input: z.object({
+    input: z.strictObject({
         id: z.string(),
         locale: z.string().optional(),
         data: updateUserSchema,

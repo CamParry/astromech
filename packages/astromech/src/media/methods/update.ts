@@ -22,7 +22,7 @@ export const updateMedia = defineServiceMethod({
     summary:
         'Update a media item’s metadata. Fields merge: omitted fields keep ' +
         'their current value, and arrays are replaced whole.',
-    input: z.object({
+    input: z.strictObject({
         id: z.string(),
         locale: z.string().optional(),
         data: updateMediaSchema,

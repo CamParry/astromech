@@ -44,12 +44,14 @@ const direction = z.enum(['asc', 'desc']);
 export const listSubmissions = defineServiceMethod({
     access: { permission: 'read' },
     summary: 'List stored submissions, newest first, one page at a time.',
-    input: z.object({
+    input: z.strictObject({
         search: z.string().optional(),
         // Strict, so a sort on any other column is refused rather than ignored.
         sort: z
-            .object({ formSlug: direction.optional(), submittedAt: direction.optional() })
-            .strict()
+            .strictObject({
+                formSlug: direction.optional(),
+                submittedAt: direction.optional(),
+            })
             .optional(),
         page: z.number().int().min(1).default(1),
         limit: z.number().int().min(1).max(100).default(20),
@@ -80,7 +82,7 @@ export const listSubmissions = defineServiceMethod({
 export const getSubmission = defineServiceMethod({
     access: { permission: 'read' },
     summary: 'Fetch one stored submission by id.',
-    input: z.object({ id: z.string() }),
+    input: z.strictObject({ id: z.string() }),
     output: submissionSchema.nullable(),
     mutates: false,
     handler: async (input, ctx): Promise<SubmissionRow | null> => {
@@ -91,7 +93,7 @@ export const getSubmission = defineServiceMethod({
 export const deleteSubmission = defineServiceMethod({
     access: { permission: 'delete' },
     summary: 'Delete a stored submission.',
-    input: z.object({ id: z.string() }),
+    input: z.strictObject({ id: z.string() }),
     output: deleteSubmissionResultSchema,
     mutates: true,
     destructive: true,

@@ -14,7 +14,7 @@ import { mediaVersionSchema } from '../../schema';
  */
 export const getMediaVersion = defineServiceMethod({
     summary: 'Read one saved version of one locale of a media item.',
-    input: z.object({
+    input: z.strictObject({
         id: z.string(),
         locale: z.string().optional(),
         version: z.number().int(),

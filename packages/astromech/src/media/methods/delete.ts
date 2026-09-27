@@ -10,7 +10,7 @@ import { variantPrefix } from '../serving/image/url';
 /** Delete a media row along with its original bytes and every derived variant. */
 export const deleteMedia = defineServiceMethod({
     summary: 'Delete a media item.',
-    input: z.object({ id: z.string() }),
+    input: z.strictObject({ id: z.string() }),
     output: z.void(),
     access: 'media:delete',
     mutates: true,

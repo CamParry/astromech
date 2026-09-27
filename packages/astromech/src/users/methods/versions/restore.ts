@@ -16,7 +16,7 @@ import { userSchema } from '../../schema';
  */
 export const restoreUserVersion = defineServiceMethod({
     summary: 'Restore one locale of a user’s fields to a saved version.',
-    input: z.object({
+    input: z.strictObject({
         id: z.string(),
         locale: z.string().optional(),
         version: z.number().int(),

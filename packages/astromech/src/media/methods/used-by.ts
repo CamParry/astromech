@@ -13,7 +13,7 @@ import { mediaRepository } from '../repository';
 export const listMediaUsage = defineServiceMethod({
     summary:
         'List the entries, globals, users and media items that reference a media item.',
-    input: z.object({ id: z.string() }),
+    input: z.strictObject({ id: z.string() }),
     output: z.array(usageSchema),
     access: 'media:read',
     mutates: false,
