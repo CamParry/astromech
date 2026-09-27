@@ -1,10 +1,4 @@
-/**
- * The values a global write stores, through the shared `prepareFields` path: a
- * first write to a locale inherits the global's shared fields, and any other
- * merges its patch over the current row.
- */
-
-import type { GlobalRepository, GlobalResource } from '../repository';
+import type { GlobalResource } from '../repository';
 import type {
     EntryStatus,
     JsonObject,
@@ -14,17 +8,14 @@ import type {
 } from '@/types/index';
 import { prepareFields } from '@/content/prepare-fields';
 import { inheritSharedFields } from '@/content/translatable';
+import { globalRepository } from '../repository';
 
 /**
- * Turns what a caller sent into the values that go in the row. Throws a 422 when
- * a field or the global's own validator reports.
- *
- * `current` absent means this locale has no row yet: the write is a create, and
- * a translatable global's shared (`translatable: false`) fields are inherited
- * from its default-locale row rather than taken from the patch.
+ * The fields one locale of a global stores, through `prepareFields`: the patch
+ * merged over `current`, or with no `current`, a new row that inherits a
+ * translatable global's shared fields from the default locale. Throws a 422.
  */
-export async function toStoredFields(input: {
-    repository: GlobalRepository;
+export async function prepareGlobalFields(input: {
     global: ResolvedGlobal;
     /** The global's row id, or null when nothing has been saved at all. */
     id: string | null;
@@ -37,16 +28,17 @@ export async function toStoredFields(input: {
     user: User | null;
     config: ResolvedConfig;
 }): Promise<JsonObject> {
-    const { global, current, patch, config } = input;
+    const { global, id, locale, patch, current, status, user, config } = input;
     const write = {
         resource: 'global' as const,
         config,
         target: global.id,
-        user: input.user,
-        status: input.status,
+        user,
+        status,
         // One row per locale, so there is nothing else to be unique among.
         scan: async () => [],
     };
+
     return current
         ? prepareFields({
               ...write,
@@ -62,10 +54,10 @@ export async function toStoredFields(input: {
               inherit: (values) =>
                   inheritSharedFields('global', config, {
                       target: global.id,
-                      repository: input.repository,
+                      repository: globalRepository,
                       values,
-                      id: input.id ?? undefined,
-                      locale: input.locale,
+                      id: id ?? undefined,
+                      locale,
                   }),
           });
 }

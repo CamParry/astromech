@@ -22,7 +22,7 @@ import { syncGlobalRelationships } from '../relationships';
 import { globalRepository } from '../repository';
 import { getDeclaredGlobal } from '../resolve-global';
 import { globalSchema, updateGlobalSchema } from '../schema';
-import { toStoredFields } from './stored-fields';
+import { prepareGlobalFields } from './prepare-fields';
 
 /**
  * Writes one locale of one global, firing the global update hooks around it.
@@ -152,7 +152,6 @@ async function fieldsToStore(params: {
 }): Promise<JsonObject | undefined> {
     const { global, id, locale, current, data, ctx } = params;
     const write = {
-        repository: globalRepository,
         global,
         id,
         locale,
@@ -161,7 +160,7 @@ async function fieldsToStore(params: {
         config: ctx.config,
     };
     if (data.fields !== undefined || current === null) {
-        return toStoredFields({
+        return prepareGlobalFields({
             ...write,
             patch: data.fields ?? {},
             // A write that changes no status keeps the row's own, so editing a
@@ -176,7 +175,8 @@ async function fieldsToStore(params: {
             hasStatuses: global.capabilities.statuses,
         }) === 'complete';
     // The parse throws the 422; its values are not written.
-    if (completes) await toStoredFields({ ...write, patch: {}, status: data.status });
+    if (completes)
+        await prepareGlobalFields({ ...write, patch: {}, status: data.status });
     return undefined;
 }
 

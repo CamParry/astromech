@@ -5,7 +5,7 @@ import { transaction } from '@/database/transaction';
 import { defineServiceMethod } from '@/services/define-service-method';
 import { globalAccess } from '../../internal/access';
 import { getCanonicalGlobal } from '../../internal/canonical-global';
-import { toStoredFields } from '../../internal/stored-fields';
+import { prepareGlobalFields } from '../../internal/prepare-fields';
 import { syncGlobalRelationships } from '../../relationships';
 import { globalSchema, localised } from '../../schema';
 
@@ -43,8 +43,7 @@ export const mergeStagedGlobal = defineServiceMethod({
         // the canonical's own status decides whether completeness is enforced.
         // Run it BEFORE the transaction opens so a rejection costs no backup
         // version.
-        const fields = await toStoredFields({
-            repository,
+        const fields = await prepareGlobalFields({
             global,
             id,
             locale,
