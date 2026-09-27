@@ -14,9 +14,8 @@ import { changesVersionedContent, snapshotVersion } from '@/content/versions';
 import { patchedFieldNames } from '@/content/write-fields';
 import { transaction } from '@/database/transaction';
 import { ResourceNotFoundError, ResourceValidationError } from '@/errors/resource';
-import { parseInput } from '@/errors/validation';
 import { defineServiceMethod } from '@/services/define-service-method';
-import { parseOutput } from '@/services/parse-method-output';
+import { parseHookOutput, parseOutput } from '@/services/parse-method-output';
 import { gate } from '../internal/access';
 import { getDeclaredGlobal } from '../internal/global';
 import { syncGlobalRelationships } from '../internal/relationships';
@@ -95,10 +94,13 @@ export const updateGlobal = defineServiceMethod({
             data: params.data,
             user,
         });
-        // Parsed here, not on the way in: the method's own input schema already
-        // checked what the caller sent, and a hook may have replaced `data`
-        // wholesale with something it did not.
-        const data = parseInput(updateGlobalSchema, context.data);
+        // The method's input already parsed the caller's `data` with this same
+        // schema, so a failure here is the hook's, which replaced it.
+        const data = parseHookOutput(
+            updateGlobalSchema,
+            context.data,
+            'global:beforeUpdate'
+        );
         const patch = data.fields ?? {};
         assertWritableStatus(global, data, staged, ctx.method.name);
 

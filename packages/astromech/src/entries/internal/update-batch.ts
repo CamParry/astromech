@@ -16,7 +16,7 @@ import { patchedFieldNames } from '@/content/write-fields';
 import { resolveEntryType } from '@/entries/entry-types';
 import { ResourceNotFoundError } from '@/errors/resource';
 import { parseInput } from '@/errors/validation';
-import { parseOutput } from '@/services/parse-method-output';
+import { parseHookOutput, parseOutput } from '@/services/parse-method-output';
 import { UnknownEntryTypeError } from '../errors';
 import { entryRepository } from '../repository/entries-table';
 import { createEntrySchema, entrySchema, updateEntrySchema } from '../schema';
@@ -59,10 +59,14 @@ export async function updateEntryBatch(
         throw new UnknownEntryTypeError(params.type);
     }
 
-    assertWritableFields(entryType, params.data);
+    // The caller's patch under the type's own schema, before a hook sees it, so
+    // a failure here is the caller's 422 and one after the hooks is the hook's.
+    const schema = updateEntrySchema({ titled: entryType.titleField !== false });
+    const data = parseInput(schema, params.data);
+    assertWritableFields(entryType, data);
 
     // A single slug across many ids would violate (type, locale) uniqueness.
-    if (params.ids.length > 1 && params.data.slug !== undefined) {
+    if (params.ids.length > 1 && data.slug !== undefined) {
         throw new Error(
             'Bulk update cannot set `slug`: a single value across multiple ids ' +
                 'would violate (type, locale) slug uniqueness. Update slugs individually.'
@@ -101,7 +105,7 @@ export async function updateEntryBatch(
                           entryType,
                           id,
                           locale,
-                          data: params.data,
+                          data,
                           user,
                       }),
                   }
@@ -117,7 +121,7 @@ export async function updateEntryBatch(
                     plan.record,
                     'The entry in entry:beforeUpdate'
                 ),
-                data: params.data,
+                data,
                 user,
             });
         } else {
@@ -129,13 +133,17 @@ export async function updateEntryBatch(
         }
     }
 
+    // A handler that changes the `data` object in place changes what is written,
+    // so it is parsed again as the hooks leave it.
+    const written = parseHookOutput(schema, data, 'entry:beforeUpdate');
+
     const results = await writeBatch(plans, (plan) =>
         plan.kind === 'update'
             ? updateOne({
                   config: ctx.config,
                   entryType,
                   currentEntry: plan.record,
-                  data: params.data,
+                  data: written,
                   user,
                   staged,
               })
@@ -158,7 +166,7 @@ export async function updateEntryBatch(
                     plan.record,
                     'The entry in entry:afterUpdate'
                 ),
-                data: params.data,
+                data: written,
                 user,
             });
         } else {
@@ -190,8 +198,8 @@ type UpdatePlan =
     | { kind: 'translate'; id: string; write: TranslationWrite };
 
 /**
- * Updates one entry: validates the patch, versions the state it replaces,
- * writes the row, then re-indexes relationships and propagates shared fields.
+ * Updates one entry with a parsed patch: versions the state it replaces, writes
+ * the row, then re-indexes relationships and propagates shared fields.
  */
 async function updateOne(params: {
     config: ResolvedConfig;
@@ -204,10 +212,7 @@ async function updateOne(params: {
 }): Promise<EntryResource> {
     const { config, entryType, currentEntry, data, user, staged } = params;
 
-    const titled = entryType.titleField !== false;
-    const validated = parseInput(updateEntrySchema({ titled }), data);
-
-    const patch = validated.fields;
+    const patch = data.fields;
     const patched = patch ? patchedFieldNames(patch) : [];
     const fields = patch
         ? await toStoredFields({
@@ -216,7 +221,7 @@ async function updateOne(params: {
               entryType,
               currentEntry,
               patch,
-              status: validated.status,
+              status: data.status,
               user,
           })
         : undefined;
@@ -225,8 +230,8 @@ async function updateOne(params: {
     if (
         entryType.capabilities.versioning &&
         changesVersionedContent(RESOURCE_SPECS.entry, currentEntry, {
-            title: validated.title,
-            slug: validated.slug,
+            title: data.title,
+            slug: data.slug,
             fields,
         })
     ) {
@@ -239,21 +244,21 @@ async function updateOne(params: {
     }
 
     const publishedAt =
-        validated.status === 'published' && !currentEntry.publishedAt
+        data.status === 'published' && !currentEntry.publishedAt
             ? new Date()
-            : validated.publishedAt;
+            : data.publishedAt;
     const slug = await uniqueSlugIfChanged({
         type: entryType.id,
         entry: currentEntry,
-        slug: validated.slug,
+        slug: data.slug,
     });
 
     const ref = { id: currentEntry.id, locale: currentEntry.locale };
     const write = {
-        title: validated.title,
+        title: data.title,
         slug,
         fields,
-        status: validated.status,
+        status: data.status,
         publishedAt,
         // Moves with `updatedAt`, not with the version snapshot. A publish is a
         // write to the row, so it stamps; whether it also takes a version is

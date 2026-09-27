@@ -1,16 +1,20 @@
 /**
  * `parseMethodOutput` applies a method's output schema in three tiers: unknown
  * keys are stripped, a key with a fallback that fails takes it and is logged
- * once, and any other failure throws `OutputValidationError`.
+ * once, and any other failure throws `OutputValidationError`. `parseHookOutput`
+ * blames a failure on the hook that produced the value.
  */
 
 import type { MockInstance } from 'vitest';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { z } from 'zod';
-import { OutputValidationError } from '@/errors/output-validation';
+import {
+    HookOutputValidationError,
+    OutputValidationError,
+} from '@/errors/output-validation';
 import { withFallback } from '@/services/fallback';
 import { unparsedJsonObject } from '@/services/json';
-import { parseMethodOutput } from '@/services/parse-method-output';
+import { parseHookOutput, parseMethodOutput } from '@/services/parse-method-output';
 
 const thing = z.object({
     id: z.string(),
@@ -170,5 +174,25 @@ describe('parseMethodOutput', () => {
         parseMethodOutput(method, resource());
 
         expect(logged).not.toHaveBeenCalled();
+    });
+});
+
+describe('parseHookOutput', () => {
+    const patch = z.strictObject({ title: z.string().optional() });
+
+    it('answers the parsed data when the hook left it valid', () => {
+        expect(parseHookOutput(patch, { title: 'Kept' }, 'entry:beforeUpdate')).toEqual({
+            title: 'Kept',
+        });
+        expect(logged).not.toHaveBeenCalled();
+    });
+
+    it('throws naming the hook alone, and logs the issues', () => {
+        const parse = (): unknown =>
+            parseHookOutput(patch, { title: 'Kept', extra: 1 }, 'entry:beforeUpdate');
+
+        expect(parse).toThrow(HookOutputValidationError);
+        expect(parse).toThrow(/^entry:beforeUpdate returned data that fails its schema$/);
+        expect(logLines().join('\n')).toContain('extra');
     });
 });

@@ -1,7 +1,7 @@
 /**
- * The error for a result its output schema refuses: a stored value a required
- * key cannot do without. The server's fault, not the caller's, so it is no
- * `ApiError`: HTTP answers it with a generic 500 and logs the detail.
+ * The errors for a value our own code produced that its schema refuses: a
+ * method's result, or what a hook handed back. The server's fault, not the
+ * caller's, so neither is an `ApiError`: HTTP answers a 500 and logs the detail.
  */
 
 import type { ZodError } from 'zod';
@@ -24,6 +24,24 @@ export class OutputValidationError extends AstromechError {
         );
         this.name = 'OutputValidationError';
         this.source = source;
+        this.issues = error.issues;
+    }
+}
+
+/**
+ * Thrown when the data a hook leaves for the write fails the schema the call's
+ * own input already passed, so the hook, not the caller, broke it. The message
+ * names the hook and nothing of the data, since HTTP may show it.
+ */
+export class HookOutputValidationError extends AstromechError {
+    /** The hook event, e.g. `global:beforeUpdate`. */
+    readonly event: string;
+    readonly issues: ZodError['issues'];
+
+    constructor(event: string, error: ZodError) {
+        super(`${event} returned data that fails its schema`);
+        this.name = 'HookOutputValidationError';
+        this.event = event;
         this.issues = error.issues;
     }
 }

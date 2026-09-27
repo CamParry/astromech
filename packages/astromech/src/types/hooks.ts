@@ -30,6 +30,11 @@ export type EntryAfterCreateContext = EntryCreateContext & {
     entry: Entry;
 };
 
+/**
+ * `data` is the patch about to be written: a `beforeUpdate` handler that assigns
+ * to it changes what is persisted, and a patch the type's update schema then
+ * refuses fails the call as a server error naming the hook.
+ */
 export type EntryUpdateContext = {
     type: string;
     entry: Entry;
@@ -40,8 +45,8 @@ export type EntryUpdateContext = {
 
 /**
  * A write to one locale of one global. `global` is null when that locale has
- * never been saved — the first `update` creates it, so a before-handler sees
- * no prior record.
+ * never been saved. A before-handler's returned `data` is what is written, and
+ * one the update schema refuses fails the call as a server error naming the hook.
  */
 export type GlobalUpdateContext = {
     key: string;

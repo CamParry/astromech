@@ -1,12 +1,16 @@
 /**
- * `parseMethodOutput`: the one place a service method's `output` schema is
- * applied. Every call path runs it after the handler, so an in-process caller
- * gets the public shape exactly as an HTTP one does.
+ * The parses of a value core's own code produced: a method's result through its
+ * `output` on every call path (`parseMethodOutput`), a resource leaving core
+ * another way (`parseOutput`), and the data a hook hands back (`parseHookOutput`).
  */
 
 import type { OutputSubject } from '@/errors/output-validation';
 import { z } from 'zod';
-import { describeSubject, OutputValidationError } from '@/errors/output-validation';
+import {
+    describeSubject,
+    HookOutputValidationError,
+    OutputValidationError,
+} from '@/errors/output-validation';
 import { countFallbacks } from '@/services/fallback';
 import { log } from '@/utilities/log';
 
@@ -39,6 +43,24 @@ export function parseOutput<T>(schema: z.ZodType<T>, value: unknown, source: str
         );
     }
     return result.data;
+}
+
+/**
+ * Parse `value`, the data the `event` hook leaves for the write, against the
+ * schema the caller's own data already passed. A failure is the hook's: it logs
+ * each issue and throws `HookOutputValidationError`, which HTTP answers with a 500.
+ */
+export function parseHookOutput<T>(
+    schema: z.ZodType<T>,
+    value: unknown,
+    event: string
+): T {
+    const result = schema.safeParse(value);
+    if (result.success) return result.data;
+    log.error(
+        `${event} returned data that fails its schema:\n${z.prettifyError(result.error)}`
+    );
+    throw new HookOutputValidationError(event, result.error);
 }
 
 /** The id and locale a result carries at its top level, when it has them. */

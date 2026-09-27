@@ -17,6 +17,7 @@ import { decodeWith } from '@/database/codec';
 import { getDb } from '@/database/registry';
 import { entriesTable } from '@/database/tables';
 import { entryRepository } from '@/entries/repository/entries-table';
+import { HookOutputValidationError } from '@/errors/output-validation';
 import { ResourceNotFoundError } from '@/errors/resource';
 import { ValidationError } from '@/errors/validation';
 import { defineHook } from '@/plugins/define-hook';
@@ -1272,6 +1273,61 @@ describe('hooks', () => {
             expect(payload['id']).toBe(entry.id);
             expect(payload).not.toHaveProperty('contentId');
         }
+    });
+
+    it('fails as the hook’s error when beforeUpdate leaves data its schema refuses', async () => {
+        const entry = await api.create({ type: 'post', data: { title: 'Before' } });
+        vi.spyOn(console, 'error').mockImplementation(() => undefined);
+        const resolved = setupTestConfig();
+        registerTestPlugins(
+            [
+                {
+                    package: '@test/probe',
+                    hooks: [
+                        defineHook('entry:beforeUpdate', (ctx) => {
+                            (ctx.data as Record<string, unknown>)['extra'] = true;
+                        }),
+                    ],
+                },
+            ],
+            resolved
+        );
+
+        const update = api.update({
+            type: 'post',
+            id: entry.id,
+            data: { title: 'After' },
+        });
+
+        await expect(update).rejects.toThrow(HookOutputValidationError);
+        await expect(update).rejects.toThrow(
+            'entry:beforeUpdate returned data that fails its schema'
+        );
+        expect((await api.get({ type: 'post', id: entry.id, full: true }))?.title).toBe(
+            'Before'
+        );
+    });
+
+    it('answers the caller’s empty title on a titled type with a 422 before any hook runs', async () => {
+        const entry = await api.create({ type: 'post', data: { title: 'Before' } });
+        const seen: unknown[] = [];
+        const resolved = setupTestConfig();
+        registerTestPlugins(
+            [
+                {
+                    package: '@test/probe',
+                    hooks: [
+                        defineHook('entry:beforeUpdate', (ctx) => void seen.push(ctx)),
+                    ],
+                },
+            ],
+            resolved
+        );
+
+        await expect(
+            api.update({ type: 'post', id: entry.id, data: { title: '' } })
+        ).rejects.toThrow(ValidationError);
+        expect(seen).toEqual([]);
     });
 
     it('a throwing beforeCreate aborts the create', async () => {
