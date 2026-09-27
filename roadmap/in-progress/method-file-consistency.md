@@ -9,7 +9,7 @@ only on the declaration and on code that would otherwise read as wrong.
 The pass runs in groups small enough to hold in view at once. The first is the
 reference: the shape is reviewed there before the rest follow it.
 
-- [ ] Users: `users/methods/` and `users/internal/`.
+- [x] Users: `users/methods/` and `users/internal/`.
 - [ ] Media and notifications: `media/methods/`, `media/internal/`,
       `notifications/methods/`.
 - [ ] Globals: `globals/methods/` and `globals/internal/`; `gate` and
