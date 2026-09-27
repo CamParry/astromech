@@ -2,7 +2,6 @@ import type { Notification } from '@/types/index';
 import { z } from '@hono/zod-openapi';
 import { defineServiceMethod } from '@/services/define-service-method';
 import { subjectId } from '../internal/subject';
-import { toNotification } from '../internal/to-notification';
 import { notificationRepository } from '../repository';
 import { notificationSchema } from '../schema';
 
@@ -15,7 +14,6 @@ export const listNotifications = defineServiceMethod({
     sessionScoped: true,
     mutates: false,
     async handler(_params, ctx): Promise<Notification[]> {
-        const rows = await notificationRepository.findByUser(subjectId(ctx.user));
-        return rows.map(toNotification);
+        return notificationRepository.findByUser(subjectId(ctx.user));
     },
 });

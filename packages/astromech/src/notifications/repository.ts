@@ -5,6 +5,7 @@
  */
 
 import type { NewNotificationRow, NotificationRow } from './tables';
+import type { Notification } from '@/types/index';
 import { createRepository } from '@/database/repository/create-repository';
 import { notificationsTable } from '@/database/tables';
 
@@ -19,11 +20,12 @@ function createNotificationRepository() {
     }
 
     /** A user's notifications, newest first. */
-    async function findByUser(userId: string): Promise<NotificationRow[]> {
-        return repository.findMany({
+    async function findByUser(userId: string): Promise<Notification[]> {
+        const rows = await repository.findMany({
             where: { userId },
             orderBy: [['createdAt', 'desc']],
         });
+        return rows.map(toNotification);
     }
 
     async function countByUser(userId: string): Promise<number> {
@@ -47,3 +49,16 @@ function createNotificationRepository() {
 
 /** The notification repository. Stateless: the db handle resolves per call. */
 export const notificationRepository = createNotificationRepository();
+
+/** Row to response shape. `createdAt` crosses as an ISO string, as every date does. */
+function toNotification(row: NotificationRow): Notification {
+    return {
+        id: row.id,
+        userId: row.userId,
+        type: row.type,
+        title: row.title,
+        message: row.message,
+        href: row.href ?? null,
+        createdAt: row.createdAt.toISOString(),
+    };
+}
