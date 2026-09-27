@@ -4,15 +4,15 @@ import { defineServiceMethod } from '@/services/define-service-method';
 import { globalAccess } from '../../internal/access';
 import { getCanonicalGlobal } from '../../internal/canonical-global';
 import { syncGlobalRelationships } from '../../relationships';
+import { globalRepository } from '../../repository';
 import { globalSchema, versionAddress } from '../../schema';
 
 /**
- * Restores one locale of a global to one of its saved versions, by its number,
- * snapshotting the state being overwritten first so a restore is itself
- * reversible. Throws when that locale has no version with the number.
+ * Saves the fields it overwrites as a new version first, so a restore can be
+ * undone. A locale with no content row, or no version with that number, throws.
  */
 export const restoreGlobalVersion = defineServiceMethod({
-    summary: 'Roll a global back to an earlier version.',
+    summary: 'Restore one locale of a global to a saved version.',
     input: versionAddress,
     output: globalSchema,
     access: globalAccess('update'),
@@ -23,24 +23,23 @@ export const restoreGlobalVersion = defineServiceMethod({
         const { key, version } = params;
         const { config, user } = ctx;
         const userId = user?.id ?? null;
-        const { repository, id, locale, current } = await getCanonicalGlobal(config, {
-            key,
-            locale: params.locale,
-        });
+
+        const { id, locale, current } = await getCanonicalGlobal(config, params);
+
         return restoreVersion({
             resource: 'global',
-            versions: repository.versions,
+            versions: globalRepository.versions,
             current,
             version,
             address: { id: key },
             user,
             write: async ({ fields }) => {
-                const row = await repository.update(
+                const restored = await globalRepository.update(
                     { id, locale },
                     { fields, updatedBy: userId }
                 );
                 await syncGlobalRelationships(config, id);
-                return row;
+                return restored;
             },
         });
     },

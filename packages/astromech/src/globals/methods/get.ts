@@ -1,4 +1,4 @@
-import type { GlobalRepository, GlobalResource } from '../repository';
+import type { GlobalResource } from '../repository';
 import type { VisibilityShape } from '@/content/visibility';
 import { z } from '@hono/zod-openapi';
 import { assertCapability } from '@/content/capabilities';
@@ -13,10 +13,9 @@ import { getDeclaredGlobal } from '../resolve-global';
 import { globalSchema, localised } from '../schema';
 
 /**
- * Gets one locale of one global, filtered to the caller's visibility shape.
- * Returns null when that locale has never been saved or visibility hides it —
- * there is no fallback to another locale. An undeclared key throws, since a
- * declared-but-unsaved global is already null and a typo is a caller error.
+ * Filtered to the caller's visibility shape, and null when that hides it; there
+ * is no fallback to another locale. An undeclared key throws. `staged` reads the
+ * staged change, and needs `full`.
  */
 export const getGlobal = defineServiceMethod({
     summary: 'Read one locale of a global. Null when it has never been saved there.',
@@ -32,38 +31,29 @@ export const getGlobal = defineServiceMethod({
         const { config } = ctx;
         const global = getDeclaredGlobal(config, key);
         const locale = resolveResourceLocale('global', config, global.id, params.locale);
+        const shape: VisibilityShape = full ? 'full' : 'public';
 
-        // Before the row lookup, so every caller gets the capability's 409 for
-        // `staged` whether or not the global has been saved.
+        // Checked before the read, so an unsaved global gets the same errors.
         if (staged === true) assertCapability('global', global, 'staging');
-
-        // A staged change is never published, so a public read of one would
-        // answer null for every global; asking for it in the public shape is a
-        // mistake worth naming rather than an empty result.
         if (staged === true && full !== true) {
             throw new ResourceValidationError([
                 `${ctx.method.name}: \`staged\` requires \`full\`; a staged change is ` +
                     'never part of the public read.',
             ]);
         }
-
-        const row =
+        const current =
             staged === true
-                ? await findStaged(globalRepository, key, locale)
+                ? await findStaged(key, locale)
                 : await globalRepository.findByKey(key, locale);
-        if (!row) return null;
+        if (!current) return null;
 
-        const shape: VisibilityShape = full ? 'full' : 'public';
-
-        const filtered = applyVisibility(
+        const visible = applyVisibility(
             {
-                fields: row.fields,
-                // A global with `statuses: false` has no draft state — every row
-                // is live — so the publish gate does not apply to it. Its column
-                // still reads `unpublished`, which would otherwise hide it from
-                // every public read.
+                fields: current.fields,
+                // Without statuses every row is live, though its column reads
+                // `unpublished`, so the publish gate is left out.
                 ...(global.capabilities.statuses
-                    ? { status: row.status, publishedAt: row.publishedAt }
+                    ? { status: current.status, publishedAt: current.publishedAt }
                     : {}),
             },
             {
@@ -72,18 +62,14 @@ export const getGlobal = defineServiceMethod({
                 audience: { now: new Date() },
             }
         );
-        if (filtered === null) return null;
+        if (visible === null) return null;
 
-        return { ...row, fields: filtered.fields };
+        return { ...current, fields: visible.fields };
     },
 });
 
 /** The staged change for one locale of the global saved under `key`, or null. */
-async function findStaged(
-    repository: GlobalRepository,
-    key: string,
-    locale: string
-): Promise<GlobalResource | null> {
-    const id = await repository.findIdByKey(key);
-    return id === null ? null : repository.staging.findOne({ id, locale });
+async function findStaged(key: string, locale: string): Promise<GlobalResource | null> {
+    const id = await globalRepository.findIdByKey(key);
+    return id === null ? null : globalRepository.staging.findOne({ id, locale });
 }

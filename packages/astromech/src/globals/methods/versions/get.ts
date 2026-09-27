@@ -1,33 +1,31 @@
-import type { globalSnapshotSchema } from '../../schema';
-import type { z } from '@hono/zod-openapi';
+import type { GlobalVersion } from '@/types/index';
 import { readVersion } from '@/content/versions';
 import { defineServiceMethod } from '@/services/define-service-method';
 import { globalAccess } from '../../internal/access';
 import { getCanonicalGlobal } from '../../internal/canonical-global';
+import { globalRepository } from '../../repository';
 import { globalVersionSchema, versionAddress } from '../../schema';
 
 /**
- * Reads one saved version of one locale of a global, by its number: the
- * metadata and the fields it holds. Throws when the global does not keep
- * versions, has no row in that locale, or has no version with that number.
+ * Addressed by version number. A locale with no content row, or no version with
+ * that number, throws, with no fallback to the default locale.
  */
 export const getGlobalVersion = defineServiceMethod({
-    summary: 'Read one version of a global.',
+    summary: 'Read one saved version of one locale of a global.',
     input: versionAddress,
     output: globalVersionSchema,
     access: globalAccess('read'),
     requires: 'versioning',
     mutates: false,
-    async handler(params, ctx) {
+    async handler(params, ctx): Promise<GlobalVersion> {
         const { key, version } = params;
         const { config } = ctx;
-        const { repository, current } = await getCanonicalGlobal(config, {
-            key,
-            locale: params.locale,
-        });
-        return readVersion<z.input<typeof globalSnapshotSchema>>({
+
+        const { current } = await getCanonicalGlobal(config, params);
+
+        return readVersion({
             resource: 'global',
-            versions: repository.versions,
+            versions: globalRepository.versions,
             record: current,
             version,
             address: { id: key },

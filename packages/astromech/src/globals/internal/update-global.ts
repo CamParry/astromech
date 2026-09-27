@@ -1,4 +1,4 @@
-import type { GlobalRepository, GlobalResource } from '../repository';
+import type { GlobalResource } from '../repository';
 import type {
     AppContext,
     EntryStatus,
@@ -25,9 +25,9 @@ import { globalSchema, updateGlobalSchema } from '../schema';
 import { prepareGlobalFields } from './prepare-fields';
 
 /**
- * Writes one locale of one global, firing the global update hooks around it.
- * `updateGlobal` and the status methods both call it; a locale with no row is
- * created unless `createMissingLocale` is false, and `staged` writes the staged change.
+ * Writes one locale of one global, firing the global update hooks around it, for
+ * `updateGlobal` and the status methods. A locale with no row is created unless
+ * `createMissingLocale` is false, and `staged` writes the staged change.
  */
 export async function updateGlobalLocale(
     params: {
@@ -61,17 +61,14 @@ export async function updateGlobalLocale(
             ? null
             : await globalRepository.staging.findOne({ id, locale })
         : canonical;
-    // A staged write addresses a row `createStaged` made, and a status change a
-    // row an earlier write made; there is nothing here to create either from.
+    // A staged write needs the row `createStaged` made, and a status change the
+    // row an earlier write made; neither is created here.
     if ((staged || params.createMissingLocale === false) && (id === null || !current)) {
         throw new ResourceNotFoundError('global', { id: key, locale });
     }
-    /** The staged row this write targets, absent on a canonical write. */
-    const stagedRef = staged && id !== null ? { id, locale } : null;
 
-    // The before-hook may replace the context, and with it the patch that is
-    // written, so it runs before the fields are parsed, not just before the
-    // transaction opens.
+    // Before the fields are prepared, not only before the writes: the hook may
+    // replace the patch that is written.
     const context = await ctx.runHook('global:beforeUpdate', {
         key,
         locale,
@@ -82,35 +79,33 @@ export async function updateGlobalLocale(
         data: params.data,
         user,
     });
-    // The method's input already parsed the caller's `data` with this same
-    // schema, so a failure here is the hook's, which replaced it.
+    // `input` already parsed the caller's `data`, so a failure here is the hook's.
     const data = parseHookOutput(updateGlobalSchema, context.data, 'global:beforeUpdate');
     assertWritableStatus(global, data, staged, ctx.method.name);
 
     const fields = await fieldsToStore({ global, id, locale, current, data, ctx });
+    const patchedNames = data.fields ? patchedFieldNames(data.fields) : [];
 
-    // The version, the row write and the index write are one transaction: an
-    // index that outlived a failed write would name relations the stored
-    // fields do not.
-    const saved = await transaction(async () => {
-        if (stagedRef) {
-            // No version and no propagation: the history and the shared fields
-            // belong to the canonical row, which the merge is what writes to.
-            const row = await globalRepository.staging.update(stagedRef, {
-                fields,
-                updatedBy: userId,
-            });
-            if (fields) await syncGlobalRelationships(config, row.id);
-            return row;
+    const updated = await transaction(async () => {
+        if (staged && id !== null) {
+            // No version and no propagation: both belong to the canonical row,
+            // which the merge writes.
+            const stagedRow = await globalRepository.staging.update(
+                { id, locale },
+                { fields, updatedBy: userId }
+            );
+            if (fields) await syncGlobalRelationships(config, stagedRow.id);
+            return stagedRow;
         }
-        if (current && global.capabilities.versioning) {
-            if (changesVersionedContent('global', current, { fields })) {
-                await snapshotVersion('global', globalRepository.versions, current, user);
-            }
+        if (
+            current &&
+            global.capabilities.versioning &&
+            changesVersionedContent('global', current, { fields })
+        ) {
+            await snapshotVersion('global', globalRepository.versions, current, user);
         }
-        const written = await writeRow({
+        const row = await writeRow({
             config,
-            repository: globalRepository,
             global,
             key,
             id,
@@ -120,21 +115,21 @@ export async function updateGlobalLocale(
             status: data.status,
             publishedAt: data.publishedAt,
             userId,
-            patchedNames: data.fields ? patchedFieldNames(data.fields) : [],
+            patchedNames,
         });
-        if (fields) await syncGlobalRelationships(config, written.id);
-        return written;
+        if (fields) await syncGlobalRelationships(config, row.id);
+        return row;
     });
 
     await ctx.runHook('global:afterUpdate', {
         key,
         locale,
-        global: parseOutput(globalSchema, saved, 'The global in global:afterUpdate'),
+        global: parseOutput(globalSchema, updated, 'The global in global:afterUpdate'),
         data,
         user,
     });
 
-    return saved;
+    return updated;
 }
 
 /**
@@ -151,14 +146,8 @@ async function fieldsToStore(params: {
     ctx: AppContext;
 }): Promise<JsonObject | undefined> {
     const { global, id, locale, current, data, ctx } = params;
-    const write = {
-        global,
-        id,
-        locale,
-        current,
-        user: ctx.user,
-        config: ctx.config,
-    };
+    const write = { global, id, locale, current, user: ctx.user, config: ctx.config };
+
     if (data.fields !== undefined || current === null) {
         return prepareGlobalFields({
             ...write,
@@ -181,13 +170,12 @@ async function fieldsToStore(params: {
 }
 
 /**
- * Write the row this locale needs (the global's first row, this locale's first
- * row, or an edit of one that exists) and copy the shared fields the write
+ * Writes the row this locale needs (the global's first row, this locale's first
+ * row, or an edit of one that exists) and copies the shared fields the write
  * touched out to the global's other locales.
  */
 async function writeRow(params: {
     config: ResolvedConfig;
-    repository: GlobalRepository;
     global: ResolvedGlobal;
     key: string;
     id: string | null;
@@ -199,7 +187,7 @@ async function writeRow(params: {
     userId: string | null;
     patchedNames: string[];
 }): Promise<GlobalResource> {
-    const { config, repository, global, id, locale, current, fields, userId } = params;
+    const { config, global, id, locale, current, fields, userId } = params;
     // The global's first row takes a status whether or not the write names one.
     const status = id === null ? (params.status ?? 'unpublished') : params.status;
     const publishedAt = resolvePublishedAt({
@@ -211,7 +199,7 @@ async function writeRow(params: {
 
     const row =
         id === null
-            ? await repository.create(
+            ? await globalRepository.create(
                   { key: params.key, createdBy: userId, updatedBy: userId },
                   {
                       locale,
@@ -222,24 +210,20 @@ async function writeRow(params: {
                       updatedBy: userId,
                   }
               )
-            : await repository.update(
+            : await globalRepository.update(
                   { id, locale },
                   {
                       fields,
                       status,
                       publishedAt,
-                      // Moves with `updatedAt`, not with the version snapshot.
                       updatedBy: userId,
-                      // A locale being written for the first time is authored
-                      // now, whoever created the global itself.
                       ...(current ? {} : { createdBy: userId }),
                   }
               );
-
     if (fields) {
         await propagateSharedFields('global', config, {
             target: global.id,
-            translatable: repository.translatable,
+            translatable: globalRepository.translatable,
             record: { id: row.id, locale: row.locale },
             fields,
             patchedFieldNames: params.patchedNames,
@@ -250,7 +234,7 @@ async function writeRow(params: {
 }
 
 /**
- * Refuse a status or publish gate the call cannot write: a global without
+ * Refuses a status or publish gate the call cannot write: a global without
  * statuses has neither, and a staged change takes the canonical's on merge.
  */
 function assertWritableStatus(

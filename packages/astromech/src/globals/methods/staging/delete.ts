@@ -5,12 +5,12 @@ import { defineServiceMethod } from '@/services/define-service-method';
 import { globalAccess } from '../../internal/access';
 import { getCanonicalGlobal } from '../../internal/canonical-global';
 import { syncGlobalRelationships } from '../../relationships';
+import { globalRepository } from '../../repository';
 import { localised } from '../../schema';
 
 /**
- * Discards the staged copy of one locale of a global, dropping the index rows
- * only it held. Throws when the global has no row in that locale, or no staged
- * change.
+ * Drops the index rows only the staged change held. Throws when the locale has no
+ * row, or no staged change.
  */
 export const deleteStagedGlobal = defineServiceMethod({
     summary: 'Discard the staged change of a global.',
@@ -22,15 +22,17 @@ export const deleteStagedGlobal = defineServiceMethod({
     async handler(params, ctx): Promise<void> {
         const { key } = params;
         const { config } = ctx;
-        const { repository, id, locale } = await getCanonicalGlobal(config, params);
-        await requireStagedChange(repository.staging, 'global', {
+
+        const { id, locale } = await getCanonicalGlobal(config, params);
+        await requireStagedChange(globalRepository.staging, 'global', {
             rowId: id,
             id: key,
             locale,
         });
-        // The global keeps its other content, so this re-derives rather than deletes.
+
+        // The global keeps its other content, so its index is re-derived, not deleted.
         await transaction(async () => {
-            await repository.staging.delete({ id, locale });
+            await globalRepository.staging.delete({ id, locale });
             await syncGlobalRelationships(config, id);
         });
     },

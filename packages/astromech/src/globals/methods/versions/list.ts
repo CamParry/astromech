@@ -5,15 +5,15 @@ import { listVersions } from '@/content/versions';
 import { defineServiceMethod } from '@/services/define-service-method';
 import { globalAccess } from '../../internal/access';
 import { getCanonicalGlobal } from '../../internal/canonical-global';
+import { globalRepository } from '../../repository';
 import { localised } from '../../schema';
 
 /**
- * Lists the saved versions of one locale of a global, newest first, as their
- * metadata; `getVersion` reads one's content. Throws when the global does not
- * keep versions, or has no row in that locale.
+ * Newest first, as metadata; `getVersion` reads one's fields. A locale with no
+ * content row throws, with no fallback to the default locale.
  */
 export const listGlobalVersions = defineServiceMethod({
-    summary: 'List the version history of a global.',
+    summary: 'List the saved versions of one locale of a global.',
     input: localised,
     output: z.array(versionMetadataSchema),
     access: globalAccess('read'),
@@ -21,7 +21,9 @@ export const listGlobalVersions = defineServiceMethod({
     mutates: false,
     async handler(params, ctx): Promise<VersionMetadata[]> {
         const { config } = ctx;
-        const { repository, current } = await getCanonicalGlobal(config, params);
-        return listVersions(repository.versions, current);
+
+        const { current } = await getCanonicalGlobal(config, params);
+
+        return listVersions(globalRepository.versions, current);
     },
 });

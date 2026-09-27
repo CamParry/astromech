@@ -5,12 +5,13 @@ import { defineServiceMethod } from '@/services/define-service-method';
 import { globalAccess } from '../../internal/access';
 import { getCanonicalGlobal } from '../../internal/canonical-global';
 import { syncGlobalRelationships } from '../../relationships';
+import { globalRepository } from '../../repository';
 import { globalSchema, localised } from '../../schema';
 
 /**
- * Creates a staged copy of one locale of a global so edits can be drafted off
- * the live row with `update({ staged: true })`. A locale with no row has nothing
- * to stage off, and one that already has a staged change throws.
+ * Copies one locale's fields into an unpublished staged change, which
+ * `update({ staged: true })` edits and `mergeStaged` makes live. Throws when the
+ * locale has no row, or already has a staged change.
  */
 export const createStagedGlobal = defineServiceMethod({
     summary: 'Stage a change to a global.',
@@ -23,20 +24,13 @@ export const createStagedGlobal = defineServiceMethod({
         const { key } = params;
         const { config, user } = ctx;
         const userId = user?.id ?? null;
-        const { repository, id, locale, current } = await getCanonicalGlobal(config, {
-            key,
-            locale: params.locale,
-        });
 
-        const existing = await repository.staging.findOne({ id, locale });
+        const { id, locale, current } = await getCanonicalGlobal(config, params);
+        const existing = await globalRepository.staging.findOne({ id, locale });
         if (existing) throw new StagedChangeExistsError('global', { id: key, locale });
 
-        // The staged row copies the canonical's content and is always
-        // unpublished: it becomes live by being merged, not by carrying a status
-        // of its own.
-        // The row and its index write are one transaction.
         return transaction(async () => {
-            const staged = await repository.staging.create(
+            const created = await globalRepository.staging.create(
                 { id, locale },
                 {
                     fields: current.fields,
@@ -47,7 +41,7 @@ export const createStagedGlobal = defineServiceMethod({
                 }
             );
             await syncGlobalRelationships(config, id);
-            return staged;
+            return created;
         });
     },
 });

@@ -7,14 +7,13 @@ import { globalAccess } from '../../internal/access';
 import { getCanonicalGlobal } from '../../internal/canonical-global';
 import { prepareGlobalFields } from '../../internal/prepare-fields';
 import { syncGlobalRelationships } from '../../relationships';
+import { globalRepository } from '../../repository';
 import { globalSchema, localised } from '../../schema';
 
 /**
- * Merges a staged change into the canonical content row it was made from:
- * validates the staged content against the canonical, snapshots the canonical,
- * overwrites it in place, and discards the staged row, all in one transaction.
- * Content-only — the canonical's status is untouched, because publishing is a
- * separate action.
+ * Checks the staged fields at the canonical row's status, saves the canonical as
+ * a version, overwrites its fields and discards the staged change. The status
+ * is left alone: publishing is a separate call.
  */
 export const mergeStagedGlobal = defineServiceMethod({
     summary: 'Merge the staged change into a global.',
@@ -27,22 +26,14 @@ export const mergeStagedGlobal = defineServiceMethod({
         const { key } = params;
         const { config, user } = ctx;
         const userId = user?.id ?? null;
-        const { global, repository, id, locale, current } = await getCanonicalGlobal(
-            config,
-            params
-        );
 
-        const staged = await requireStagedChange(repository.staging, 'global', {
+        const { global, id, locale, current } = await getCanonicalGlobal(config, params);
+        const staged = await requireStagedChange(globalRepository.staging, 'global', {
             rowId: id,
             id: key,
             locale,
         });
 
-        // Merging is the promotion moment: editing the staged row validates at
-        // the draft stage (it is unpublished), so this is the first write where
-        // the canonical's own status decides whether completeness is enforced.
-        // Run it BEFORE the transaction opens so a rejection costs no backup
-        // version.
         const fields = await prepareGlobalFields({
             global,
             id,
@@ -55,20 +46,18 @@ export const mergeStagedGlobal = defineServiceMethod({
         });
 
         return transaction(async () => {
-            // Snapshot the canonical first, so a partial failure leaves a
-            // recoverable version.
             if (global.capabilities.versioning) {
-                await snapshotVersion('global', repository.versions, current, user);
+                await snapshotVersion('global', globalRepository.versions, current, user);
             }
-            const row = await repository.update(
+            const updated = await globalRepository.update(
                 { id, locale },
                 { fields, updatedBy: userId }
             );
-            // Discard the staged row before re-indexing, so the references it
-            // held on its own do not survive the merge.
-            await repository.staging.delete({ id, locale });
+            // Deleted before the re-index, so references only the staged change
+            // held are dropped.
+            await globalRepository.staging.delete({ id, locale });
             await syncGlobalRelationships(config, id);
-            return row;
+            return updated;
         });
     },
 });

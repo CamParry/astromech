@@ -21,8 +21,6 @@ export type GlobalResource = Resource & {
     publishedAt: Date | null;
 };
 
-export type GlobalRepository = ReturnType<typeof createGlobalRepository>;
-
 /** The two joined rows plus the locale list, as the resource the service reads. */
 function toGlobalResource(
     resourceRow: GlobalTableRow,

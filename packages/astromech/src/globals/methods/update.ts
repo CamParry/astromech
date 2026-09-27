@@ -6,15 +6,9 @@ import { updateGlobalLocale } from '../internal/update-global';
 import { globalSchema, localised, updateGlobalSchema } from '../schema';
 
 /**
- * Writes one locale of one global, firing the global write hooks around it.
- * Rows are created on demand: a global nothing has saved gets its `globals` row
- * and this locale's content row, and a translatable global whose locale has no
- * row gets one with the shared fields inherited from the default-locale row.
- *
- * `staged` writes the staged change for that locale instead, which is how an
- * editor drafts against a live global. It must already exist (only
- * `createStaged` makes one), and it takes no version and propagates no shared
- * fields, both of which belong to the canonical row the merge writes to.
+ * The first write to a global or a locale creates its row, inheriting a
+ * translatable global's shared fields. `staged` writes the locale's staged
+ * change, which `createStaged` must have made, and takes no version.
  */
 export const updateGlobal = defineServiceMethod({
     summary:
