@@ -5,7 +5,6 @@ import { defaultContentLocale } from '@/config/content-locale';
 import { RESOURCE_SPECS } from '@/content/resources';
 import { writeFields } from '@/content/write-fields';
 import { transaction } from '@/database/transaction';
-import { getRole } from '@/permissions/roles';
 import { defineServiceMethod } from '@/services/define-service-method';
 import { syncUserRelationships } from '../relationships';
 import { userRepository } from '../repository';
@@ -25,7 +24,6 @@ export const createUser = defineServiceMethod({
         const { data } = params;
 
         const config = ctx.config;
-        getRole(config, data.role);
 
         const fields = await writeFields(
             RESOURCE_SPECS.user,

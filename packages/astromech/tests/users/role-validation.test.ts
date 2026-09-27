@@ -2,10 +2,10 @@
  * A role slug the config does not define is refused on the way in, and refused
  * again on the way out.
  *
- * `role` is a bare string in `users/schema.ts` and a bare `text` column, so
- * neither zod nor the DDL constrains it to the configured roles. These pin the
- * two places that do: the write operations, and session resolution for a row
- * written before a config edit removed the role it names.
+ * `role` is a bare `text` column, so the DDL does not constrain it to the
+ * configured roles. These pin the two places that do: the write input schemas,
+ * and session resolution for a row written before a config edit removed the
+ * role it names.
  */
 
 import type { DB } from '@/database/types';
@@ -40,6 +40,19 @@ describe('usersService.create', () => {
         ).rejects.toThrow(ValidationError);
     });
 
+    it('reports an unknown role at data.role', async () => {
+        const error = await usersService
+            .create({ data: { email: 'path@test.dev', name: 'Path', role: 'admni' } })
+            .catch((caught: unknown) => caught);
+        expect(error).toBeInstanceOf(ValidationError);
+        expect((error as ValidationError).issues).toEqual([
+            expect.objectContaining({
+                path: ['data', 'role'],
+                message: expect.stringContaining('Unknown role "admni"') as string,
+            }),
+        ]);
+    });
+
     it('does not write the row it rejected', async () => {
         await usersService
             .create({
@@ -72,6 +85,20 @@ describe('usersService.update', () => {
 
         const after = await usersService.get({ id: user.id });
         expect(after?.role).toBe(DEFAULT_ROLE_SLUG);
+    });
+
+    it('reports an unknown role at data.role', async () => {
+        const user = await createTestUser(db, { email: 'update-path@test.dev' });
+        const error = await usersService
+            .update({ id: user.id, data: { role: 'reviewer' } })
+            .catch((caught: unknown) => caught);
+        expect(error).toBeInstanceOf(ValidationError);
+        expect((error as ValidationError).issues).toEqual([
+            expect.objectContaining({
+                path: ['data', 'role'],
+                message: expect.stringContaining('Configured roles: ') as string,
+            }),
+        ]);
     });
 
     it('leaves the role alone when the update names no role', async () => {

@@ -9,6 +9,8 @@
 
 import type { AstromechConfig, ResolvedConfig } from '@/types/config';
 import type { Permission, Role } from '@/types/domain';
+import { z } from '@hono/zod-openapi';
+import { getConfig } from '@/config/registry';
 import { ValidationError } from '@/errors/validation';
 import { corePermissions } from '@/permissions/core-permissions';
 import { hasPermission } from '@/utilities/permission-match';
@@ -97,9 +99,8 @@ export function resolveRole(
 }
 
 /**
- * Look up a role, rejecting a slug the config does not define. The write paths
- * use this so an unknown role is a 422 at the point it is sent, rather than a
- * stored value that something later has to decide what to do with.
+ * Look up a role, rejecting a slug the config does not define. The CLI uses
+ * this for the role it acts as; a write checks its input with `roleSlugSchema`.
  */
 export function getRole(
     config: Pick<ResolvedConfig, 'resolvedRoles'>,
@@ -107,10 +108,26 @@ export function getRole(
 ): Role {
     const role = resolveRole(config, slug);
     if (role) return role;
+    throw ValidationError.fromFieldErrors({ role: [unknownRoleMessage(config, slug)] });
+}
+
+/**
+ * A role slug the config defines. The user write schemas use it, so an unknown
+ * role is a 422 at the field it was sent in, rather than a stored value that
+ * something later has to decide what to do with.
+ */
+export const roleSlugSchema = z.string().superRefine((slug, ctx) => {
+    const config = getConfig();
+    if (resolveRole(config, slug)) return;
+    ctx.addIssue({ code: 'custom', message: unknownRoleMessage(config, slug) });
+});
+
+function unknownRoleMessage(
+    config: Pick<ResolvedConfig, 'resolvedRoles'>,
+    slug: string
+): string {
     const configured = Object.keys(config.resolvedRoles).join(', ');
-    throw ValidationError.fromFieldErrors({
-        role: [`Unknown role "${slug}". Configured roles: ${configured}`],
-    });
+    return `Unknown role "${slug}". Configured roles: ${configured}`;
 }
 
 /** Convenience wrapper: check whether a role grants a permission. */

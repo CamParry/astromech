@@ -4,7 +4,7 @@ Found reading `packages/astromech/src/users/methods/create.ts` top to bottom
 (2026-09-27). Each fix applies to every method and every shared helper with the
 same shape, not only to `createUser`.
 
-- [ ] **The role check is input validation.** `createUser` and `updateUser` call
+- [x] **The role check is input validation.** `createUser` and `updateUser` call
       `getRole` only for its throw, and it reports the path `role` where the
       input schema reports `data.role`. Check the role in `createUserSchema` and
       `updateUserSchema` against the configured roles, and drop the two handler

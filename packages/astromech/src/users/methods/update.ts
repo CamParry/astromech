@@ -8,7 +8,6 @@ import { changesVersionedContent, snapshotVersion } from '@/content/versions';
 import { patchedFieldNames, writeFields } from '@/content/write-fields';
 import { transaction } from '@/database/transaction';
 import { ResourceNotFoundError } from '@/errors/resource';
-import { getRole } from '@/permissions/roles';
 import { defineServiceMethod } from '@/services/define-service-method';
 import { assertKeepsAnAdmin } from '../internal/last-admin';
 import { syncUserRelationships } from '../relationships';
@@ -53,7 +52,6 @@ export const updateUser = defineServiceMethod({
 
         const config = ctx.config;
         if (data.role !== undefined) {
-            getRole(config, data.role);
             await assertKeepsAnAdmin(
                 userRepository,
                 base,
