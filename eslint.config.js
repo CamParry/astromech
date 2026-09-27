@@ -106,6 +106,26 @@ const ambientReadExceptions = [
     'packages/astromech/src/media/serving/handler.ts',
 ];
 
+// A module's `internal/` is importable only from inside that module (DECISIONS.md,
+// "A module's `internal/` is private to it"). A block for the rest of core bans
+// all five; each module's own block bans the other four.
+const modulesWithInternal = ['entries', 'globals', 'media', 'users', 'notifications'];
+
+function noInternalImport(modules) {
+    return [
+        'error',
+        {
+            patterns: [
+                {
+                    regex: `^(@/|(\\.{1,2}/)+(.*/)?)(${modules.join('|')})/internal(/|$)`,
+                    message:
+                        'A module\'s internal/ is private to it. Import from the module root, or move the helper there if another module needs it (see DECISIONS.md, "A module\'s internal/ is private to it").',
+                },
+            ],
+        },
+    ];
+}
+
 export default tseslint.config(
     eslint.configs.recommended,
     ...tseslint.configs.strict,
@@ -164,8 +184,8 @@ export default tseslint.config(
         // The admin package. Its files import one another by relative path and
         // reach core only through its browser entries: `astromech/shared`,
         // `astromech/fetch` and type-only imports from `astromech`. No other
-        // block sets `no-restricted-imports`, so these options are the whole of
-        // it for admin files.
+        // block sets `no-restricted-imports` for admin files, so these options
+        // are the whole of it there.
         files: ['packages/admin/src/**/*.ts', 'packages/admin/src/**/*.tsx'],
         rules: {
             'no-restricted-syntax': [
@@ -231,6 +251,21 @@ export default tseslint.config(
             ],
         },
     },
+    {
+        files: ['packages/astromech/src/**/*.ts', 'packages/astromech/src/**/*.tsx'],
+        rules: {
+            '@typescript-eslint/no-restricted-imports':
+                noInternalImport(modulesWithInternal),
+        },
+    },
+    ...modulesWithInternal.map((own) => ({
+        files: [`packages/astromech/src/${own}/**/*.ts`],
+        rules: {
+            '@typescript-eslint/no-restricted-imports': noInternalImport(
+                modulesWithInternal.filter((m) => m !== own)
+            ),
+        },
+    })),
     {
         files: [
             'packages/astromech/tests/**/*.ts',
