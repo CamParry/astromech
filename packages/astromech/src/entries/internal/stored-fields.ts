@@ -1,11 +1,11 @@
 /**
- * The values an entry write stores, through the shared `writeFields` path: a
+ * The values an entry write stores, through the shared `prepareFields` path: a
  * create inherits the entry's shared fields, an update merges its patch over the
  * current row, and a merge takes the staged change's fields as they are.
  */
 
 import type { EntryResource } from '../repository/types';
-import type { FieldSource } from '@/content/write-fields';
+import type { FieldSource } from '@/content/prepare-fields';
 import type {
     EntryStatus,
     JsonObject,
@@ -13,9 +13,9 @@ import type {
     ResolvedEntryType,
     User,
 } from '@/types/index';
+import { prepareFields } from '@/content/prepare-fields';
 import { RESOURCE_SPECS } from '@/content/resources';
 import { inheritSharedFields } from '@/content/translatable';
-import { writeFields } from '@/content/write-fields';
 import { listEntriesInLocale } from '../read-entry';
 import { entryRepository } from '../repository/entries-table';
 
@@ -63,33 +63,28 @@ export async function toStoredFields(input: StoredFieldsInput): Promise<JsonObje
 
     if (input.kind === 'create') {
         const type = input.entryType.id;
-        return writeFields(
+        return prepareFields({
             spec,
             config,
-            {
-                values: input.values,
-                inherit: (values) =>
-                    inheritSharedFields(spec, config, {
-                        target: type,
-                        // The shared read is by id and locale; an entry read names its type.
-                        repository: {
-                            findOne: (ref, opts) =>
-                                entryRepository.findOne({ ...ref, type }, opts),
-                        },
-                        values,
-                        id: input.entryId,
-                        locale: input.locale,
-                    }),
-            },
-            {
-                target: type,
-                operation: 'create',
-                record: null,
-                user,
-                status: input.status,
-                scan: () => listEntriesInLocale(type, input.locale),
-            }
-        );
+            target: type,
+            operation: 'create',
+            user,
+            status: input.status,
+            scan: () => listEntriesInLocale(type, input.locale),
+            values: input.values,
+            inherit: (values) =>
+                inheritSharedFields(spec, config, {
+                    target: type,
+                    // The shared read is by id and locale; an entry read names its type.
+                    repository: {
+                        findOne: (ref, opts) =>
+                            entryRepository.findOne({ ...ref, type }, opts),
+                    },
+                    values,
+                    id: input.entryId,
+                    locale: input.locale,
+                }),
+        });
     }
 
     const { type, current, source, status } =
@@ -109,10 +104,13 @@ export async function toStoredFields(input: StoredFieldsInput): Promise<JsonObje
                   status: input.canonical.status,
               };
 
-    return writeFields(spec, config, source satisfies FieldSource, {
+    return prepareFields({
+        ...(source satisfies FieldSource),
+        spec,
+        config,
         target: type,
         operation: 'update',
-        record: current,
+        existing: current,
         user,
         status,
         scan: () => listEntriesInLocale(type, current.locale),

@@ -2,10 +2,10 @@ import type { MediaResource } from '../repository';
 import type { JsonObject } from '@/types/index';
 import { z } from '@hono/zod-openapi';
 import { resolveResourceLocale } from '@/content/locale';
+import { patchedFieldNames, prepareFields } from '@/content/prepare-fields';
 import { RESOURCE_SPECS } from '@/content/resources';
 import { propagateSharedFields } from '@/content/translatable';
 import { changesVersionedContent, snapshotVersion } from '@/content/versions';
-import { patchedFieldNames, writeFields } from '@/content/write-fields';
 import { transaction } from '@/database/transaction';
 import { ResourceNotFoundError } from '@/errors/resource';
 import { defineServiceMethod } from '@/services/define-service-method';
@@ -55,18 +55,17 @@ export const updateMedia = defineServiceMethod({
         if (patch !== undefined) {
             // Merged over `base`, so a locale being written for the first time
             // starts as a copy of the default-locale row.
-            fields = await writeFields(
-                RESOURCE_SPECS.media,
+            fields = await prepareFields({
+                spec: RESOURCE_SPECS.media,
                 config,
-                { base: base.fields, patch },
-                {
-                    operation: 'update',
-                    record: base,
-                    user,
-                    scan: () => mediaRepository.findByLocale(locale),
-                    excludeId: id,
-                }
-            );
+                operation: 'update',
+                existing: base,
+                user,
+                scan: () => mediaRepository.findByLocale(locale),
+                excludeId: id,
+                base: base.fields,
+                patch,
+            });
         } else if (!current) {
             // The copy carries the source row's fields unchanged.
             fields = base.fields;

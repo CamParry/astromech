@@ -90,7 +90,7 @@ the repository copies.
       `transport/cli/validate-stored-content.ts` are content logic. Move them to
       `content/`.
 - [ ] `globals/schema.ts` imports status and date schemas from `entries/schema.ts`,
-      and `content/write-fields.ts` imports `entries/validation-mode.ts`. Move all
+      and `content/prepare-fields.ts` imports `entries/validation-mode.ts`. Move all
       four to `content/`.
 - [ ] `types/` holds contracts away from their owners (driver contracts, admin
       resource types, service interfaces) and imports every module's schema.

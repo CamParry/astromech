@@ -8,10 +8,10 @@ import type {
 import { z } from '@hono/zod-openapi';
 import { assertCapability } from '@/content/capabilities';
 import { resolveResourceLocale } from '@/content/locale';
+import { patchedFieldNames } from '@/content/prepare-fields';
 import { RESOURCE_SPECS } from '@/content/resources';
 import { propagateSharedFields } from '@/content/translatable';
 import { changesVersionedContent, snapshotVersion } from '@/content/versions';
-import { patchedFieldNames } from '@/content/write-fields';
 import { transaction } from '@/database/transaction';
 import { ResourceNotFoundError, ResourceValidationError } from '@/errors/resource';
 import { defineServiceMethod } from '@/services/define-service-method';

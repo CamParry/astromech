@@ -8,11 +8,11 @@ import type {
     User,
 } from '@/types/index';
 import { resolveResourceLocale } from '@/content/locale';
+import { patchedFieldNames } from '@/content/prepare-fields';
 import { RESOURCE_SPECS } from '@/content/resources';
 import { requireStagedChange } from '@/content/staging';
 import { propagateSharedFields } from '@/content/translatable';
 import { changesVersionedContent, snapshotVersion } from '@/content/versions';
-import { patchedFieldNames } from '@/content/write-fields';
 import { resolveEntryType } from '@/entries/entry-types';
 import { ResourceNotFoundError } from '@/errors/resource';
 import { parseInput } from '@/errors/validation';

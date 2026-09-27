@@ -8,8 +8,8 @@ import type { ScannedRow } from '@/content/unique';
 import type { FieldErrors } from '@/types/fields';
 import type { AppContext, EntryStatus, JsonObject, ResourceType } from '@/types/index';
 import { defaultContentLocale } from '@/config/content-locale';
+import { definitionsOf, fieldParseContext } from '@/content/prepare-fields';
 import { RESOURCE_SPECS } from '@/content/resources';
-import { definitionsOf, fieldParseContext } from '@/content/write-fields';
 import { resolveEntryType } from '@/entries/entry-types';
 import { listEntriesInLocale } from '@/entries/read-entry';
 import { entryRepository } from '@/entries/repository/entries-table';
@@ -181,12 +181,14 @@ async function checkRow(
     report.rowsChecked += 1;
     const processed = await safeParseFields(
         row.fields,
-        definitionsOf(spec, ctx.config, row.target),
+        definitionsOf({ spec, config: ctx.config, target: row.target }),
         {
-            ...fieldParseContext(spec, ctx.config, {
+            ...fieldParseContext({
+                spec,
+                config: ctx.config,
                 target: row.target,
                 operation: 'update',
-                record: row.record,
+                existing: row.record,
                 user: null,
                 status: row.status,
                 scan: row.scan,

@@ -2,8 +2,8 @@ import type { UserResource } from '../repository';
 import { z } from '@hono/zod-openapi';
 import { hashPassword } from 'better-auth/crypto';
 import { defaultContentLocale } from '@/config/content-locale';
+import { prepareFields } from '@/content/prepare-fields';
 import { RESOURCE_SPECS } from '@/content/resources';
-import { writeFields } from '@/content/write-fields';
 import { transaction } from '@/database/transaction';
 import { defineServiceMethod } from '@/services/define-service-method';
 import { syncUserRelationships } from '../relationships';
@@ -25,17 +25,14 @@ export const createUser = defineServiceMethod({
         const { config, user } = ctx;
         const userId = user?.id ?? null;
 
-        const fields = await writeFields(
-            RESOURCE_SPECS.user,
+        const fields = await prepareFields({
+            spec: RESOURCE_SPECS.user,
             config,
-            { values: data.fields ?? {} },
-            {
-                operation: 'create',
-                record: null,
-                user,
-                scan: () => userRepository.findByLocale(defaultContentLocale(config)),
-            }
-        );
+            operation: 'create',
+            user,
+            scan: () => userRepository.findByLocale(defaultContentLocale(config)),
+            values: data.fields ?? {},
+        });
 
         // Hashed before the transaction opens, so no lock is held while it runs.
         const passwordHash =

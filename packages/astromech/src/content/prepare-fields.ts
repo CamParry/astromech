@@ -19,11 +19,10 @@ import { isUniqueAmong } from './unique';
 
 /** What the field parse needs to know about the write, beyond the values. */
 export type FieldWrite = {
+    spec: ResourceSpec;
+    config: ResolvedConfig;
     /** The entry type or global key; users and media have none. */
     target?: string | undefined;
-    operation: 'create' | 'update';
-    /** The row as it stands, handed to validators; null on a create. */
-    record: unknown;
     user: User | null;
     /** The status the row has after the write; it decides the validation mode. */
     status?: EntryStatus | undefined;
@@ -31,21 +30,28 @@ export type FieldWrite = {
     scan: () => Promise<readonly ScannedRow[]>;
     /** Rows the uniqueness scan ignores: usually the row being written. */
     excludeId?: string | readonly string[] | undefined;
-    /** Root field names new in this write; absent coerces every field. */
-    coerceOnly?: ReadonlySet<string> | undefined;
-};
+} & (
+    | { operation: 'create' }
+    /** `existing` is the row as it stands, handed to validators. */
+    | { operation: 'update'; existing: unknown }
+);
 
 /** Where the values come from before the parse. */
 export type FieldSource =
     /** Taken as they are: a create, or a staged change being merged. */
-    | { values: Record<string, unknown> }
+    | { values: Record<string, unknown>; base?: never; patch?: never; inherit?: never }
     /**
      * A patch over a stored row: an omitted field keeps its stored value, an
      * explicit `null` stores null, and an array or container replaces wholesale.
      * Only the patched fields are coerced, and keys the schema no longer
      * declares are dropped.
      */
-    | { base: JsonObject; patch: Record<string, unknown> }
+    | {
+          base: JsonObject;
+          patch: Record<string, unknown>;
+          values?: never;
+          inherit?: never;
+      }
     /**
      * A new translation: shared (`translatable: false`) fields come from the
      * resource's default-locale row rather than from the values sent.
@@ -53,25 +59,79 @@ export type FieldSource =
     | {
           values: Record<string, unknown>;
           inherit: (values: Record<string, unknown>) => Promise<Record<string, unknown>>;
+          base?: never;
+          patch?: never;
       };
+
+/** `prepareFields`'s argument: the write, and where its values come from. */
+export type PrepareFieldsInput = FieldWrite & FieldSource;
+
+/**
+ * The fields a write stores. Throws a 422 when a field or the resource's own
+ * validator reports. The prune runs after the parse, whose minted item ids the
+ * traversal needs, and before the write, so the index derives from its result.
+ */
+export async function prepareFields(input: PrepareFieldsInput): Promise<JsonObject> {
+    const { spec, config, target } = input;
+    const definitions = definitionsOf({ spec, config, target });
+    const patch = input.base === undefined ? undefined : input.patch;
+    const values =
+        input.base !== undefined
+            ? mergePatch(input.base, input.patch)
+            : input.inherit !== undefined
+              ? await input.inherit(input.values)
+              : input.values;
+
+    const parsed = await parseFields(
+        values,
+        definitions,
+        fieldParseContext({
+            ...input,
+            // Validators are site and plugin code, so they read the public shape.
+            ...(input.operation === 'update'
+                ? {
+                      existing: parseOutput(
+                          spec.outputSchema,
+                          input.existing,
+                          `The ${spec.kind} a field validator reads`
+                      ),
+                  }
+                : {}),
+            ...(patch !== undefined
+                ? { coerceOnly: new Set(patchedFieldNames(patch)) }
+                : {}),
+        })
+    );
+    const pruned = await pruneDanglingRelations(
+        config,
+        definitions,
+        (patch !== undefined
+            ? projectToSchema(parsed, definitions)
+            : parsed) as JsonObject
+    );
+    return pruned.values;
+}
 
 /**
  * The context `parseFields` runs with for one write to a resource: the
  * validation mode its status implies, its uniqueness scan, its validator.
+ * `coerceOnly` names the root fields new in this write; absent coerces every field.
  */
 export function fieldParseContext(
-    spec: ResourceSpec,
-    config: ResolvedConfig,
-    write: FieldWrite
+    write: FieldWrite & { coerceOnly?: ReadonlySet<string> | undefined }
 ): Parameters<typeof parseFields>[2] {
-    const validate = spec.validate(config, write.target);
+    const { spec, config, target } = write;
+    const validate = spec.validate(config, target);
     return {
         operation: write.operation,
         validation: entryValidationMode({
             status: write.status,
-            hasStatuses: spec.hasStatuses(config, write.target),
+            hasStatuses: spec.hasStatuses(config, target),
         }),
-        resource: { kind: spec.kind, record: write.record },
+        resource: {
+            kind: spec.kind,
+            record: write.operation === 'update' ? write.existing : null,
+        },
         user: write.user,
         isUnique: isUniqueAmong(write.scan, write.excludeId),
         entryTypes: (ids) => resourceExistenceRepository.findEntryTypes(ids),
@@ -80,56 +140,16 @@ export function fieldParseContext(
     };
 }
 
-/**
- * The fields a write stores. Throws a 422 when a field or the resource's own
- * validator reports. The prune runs after the parse, whose minted item ids the
- * traversal needs, and before the write, so the index derives from its result.
- */
-export async function writeFields(
-    spec: ResourceSpec,
-    config: ResolvedConfig,
-    source: FieldSource,
-    write: FieldWrite
-): Promise<JsonObject> {
-    const definitions = definitionsOf(spec, config, write.target);
-    const merging = 'base' in source;
-    const values = merging
-        ? mergePatch(source.base, source.patch)
-        : 'inherit' in source
-          ? await source.inherit(source.values)
-          : source.values;
-
-    const parsed = await parseFields(
-        values,
-        definitions,
-        fieldParseContext(spec, config, {
-            ...write,
-            // Validators are site and plugin code, so they read the public shape.
-            record:
-                write.record === null
-                    ? null
-                    : parseOutput(
-                          spec.outputSchema,
-                          write.record,
-                          `The ${spec.kind} a field validator reads`
-                      ),
-            ...(merging ? { coerceOnly: new Set(patchedFieldNames(source.patch)) } : {}),
-        })
-    );
-    const pruned = await pruneDanglingRelations(
-        config,
-        definitions,
-        (merging ? projectToSchema(parsed, definitions) : parsed) as JsonObject
-    );
-    return pruned.values;
-}
-
 /** The target's top-level data fields, layout fields unwrapped. */
-export function definitionsOf(
-    spec: ResourceSpec,
-    config: ResolvedConfig,
-    target?: string
-): DataField[] {
+export function definitionsOf({
+    spec,
+    config,
+    target,
+}: {
+    spec: ResourceSpec;
+    config: ResolvedConfig;
+    target?: string | undefined;
+}): DataField[] {
     return flattenFieldNodes(spec.fields(config, target));
 }
 

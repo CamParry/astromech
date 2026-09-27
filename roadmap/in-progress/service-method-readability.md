@@ -13,7 +13,7 @@ same shape, not only to `createUser`.
       `params` and `ctx` first (`const { config, user } = ctx`, the acting user's
       id, the default locale), rather than reaching into `ctx` partway through.
       Every method under `packages/astromech/src/*/methods/`.
-- [ ] **`writeFields` becomes `prepareFields`.** It merges, validates, coerces and
+- [x] **`writeFields` becomes `prepareFields`.** It merges, validates, coerces and
       prunes the fields a write stores; it writes nothing. Take one object
       argument, with the three source shapes as its keys, and name the row
       before the write `existing`, carried only by the update operation.

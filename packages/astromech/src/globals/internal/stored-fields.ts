@@ -1,5 +1,5 @@
 /**
- * The values a global write stores, through the shared `writeFields` path: a
+ * The values a global write stores, through the shared `prepareFields` path: a
  * first write to a locale inherits the global's shared fields, and any other
  * merges its patch over the current row.
  */
@@ -12,9 +12,9 @@ import type {
     ResolvedGlobal,
     User,
 } from '@/types/index';
+import { prepareFields } from '@/content/prepare-fields';
 import { RESOURCE_SPECS } from '@/content/resources';
 import { inheritSharedFields } from '@/content/translatable';
-import { writeFields } from '@/content/write-fields';
 
 /**
  * Turns what a caller sent into the values that go in the row. Throws a 422 when
@@ -40,30 +40,34 @@ export async function toStoredFields(input: {
 }): Promise<JsonObject> {
     const { global, current, patch, config } = input;
     const spec = RESOURCE_SPECS.global;
-    return writeFields(
+    const write = {
         spec,
         config,
-        current
-            ? { base: current.fields, patch }
-            : {
-                  values: patch,
-                  inherit: (values) =>
-                      inheritSharedFields(spec, config, {
-                          target: global.id,
-                          repository: input.repository,
-                          values,
-                          id: input.id ?? undefined,
-                          locale: input.locale,
-                      }),
-              },
-        {
-            target: global.id,
-            operation: current ? 'update' : 'create',
-            record: current,
-            user: input.user,
-            status: input.status,
-            // One row per locale, so there is nothing else to be unique among.
-            scan: async () => [],
-        }
-    );
+        target: global.id,
+        user: input.user,
+        status: input.status,
+        // One row per locale, so there is nothing else to be unique among.
+        scan: async () => [],
+    };
+    return current
+        ? prepareFields({
+              ...write,
+              operation: 'update',
+              existing: current,
+              base: current.fields,
+              patch,
+          })
+        : prepareFields({
+              ...write,
+              operation: 'create',
+              values: patch,
+              inherit: (values) =>
+                  inheritSharedFields(spec, config, {
+                      target: global.id,
+                      repository: input.repository,
+                      values,
+                      id: input.id ?? undefined,
+                      locale: input.locale,
+                  }),
+          });
 }

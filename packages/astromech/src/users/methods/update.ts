@@ -2,10 +2,10 @@ import type { UserResource } from '../repository';
 import { z } from '@hono/zod-openapi';
 import { defaultContentLocale } from '@/config/content-locale';
 import { resolveResourceLocale } from '@/content/locale';
+import { patchedFieldNames, prepareFields } from '@/content/prepare-fields';
 import { RESOURCE_SPECS } from '@/content/resources';
 import { propagateSharedFields } from '@/content/translatable';
 import { changesVersionedContent, snapshotVersion } from '@/content/versions';
-import { patchedFieldNames, writeFields } from '@/content/write-fields';
 import { transaction } from '@/database/transaction';
 import { ResourceNotFoundError } from '@/errors/resource';
 import { defineServiceMethod } from '@/services/define-service-method';
@@ -70,18 +70,17 @@ export const updateUser = defineServiceMethod({
         const fields =
             patch === undefined
                 ? undefined
-                : await writeFields(
-                      RESOURCE_SPECS.user,
+                : await prepareFields({
+                      spec: RESOURCE_SPECS.user,
                       config,
-                      { base: base.fields, patch },
-                      {
-                          operation: 'update',
-                          record: base,
-                          user,
-                          scan: () => userRepository.findByLocale(locale),
-                          excludeId: id,
-                      }
-                  );
+                      operation: 'update',
+                      existing: base,
+                      user,
+                      scan: () => userRepository.findByLocale(locale),
+                      excludeId: id,
+                      base: base.fields,
+                      patch,
+                  });
 
         const { name, email, role } = data;
 
