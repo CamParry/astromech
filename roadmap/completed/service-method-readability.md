@@ -23,10 +23,7 @@ same shape, not only to `createUser`.
 - [x] **The per-resource table is `RESOURCE_CONFIG`, typed `ResourceConfig`.**
       "Resource spec" was never agreed vocabulary; `TERMINOLOGY.md` has
       "Resource type" and its config.
-- [ ] **Move `RESOURCE_TYPES` beside `RESOURCE_CONFIG`.** Blocked: the list sits
-      in `types/domain.ts` because `content/schema.ts` builds `usageSchema` from
-      it, and `content/resources.ts` imports the resource schemas that import
-      `content/schema.ts`, so the move leaves the list undefined at load time.
 
 The `scan` argument is left as it is: `backlog.md` asks whether `unique` fields
-stay at all.
+stay at all. Moving `RESOURCE_TYPES` beside `RESOURCE_CONFIG` is in
+`planned/module-cleanup.md`.

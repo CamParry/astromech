@@ -8,7 +8,7 @@ result.
       reserved for middleware today (`requireAuth`), so a change needs a new
       home for that meaning too. Record the outcome in `DECISIONS.md`.
 - [ ] Use `prepare*` for every function that turns caller input into what a
-      write stores, after `prepareFields` (`in-progress/service-method-readability.md`).
+      write stores, after `prepareFields` (`completed/service-method-readability.md`).
 - [ ] Audit the other verbs across `packages/` against the result, and rename
       what disagrees.
 - [ ] Call a resource's category its type, not its kind, everywhere: the

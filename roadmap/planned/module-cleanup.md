@@ -1,7 +1,7 @@
 # Module clean-up
 
 From a read-only review of every package (2026-09-27). Paths are under
-`packages/astromech/src/` unless they name a package. `in-progress/service-method-readability.md`
+`packages/astromech/src/` unless they name a package. `completed/service-method-readability.md`
 holds the method-level fixes; `planned/media-users-repository-copies.md` holds
 the repository copies.
 
@@ -78,6 +78,10 @@ the repository copies.
 - [ ] **Plugins rebuild the API base URL** from a private build global
       (`@astromech/backups`, `@astromech/assistant`). Add a route helper to the
       plugin context; rename its misnamed `modal` to `confirm`.
+- [ ] **Entry create and duplicate derive the title, status, slug and fields the
+      same way** (`entries/methods/create.ts` and the duplicate path in
+      `entries/internal/update-batch.ts`), which `report:drift` lists. Share it
+      with the `publishedAt` helper above.
 - [ ] Smaller: the two identical `VersionsPanel` wrappers in the admin; the two
       no-op cron drivers; `quoteName`/`quoteLiteral` in `packages/schema-engine`;
       the exclusion count in the MCP and CLI `methods` listings.
@@ -97,6 +101,11 @@ the repository copies.
       Move each next to its owner, keep `types/index.ts` as the public list.
       Start with the driver contracts. Admin-only render types in
       `types/resolved.ts` move to `packages/admin`.
+- [ ] `RESOURCE_TYPES` sits in `types/domain.ts`, apart from `RESOURCE_CONFIG`
+      in `content/resources.ts`. Moving it there leaves it undefined at load
+      time: `content/schema.ts` builds `usageSchema` from it, and
+      `content/resources.ts` imports the resource schemas, which import
+      `content/schema.ts`. Break that cycle first.
 - [ ] `utilities/` is a mixed bag: `ai-context.ts` to `ai/`,
       `permission-match.ts` to `permissions/`, `locale.ts` to its one consumer.
 - [ ] The plugin runtime keeps its own config copy with its own defaults
