@@ -7,9 +7,8 @@ import { mediaRepository } from '../repository';
 import { mediaSchema } from '../schema';
 
 /**
- * Read one media item by id, or null when there is no such row. A locale with no
- * content row falls back to the default one, and the returned `locale` names
- * where the content came from.
+ * A missing item answers null. A locale with no content row falls back to the
+ * default locale; the result's `locale` names the one read.
  */
 export const getMedia = defineServiceMethod({
     summary: 'Read one media item by id.',
@@ -21,9 +20,8 @@ export const getMedia = defineServiceMethod({
         const { id } = params;
         const { config } = ctx;
         const locale = resolveResourceLocale('media', config, undefined, params.locale);
-        return mediaRepository.findOne(id, {
-            locale,
-            fallbackLocale: defaultContentLocale(config),
-        });
+        const fallbackLocale = defaultContentLocale(config);
+
+        return mediaRepository.findOne(id, { locale, fallbackLocale });
     },
 });

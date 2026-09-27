@@ -7,7 +7,10 @@ import { originalKey } from '../internal/keys';
 import { mediaRepository } from '../repository';
 import { variantPrefix } from '../serving/image/url';
 
-/** Delete a media row along with its original bytes and every derived variant. */
+/**
+ * Also deletes the original file and every derived variant from storage. A
+ * missing item is a no-op.
+ */
 export const deleteMedia = defineServiceMethod({
     summary: 'Delete a media item.',
     input: z.strictObject({ id: z.string() }),
@@ -15,21 +18,19 @@ export const deleteMedia = defineServiceMethod({
     access: 'media:delete',
     mutates: true,
     destructive: true,
-    // A missing row is a no-op rather than a 404, so a second call changes nothing.
     idempotent: true,
     async handler(params): Promise<void> {
         const { id } = params;
         const driver = getStorageDriver();
 
         const row = await mediaRepository.findOne(id);
+
         if (row) {
             await driver.delete(originalKey(row.id, row.filename));
             await deletePrefix(driver, variantPrefix(id));
         }
 
-        // The row and its index rows go together, as a user's do.
-        await transaction(async () => {
-            await mediaRepository.delete(id);
-        });
+        // `delete` removes the item's relationship rows, then the item.
+        await transaction(() => mediaRepository.delete(id));
     },
 });

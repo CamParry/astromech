@@ -10,7 +10,10 @@ import { mediaRepository } from '../repository';
 import { mediaSchema } from '../schema';
 import { variantPrefix } from '../serving/image/url';
 
-/** Swap a media item's file, keeping its id, URL shape and metadata row. */
+/**
+ * Only the file columns change, so no content row or version is written. The
+ * old original and every derived variant are deleted from storage.
+ */
 export const replaceMedia = defineServiceMethod({
     summary: 'Replace a media item’s file, keeping its id, URL and metadata.',
     input: z.strictObject({ id: z.string(), file: z.instanceof(File) }),
@@ -21,26 +24,19 @@ export const replaceMedia = defineServiceMethod({
     destructive: true,
     async handler(params, ctx): Promise<MediaResource> {
         const { id, file } = params;
-        const userId = ctx.user?.id ?? null;
+        const { user } = ctx;
+        const userId = user?.id ?? null;
         const driver = getStorageDriver();
 
-        const row = await mediaRepository.findOne(id);
-        if (!row) throw new ResourceNotFoundError('media', { id });
+        const current = await mediaRepository.findOne(id);
+        if (!current) throw new ResourceNotFoundError('media', { id });
 
-        const newKey = originalKey(id, file.name);
-        const oldKey = originalKey(id, row.filename);
-
-        const { width, height, metadata } = await storeFile(driver, newKey, file);
-
-        // Drop the previous original when the extension (hence key) changed, so
-        // a cross-extension replace doesn't leave the old bytes orphaned.
-        if (oldKey !== newKey) {
-            await driver.delete(oldKey);
-        }
+        const key = originalKey(id, file.name);
+        const oldKey = originalKey(id, current.filename);
+        const { width, height, metadata } = await storeFile(driver, key, file);
+        if (oldKey !== key) await driver.delete(oldKey);
         await deletePrefix(driver, variantPrefix(id));
 
-        // The file columns only: replacing the bytes changes no authored
-        // content, so no content row and no version is written.
         await mediaRepository.updateFile(id, {
             filename: file.name,
             mimeType: file.type,

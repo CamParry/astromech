@@ -7,9 +7,8 @@ import { defineServiceMethod } from '@/services/define-service-method';
 import { mediaRepository } from '../../repository';
 
 /**
- * Lists the saved versions of one locale of a media item, newest first, as their
- * metadata; `getVersion` reads one's content. Unlike a read, this addresses a
- * content row: a locale with none throws rather than falling back to the default.
+ * Newest first, as metadata; `getVersion` reads one's content. A locale with no
+ * content row throws, with no fallback to the default locale.
  */
 export const listMediaVersions = defineServiceMethod({
     summary: 'List the saved versions of one locale of a media item.',
@@ -19,12 +18,14 @@ export const listMediaVersions = defineServiceMethod({
     mutates: false,
     async handler(params, ctx): Promise<VersionMetadata[]> {
         const { config } = ctx;
+
         const current = await getResourceInLocale(
             'media',
             config,
             mediaRepository,
             params
         );
+
         return listVersions(mediaRepository.versions, current);
     },
 });

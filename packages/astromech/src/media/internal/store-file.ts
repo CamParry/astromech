@@ -1,5 +1,3 @@
-/** Writing an uploaded file to the blob store, shared by `upload` and `replace`. */
-
 import type { MediaMetadata, StorageDriver } from '@/types/index';
 import { isOptimisableImage, readImageDimensions } from '../serving/image/dimensions';
 import { getImageConfig } from '../serving/image/registry';

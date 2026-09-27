@@ -1,6 +1,7 @@
 import type { MediaResource } from '../repository';
 import { z } from '@hono/zod-openapi';
 import { ulid } from 'ulidx';
+import { transaction } from '@/database/transaction';
 import { defineServiceMethod } from '@/services/define-service-method';
 import { getStorageDriver } from '@/storage/registry';
 import { originalKey } from '../internal/keys';
@@ -8,49 +9,44 @@ import { storeFile } from '../internal/store-file';
 import { mediaRepository } from '../repository';
 import { mediaSchema } from '../schema';
 
-/** Store a new file and insert the row describing it. */
+/**
+ * Writes the file to storage, then inserts the item with an empty
+ * default-locale content row.
+ */
 export const uploadMedia = defineServiceMethod({
     summary: 'Upload a new media file.',
-    // `File` has no JSON Schema representation — the manifest generator's
-    // `unrepresentable: 'any'` degrades it to `{}` rather than throwing, so
-    // the emitted schema looks callable and isn't. `binaryInput` is what
-    // says so out loud; a JSON-RPC transport skips the method by that flag
-    // rather than by keeping its own list of exceptions.
     input: z.strictObject({ file: z.instanceof(File) }),
+    // A `File` has no JSON Schema, so JSON-only transports must skip this method.
     binaryInput: true,
     output: mediaSchema,
     access: 'media:upload',
     mutates: true,
     async handler(params, ctx): Promise<MediaResource> {
         const { file } = params;
-        const userId = ctx.user?.id ?? null;
+        const { user } = ctx;
+        const userId = user?.id ?? null;
         const driver = getStorageDriver();
 
-        // Minted here rather than left to the column's `col.id()` default:
-        // the storage key is derived from the id and the bytes are written
-        // BEFORE the row is inserted, so the id has to exist first. `ulid()` is
-        // the same generator the column default uses, so an explicit mint
-        // agrees with the column instead of fighting it.
+        // Minted here, not by the column default: the file is stored under it first.
         const id = ulid();
         const key = originalKey(id, file.name);
-
         const { width, height, metadata } = await storeFile(driver, key, file);
 
-        // The resource row and its default-locale content row are one insert
-        // pair: the repository wraps both in a transaction.
-        return mediaRepository.create(
-            {
-                id,
-                filename: file.name,
-                mimeType: file.type,
-                size: file.size,
-                width,
-                height,
-                metadata,
-                createdBy: userId,
-                updatedBy: userId,
-            },
-            { fields: {}, createdBy: userId, updatedBy: userId }
+        return transaction(() =>
+            mediaRepository.create(
+                {
+                    id,
+                    filename: file.name,
+                    mimeType: file.type,
+                    size: file.size,
+                    width,
+                    height,
+                    metadata,
+                    createdBy: userId,
+                    updatedBy: userId,
+                },
+                { fields: {}, createdBy: userId, updatedBy: userId }
+            )
         );
     },
 });

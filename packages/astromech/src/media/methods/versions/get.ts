@@ -1,4 +1,4 @@
-import type { mediaSnapshotSchema } from '../../schema';
+import type { MediaVersion } from '@/types/index';
 import { z } from '@hono/zod-openapi';
 import { getResourceInLocale } from '@/content/locale';
 import { readVersion } from '@/content/versions';
@@ -7,9 +7,8 @@ import { mediaRepository } from '../../repository';
 import { mediaVersionSchema } from '../../schema';
 
 /**
- * Reads one saved version of one locale of a media item, by its number: the
- * metadata and the title, alt text, caption and fields it holds. A locale with no content row, or no version
- * with that number, throws.
+ * Addressed by version number. A locale with no content row, or no version with
+ * that number, throws, with no fallback to the default locale.
  */
 export const getMediaVersion = defineServiceMethod({
     summary: 'Read one saved version of one locale of a media item.',
@@ -21,16 +20,18 @@ export const getMediaVersion = defineServiceMethod({
     output: mediaVersionSchema,
     access: 'media:read',
     mutates: false,
-    async handler(params, ctx) {
+    async handler(params, ctx): Promise<MediaVersion> {
         const { id, version } = params;
         const { config } = ctx;
+
         const current = await getResourceInLocale(
             'media',
             config,
             mediaRepository,
             params
         );
-        return readVersion<z.input<typeof mediaSnapshotSchema>>({
+
+        return readVersion({
             resource: 'media',
             versions: mediaRepository.versions,
             record: current,

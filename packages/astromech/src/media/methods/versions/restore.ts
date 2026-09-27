@@ -8,10 +8,8 @@ import { mediaRepository } from '../../repository';
 import { mediaSchema } from '../../schema';
 
 /**
- * Restores one locale of a media item to one of its saved versions, by its
- * number, snapshotting the state being overwritten first so a restore is itself
- * reversible. A locale with no content row, or no version with that number,
- * throws.
+ * Saves the content it overwrites as a new version first, so a restore can be
+ * undone. A locale with no content row, or no version with that number, throws.
  */
 export const restoreMediaVersion = defineServiceMethod({
     summary: 'Restore one locale of a media item to a saved version.',
@@ -27,13 +25,13 @@ export const restoreMediaVersion = defineServiceMethod({
         const { id, version } = params;
         const { config, user } = ctx;
         const userId = user?.id ?? null;
+
         const current = await getResourceInLocale(
             'media',
             config,
             mediaRepository,
             params
         );
-        const { locale } = current;
 
         return restoreVersion({
             resource: 'media',
@@ -43,12 +41,12 @@ export const restoreMediaVersion = defineServiceMethod({
             address: { id },
             user,
             write: async ({ fields, columns }) => {
-                const row = await mediaRepository.update(
-                    { id, locale },
+                const restored = await mediaRepository.update(
+                    { id, locale: current.locale },
                     { ...columns, fields, updatedBy: userId }
                 );
                 await syncMediaRelationships(config, id);
-                return row;
+                return restored;
             },
         });
     },

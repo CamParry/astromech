@@ -1,5 +1,4 @@
 import type { MediaResource } from '../repository';
-import type { JsonObject } from '@/types/index';
 import { z } from '@hono/zod-openapi';
 import { resolveResourceLocale } from '@/content/locale';
 import { patchedFieldNames, prepareFields } from '@/content/prepare-fields';
@@ -13,9 +12,8 @@ import { mediaRepository } from '../repository';
 import { mediaSchema, updateMediaSchema } from '../schema';
 
 /**
- * Update one locale of a media item's authored content. A locale with no row yet
- * gets one seeded from the default-locale row with the patch applied over it, so
- * a read does not change shape when the translation is created.
+ * Writes one locale's content row. A locale with none is seeded from the default
+ * locale's, with the patch applied over it.
  */
 export const updateMedia = defineServiceMethod({
     summary:
@@ -32,68 +30,51 @@ export const updateMedia = defineServiceMethod({
     idempotent: true,
     async handler(params, ctx): Promise<MediaResource> {
         const { id, data } = params;
+        const { title, alt, caption, fields: patch } = data;
         const { config, user } = ctx;
         const userId = user?.id ?? null;
         const locale = resolveResourceLocale('media', config, undefined, params.locale);
 
-        // The row this write edits or, when the locale has none, the
-        // default-locale row the new one is copied from.
+        // With no content row in `locale`, `base` is the row the new one is seeded from.
         const current = await mediaRepository.findOne(id, { locale });
         const base = current ?? (await mediaRepository.findOne(id));
         if (!base) throw new ResourceNotFoundError('media', { id });
 
-        const patch = data.fields;
+        const fields =
+            patch === undefined
+                ? undefined
+                : await prepareFields({
+                      resource: 'media',
+                      config,
+                      operation: 'update',
+                      existing: base,
+                      user,
+                      scan: () => mediaRepository.findByLocale(locale),
+                      excludeId: id,
+                      base: base.fields,
+                      patch,
+                  });
         const patchedNames = patch === undefined ? [] : patchedFieldNames(patch);
-
-        let fields: JsonObject | undefined;
-        if (patch !== undefined) {
-            // Merged over `base`, so a locale being written for the first time
-            // starts as a copy of the default-locale row.
-            fields = await prepareFields({
-                resource: 'media',
-                config,
-                operation: 'update',
-                existing: base,
-                user,
-                scan: () => mediaRepository.findByLocale(locale),
-                excludeId: id,
-                base: base.fields,
-                patch,
-            });
-        } else if (!current) {
-            // The copy carries the source row's fields unchanged.
-            fields = base.fields;
-        }
-
         const next = {
-            title: inherited(data.title, current, base, 'title'),
-            alt: inherited(data.alt, current, base, 'alt'),
-            caption: inherited(data.caption, current, base, 'caption'),
-            fields,
+            title: inherited(title, current, base, 'title'),
+            alt: inherited(alt, current, base, 'alt'),
+            caption: inherited(caption, current, base, 'caption'),
+            fields: inherited(fields, current, base, 'fields'),
         };
 
-        // The version, the row write and the index write are one transaction: an
-        // index that outlived a failed write would name relations the stored
-        // fields do not.
         return transaction(async () => {
             if (current && changesVersionedContent('media', current, next)) {
                 await snapshotVersion('media', mediaRepository.versions, current, user);
             }
-            // The repository stamps `updatedAt` and `updatedBy` on the media
-            // row; an explicitly-`undefined` key means "leave this column alone".
-            const row = await mediaRepository.update(
+            const updated = await mediaRepository.update(
                 { id, locale },
                 {
                     ...next,
                     updatedBy: userId,
-                    // A locale being written for the first time is authored now,
-                    // whoever uploaded the file.
                     ...(current ? {} : { createdBy: userId }),
                 }
             );
-            // An update that never touched `fields` must leave the index and the
-            // item's other locales alone.
-            if (fields !== undefined && patch !== undefined) {
+            if (fields !== undefined) {
                 await propagateSharedFields('media', config, {
                     translatable: mediaRepository.translatable,
                     record: { id, locale },
@@ -102,21 +83,21 @@ export const updateMedia = defineServiceMethod({
                 });
                 await syncMediaRelationships(config, id);
             }
-            return row;
+            return updated;
         });
     },
 });
 
 /**
- * The value one text column takes. An omitted key is left alone on an edit, and
- * copied from the source row when the locale's row is being created.
+ * The value one column is written with. An omitted key leaves the column alone
+ * on an edit, and is copied from `base` when the locale's row is being created.
  */
-function inherited(
-    value: string | null | undefined,
+function inherited<K extends 'title' | 'alt' | 'caption' | 'fields'>(
+    value: MediaResource[K] | undefined,
     current: MediaResource | null,
     base: MediaResource,
-    column: 'title' | 'alt' | 'caption'
-): string | null | undefined {
+    column: K
+): MediaResource[K] | undefined {
     if (value !== undefined) return value;
     return current ? undefined : base[column];
 }

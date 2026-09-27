@@ -7,8 +7,8 @@ import { defineServiceMethod } from '@/services/define-service-method';
 import { mediaRepository } from '../repository';
 
 /**
- * Every reference to a media item, from any resource: the "used by" panel. One
- * row per reference, so a source using the file at two paths is two rows.
+ * One row per reference, so a source that uses the file at two paths is two
+ * rows. A missing item throws.
  */
 export const listMediaUsage = defineServiceMethod({
     summary:
@@ -20,8 +20,10 @@ export const listMediaUsage = defineServiceMethod({
     async handler(params, ctx): Promise<Usage[]> {
         const { id } = params;
         const { config } = ctx;
+
         const row = await mediaRepository.findFile(id);
         if (!row) throw new ResourceNotFoundError('media', { id });
+
         return listUsage(config, { id, kind: 'media' });
     },
 });
