@@ -166,4 +166,4 @@ z.output<typeof userSchema>`, with the schema in the resource's `schema.ts`.
 ## Follow-ups
 
 The shared audit keys landed with step 8. The rest moved to
-`planned/api-contract-gaps.md` and `planned/media-users-repository-copies.md`.
+`completed/api-contract-gaps.md` and `planned/media-users-repository-copies.md`.
