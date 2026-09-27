@@ -1,5 +1,4 @@
 import { z } from '@hono/zod-openapi';
-import { sortSchema } from '@/content/list';
 import { versionSchema } from '@/content/schema';
 import { DEFAULT_ROLE_SLUG, roleSlugSchema } from '@/permissions/roles';
 import { withFallback } from '@/services/fallback';
@@ -27,19 +26,6 @@ export const updateUserSchema = z
         role: roleSlugSchema.optional(),
     })
     .openapi('UpdateUser');
-
-/**
- * Call schema for `users.query`, the shape of `UserQueryParams`. Not a request body:
- * the HTTP route reads these off the query string, so this exists purely so the
- * method manifest can describe how the method is called.
- */
-export const userQuerySchema = z.strictObject({
-    locale: z.string().optional(),
-    search: z.string().optional(),
-    page: z.number().optional(),
-    limit: z.union([z.number(), z.literal('all')]).optional(),
-    sort: sortSchema,
-});
 
 /** An admin user account: the public `User`. */
 export const userSchema = z

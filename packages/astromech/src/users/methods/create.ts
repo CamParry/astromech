@@ -10,8 +10,8 @@ import { userRepository } from '../repository';
 import { createUserSchema, userSchema } from '../schema';
 
 /**
- * Create a CMS user, running its custom fields through the field pipeline. A
- * `password` also writes the credential account it signs in with.
+ * A `password` also writes the credential account the user signs in with.
+ * Without one, the user sets a password through the reset link.
  */
 export const createUser = defineServiceMethod({
     summary: 'Create a new CMS user.',
@@ -33,28 +33,20 @@ export const createUser = defineServiceMethod({
             scan: () => userRepository.findByLocale(locale),
             values: data.fields ?? {},
         });
-
-        // Hashed before the transaction opens, so no lock is held while it runs.
+        // Hashed before the transaction, so no lock is held while it runs.
         const passwordHash =
             data.password === undefined ? undefined : await hashPassword(data.password);
 
-        // The `users` row, its credential, its content row and the index write
-        // are one transaction: an index that outlived a failed create would name
-        // a user that is not there.
         return transaction(async () => {
-            const row = await userRepository.create(
-                {
-                    email: data.email,
-                    name: data.name,
-                    role: data.role,
-                },
+            const created = await userRepository.create(
+                { email: data.email, name: data.name, role: data.role },
                 { fields, createdBy: userId, updatedBy: userId }
             );
             if (passwordHash !== undefined) {
-                await userRepository.createCredentialAccount(row.id, passwordHash);
+                await userRepository.createCredentialAccount(created.id, passwordHash);
             }
-            await syncUserRelationships(config, row.id);
-            return row;
+            await syncUserRelationships(config, created.id);
+            return created;
         });
     },
 });

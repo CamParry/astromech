@@ -8,10 +8,8 @@ import { userRepository } from '../../repository';
 import { userSchema } from '../../schema';
 
 /**
- * Restores one locale of a user's fields to one of its saved versions, by its
- * number, snapshotting the state being overwritten first so a restore is itself
- * reversible. A locale with no content row, or no version with that number,
- * throws.
+ * Saves the fields it overwrites as a new version first, so a restore can be
+ * undone. A locale with no content row, or no version with that number, throws.
  */
 export const restoreUserVersion = defineServiceMethod({
     summary: 'Restore one locale of a user’s fields to a saved version.',
@@ -27,8 +25,8 @@ export const restoreUserVersion = defineServiceMethod({
         const { id, version } = params;
         const { config, user } = ctx;
         const userId = user?.id ?? null;
+
         const current = await getResourceInLocale('user', config, userRepository, params);
-        const { locale } = current;
 
         return restoreVersion({
             resource: 'user',
@@ -38,12 +36,12 @@ export const restoreUserVersion = defineServiceMethod({
             address: { id },
             user,
             write: async ({ fields }) => {
-                const row = await userRepository.update(
-                    { id, locale },
+                const restored = await userRepository.update(
+                    { id, locale: current.locale },
                     { fields, updatedBy: userId }
                 );
                 await syncUserRelationships(config, id);
-                return row;
+                return restored;
             },
         });
     },

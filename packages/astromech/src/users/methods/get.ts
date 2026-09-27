@@ -7,9 +7,9 @@ import { userRepository } from '../repository';
 import { userSchema } from '../schema';
 
 /**
- * Read one user by id, or null when there is no such user. A locale with no
- * content row falls back to the default one, then to any locale the user has,
- * and the returned `locale` names where the content came from.
+ * A missing user answers null. A locale with no content row falls back to the
+ * default locale, then to any locale the user has; the result's `locale` names
+ * the one read.
  */
 export const getUser = defineServiceMethod({
     summary: 'Read one user by id.',
@@ -21,9 +21,8 @@ export const getUser = defineServiceMethod({
         const { id } = params;
         const { config } = ctx;
         const locale = resolveResourceLocale('user', config, undefined, params.locale);
-        return userRepository.findOne(id, {
-            locale,
-            fallbackLocale: defaultContentLocale(config),
-        });
+        const fallbackLocale = defaultContentLocale(config);
+
+        return userRepository.findOne(id, { locale, fallbackLocale });
     },
 });

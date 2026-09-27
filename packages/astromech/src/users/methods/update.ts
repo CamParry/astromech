@@ -14,10 +14,9 @@ import { userRepository } from '../repository';
 import { updateUserSchema, userSchema } from '../schema';
 
 /**
- * Update a user's profile, role and custom fields. `name`, `email` and `role`
- * are the `users` row and are written whatever the locale; `fields` addresses
- * one locale's content row, and a locale with none gets one seeded from the
- * default-locale row with the patch applied over it. Demoting the last admin is refused.
+ * `name`, `email` and `role` are written whatever the locale. `fields` merges into
+ * one locale's content row, and a locale with none is seeded from the default
+ * locale's. Demoting the last admin is refused.
  */
 export const updateUser = defineServiceMethod({
     summary:
@@ -34,33 +33,18 @@ export const updateUser = defineServiceMethod({
     idempotent: true,
     async handler(params, ctx): Promise<UserResource> {
         const { id, data } = params;
+        const { name, email, role, fields: patch } = data;
         const { config, user } = ctx;
         const userId = user?.id ?? null;
         const locale = resolveResourceLocale('user', config, undefined, params.locale);
         const fallbackLocale = defaultContentLocale(config);
 
-        // The resource this write edits or, when the locale has no content row,
-        // the one the new row is copied from: the default locale's, else any
-        // locale's. A user with no content row at all is not found.
+        // With no content row in `locale`, `base` is the row the new one is seeded from.
         const current = await userRepository.findOne(id, { locale });
         const base = current ?? (await userRepository.findOne(id, { fallbackLocale }));
         if (!base) throw new ResourceNotFoundError('user', { id });
+        if (role !== undefined) await assertKeepsAnAdmin(base, role);
 
-        if (data.role !== undefined) {
-            await assertKeepsAnAdmin(
-                userRepository,
-                base,
-                data.role,
-                'Cannot remove the last administrator'
-            );
-        }
-
-        const patch = data.fields;
-        const patchedNames = patch === undefined ? [] : patchedFieldNames(patch);
-
-        // A patch is merged over `base`, so a locale being written for the first
-        // time is seeded from the default-locale row. A write naming no `fields`
-        // at all touches the `users` row alone and creates no content row.
         const fields =
             patch === undefined
                 ? undefined
@@ -75,12 +59,8 @@ export const updateUser = defineServiceMethod({
                       base: base.fields,
                       patch,
                   });
+        const patchedNames = patch === undefined ? [] : patchedFieldNames(patch);
 
-        const { name, email, role } = data;
-
-        // The version, the `users` row write, the content write and the index write
-        // are one transaction: an index that outlived a failed write would name
-        // relations the stored fields do not.
         await transaction(async () => {
             if (current && changesVersionedContent('user', current, { fields })) {
                 await snapshotVersion('user', userRepository.versions, current, user);
@@ -94,15 +74,9 @@ export const updateUser = defineServiceMethod({
                     {
                         fields,
                         updatedBy: userId,
-                        // A locale being written for the first time is authored
-                        // now, whoever created the user.
                         ...(current ? {} : { createdBy: userId }),
                     }
                 );
-            }
-            // An update that never touched `fields` must leave the index and the
-            // user's other locales alone.
-            if (fields !== undefined && patch !== undefined) {
                 await propagateSharedFields('user', config, {
                     translatable: userRepository.translatable,
                     record: { id, locale },

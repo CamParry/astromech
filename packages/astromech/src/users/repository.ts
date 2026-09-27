@@ -47,8 +47,6 @@ export type UserListParams = {
 /** The `users` row columns a profile write may change. */
 type UserRowPatch = Pick<Patch<typeof usersTable>, 'name' | 'email' | 'role'>;
 
-export type UserRepository = ReturnType<typeof createUserRepository>;
-
 /** The two joined rows plus the locale list, as the resource the service reads. */
 function toUserResource(
     resourceRow: UserTableRow,
