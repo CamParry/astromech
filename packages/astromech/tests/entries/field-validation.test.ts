@@ -194,6 +194,60 @@ describe('validation stage — derived from the status the row will hold', () =>
     });
 });
 
+describe('validation stage — a status change', () => {
+    it('publishing a draft with a missing required field is rejected', async () => {
+        const entry = await api.create({
+            type: 'post',
+            data: { title: 'Draft', status: 'unpublished', fields: {} },
+        });
+        await expect(api.publish({ type: 'post', id: entry.id })).rejects.toMatchObject({
+            name: 'ValidationError',
+            fields: { title_text: ['This field is required'] },
+        });
+        const stored = await api.get({ type: 'post', id: entry.id, full: true });
+        expect(stored?.status).toBe('unpublished');
+    });
+
+    it('scheduling a draft with a missing required field is rejected', async () => {
+        const entry = await api.create({
+            type: 'post',
+            data: { title: 'Draft', status: 'unpublished', fields: {} },
+        });
+        await expect(
+            api.schedule({
+                type: 'post',
+                id: entry.id,
+                publishedAt: new Date(Date.now() + 60_000),
+            })
+        ).rejects.toMatchObject({
+            name: 'ValidationError',
+            fields: { title_text: ['This field is required'] },
+        });
+    });
+
+    it('an update that only sets the status to published is rejected', async () => {
+        const entry = await api.create({
+            type: 'post',
+            data: { title: 'Draft', status: 'unpublished', fields: {} },
+        });
+        await expect(
+            api.update({ type: 'post', id: entry.id, data: { status: 'published' } })
+        ).rejects.toMatchObject({
+            name: 'ValidationError',
+            fields: { title_text: ['This field is required'] },
+        });
+    });
+
+    it('unpublishing never checks completeness', async () => {
+        const entry = await api.create({
+            type: 'post',
+            data: { title: 'Draft', status: 'unpublished', fields: {} },
+        });
+        const un = await api.unpublish({ type: 'post', id: entry.id });
+        expect(un.status).toBe('unpublished');
+    });
+});
+
 describe('validation stage — statuses: false', () => {
     it('rejects a missing required field on create', async () => {
         await expect(

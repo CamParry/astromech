@@ -2,6 +2,7 @@ import type { EntryResource } from '../repository/types';
 import type {
     AppContext,
     EntryCreateContext,
+    EntryStatus,
     ParsedEntryUpdateData,
     ResolvedConfig,
     ResolvedEntryType,
@@ -23,6 +24,7 @@ import { getEntryOfType } from '../read-entry';
 import { syncEntryRelationships } from '../relationships';
 import { entryRepository } from '../repository/entries-table';
 import { createEntrySchema, entrySchema, updateEntrySchema } from '../schema';
+import { entryValidationMode } from '../validation-mode';
 import { deriveSlug, uniqueSlugIfChanged } from './slug';
 import { toStoredFields } from './stored-fields';
 import { writeBatch } from './write-batch';
@@ -213,17 +215,15 @@ async function updateOne(params: {
 
     const patch = data.fields;
     const patched = patch ? patchedFieldNames(patch) : [];
+    const stored = { kind: 'update', config, entryType, currentEntry, user } as const;
     const fields = patch
-        ? await toStoredFields({
-              kind: 'update',
-              config,
-              entryType,
-              currentEntry,
-              patch,
-              status: data.status,
-              user,
-          })
+        ? await toStoredFields({ ...stored, patch, status: data.status })
         : undefined;
+    // A write with no fields patch rewrites none, but one that moves the entry
+    // to a complete status still checks them; the parse throws the 422.
+    if (!patch && completes(entryType, data.status)) {
+        await toStoredFields({ ...stored, patch: {}, status: data.status });
+    }
 
     // Snapshot before the slug is uniquified, so the version compares what the caller sent.
     if (
@@ -280,6 +280,18 @@ async function updateOne(params: {
         }
     }
     return entry;
+}
+
+/** True when the write sets a status the fields must be complete for. */
+function completes(
+    entryType: ResolvedEntryType,
+    status: EntryStatus | undefined
+): boolean {
+    return (
+        status !== undefined &&
+        entryValidationMode({ status, hasStatuses: entryType.capabilities.statuses }) ===
+            'complete'
+    );
 }
 
 /**

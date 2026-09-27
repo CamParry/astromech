@@ -206,9 +206,15 @@ await app.globals.update({
 });
 ```
 
-Each locale publishes independently. A scheduled global goes live unattended, so
-it validates as a publish: `required` fields must be filled. A staged write takes
-no status: merge the staged change, then publish.
+Each locale publishes independently. Publishing and scheduling check the stored
+fields as a publish, since a scheduled global goes live unattended: a `required`
+field left empty refuses the call with a 422 naming it. A staged write takes no
+status: merge the staged change, then publish.
+
+`publish`, `unpublish` and `schedule` are updates, so they fire
+`global:beforeUpdate` and `global:afterUpdate` with the new status in `data`,
+as an entry's status change fires `entry:beforeUpdate` and `entry:afterUpdate`.
+They write no version and leave the fields as they are.
 
 `publishedAt` follows one rule for globals and entries. A date you pass is
 stored as given. Otherwise publishing keeps a date already in the past and

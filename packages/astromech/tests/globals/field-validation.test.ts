@@ -59,6 +59,29 @@ describe('field validation', () => {
         ).rejects.toThrow(ValidationError);
     });
 
+    it('refuses to publish a draft that misses it, naming the field', async () => {
+        await api.update({ key: 'contact', data: { fields: { phone: '1' } } });
+
+        await expect(api.publish({ key: 'contact' })).rejects.toMatchObject({
+            name: 'ValidationError',
+            fields: { email: ['This field is required'] },
+        });
+        expect((await api.get({ key: 'contact', full: true }))?.status).toBe(
+            'unpublished'
+        );
+    });
+
+    it('refuses to schedule a draft that misses it', async () => {
+        await api.update({ key: 'contact', data: { fields: {} } });
+
+        await expect(
+            api.schedule({
+                key: 'contact',
+                publishedAt: new Date(Date.now() + 60_000),
+            })
+        ).rejects.toThrow(ValidationError);
+    });
+
     it('always requires it on a global with statuses off', async () => {
         await expect(api.update({ key: 'banner', data: { fields: {} } })).rejects.toThrow(
             ValidationError

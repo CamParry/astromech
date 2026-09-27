@@ -1,26 +1,8 @@
-import type { GlobalRepository, GlobalResource } from '../repository';
-import type {
-    EntryStatus,
-    JsonObject,
-    ResolvedConfig,
-    ResolvedGlobal,
-} from '@/types/index';
+import type { GlobalResource } from '../repository';
 import { z } from '@hono/zod-openapi';
-import { assertCapability } from '@/content/capabilities';
-import { resolveResourceLocale } from '@/content/locale';
-import { patchedFieldNames } from '@/content/prepare-fields';
-import { resolvePublishedAt } from '@/content/published-at';
-import { propagateSharedFields } from '@/content/translatable';
-import { changesVersionedContent, snapshotVersion } from '@/content/versions';
-import { transaction } from '@/database/transaction';
-import { ResourceNotFoundError, ResourceValidationError } from '@/errors/resource';
 import { defineServiceMethod } from '@/services/define-service-method';
-import { parseHookOutput, parseOutput } from '@/services/parse-method-output';
 import { gate } from '../internal/access';
-import { toStoredFields } from '../internal/stored-fields';
-import { syncGlobalRelationships } from '../relationships';
-import { globalRepository } from '../repository';
-import { getDeclaredGlobal } from '../resolve-global';
+import { updateGlobalLocale } from '../internal/update-global';
 import { globalSchema, localised, updateGlobalSchema } from '../schema';
 
 /**
@@ -30,8 +12,8 @@ import { globalSchema, localised, updateGlobalSchema } from '../schema';
  * row gets one with the shared fields inherited from the default-locale row.
  *
  * `staged` writes the staged change for that locale instead, which is how an
- * editor drafts against a live global. It must already exist — only
- * `createStaged` makes one — and it takes no version and propagates no shared
+ * editor drafts against a live global. It must already exist (only
+ * `createStaged` makes one), and it takes no version and propagates no shared
  * fields, both of which belong to the canonical row the merge writes to.
  */
 export const updateGlobal = defineServiceMethod({
@@ -47,209 +29,7 @@ export const updateGlobal = defineServiceMethod({
     access: gate('update'),
     mutates: true,
     idempotent: true,
-    async handler(params, ctx): Promise<GlobalResource> {
-        const { key } = params;
-        const { config, user } = ctx;
-        const userId = user?.id ?? null;
-        const staged = params.staged === true;
-        const global = getDeclaredGlobal(config, key);
-        if (staged) assertCapability('global', global, 'staging');
-        const locale = resolveResourceLocale('global', config, global.id, params.locale);
-
-        const canonical = staged ? null : await globalRepository.findByKey(key, locale);
-        // A locale with no row yet still needs the id when the global exists.
-        const id = canonical?.id ?? (await globalRepository.findIdByKey(key));
-        const current = staged
-            ? id === null
-                ? null
-                : await globalRepository.staging.findOne({ id, locale })
-            : canonical;
-        // A staged write addresses a row `createStaged` made; there is nothing
-        // here to create one from.
-        if (staged && (id === null || !current)) {
-            throw new ResourceNotFoundError('global', { id: key, locale });
-        }
-        /** The staged row this write targets, absent on a canonical write. */
-        const stagedRef = staged && id !== null ? { id, locale } : null;
-
-        // The before-hook may replace the context, and with it the patch that is
-        // written — so it runs before the fields are parsed, not just before the
-        // transaction opens.
-        const context = await ctx.runHook('global:beforeUpdate', {
-            key,
-            locale,
-            global:
-                current === null
-                    ? null
-                    : parseOutput(
-                          globalSchema,
-                          current,
-                          'The global in global:beforeUpdate'
-                      ),
-            data: params.data,
-            user,
-        });
-        // The method's input already parsed the caller's `data` with this same
-        // schema, so a failure here is the hook's, which replaced it.
-        const data = parseHookOutput(
-            updateGlobalSchema,
-            context.data,
-            'global:beforeUpdate'
-        );
-        const patch = data.fields ?? {};
-        assertWritableStatus(global, data, staged, ctx.method.name);
-
-        const fields = await toStoredFields({
-            repository: globalRepository,
-            global,
-            id,
-            locale,
-            patch,
-            current,
-            // A write that changes no status keeps the row's own, so editing a
-            // published global still enforces completeness.
-            status: data.status ?? current?.status,
-            user,
-            config,
-        });
-
-        // The version, the row write and the index write are one transaction:
-        // an index that outlived a failed write would name relations the stored
-        // fields do not.
-        const saved = await transaction(async () => {
-            if (stagedRef) {
-                // No version and no propagation: the history and the shared
-                // fields belong to the canonical row, which the merge is what
-                // writes to.
-                const row = await globalRepository.staging.update(stagedRef, {
-                    fields,
-                    updatedBy: userId,
-                });
-                await syncGlobalRelationships(config, row.id);
-                return row;
-            }
-            if (current && global.capabilities.versioning) {
-                if (changesVersionedContent('global', current, { fields })) {
-                    await snapshotVersion(
-                        'global',
-                        globalRepository.versions,
-                        current,
-                        user
-                    );
-                }
-            }
-            const written = await writeRow({
-                config,
-                repository: globalRepository,
-                global,
-                key,
-                id,
-                locale,
-                current,
-                fields,
-                status: data.status,
-                publishedAt: data.publishedAt,
-                userId,
-                patchedNames: patchedFieldNames(patch),
-            });
-            await syncGlobalRelationships(config, written.id);
-            return written;
-        });
-
-        await ctx.runHook('global:afterUpdate', {
-            key,
-            locale,
-            global: parseOutput(globalSchema, saved, 'The global in global:afterUpdate'),
-            data,
-            user,
-        });
-
-        return saved;
+    handler(params, ctx): Promise<GlobalResource> {
+        return updateGlobalLocale(params, ctx);
     },
 });
-
-/**
- * Write the row this locale needs — the global's first row, this locale's first
- * row, or an edit of one that exists — and copy the shared fields the write
- * touched out to the global's other locales.
- */
-async function writeRow(params: {
-    config: ResolvedConfig;
-    repository: GlobalRepository;
-    global: ResolvedGlobal;
-    key: string;
-    id: string | null;
-    locale: string;
-    current: GlobalResource | null;
-    fields: JsonObject;
-    status: EntryStatus | undefined;
-    publishedAt: Date | null | undefined;
-    userId: string | null;
-    patchedNames: string[];
-}): Promise<GlobalResource> {
-    const { config, repository, global, id, locale, current, fields, userId } = params;
-    // The global's first row takes a status whether or not the write names one.
-    const status = id === null ? (params.status ?? 'unpublished') : params.status;
-    const publishedAt = resolvePublishedAt({
-        status,
-        given: params.publishedAt,
-        current: current?.publishedAt ?? null,
-        now: new Date(),
-    });
-
-    const row =
-        id === null
-            ? await repository.create(
-                  { key: params.key, createdBy: userId, updatedBy: userId },
-                  {
-                      locale,
-                      fields,
-                      status: status ?? 'unpublished',
-                      publishedAt: publishedAt ?? null,
-                      createdBy: userId,
-                      updatedBy: userId,
-                  }
-              )
-            : await repository.update(
-                  { id, locale },
-                  {
-                      fields,
-                      status,
-                      publishedAt,
-                      // Moves with `updatedAt`, not with the version snapshot.
-                      updatedBy: userId,
-                      // A locale being written for the first time is authored
-                      // now, whoever created the global itself.
-                      ...(current ? {} : { createdBy: userId }),
-                  }
-              );
-
-    await propagateSharedFields('global', config, {
-        target: global.id,
-        translatable: repository.translatable,
-        record: { id: row.id, locale: row.locale },
-        fields,
-        patchedFieldNames: params.patchedNames,
-    });
-
-    return row;
-}
-
-/**
- * Refuse a status or publish gate the call cannot write: a global without
- * statuses has neither, and a staged change takes the canonical's on merge.
- */
-function assertWritableStatus(
-    global: ResolvedGlobal,
-    data: { status?: unknown; publishedAt?: unknown },
-    staged: boolean,
-    method: string
-): void {
-    if (data.status === undefined && data.publishedAt === undefined) return;
-    assertCapability('global', global, 'statuses');
-    if (staged) {
-        throw new ResourceValidationError([
-            `${method}: a staged change carries no status; merge it, then publish.`,
-        ]);
-    }
-}

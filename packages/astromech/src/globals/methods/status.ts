@@ -1,16 +1,13 @@
 /**
- * Status transitions. A locale with no content row is a not-found error here:
- * only `update` may create one. A status change writes no version — it changes
- * nothing a version preserves, which is the rule entries apply too.
+ * Status transitions. Each is an update write, so it fires the global update
+ * hooks and checks completeness when it publishes or schedules; a locale with
+ * no content row is a not-found error, since only `update` may create one.
  */
 
 import type { GlobalResource } from '../repository';
-import type { ContentWrite } from '@/content/repository/types';
-import type { ResolvedConfig, User } from '@/types/index';
-import { resolvePublishedAt } from '@/content/published-at';
 import { defineServiceMethod } from '@/services/define-service-method';
 import { gate } from '../internal/access';
-import { getCanonicalGlobal } from '../internal/canonical-global';
+import { updateGlobalLocale } from '../internal/update-global';
 import { globalSchema, localised, scheduleGlobalSchema } from '../schema';
 
 /** Publishes one locale, keeping a past `publishedAt` and otherwise stamping now. */
@@ -23,15 +20,10 @@ export const publishGlobal = defineServiceMethod({
     mutates: true,
     idempotent: true,
     handler(params, ctx): Promise<GlobalResource> {
-        return writeStatus(ctx.config, params, ctx.user, (current) => ({
-            status: 'published',
-            publishedAt: resolvePublishedAt({
-                status: 'published',
-                given: undefined,
-                current: current.publishedAt,
-                now: new Date(),
-            }),
-        }));
+        return updateGlobalLocale(
+            { ...params, createMissingLocale: false, data: { status: 'published' } },
+            ctx
+        );
     },
 });
 
@@ -48,10 +40,10 @@ export const unpublishGlobal = defineServiceMethod({
     destructive: true,
     idempotent: true,
     handler(params, ctx): Promise<GlobalResource> {
-        return writeStatus(ctx.config, params, ctx.user, () => ({
-            status: 'unpublished',
-            publishedAt: null,
-        }));
+        return updateGlobalLocale(
+            { ...params, createMissingLocale: false, data: { status: 'unpublished' } },
+            ctx
+        );
     },
 });
 
@@ -65,27 +57,14 @@ export const scheduleGlobal = defineServiceMethod({
     mutates: true,
     idempotent: true,
     handler(params, ctx): Promise<GlobalResource> {
-        return writeStatus(ctx.config, params, ctx.user, () => ({
-            status: 'scheduled',
-            publishedAt: params.publishedAt,
-        }));
+        const { publishedAt, ...address } = params;
+        return updateGlobalLocale(
+            {
+                ...address,
+                createMissingLocale: false,
+                data: { status: 'scheduled', publishedAt },
+            },
+            ctx
+        );
     },
 });
-
-/**
- * Apply a status write to an existing canonical row. Every transition needs the
- * `statuses` capability and a row to move.
- */
-async function writeStatus(
-    config: ResolvedConfig,
-    params: { key: string; locale?: string | undefined },
-    user: User | null,
-    write: (current: GlobalResource) => ContentWrite
-): Promise<GlobalResource> {
-    const { repository, id, locale, current } = await getCanonicalGlobal(config, params);
-
-    return repository.update(
-        { id, locale },
-        { ...write(current), updatedBy: user?.id ?? null }
-    );
-}

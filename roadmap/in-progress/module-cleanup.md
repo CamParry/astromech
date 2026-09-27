@@ -7,7 +7,7 @@ the repository copies.
 
 ## Defects to confirm with a test first
 
-- [ ] **Re-publishing an entry clears its `publishedAt`.** `publish` passes
+- [x] **Re-publishing an entry clears its `publishedAt`.** `publish` passes
       `publishedAt: null` (`entries/methods/status.ts`), and
       `entries/internal/update-batch.ts` writes it when the row already has a
       date. The class: `publishedAt` is stamped in six places under three rules
@@ -20,7 +20,7 @@ the repository copies.
           stays hidden while reporting `published`.
     - [x] `entries.create` ignores a caller's `publishedAt` when the status is
           `published`; `globals.update` honours it.
-    - [ ] `entries.publish` and `globals.publish` may skip the `required` check:
+    - [x] `entries.publish` and `globals.publish` may skip the `required` check:
           only a write with a fields patch validates in complete mode.
     - [ ] A scheduled global never goes live. The `scheduled-publish` job moves
           entries only (`entries/jobs/scheduled-publish.ts`), and the public

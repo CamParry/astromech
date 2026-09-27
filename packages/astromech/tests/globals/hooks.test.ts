@@ -121,6 +121,38 @@ describe('global:afterUpdate', () => {
     });
 });
 
+describe('a status change', () => {
+    it('fires global:beforeUpdate and global:afterUpdate', async () => {
+        const seen: string[] = [];
+        probe([
+            defineHook('global:beforeUpdate', (ctx) => {
+                seen.push(`before ${ctx.data.status ?? 'none'}`);
+            }),
+            defineHook('global:afterUpdate', (ctx) => {
+                seen.push(`after ${ctx.global?.status ?? 'none'}`);
+            }),
+        ]);
+        await api.update({ key: 'contact', data: { fields: { email: 'a@b.dev' } } });
+        seen.length = 0;
+
+        await api.publish({ key: 'contact' });
+        await api.schedule({
+            key: 'contact',
+            publishedAt: new Date(Date.now() + 60_000),
+        });
+        await api.unpublish({ key: 'contact' });
+
+        expect(seen).toEqual([
+            'before published',
+            'after published',
+            'before scheduled',
+            'after scheduled',
+            'before unpublished',
+            'after unpublished',
+        ]);
+    });
+});
+
 describe('a hook’s refused data over HTTP', () => {
     it('answers 500 without the issues, and the caller’s own bad key 422', async () => {
         await seedTestUser(await createTestDb());
