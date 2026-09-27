@@ -3,7 +3,7 @@ import { defineServiceMethod } from '@/services/define-service-method';
 import { subjectId } from '../internal/subject';
 import { notificationRepository } from '../repository';
 
-/** Clear the caller's whole inbox, and nobody else's. */
+/** Deletes only the signed-in user's rows, and throws with nobody signed in. */
 export const dismissAllNotifications = defineServiceMethod({
     summary: 'Dismiss every one of your own notifications.',
     input: z.strictObject({}),
@@ -14,6 +14,9 @@ export const dismissAllNotifications = defineServiceMethod({
     destructive: true,
     idempotent: true,
     async handler(_params, ctx): Promise<void> {
-        await notificationRepository.deleteByUser(subjectId(ctx.user));
+        const { user } = ctx;
+        const userId = subjectId(user);
+
+        await notificationRepository.deleteByUser(userId);
     },
 });

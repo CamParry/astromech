@@ -4,9 +4,8 @@ import { subjectId } from '../internal/subject';
 import { notificationRepository } from '../repository';
 
 /**
- * Dismiss one row. The delete filters on the subject as well as the id, so an
- * id belonging to somebody else is a no-op rather than a cross-user write —
- * that pairing is the whole of the authorization here.
+ * The delete matches the signed-in user as well as the id, so another user's
+ * notification is left alone and the call is a no-op.
  */
 export const dismissNotification = defineServiceMethod({
     summary: 'Dismiss one of your own notifications.',
@@ -18,9 +17,10 @@ export const dismissNotification = defineServiceMethod({
     destructive: true,
     idempotent: true,
     async handler(params, ctx): Promise<void> {
-        await notificationRepository.delete({
-            id: params.id,
-            userId: subjectId(ctx.user),
-        });
+        const { id } = params;
+        const { user } = ctx;
+        const userId = subjectId(user);
+
+        await notificationRepository.delete({ id, userId });
     },
 });

@@ -5,7 +5,7 @@ import { subjectId } from '../internal/subject';
 import { notificationRepository } from '../repository';
 import { notificationSchema } from '../schema';
 
-/** The caller's own undismissed notifications, newest first. */
+/** Lists only the signed-in user's rows, and throws with nobody signed in. */
 export const listNotifications = defineServiceMethod({
     summary: 'List your own notifications, newest first.',
     input: z.strictObject({}),
@@ -14,6 +14,9 @@ export const listNotifications = defineServiceMethod({
     sessionScoped: true,
     mutates: false,
     async handler(_params, ctx): Promise<Notification[]> {
-        return notificationRepository.findByUser(subjectId(ctx.user));
+        const { user } = ctx;
+        const userId = subjectId(user);
+
+        return notificationRepository.findByUser(userId);
     },
 });

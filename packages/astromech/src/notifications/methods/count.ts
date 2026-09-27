@@ -3,7 +3,7 @@ import { defineServiceMethod } from '@/services/define-service-method';
 import { subjectId } from '../internal/subject';
 import { notificationRepository } from '../repository';
 
-/** How many undismissed notifications the caller has. */
+/** Counts only the signed-in user's rows, and throws with nobody signed in. */
 export const countNotifications = defineServiceMethod({
     summary: 'Count your own undismissed notifications.',
     input: z.strictObject({}),
@@ -12,6 +12,9 @@ export const countNotifications = defineServiceMethod({
     sessionScoped: true,
     mutates: false,
     async handler(_params, ctx): Promise<number> {
-        return notificationRepository.countByUser(subjectId(ctx.user));
+        const { user } = ctx;
+        const userId = subjectId(user);
+
+        return notificationRepository.countByUser(userId);
     },
 });
