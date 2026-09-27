@@ -65,7 +65,6 @@ export const globalVersionsTable = defineTable(
         }),
         version: col.integer({ notNull: true }),
         fields: col.json(),
-        status: col.enum(['unpublished', 'published', 'scheduled']),
         createdAt: col.timestamp({ notNull: true, defaultNow: true }),
         createdBy: col.reference('users', { onDelete: 'set null' }),
     }),

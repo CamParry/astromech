@@ -555,15 +555,6 @@
                     "primaryKey": false
                 },
                 {
-                    "key": "status",
-                    "name": "status",
-                    "kind": "enum",
-                    "type": "text",
-                    "notNull": false,
-                    "primaryKey": false,
-                    "enumValues": ["unpublished", "published", "scheduled"]
-                },
-                {
                     "key": "createdAt",
                     "name": "created_at",
                     "kind": "timestamp",
@@ -775,15 +766,6 @@
                     "type": "text",
                     "notNull": false,
                     "primaryKey": false
-                },
-                {
-                    "key": "status",
-                    "name": "status",
-                    "kind": "enum",
-                    "type": "text",
-                    "notNull": false,
-                    "primaryKey": false,
-                    "enumValues": ["unpublished", "published", "scheduled"]
                 },
                 {
                     "key": "createdAt",

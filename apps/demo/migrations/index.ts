@@ -8,6 +8,7 @@ import * as m0004 from './0004_users-role';
 import * as m0005 from './0005_user-content';
 import * as m0006 from './0006_global-relationship-source';
 import * as m0007 from './0007_drop-settings';
+import * as m0008 from './0008_drop-version-status';
 
 export const migrationProvider: MigrationProvider = {
     async getMigrations() {
@@ -20,6 +21,7 @@ export const migrationProvider: MigrationProvider = {
             '0005_user-content': m0005,
             '0006_global-relationship-source': m0006,
             '0007_drop-settings': m0007,
+            '0008_drop-version-status': m0008,
         };
     },
 };

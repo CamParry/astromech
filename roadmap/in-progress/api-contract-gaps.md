@@ -22,8 +22,5 @@ server does.
       `{ data: … }` answers 200 and changes nothing. Decide whether method
       inputs refuse unknown keys (`z.strictObject`), and where that would
       break a caller.
-- [ ] **The entry and global version tables have a `status` column nothing
-      writes.** It is always null, so a version's `snapshot` leaves it out.
-      Either version `status` (add it to the spec's `versionedColumns`) or drop
-      the column, which needs a migration and a hand edit to the Cloudflare
-      baseline.
+- [x] **The version tables' unused `status` column is dropped.** A version
+      holds content, not publication state (`DECISIONS.md`).

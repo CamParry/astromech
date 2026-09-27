@@ -86,7 +86,6 @@ export const entryVersionsTable = defineTable(
         title: col.text({ notNull: true }),
         slug: col.text(),
         fields: col.json(),
-        status: col.enum(['unpublished', 'published', 'scheduled']),
         createdAt: col.timestamp({ notNull: true, defaultNow: true }),
         createdBy: col.reference('users', { onDelete: 'set null' }),
     }),

@@ -41,6 +41,11 @@
             "idx": 7,
             "tag": "0007_drop-settings",
             "when": 1790159194510
+        },
+        {
+            "idx": 8,
+            "tag": "0008_drop-version-status",
+            "when": 1790513127212
         }
     ]
 }
