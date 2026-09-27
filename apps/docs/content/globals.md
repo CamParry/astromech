@@ -217,9 +217,10 @@ as an entry's status change fires `entry:beforeUpdate` and `entry:afterUpdate`.
 They write no version and leave the fields as they are.
 
 `publishedAt` follows one rule for globals and entries. A date you pass is
-stored as given. Otherwise publishing keeps a date already in the past and
-stamps the current time over a missing or future one, so re-publishing keeps
-the original date and publishing a scheduled global puts it live at once.
+stored as given. Otherwise a global that is already published keeps its date,
+through a re-publish or any save, and one becoming published (from a draft or
+a schedule) is stamped with the current time, so publishing a scheduled global
+puts it live at once.
 Unpublishing clears the date, and scheduling keeps the one it names. A
 scheduled global goes live on the first run of the built-in `scheduled-publish`
 job after its date, as a scheduled entry does

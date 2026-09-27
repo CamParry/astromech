@@ -26,17 +26,14 @@ describe('publish / unpublish / schedule', () => {
         expect(published.publishedAt).toBeInstanceOf(Date);
     });
 
-    it('publish keeps an existing publishedAt rather than restamping it', async () => {
+    it('publishing a scheduled global stamps now, even when its date has passed', async () => {
         await api.update({ key: 'contact', data: { fields: {} } });
-        const first = await api.publish({ key: 'contact' });
-        await api.unpublish({ key: 'contact' });
-        await api.schedule({
-            key: 'contact',
-            publishedAt: new Date(first.publishedAt?.getTime() ?? 0),
-        });
-        const again = await api.publish({ key: 'contact' });
+        const past = new Date(Date.now() - 86_400_000);
+        await api.schedule({ key: 'contact', publishedAt: past });
+        const before = Date.now();
+        const published = await api.publish({ key: 'contact' });
 
-        expect(again.publishedAt?.getTime()).toBe(first.publishedAt?.getTime());
+        expect(published.publishedAt?.getTime()).toBeGreaterThanOrEqual(before);
     });
 
     it('publishing a scheduled global puts it live now', async () => {
@@ -52,6 +49,21 @@ describe('publish / unpublish / schedule', () => {
         expect(published.publishedAt?.getTime()).toBeGreaterThanOrEqual(before);
         expect(published.publishedAt?.getTime()).toBeLessThanOrEqual(Date.now());
         expect(await api.get({ key: 'legal' })).not.toBeNull();
+    });
+
+    it('keeps a published global’s future publishedAt through a save that sends published', async () => {
+        const future = new Date(Date.now() + 86_400_000);
+        await api.update({
+            key: 'contact',
+            data: { fields: {}, status: 'published', publishedAt: future },
+        });
+        const saved = await api.update({
+            key: 'contact',
+            data: { fields: { email: 'a@b.dev' }, status: 'published' },
+        });
+
+        expect(saved.fields['email']).toBe('a@b.dev');
+        expect(saved.publishedAt?.getTime()).toBe(future.getTime());
     });
 
     it('re-publishing a published global keeps its publishedAt', async () => {

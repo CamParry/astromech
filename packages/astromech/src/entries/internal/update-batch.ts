@@ -240,7 +240,7 @@ async function updateOne(params: {
     const publishedAt = resolvePublishedAt({
         status: data.status,
         given: data.publishedAt,
-        current: currentEntry.publishedAt,
+        current: currentEntry,
         now: new Date(),
     });
     const slug = await uniqueSlugIfChanged({
@@ -350,7 +350,7 @@ async function planTranslation(params: {
         publishedAt: resolvePublishedAt({
             status,
             given: validated.publishedAt,
-            current: source.publishedAt,
+            current: source,
             now: new Date(),
         }),
         createdBy: user?.id ?? null,

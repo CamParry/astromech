@@ -730,6 +730,21 @@ describe('publish / unpublish / schedule', () => {
         expect(again.publishedAt?.getTime()).toBe(e.publishedAt?.getTime());
     });
 
+    it('keeps a published entry’s future publishedAt through a save that sends published', async () => {
+        const future = new Date(Date.now() + 86_400_000);
+        const e = await api.create({
+            type: 'post',
+            data: { title: 'P', status: 'published', publishedAt: future },
+        });
+        const saved = await api.update({
+            type: 'post',
+            id: e.id,
+            data: { status: 'published', fields: { body: 'new' } },
+        });
+        expect(saved.fields['body']).toBe('new');
+        expect(saved.publishedAt?.getTime()).toBe(future.getTime());
+    });
+
     it('publishing a scheduled entry puts it live now', async () => {
         const e = await api.create({ type: 'post', data: { title: 'S' } });
         await api.schedule({

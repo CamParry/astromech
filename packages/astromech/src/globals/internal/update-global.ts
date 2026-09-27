@@ -205,7 +205,7 @@ async function writeRow(params: {
     const publishedAt = resolvePublishedAt({
         status,
         given: params.publishedAt,
-        current: current?.publishedAt ?? null,
+        current,
         now: new Date(),
     });
 
