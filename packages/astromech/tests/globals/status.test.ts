@@ -174,3 +174,15 @@ describe('status through update', () => {
         ).rejects.toMatchObject({ name: 'ResourceValidationError' });
     });
 });
+
+describe('a first save', () => {
+    it('may publish the global it creates', async () => {
+        const saved = await api.update({
+            key: 'contact',
+            data: { fields: { email: 'a@b.dev' }, status: 'published' },
+        });
+
+        expect(saved.status).toBe('published');
+        expect(saved.publishedAt).toBeInstanceOf(Date);
+    });
+});

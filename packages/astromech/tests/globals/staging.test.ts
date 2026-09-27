@@ -381,3 +381,13 @@ describe('deleteStaged', () => {
         );
     });
 });
+
+describe('a staged write with no fields', () => {
+    it('keeps the staged fields', async () => {
+        await saveSite();
+        await stageSite('Draft');
+        const staged = await api.update({ key: 'site', staged: true, data: {} });
+
+        expect(staged.fields.title).toBe('Draft');
+    });
+});
