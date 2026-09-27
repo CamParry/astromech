@@ -2,7 +2,7 @@ import type { GlobalResource } from '../../repository';
 import { transaction } from '@/database/transaction';
 import { StagedChangeExistsError } from '@/errors/resource';
 import { defineServiceMethod } from '@/services/define-service-method';
-import { gate } from '../../internal/access';
+import { globalAccess } from '../../internal/access';
 import { getCanonicalGlobal } from '../../internal/canonical-global';
 import { syncGlobalRelationships } from '../../relationships';
 import { globalSchema, localised } from '../../schema';
@@ -16,7 +16,7 @@ export const createStagedGlobal = defineServiceMethod({
     summary: 'Stage a change to a global.',
     input: localised,
     output: globalSchema,
-    access: gate('update'),
+    access: globalAccess('update'),
     requires: 'staging',
     mutates: true,
     async handler(params, ctx): Promise<GlobalResource> {

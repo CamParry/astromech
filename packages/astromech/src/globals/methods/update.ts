@@ -1,7 +1,7 @@
 import type { GlobalResource } from '../repository';
 import { z } from '@hono/zod-openapi';
 import { defineServiceMethod } from '@/services/define-service-method';
-import { gate } from '../internal/access';
+import { globalAccess } from '../internal/access';
 import { updateGlobalLocale } from '../internal/update-global';
 import { globalSchema, localised, updateGlobalSchema } from '../schema';
 
@@ -26,7 +26,7 @@ export const updateGlobal = defineServiceMethod({
         data: updateGlobalSchema,
     }),
     output: globalSchema,
-    access: gate('update'),
+    access: globalAccess('update'),
     mutates: true,
     idempotent: true,
     handler(params, ctx): Promise<GlobalResource> {

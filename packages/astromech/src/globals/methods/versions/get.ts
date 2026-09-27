@@ -2,7 +2,7 @@ import type { globalSnapshotSchema } from '../../schema';
 import type { z } from '@hono/zod-openapi';
 import { readVersion } from '@/content/versions';
 import { defineServiceMethod } from '@/services/define-service-method';
-import { gate } from '../../internal/access';
+import { globalAccess } from '../../internal/access';
 import { getCanonicalGlobal } from '../../internal/canonical-global';
 import { globalVersionSchema, versionAddress } from '../../schema';
 
@@ -15,7 +15,7 @@ export const getGlobalVersion = defineServiceMethod({
     summary: 'Read one version of a global.',
     input: versionAddress,
     output: globalVersionSchema,
-    access: gate('read'),
+    access: globalAccess('read'),
     requires: 'versioning',
     mutates: false,
     async handler(params, ctx) {

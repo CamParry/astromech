@@ -3,7 +3,7 @@ import { z } from '@hono/zod-openapi';
 import { versionMetadataSchema } from '@/content/schema';
 import { listVersions } from '@/content/versions';
 import { defineServiceMethod } from '@/services/define-service-method';
-import { gate } from '../../internal/access';
+import { globalAccess } from '../../internal/access';
 import { getCanonicalGlobal } from '../../internal/canonical-global';
 import { localised } from '../../schema';
 
@@ -16,7 +16,7 @@ export const listGlobalVersions = defineServiceMethod({
     summary: 'List the version history of a global.',
     input: localised,
     output: z.array(versionMetadataSchema),
-    access: gate('read'),
+    access: globalAccess('read'),
     requires: 'versioning',
     mutates: false,
     async handler(params, ctx): Promise<VersionMetadata[]> {

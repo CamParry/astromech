@@ -3,7 +3,7 @@ import { requireStagedChange } from '@/content/staging';
 import { snapshotVersion } from '@/content/versions';
 import { transaction } from '@/database/transaction';
 import { defineServiceMethod } from '@/services/define-service-method';
-import { gate } from '../../internal/access';
+import { globalAccess } from '../../internal/access';
 import { getCanonicalGlobal } from '../../internal/canonical-global';
 import { toStoredFields } from '../../internal/stored-fields';
 import { syncGlobalRelationships } from '../../relationships';
@@ -20,7 +20,7 @@ export const mergeStagedGlobal = defineServiceMethod({
     summary: 'Merge the staged change into a global.',
     input: localised,
     output: globalSchema,
-    access: gate('publish'),
+    access: globalAccess('publish'),
     requires: 'staging',
     mutates: true,
     async handler(params, ctx): Promise<GlobalResource> {

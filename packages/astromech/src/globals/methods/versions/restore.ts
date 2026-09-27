@@ -1,7 +1,7 @@
 import type { GlobalResource } from '../../repository';
 import { restoreVersion } from '@/content/versions';
 import { defineServiceMethod } from '@/services/define-service-method';
-import { gate } from '../../internal/access';
+import { globalAccess } from '../../internal/access';
 import { getCanonicalGlobal } from '../../internal/canonical-global';
 import { syncGlobalRelationships } from '../../relationships';
 import { globalSchema, versionAddress } from '../../schema';
@@ -15,7 +15,7 @@ export const restoreGlobalVersion = defineServiceMethod({
     summary: 'Roll a global back to an earlier version.',
     input: versionAddress,
     output: globalSchema,
-    access: gate('update'),
+    access: globalAccess('update'),
     requires: 'versioning',
     mutates: true,
     idempotent: true,

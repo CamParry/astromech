@@ -1,7 +1,7 @@
 import type { GlobalResource } from '../../repository';
 import { hasDiverged } from '@/content/staging';
 import { defineServiceMethod } from '@/services/define-service-method';
-import { gate } from '../../internal/access';
+import { globalAccess } from '../../internal/access';
 import { getCanonicalGlobal } from '../../internal/canonical-global';
 import { localised, stagedGlobalSchema } from '../../schema';
 
@@ -14,7 +14,7 @@ export const getStagedGlobal = defineServiceMethod({
     summary: 'Get the staged change of a global.',
     input: localised,
     output: stagedGlobalSchema.nullable(),
-    access: gate('read'),
+    access: globalAccess('read'),
     requires: 'staging',
     mutates: false,
     async handler(params, ctx): Promise<(GlobalResource & { diverged: boolean }) | null> {

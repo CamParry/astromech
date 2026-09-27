@@ -6,7 +6,7 @@
 
 import type { GlobalResource } from '../repository';
 import { defineServiceMethod } from '@/services/define-service-method';
-import { gate } from '../internal/access';
+import { globalAccess } from '../internal/access';
 import { updateGlobalLocale } from '../internal/update-global';
 import { globalSchema, localised, scheduleGlobalSchema } from '../schema';
 
@@ -15,7 +15,7 @@ export const publishGlobal = defineServiceMethod({
     summary: 'Publish a global.',
     input: localised,
     output: globalSchema,
-    access: gate('publish'),
+    access: globalAccess('publish'),
     requires: 'statuses',
     mutates: true,
     idempotent: true,
@@ -32,7 +32,7 @@ export const unpublishGlobal = defineServiceMethod({
     summary: 'Unpublish a global.',
     input: localised,
     output: globalSchema,
-    access: gate('publish'),
+    access: globalAccess('publish'),
     requires: 'statuses',
     mutates: true,
     // Data-losing in the sense the effect hints mean: the global stops being
@@ -52,7 +52,7 @@ export const scheduleGlobal = defineServiceMethod({
     summary: 'Schedule a global to publish at a future time.',
     input: localised.extend(scheduleGlobalSchema.shape),
     output: globalSchema,
-    access: gate('publish'),
+    access: globalAccess('publish'),
     requires: 'statuses',
     mutates: true,
     idempotent: true,
