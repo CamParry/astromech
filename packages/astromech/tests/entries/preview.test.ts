@@ -11,8 +11,10 @@
 import { createTestDb, makeTestConfig, setupTestConfig } from '@tests/harness';
 import { beforeEach, describe, expect, it } from 'vitest';
 import { currentServices } from '@/app-context/services';
-import { hashPreviewToken } from '@/entries/internal/preview';
-import { DEFAULT_PREVIEW_TOKEN_TTL_MS } from '@/entries/methods/preview/token';
+import {
+    DEFAULT_PREVIEW_TOKEN_TTL_MS,
+    hashPreviewToken,
+} from '@/entries/internal/preview';
 import { entryRepository } from '@/entries/repository/entries-table';
 import { CapabilityError } from '@/errors/capability';
 

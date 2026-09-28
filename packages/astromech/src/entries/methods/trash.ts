@@ -1,19 +1,12 @@
 import { z } from '@hono/zod-openapi';
-import { relationshipRepository } from '@/content/repository/relationships';
-import { transaction } from '@/database/transaction';
 import { defineServiceMethod } from '@/services/define-service-method';
 import { entryAccess } from '../internal/access';
 import { trashEntryBatch } from '../internal/delete-batch';
 import { batchAddress, fromBatch, oneOrMany } from '../internal/from-batch';
-import { entryRepository } from '../repository/entries-table';
-
-/** One id is a batch of one, and its errors are unwrapped. */
-const trashOne = fromBatch(trashEntryBatch);
 
 /**
- * Soft-delete one entry or a list of them, atomically, firing the entry delete
- * hooks around the write. Trashing is resource-level: every locale of an entry
- * goes with it. Throws if the type does not support trash.
+ * Takes one `id` or a list of `ids`, trashed atomically with every locale, firing
+ * the entry delete hooks with `permanent: false`. `restore` brings them back.
  */
 export const trashEntries = defineServiceMethod({
     summary: 'Move an entry to the trash (reversible).',
@@ -22,42 +15,10 @@ export const trashEntries = defineServiceMethod({
     access: entryAccess('delete'),
     requires: 'trash',
     mutates: true,
-    // NOT destructive: trash is the reversible half of the delete pair —
-    // `restore` undoes it. `emptyTrash` and `delete` are the ones that lose
-    // data, and both declare the flag.
+    // Not destructive, unlike `delete` and `emptyTrash`: `restore` undoes it.
     idempotent: true,
     handler(params, ctx): Promise<void> {
         return trashOne(params, ctx);
-    },
-});
-
-/**
- * Permanently delete every trashed entry of the type, clearing their
- * relationship rows first. Throws if the type does not support trash.
- */
-export const emptyTrash = defineServiceMethod({
-    summary: 'Permanently delete every trashed entry of one type.',
-    input: emptyTrashInput({ type: z.string() }),
-    output: z.void(),
-    access: entryAccess('delete'),
-    requires: 'trash',
-    mutates: true,
-    destructive: true,
-    idempotent: true,
-    async handler(params): Promise<void> {
-        const { type } = params;
-        const trashed = await entryRepository.findMany({
-            type,
-            locale: 'all',
-            trashed: true,
-        });
-
-        await transaction(async () => {
-            for (const entryId of new Set(trashed.map((entry) => entry.id))) {
-                await relationshipRepository.deleteByResource(entryId, 'entry');
-            }
-            await entryRepository.trash.emptyTrash(type);
-        });
     },
 });
 
@@ -69,10 +30,4 @@ export function trashEntriesInput<T extends z.ZodType>({ type }: { type: T }) {
     return oneOrMany(z.strictObject({ type, ...batchAddress }));
 }
 
-/**
- * `entries.emptyTrash`'s input, with `type` as given: any type id on the method,
- * one type's literal in that type's catalogue.
- */
-export function emptyTrashInput<T extends z.ZodType>({ type }: { type: T }) {
-    return z.strictObject({ type });
-}
+const trashOne = fromBatch(trashEntryBatch);

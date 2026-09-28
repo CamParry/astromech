@@ -109,6 +109,9 @@ export async function getPreviewEntry(
     return projectPreview(target, fields);
 }
 
+/** How long a preview token lasts when the caller names no expiry: seven days. */
+export const DEFAULT_PREVIEW_TOKEN_TTL_MS = 7 * 24 * 60 * 60 * 1000;
+
 /** SHA-256 hex of a token (crypto.subtle, so Workers-safe). */
 export async function hashPreviewToken(plaintext: string): Promise<string> {
     const bytes = new TextEncoder().encode(plaintext);

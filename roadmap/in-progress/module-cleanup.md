@@ -8,7 +8,7 @@ the repository copies.
 ## Defects to confirm with a test first
 
 - [x] **Re-publishing an entry clears its `publishedAt`.** `publish` passes
-      `publishedAt: null` (`entries/methods/status.ts`), and
+      `publishedAt: null` (`entries/methods/publish.ts`), and
       `entries/internal/update-batch.ts` writes it when the row already has a
       date. The class: `publishedAt` is stamped in six places under three rules
       (`update-batch.ts` twice, `entries/methods/create.ts`,

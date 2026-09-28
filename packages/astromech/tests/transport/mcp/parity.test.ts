@@ -274,7 +274,7 @@ describe('manifest ↔ MCP tool coverage', () => {
     it('gates a capability-bound method on the capability the SERVICE asserts', () => {
         // `pages` declares no versioning and no staging, so it has no version
         // history and no staged-entry methods — but it DOES have statuses, and
-        // `entries/methods/status.ts` gates publish on statuses. Gating publish
+        // `entries/methods/publish.ts` gates publish on statuses. Gating publish
         // on versioning would hide it from every unversioned type while the
         // service accepts the call.
         const pages = tools.map((t) => t.name);

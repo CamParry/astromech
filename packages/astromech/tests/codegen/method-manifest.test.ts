@@ -332,7 +332,7 @@ describe('generateMethodManifest — root entries', () => {
     });
 
     it('should emit entries.publish for non-versioned type pages too', () => {
-        // Publish requires `statuses` (`entries/methods/status.ts`), not
+        // Publish requires `statuses` (`entries/methods/publish.ts`), not
         // `versioning`. Gating it on versioning would hide publish, unpublish
         // and schedule from every unversioned type while the service accepts
         // the call.

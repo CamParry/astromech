@@ -11,20 +11,20 @@ import { resolveAccess } from '@/permissions/access';
 import { createEntryInput } from './methods/create';
 import { deleteEntriesInput } from './methods/delete';
 import { duplicateEntryInput } from './methods/duplicate';
+import { emptyTrashInput } from './methods/empty-trash';
 import { getEntryInput } from './methods/get';
-import { issuePreviewTokenInput, revokePreviewTokenInput } from './methods/preview/token';
+import { issuePreviewTokenInput } from './methods/preview/issue-token';
+import { revokePreviewTokenInput } from './methods/preview/revoke-token';
+import { publishEntriesInput } from './methods/publish';
 import { queryEntriesInput } from './methods/query';
 import { restoreEntriesInput } from './methods/restore';
+import { scheduleEntriesInput } from './methods/schedule';
 import { createStagedEntryInput } from './methods/staging/create';
 import { deleteStagedEntryInput } from './methods/staging/delete';
 import { getStagedEntryInput } from './methods/staging/get';
 import { mergeStagedEntryInput } from './methods/staging/merge';
-import {
-    publishEntriesInput,
-    scheduleEntriesInput,
-    unpublishEntriesInput,
-} from './methods/status';
-import { emptyTrashInput, trashEntriesInput } from './methods/trash';
+import { trashEntriesInput } from './methods/trash';
+import { unpublishEntriesInput } from './methods/unpublish';
 import { updateEntriesInput } from './methods/update';
 import { listEntryUsageInput } from './methods/used-by';
 import { getEntryVersionInput } from './methods/versions/get';
