@@ -1,7 +1,6 @@
 /**
- * The plugin's service: the public `lookup` a frontend middleware calls, and
- * the `list`, `get`, `create`, `update` and `delete` methods behind the admin
- * resource, each gated on one of the plugin's permissions.
+ * The redirects service: the public `lookup` a frontend middleware calls, and
+ * the `list`, `get`, `create`, `update` and `delete` behind the admin resource.
  */
 
 import type { RedirectsRepository } from '../repository';
@@ -12,12 +11,6 @@ import { defineServiceMethod, queryResultSchema, z } from 'astromech';
 import { parseFields } from 'astromech/fields';
 import { redirectFields } from '../fields';
 import { createRedirectsRepository, REDIRECT_SORTABLE } from '../repository';
-
-const DEFAULT_PAGE_SIZE = 20;
-const MAX_PAGE_SIZE = 100;
-
-const idInput = z.strictObject({ id: z.string() });
-const dataInput = z.record(z.string(), z.unknown());
 
 /** What `lookup` answers for a path with an enabled rule. */
 export const redirectMatchSchema = z.object({
@@ -41,25 +34,28 @@ export const redirectSchema = z.object({
 
 export const redirectsService = {
     /**
-     * Resolve a request path to its redirect target. Public so a frontend
-     * middleware can call it without a session.
+     * Public, so a frontend middleware can call it without a session. A path
+     * with no rule, or only a disabled one, answers `null`.
      */
     lookup: defineServiceMethod({
-        access: 'public',
         summary: 'Look up the redirect target for an incoming path.',
         input: z.strictObject({ from: z.string() }),
         output: redirectMatchSchema.nullable(),
+        access: 'public',
         mutates: false,
-        handler: async ({ from }, ctx): Promise<RedirectMatch | null> => {
+        async handler(params, ctx): Promise<RedirectMatch | null> {
+            const { from } = params;
+            const redirects = createRedirectsRepository(ctx.db);
+
             if (from === '') return null;
-            const rule = await createRedirectsRepository(ctx.db).findByFrom(from);
+            const rule = await redirects.findByFrom(from);
             if (rule === null || !rule.enabled) return null;
+
             return { to: rule.to, status: rule.status === '302' ? '302' : '301' };
         },
     }),
 
     list: defineServiceMethod({
-        access: { permission: 'read' },
         summary: 'List redirect rules, searched by path, sorted and paged.',
         input: z.strictObject({
             search: z.string().optional(),
@@ -74,19 +70,21 @@ export const redirectsService = {
                 )
                 .optional(),
             page: z.number().int().min(1).default(1),
-            limit: z.number().int().min(1).max(MAX_PAGE_SIZE).default(DEFAULT_PAGE_SIZE),
+            limit: z.number().int().min(1).max(100).default(20),
         }),
         output: queryResultSchema(redirectSchema),
+        access: { permission: 'read' },
         mutates: false,
-        handler: async (
-            { search, sort, page, limit },
-            ctx
-        ): Promise<QueryResult<RedirectRow>> => {
+        async handler(params, ctx): Promise<QueryResult<RedirectRow>> {
+            const { search, sort, page, limit } = params;
             const redirects = createRedirectsRepository(ctx.db);
+            const offset = (page - 1) * limit;
+
             const [data, total] = await Promise.all([
-                redirects.findMany({ search, sort, limit, offset: (page - 1) * limit }),
+                redirects.findMany({ search, sort, limit, offset }),
                 redirects.count({ search }),
             ]);
+
             return {
                 data,
                 pagination: { page, limit, total, pages: Math.ceil(total / limit) },
@@ -95,59 +93,77 @@ export const redirectsService = {
     }),
 
     get: defineServiceMethod({
-        access: { permission: 'read' },
         summary: 'Get one redirect rule by id.',
-        input: idInput,
+        input: z.strictObject({ id: z.string() }),
         output: redirectSchema.nullable(),
+        access: { permission: 'read' },
         mutates: false,
-        handler: async ({ id }, ctx): Promise<RedirectRow | null> =>
-            createRedirectsRepository(ctx.db).findOne(id),
+        async handler(params, ctx): Promise<RedirectRow | null> {
+            const { id } = params;
+            const redirects = createRedirectsRepository(ctx.db);
+
+            return redirects.findOne(id);
+        },
     }),
 
     create: defineServiceMethod({
-        access: { permission: 'create' },
         summary: 'Create a redirect rule.',
-        input: z.strictObject({ data: dataInput }),
+        input: z.strictObject({ data: z.record(z.string(), z.unknown()) }),
         output: redirectSchema,
+        access: { permission: 'create' },
         mutates: true,
-        handler: async ({ data }, ctx): Promise<RedirectRow> => {
+        async handler(params, ctx): Promise<RedirectRow> {
+            const { data } = params;
             const redirects = createRedirectsRepository(ctx.db);
+
             const values = await parseRedirect(ctx, redirects, data, null);
+
             return redirects.create(values);
         },
     }),
 
-    /** Answers `null` when there is no rule with that id. */
+    /** A rule that does not exist answers `null`. */
     update: defineServiceMethod({
-        access: { permission: 'update' },
         summary: 'Update a redirect rule. Fields left out keep their values.',
-        input: z.strictObject({ id: z.string(), data: dataInput }),
+        input: z.strictObject({
+            id: z.string(),
+            data: z.record(z.string(), z.unknown()),
+        }),
         output: redirectSchema.nullable(),
+        access: { permission: 'update' },
         mutates: true,
-        handler: async ({ id, data }, ctx): Promise<RedirectRow | null> => {
+        idempotent: true,
+        async handler(params, ctx): Promise<RedirectRow | null> {
+            const { id, data } = params;
             const redirects = createRedirectsRepository(ctx.db);
+
             const existing = await redirects.findOne(id);
             if (existing === null) return null;
-            const values = await parseRedirect(
-                ctx,
-                redirects,
-                { ...existing, ...data },
-                existing
-            );
+
+            const merged = { ...existing, ...data };
+            const values = await parseRedirect(ctx, redirects, merged, existing);
+
             return redirects.update(id, values);
         },
     }),
 
+    /** A rule that does not exist answers `{ deleted: false }`. */
     delete: defineServiceMethod({
-        access: { permission: 'delete' },
         summary: 'Delete a redirect rule.',
-        input: idInput,
+        input: z.strictObject({ id: z.string() }),
         output: z.object({ deleted: z.boolean() }),
+        access: { permission: 'delete' },
         mutates: true,
         destructive: true,
-        handler: async ({ id }, ctx): Promise<{ deleted: boolean }> => ({
-            deleted: await createRedirectsRepository(ctx.db).delete(id),
-        }),
+        idempotent: true,
+        async handler(params, ctx): Promise<{ deleted: boolean }> {
+            const { id } = params;
+            const redirects = createRedirectsRepository(ctx.db);
+
+            const deleted = await redirects.delete(id);
+
+            return { deleted };
+        },
     }),
 };
 
