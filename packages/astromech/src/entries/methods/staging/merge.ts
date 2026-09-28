@@ -6,7 +6,7 @@ import { transaction } from '@/database/transaction';
 import { resolveEntryType } from '@/entries/entry-types';
 import { defineServiceMethod } from '@/services/define-service-method';
 import { entryAccess } from '../../internal/access';
-import { toStoredFields } from '../../internal/stored-fields';
+import { prepareEntryFields } from '../../internal/prepare-fields';
 import { getEntryOfType } from '../../read-entry';
 import { syncEntryRelationships } from '../../relationships';
 import { entryRepository } from '../../repository/entries-table';
@@ -41,7 +41,7 @@ export const mergeStagedEntry = defineServiceMethod({
         // draft stage (it is unpublished), so this is the first write where the
         // canonical's own status decides whether completeness is enforced. Run it
         // BEFORE the transaction opens so a rejection costs no backup version.
-        const mergedFields = await toStoredFields({
+        const mergedFields = await prepareEntryFields({
             kind: 'merge',
             config,
             type,

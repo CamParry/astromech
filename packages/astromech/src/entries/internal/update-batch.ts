@@ -25,8 +25,8 @@ import { syncEntryRelationships } from '../relationships';
 import { entryRepository } from '../repository/entries-table';
 import { createEntrySchema, entrySchema, updateEntrySchema } from '../schema';
 import { entryValidationMode } from '../validation-mode';
+import { prepareEntryFields } from './prepare-fields';
 import { deriveSlug, uniqueSlugIfChanged } from './slug';
-import { toStoredFields } from './stored-fields';
 import { writeBatch } from './write-batch';
 
 /**
@@ -217,12 +217,12 @@ async function updateOne(params: {
     const patched = patch ? patchedFieldNames(patch) : [];
     const stored = { kind: 'update', config, entryType, currentEntry, user } as const;
     const fields = patch
-        ? await toStoredFields({ ...stored, patch, status: data.status })
+        ? await prepareEntryFields({ ...stored, patch, status: data.status })
         : undefined;
     // A write with no fields patch rewrites none, but one that moves the entry
     // to a complete status still checks them; the parse throws the 422.
     if (!patch && completes(entryType, data.status)) {
-        await toStoredFields({ ...stored, patch: {}, status: data.status });
+        await prepareEntryFields({ ...stored, patch: {}, status: data.status });
     }
 
     // Snapshot before the slug is uniquified, so the version compares what the caller sent.
@@ -328,7 +328,7 @@ async function planTranslation(params: {
         slug: validated.slug,
     });
 
-    const fields = await toStoredFields({
+    const fields = await prepareEntryFields({
         kind: 'create',
         config,
         entryType,

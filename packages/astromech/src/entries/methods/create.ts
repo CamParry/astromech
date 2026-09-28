@@ -10,8 +10,8 @@ import { parseOutput } from '@/services/parse-method-output';
 import { assertWritableFields } from '../capabilities';
 import { UnknownEntryTypeError } from '../errors';
 import { entryAccess } from '../internal/access';
+import { prepareEntryFields } from '../internal/prepare-fields';
 import { deriveSlug } from '../internal/slug';
-import { toStoredFields } from '../internal/stored-fields';
 import { syncEntryRelationships } from '../relationships';
 import { entryRepository } from '../repository/entries-table';
 import { createEntryPayloadSchema, createEntrySchema, entrySchema } from '../schema';
@@ -68,7 +68,7 @@ export const createEntry = defineServiceMethod({
             slug: validated.slug,
         });
 
-        const fields = await toStoredFields({
+        const fields = await prepareEntryFields({
             kind: 'create',
             config,
             entryType,

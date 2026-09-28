@@ -1,9 +1,3 @@
-/**
- * The values an entry write stores, through the shared `prepareFields` path: a
- * create inherits the entry's shared fields, an update merges its patch over the
- * current row, and a merge takes the staged change's fields as they are.
- */
-
 import type { EntryResource } from '../repository/types';
 import type { FieldSource } from '@/content/prepare-fields';
 import type {
@@ -23,7 +17,7 @@ import { entryRepository } from '../repository/entries-table';
  * pre-step needs. A merge is an `'update'` to the parse, so the tag names the
  * write path rather than the operation.
  */
-export type StoredFieldsInput = {
+export type PrepareEntryFieldsInput = {
     /** Who the write is attributed to; the field validators read it. */
     user: User | null;
     config: ResolvedConfig;
@@ -53,10 +47,13 @@ export type StoredFieldsInput = {
 );
 
 /**
- * Turns what a caller sent into the values that go in the row. Throws a 422
- * when a field or the type's own validator reports.
+ * The fields an entry write stores, through `prepareFields`: a create inherits
+ * the entry's shared fields, an update merges its patch over the current row, and
+ * a merge takes the staged change's fields as they are. Throws a 422.
  */
-export async function toStoredFields(input: StoredFieldsInput): Promise<JsonObject> {
+export async function prepareEntryFields(
+    input: PrepareEntryFieldsInput
+): Promise<JsonObject> {
     const { config, user } = input;
 
     if (input.kind === 'create') {
