@@ -1,7 +1,6 @@
 /**
- * Service method for @astromech/menus. Reads a menu's global, drops disabled
- * nodes, resolves entry refs to front-end URLs via the entry type's `url`
- * template, and returns a clean tree.
+ * The menus service: `get` reads a menu's global, drops disabled nodes and
+ * resolves entry refs to front-end URLs through the entry type's `url` template.
  */
 
 import type { MenuConfig, MenuItem } from '../types';
@@ -109,29 +108,31 @@ export function createMenusService(configs: MenuConfig[]) {
     const configuredKeys = new Set(configs.map((c) => c.key));
 
     return {
+        /**
+         * A key the plugin was not configured with answers `null`. Disabled
+         * nodes are dropped, and an entry a visitor cannot see resolves to no URL.
+         */
         get: defineServiceMethod({
-            access: 'public',
             summary: 'Resolve a configured menu into a nested tree of menu items.',
             input: z.strictObject({ key: z.string(), locale: z.string().optional() }),
             output: z.array(menuItemSchema).nullable(),
+            access: 'public',
             mutates: false,
-            handler: async (input, ctx): Promise<MenuItem[] | null> => {
-                const key = typeof input?.key === 'string' ? input.key : null;
-                if (!key) return null;
-                if (!configuredKeys.has(key)) return null;
+            async handler(params, ctx): Promise<MenuItem[] | null> {
+                const { key, locale } = params;
+                const globalKey = `${ctx.plugin.namespace}/menu-${key}`;
 
-                const locale =
-                    typeof input?.locale === 'string' ? input.locale : undefined;
-                // The plugin's own menu global, at the qualified key core
-                // resolves it under, in the full shape: the handler returns a
-                // sanitised menu tree, never the raw fields.
+                if (key === '' || !configuredKeys.has(key)) return null;
+                // `full` is safe on a public method: only the resolved tree is
+                // returned, never the raw fields.
                 const global = await ctx.globals.get({
-                    key: `${ctx.plugin.namespace}/menu-${key}`,
+                    key: globalKey,
                     ...(locale ? { locale } : {}),
                     full: true,
                 });
                 const stored = global?.fields['items'];
                 const items = Array.isArray(stored) ? (stored as RawNode[]) : [];
+
                 return walkNodes(items, ctx, locale);
             },
         }),
