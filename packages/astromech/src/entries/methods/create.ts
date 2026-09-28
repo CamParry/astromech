@@ -17,8 +17,9 @@ import { entryRepository } from '../repository/entries-table';
 import { createEntryPayloadSchema, createEntrySchema, entrySchema } from '../schema';
 
 /**
- * Creates an entry of the given type: validates input, fills defaults, runs
- * the entry create hooks, and writes the row with its relationship index.
+ * `data` is parsed under the type's own schema. The slug, given or derived from
+ * the title, is made unique in its locale, and the entry create hooks fire
+ * around the write.
  */
 export const createEntry = defineServiceMethod({
     summary: 'Create an entry.',
@@ -31,43 +32,30 @@ export const createEntry = defineServiceMethod({
     async handler(params, ctx): Promise<EntryResource> {
         const { type, data } = params;
         const { config, user } = ctx;
-        // Null outside a request: a seed script, the CLI and the scheduler all
-        // write entries with no identity to record.
         const userId = user?.id ?? null;
-
         const entryType = resolveEntryType(config, type);
-        if (!entryType) {
-            throw new UnknownEntryTypeError(type);
-        }
+        if (!entryType) throw new UnknownEntryTypeError(type);
+        const schema = createEntrySchema({ titled: entryType.titleField !== false });
 
         assertWritableFields(entryType, data);
-
-        const titled = entryType.titleField !== false;
-        const validated = parseInput(createEntrySchema({ titled }), {
+        const validated = parseInput(schema, {
             title: data.title,
             slug: data.slug,
             fields: data.fields,
             status: data.status,
             publishedAt: data.publishedAt,
         });
+        const locale = resolveResourceLocale('entry', config, entryType.id, data.locale);
 
         const title = validated.title ?? '';
         const status = validated.status ?? 'unpublished';
-        const locale = resolveResourceLocale('entry', config, entryType.id, data.locale);
         const publishedAt = resolvePublishedAt({
             status,
             given: validated.publishedAt,
             current: null,
             now: new Date(),
         });
-
-        const slug = await deriveSlug({
-            entryType,
-            locale,
-            title,
-            slug: validated.slug,
-        });
-
+        const slug = await deriveSlug({ entryType, locale, title, slug: validated.slug });
         const fields = await prepareEntryFields({
             kind: 'create',
             config,
@@ -78,8 +66,7 @@ export const createEntry = defineServiceMethod({
             status,
             user,
         });
-
-        const row = {
+        const write = {
             title,
             slug,
             locale,
@@ -90,23 +77,22 @@ export const createEntry = defineServiceMethod({
             updatedBy: userId,
         };
 
-        await ctx.runHook('entry:beforeCreate', { type, data: row, user });
+        await ctx.runHook('entry:beforeCreate', { type, data: write, user });
 
-        // Write the row and its relationship index atomically.
-        const entry = await transaction(async () => {
-            const created = await entryRepository.create({ type, ...row });
-            await syncEntryRelationships(config, created, type);
-            return created;
+        const created = await transaction(async () => {
+            const row = await entryRepository.create({ type, ...write });
+            await syncEntryRelationships(config, row, type);
+            return row;
         });
 
         await ctx.runHook('entry:afterCreate', {
             type,
-            data: row,
+            data: write,
             user,
-            entry: parseOutput(entrySchema, entry, 'The entry in entry:afterCreate'),
+            entry: parseOutput(entrySchema, created, 'The entry in entry:afterCreate'),
         });
 
-        return entry;
+        return created;
     },
 });
 

@@ -1,8 +1,3 @@
-/**
- * Slug derivation for the entry write paths: turn a title or a caller's slug
- * into the value an entry stores, made unique per (type, locale).
- */
-
 import type { Entry, ResolvedEntryType } from '@/types/index';
 import { slugify } from '@/utilities/strings';
 import { entryRepository } from '../repository/entries-table';

@@ -11,10 +11,9 @@ import { entryRepository } from '../repository/entries-table';
 import { duplicateOverridesSchema, entrySchema } from '../schema';
 
 /**
- * Duplicates an entry: copies every locale of it into a new entry of the same
- * type, applying any overrides, and indexes the copy's relationships.
- * `overrides.locale` copies that locale alone. Throws if the source does not
- * exist or is the wrong type.
+ * Copies every locale, or only `overrides.locale`, into a new entry of the same
+ * type, `unpublished` unless `overrides` says otherwise. Each slug is made unique
+ * in its locale. No entry hooks fire.
  */
 export const duplicateEntry = defineServiceMethod({
     summary: 'Copy an entry into a new one.',
@@ -24,20 +23,16 @@ export const duplicateEntry = defineServiceMethod({
     mutates: true,
     async handler(params, ctx): Promise<EntryResource> {
         const { type, id, overrides } = params;
-        const { config } = ctx;
-        // The copy is a new entry made by whoever duplicated it, not by the author
-        // of the source.
-        const userId = ctx.user?.id ?? null;
+        const { config, user } = ctx;
+        const userId = user?.id ?? null;
 
         const source = overrides?.locale
             ? await getEntryOfType(type, id, overrides.locale)
             : await getEntryResource(type, id);
-
         const locales = overrides?.locale ? [overrides.locale] : source.locales;
         const [firstLocale = source.locale, ...restLocales] = locales;
 
-        // Write the entry and its relationship index atomically.
-        const created = await transaction(async () => {
+        return transaction(async () => {
             const first = await copyLocale({
                 type,
                 id,
@@ -46,7 +41,6 @@ export const duplicateEntry = defineServiceMethod({
                 overrides,
                 createdBy: userId,
             });
-
             for (const locale of restLocales) {
                 await copyLocale({
                     type,
@@ -58,20 +52,29 @@ export const duplicateEntry = defineServiceMethod({
                     into: first.id,
                 });
             }
-
             // Once, at the end: the index is per entry and reads every locale back.
             await syncEntryRelationships(config, first, type);
             // Re-read so `locales` names every copied locale, not just the first.
             return getEntryOfType(type, first.id, firstLocale);
         });
-
-        return created;
     },
 });
 
 /**
- * Copy one locale of the source into the new entry, minting it when `into` is
- * absent. The slug is re-uniqued within the locale it lands in.
+ * `entries.duplicate`'s input, with `type` as given: any type id on the method,
+ * one type's literal in that type's catalogue.
+ */
+export function duplicateEntryInput<T extends z.ZodType>({ type }: { type: T }) {
+    return z.strictObject({
+        type,
+        id: z.string(),
+        overrides: duplicateOverridesSchema.optional(),
+    });
+}
+
+/**
+ * Copies one locale of the source into the new entry, creating the entry when
+ * `into` is absent. The slug is made unique in the locale it lands in.
  */
 async function copyLocale(params: {
     type: string;
@@ -109,16 +112,4 @@ async function copyLocale(params: {
     return into === undefined
         ? entryRepository.create({ type, ...write })
         : entryRepository.update({ id: into, locale }, write);
-}
-
-/**
- * `entries.duplicate`'s input, with `type` as given: any type id on the method,
- * one type's literal in that type's catalogue.
- */
-export function duplicateEntryInput<T extends z.ZodType>({ type }: { type: T }) {
-    return z.strictObject({
-        type,
-        id: z.string(),
-        overrides: duplicateOverridesSchema.optional(),
-    });
 }

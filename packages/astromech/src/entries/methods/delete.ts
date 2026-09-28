@@ -4,13 +4,9 @@ import { entryAccess } from '../internal/access';
 import { deleteEntryBatch } from '../internal/delete-batch';
 import { batchAddress, fromBatch, oneOrMany } from '../internal/from-batch';
 
-/** One id is a batch of one, and its errors are unwrapped. */
-const deleteOne = fromBatch(deleteEntryBatch);
-
 /**
- * Permanently delete one entry or a list of them, atomically, firing the entry
- * delete hooks around the write. Deleting is resource-level: every locale of an
- * entry goes with it.
+ * Takes one `id` or a list of `ids`, deleted atomically with every locale and
+ * version. A missing id, or one of another type, throws before any hook fires.
  */
 export const deleteEntries = defineServiceMethod({
     summary: 'Delete an entry.',
@@ -31,3 +27,5 @@ export const deleteEntries = defineServiceMethod({
 export function deleteEntriesInput<T extends z.ZodType>({ type }: { type: T }) {
     return oneOrMany(z.strictObject({ type, ...batchAddress }));
 }
+
+const deleteOne = fromBatch(deleteEntryBatch);

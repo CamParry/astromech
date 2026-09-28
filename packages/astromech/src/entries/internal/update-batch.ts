@@ -3,6 +3,7 @@ import type {
     AppContext,
     EntryCreateContext,
     EntryStatus,
+    JsonObject,
     ParsedEntryUpdateData,
     ResolvedConfig,
     ResolvedEntryType,
@@ -30,14 +31,9 @@ import { deriveSlug, uniqueSlugIfChanged } from './slug';
 import { writeBatch } from './write-batch';
 
 /**
- * Updates one locale of a batch of entries, atomically, firing the entry write
- * hooks around it. A single id is a batch of one (`DECISIONS.md`). A locale with
- * no content row yet is created from the default-locale row (unless
- * `createMissingLocale` is false), which is how a translation is written;
- * `staged` writes the staged change instead.
- *
- * Batch-only: `methods/update.ts` and `methods/status.ts` reach it through
- * `fromBatch`, which is what turns one id into a batch of one.
+ * Writes one locale of each entry in a batch, atomically, firing the entry write
+ * hooks around it, for `update` and the status methods. A locale with no row is
+ * created unless `createMissingLocale` is false; `staged` writes the staged change.
  */
 export async function updateEntryBatch(
     params: {
@@ -59,31 +55,23 @@ export async function updateEntryBatch(
     const { type, ids } = params;
     const { config, user } = ctx;
     const staged = params.staged === true;
-
     const entryType = resolveEntryType(config, type);
-    if (!entryType) {
-        throw new UnknownEntryTypeError(type);
-    }
-
-    // The caller's patch under the type's own schema, before a hook sees it, so
-    // a failure here is the caller's 422 and one after the hooks is the hook's.
+    if (!entryType) throw new UnknownEntryTypeError(type);
     const schema = updateEntrySchema({ titled: entryType.titleField !== false });
+
+    // Parsed before a hook sees it, so a failure here is the caller's 422.
     const data = parseInput(schema, params.data);
     assertWritableFields(entryType, data);
-
-    // A single slug across many ids would violate (type, locale) uniqueness.
     if (ids.length > 1 && data.slug !== undefined) {
         throw new Error(
             'Bulk update cannot set `slug`: a single value across multiple ids ' +
                 'would violate (type, locale) slug uniqueness. Update slugs individually.'
         );
     }
-
     const locale = resolveResourceLocale('entry', config, entryType.id, params.locale);
 
-    // Each id is read once, at the top: the record feeds both the before-hook
-    // context and the write, so nothing loads twice. An id with no row in this
-    // locale becomes a translation, planned here for the same reason.
+    // An id with no row in `locale` is a new translation, prepared here so its
+    // before hook sees the row it writes, as `create`'s does.
     const plans: UpdatePlan[] = [];
     for (const id of ids) {
         const record = staged
@@ -113,6 +101,8 @@ export async function updateEntryBatch(
         );
     }
 
+    // An update's fields are prepared after its hook, in `updateOne`: the hook
+    // may change `data` in place, so it is parsed again as the hooks leave it.
     for (const plan of plans) {
         if (plan.kind === 'update') {
             await ctx.runHook('entry:beforeUpdate', {
@@ -133,9 +123,6 @@ export async function updateEntryBatch(
             });
         }
     }
-
-    // A handler that changes the `data` object in place changes what is written,
-    // so it is parsed again as the hooks leave it.
     const written = parseHookOutput(schema, data, 'entry:beforeUpdate');
 
     const results = await writeBatch(plans, (plan) =>
@@ -187,7 +174,7 @@ export async function updateEntryBatch(
     return results;
 }
 
-/** The row a new translation writes — `create`'s row, for the same hooks. */
+/** The row a new translation writes: `create`'s row, so the same hooks see it. */
 type TranslationWrite = EntryCreateContext['data'] & {
     createdBy: string | null;
     updatedBy: string | null;
@@ -199,8 +186,8 @@ type UpdatePlan =
     | { kind: 'translate'; id: string; write: TranslationWrite };
 
 /**
- * Updates one entry with a parsed patch: versions the state it replaces, writes
- * the row, then re-indexes relationships and propagates shared fields.
+ * Updates one entry with a parsed patch: saves the state it replaces as a
+ * version, writes the row, then re-indexes it and propagates shared fields.
  */
 async function updateOne(params: {
     config: ResolvedConfig;
@@ -213,17 +200,8 @@ async function updateOne(params: {
 }): Promise<EntryResource> {
     const { config, entryType, currentEntry, data, user, staged } = params;
 
-    const patch = data.fields;
-    const patched = patch ? patchedFieldNames(patch) : [];
-    const stored = { kind: 'update', config, entryType, currentEntry, user } as const;
-    const fields = patch
-        ? await prepareEntryFields({ ...stored, patch, status: data.status })
-        : undefined;
-    // A write with no fields patch rewrites none, but one that moves the entry
-    // to a complete status still checks them; the parse throws the 422.
-    if (!patch && completes(entryType, data.status)) {
-        await prepareEntryFields({ ...stored, patch: {}, status: data.status });
-    }
+    const fields = await fieldsToStore({ config, entryType, currentEntry, data, user });
+    const patchedNames = data.fields ? patchedFieldNames(data.fields) : [];
 
     // Snapshot before the slug is uniquified, so the version compares what the caller sent.
     if (
@@ -248,7 +226,6 @@ async function updateOne(params: {
         entry: currentEntry,
         slug: data.slug,
     });
-
     const ref = { id: currentEntry.id, locale: currentEntry.locale };
     const write = {
         title: data.title,
@@ -256,9 +233,6 @@ async function updateOne(params: {
         fields,
         status: data.status,
         publishedAt,
-        // Moves with `updatedAt`, not with the version snapshot. A publish is a
-        // write to the row, so it stamps; whether it also takes a version is
-        // `changesVersionedContent`'s separate question.
         updatedBy: user?.id ?? null,
     };
 
@@ -275,11 +249,37 @@ async function updateOne(params: {
                 translatable: entryRepository.translatable,
                 record: currentEntry,
                 fields,
-                patchedFieldNames: patched,
+                patchedFieldNames: patchedNames,
             });
         }
     }
+
     return entry;
+}
+
+/**
+ * The fields an update stores, or undefined to leave them as they are. A write
+ * with no fields patch rewrites nothing, but one that moves the entry to a
+ * complete status still checks the stored fields in complete mode.
+ */
+async function fieldsToStore(params: {
+    config: ResolvedConfig;
+    entryType: ResolvedEntryType;
+    currentEntry: EntryResource;
+    data: ParsedEntryUpdateData;
+    user: User | null;
+}): Promise<JsonObject | undefined> {
+    const { config, entryType, currentEntry, data, user } = params;
+    const write = { kind: 'update', config, entryType, currentEntry, user } as const;
+
+    if (data.fields) {
+        return prepareEntryFields({ ...write, patch: data.fields, status: data.status });
+    }
+    // The parse throws the 422; its values are not written.
+    if (completes(entryType, data.status)) {
+        await prepareEntryFields({ ...write, patch: {}, status: data.status });
+    }
+    return undefined;
 }
 
 /** True when the write sets a status the fields must be complete for. */
@@ -308,10 +308,10 @@ async function planTranslation(params: {
     user: User | null;
 }): Promise<TranslationWrite> {
     const { config, entryType, id, locale, data, user } = params;
-    const source = await getEntryOfType(entryType.id, id);
+    const schema = createEntrySchema({ titled: entryType.titleField !== false });
 
-    const titled = entryType.titleField !== false;
-    const validated = parseInput(createEntrySchema({ titled }), {
+    const source = await getEntryOfType(entryType.id, id);
+    const validated = parseInput(schema, {
         title: data.title ?? source.title,
         slug: data.slug ?? source.slug ?? undefined,
         fields: data.fields,
@@ -321,13 +321,7 @@ async function planTranslation(params: {
 
     const title = validated.title ?? '';
     const status = validated.status ?? 'unpublished';
-    const slug = await deriveSlug({
-        entryType,
-        locale,
-        title,
-        slug: validated.slug,
-    });
-
+    const slug = await deriveSlug({ entryType, locale, title, slug: validated.slug });
     const fields = await prepareEntryFields({
         kind: 'create',
         config,
@@ -358,7 +352,7 @@ async function planTranslation(params: {
     };
 }
 
-/** Write the planned translation and fold its references into the entry's index. */
+/** Writes the planned translation and folds its references into the entry's index. */
 async function writeTranslation(params: {
     config: ResolvedConfig;
     type: string;

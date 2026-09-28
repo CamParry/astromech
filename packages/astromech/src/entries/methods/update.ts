@@ -6,14 +6,10 @@ import { batchAddress, fromBatch, oneOrMany } from '../internal/from-batch';
 import { updateEntryBatch } from '../internal/update-batch';
 import { entrySchema, updateEntryPayloadSchema } from '../schema';
 
-/** One id is a batch of one, and its result and errors are unwrapped. */
-const updateOne = fromBatch(updateEntryBatch);
-
 /**
- * Updates one locale of one entry or a list of them, atomically, firing the
- * entry write hooks around it. A locale with no content row yet is created from
- * the default-locale row, which is how a translation is written; `staged` writes
- * the staged change instead.
+ * Takes one `id` or a list of `ids`, written atomically. A locale with no content
+ * row is created from the default locale's, firing the create hooks rather than
+ * the update hooks; `staged` writes the staged change instead.
  */
 export const updateEntries = defineServiceMethod({
     summary:
@@ -28,8 +24,6 @@ export const updateEntries = defineServiceMethod({
     output: z.union([entrySchema, z.array(entrySchema)]),
     access: entryAccess('update'),
     mutates: true,
-    // Re-applying the same update lands the same end-state — matches the core
-    // `users.update` idempotent hint.
     idempotent: true,
     handler(params, ctx): Promise<EntryResource | EntryResource[]> {
         return updateOne(params, ctx);
@@ -58,3 +52,5 @@ export function updateEntriesInput<T extends z.ZodType, D extends z.ZodType>({
         })
     );
 }
+
+const updateOne = fromBatch(updateEntryBatch);

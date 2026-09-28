@@ -1,9 +1,3 @@
-/**
- * The adapter between a batch-only write and the entries method over it, which
- * takes one `id` or a list of `ids`. A write two methods share lives in
- * `internal/`; one only its method uses lives in that method's file.
- */
-
 import type { AppContext } from '@/types/index';
 import { z } from '@hono/zod-openapi';
 import { BulkOperationError } from '../errors';

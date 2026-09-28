@@ -1,9 +1,3 @@
-/**
- * Preview reads (forward versioning): with a valid token, a read sees the entry
- * past the publish gate, or its staged change, in the public shape; with none or
- * a bad one it finds nothing. Also mints and hashes the token.
- */
-
 import type { EntryResource } from '../repository/types';
 import type { AudienceContext } from '@/content/visibility';
 import type { EntryQueryParams, Field, QueryResult, ResolvedConfig } from '@/types/index';
@@ -13,9 +7,9 @@ import { flattenEntryFields } from '@/fields/flatten';
 import { entryRepository } from '../repository/entries-table';
 
 /**
- * Preview list read by filters. Returns an empty result when the token or type
- * is absent, or when no canonical passes the token check; with `staged`, swaps
- * each match for its staged change or skips it.
+ * The entries a preview token opens, matched by filters: past the publish gate
+ * but in the public shape, and with `staged`, each one's staged change or none.
+ * An absent or bad token, or an absent type, finds nothing.
  */
 export async function queryPreviewEntries(
     config: ResolvedConfig,
@@ -78,7 +72,7 @@ export async function queryPreviewEntries(
     };
 }
 
-/** Preview single read by canonical id (see queryPreviewEntries). */
+/** One entry a preview token opens, read as `queryPreviewEntries` reads, or null. */
 export async function getPreviewEntry(
     config: ResolvedConfig,
     params: {
