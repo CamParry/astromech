@@ -1,9 +1,6 @@
 /**
- * Service methods for @astromech/assistant — reading back the signed-in user's
- * chat session and replacing it. Only the chat endpoint itself streams, so it
- * stays a raw route; these are plain JSON and belong here, where they are
- * typed, callable off `useAstromechPlugin().service`, and visible to the method
- * manifest.
+ * The assistant service: read back and clear the signed-in user's chat
+ * session. The chat endpoint streams, so it stays a raw route.
  */
 
 import type { ChatMessage, ResolvedAssistantOptions } from '../types';
@@ -25,7 +22,7 @@ export const approvalRequestSchema = z.object({
 
 /**
  * A user's conversation. `pending` is read off the approvals table rather than
- * stored with the transcript — the rows are what a click resolves, so a reload
+ * stored with the transcript: the rows are what a click resolves, so a reload
  * mid-pause restores the buttons instead of dropping the calls behind them.
  */
 const chatSessionSchema = z.object({
@@ -47,44 +44,54 @@ export type ChatSession = z.output<typeof chatSessionSchema>;
 export function createSessionsService(options: ResolvedAssistantOptions) {
     return {
         getSession: defineServiceMethod({
-            access: { permission: 'use' },
             summary: 'Read back the signed-in user’s conversation with the assistant.',
             input: noInput(),
             output: chatSessionSchema,
+            access: { permission: 'use' },
             mutates: false,
-            handler: async (_input, ctx): Promise<ChatSession> => {
-                const userId = actingUserId(ctx.user);
+            async handler(_params, ctx): Promise<ChatSession> {
+                const { user } = ctx;
+                const userId = actingUserId(user);
+                const sessions = createSessionsRepository(ctx.db);
                 const approvals = createApprovalsRepository(ctx.db);
+
                 const held = await approvals.findPending(userId);
+                const messages = await sessions.findByUser(userId);
+
                 // Only a held call needs the tool that worded it, and building
                 // the surface composes the whole manifest.
                 const tools =
                     held.length === 0
                         ? []
                         : ctx.methods.tools({ readOnly: options.readOnly });
-                return {
-                    messages:
-                        (await createSessionsRepository(ctx.db).findByUser(userId)) ?? [],
-                    pending: held.map((row) => toApprovalRequest(row, tools)),
-                };
+                const pending = held.map((row) => toApprovalRequest(row, tools));
+
+                return { messages: messages ?? [], pending };
             },
         }),
 
-        // Answers `null`: there is no result, and that is what RPC puts on the
-        // wire for a handler that returns nothing.
+        /**
+         * Also rejects the user's held approvals, as a new message does, so no
+         * held call outlives its conversation. Answers `null`, which is what RPC
+         * puts on the wire for a handler with no result.
+         */
         clearSession: defineServiceMethod({
-            access: { permission: 'use' },
             summary: 'Discard the conversation and start a new one.',
             input: noInput(),
             output: z.null(),
+            access: { permission: 'use' },
             mutates: true,
-            destructive: false,
-            handler: async (_input, ctx): Promise<null> => {
-                const userId = actingUserId(ctx.user);
-                await createSessionsRepository(ctx.db).deleteByUser(userId);
-                // A conversation nobody will answer must leave no held rows, the
-                // same rule a new message already applies.
-                await createApprovalsRepository(ctx.db).rejectPending(userId);
+            destructive: true,
+            idempotent: true,
+            async handler(_params, ctx): Promise<null> {
+                const { user } = ctx;
+                const userId = actingUserId(user);
+                const sessions = createSessionsRepository(ctx.db);
+                const approvals = createApprovalsRepository(ctx.db);
+
+                await sessions.deleteByUser(userId);
+                await approvals.rejectPending(userId);
+
                 return null;
             },
         }),
