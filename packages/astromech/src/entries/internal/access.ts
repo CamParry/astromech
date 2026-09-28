@@ -1,22 +1,14 @@
-/**
- * The access rules the entries methods declare. One rule for every entry type,
- * not one per type: the permissions depend on the call's `type`, its payload and
- * its shape, so it is the function form of `ServiceMethodAccess`.
- */
-
 import type { EntryAction } from '@/permissions/entry-permission';
 import type { Permission, ServiceMethodAccess } from '@/types/index';
 import { PERMISSION_ENTRY_READ_FULL } from '@/permissions/core-permissions';
 import { entryPermission } from '@/permissions/entry-permission';
 
 /**
- * The gate for a method acting as `action`: that action on every type the call
- * names. A write whose payload makes the entry live (`status: 'published'` in
- * `data`, or in `duplicate`'s `overrides`) demands the publish permission too,
- * and `full: true` demands `entry:read:full`, on every method, so a new option
- * cannot grow a way round it.
+ * The permissions an entries method needs: `action` on each type the call names,
+ * plus `publish` when its `data` or `overrides` sets `status: 'published'`, and
+ * `entry:read:full` when it asks for `full`, whatever the method.
  */
-export function entryGate(action: EntryAction): ServiceMethodAccess {
+export function entryAccess(action: EntryAction): ServiceMethodAccess {
     return (input) => {
         const types = typesOf(input);
         const demanded: Permission[] = types.map((type) => entryPermission(type, action));
@@ -37,7 +29,7 @@ export function typeOf(input: unknown): string {
 /**
  * The types one call names: one, or each of a cross-type query's list. A call
  * naming none, or naming one badly, resolves to the empty type, whose permission
- * (`entry::read`) only a wildcard grant holds, so the gate refuses every
+ * (`entry::read`) only a wildcard grant holds, so the rule refuses every
  * narrower role and the method's own parse names the real problem.
  */
 function typesOf(input: unknown): string[] {

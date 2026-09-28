@@ -4,7 +4,7 @@ import { z } from '@hono/zod-openapi';
 import { resolvePublishedAt } from '@/content/published-at';
 import { transaction } from '@/database/transaction';
 import { defineServiceMethod } from '@/services/define-service-method';
-import { entryGate } from '../internal/access';
+import { entryAccess } from '../internal/access';
 import { getEntryOfType, getEntryResource } from '../read-entry';
 import { syncEntryRelationships } from '../relationships';
 import { entryRepository } from '../repository/entries-table';
@@ -20,7 +20,7 @@ export const duplicateEntry = defineServiceMethod({
     summary: 'Copy an entry into a new one.',
     input: duplicateEntryInput({ type: z.string() }),
     output: entrySchema,
-    access: entryGate('create'),
+    access: entryAccess('create'),
     mutates: true,
     async handler(params, ctx): Promise<EntryResource> {
         const { type, id, overrides } = params;

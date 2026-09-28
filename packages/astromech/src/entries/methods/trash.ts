@@ -2,7 +2,7 @@ import { z } from '@hono/zod-openapi';
 import { relationshipRepository } from '@/content/repository/relationships';
 import { transaction } from '@/database/transaction';
 import { defineServiceMethod } from '@/services/define-service-method';
-import { entryGate } from '../internal/access';
+import { entryAccess } from '../internal/access';
 import { trashEntryBatch } from '../internal/delete-batch';
 import { batchAddress, fromBatch, oneOrMany } from '../internal/from-batch';
 import { entryRepository } from '../repository/entries-table';
@@ -19,7 +19,7 @@ export const trashEntries = defineServiceMethod({
     summary: 'Move an entry to the trash (reversible).',
     input: trashEntriesInput({ type: z.string() }),
     output: z.void(),
-    access: entryGate('delete'),
+    access: entryAccess('delete'),
     requires: 'trash',
     mutates: true,
     // NOT destructive: trash is the reversible half of the delete pair —
@@ -39,7 +39,7 @@ export const emptyTrash = defineServiceMethod({
     summary: 'Permanently delete every trashed entry of one type.',
     input: emptyTrashInput({ type: z.string() }),
     output: z.void(),
-    access: entryGate('delete'),
+    access: entryAccess('delete'),
     requires: 'trash',
     mutates: true,
     destructive: true,

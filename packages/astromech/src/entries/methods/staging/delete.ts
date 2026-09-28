@@ -1,7 +1,7 @@
 import { z } from '@hono/zod-openapi';
 import { requireStagedChange } from '@/content/staging';
 import { defineServiceMethod } from '@/services/define-service-method';
-import { entryGate } from '../../internal/access';
+import { entryAccess } from '../../internal/access';
 import { getEntryOfType } from '../../read-entry';
 import { syncEntryRelationships } from '../../relationships';
 import { entryRepository } from '../../repository/entries-table';
@@ -14,7 +14,7 @@ export const deleteStagedEntry = defineServiceMethod({
     summary: 'Discard the staged change of an entry.',
     input: deleteStagedEntryInput({ type: z.string() }),
     output: z.void(),
-    access: entryGate('update'),
+    access: entryAccess('update'),
     requires: 'staging',
     mutates: true,
     async handler(params, ctx): Promise<void> {

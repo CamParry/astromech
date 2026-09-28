@@ -3,7 +3,7 @@ import { z } from '@hono/zod-openapi';
 import { transaction } from '@/database/transaction';
 import { StagedChangeExistsError } from '@/errors/resource';
 import { defineServiceMethod } from '@/services/define-service-method';
-import { entryGate } from '../../internal/access';
+import { entryAccess } from '../../internal/access';
 import { getEntryOfType } from '../../read-entry';
 import { syncEntryRelationships } from '../../relationships';
 import { entryRepository } from '../../repository/entries-table';
@@ -17,7 +17,7 @@ export const createStagedEntry = defineServiceMethod({
     summary: 'Stage a change to an entry.',
     input: createStagedEntryInput({ type: z.string() }),
     output: entrySchema,
-    access: entryGate('update'),
+    access: entryAccess('update'),
     requires: 'staging',
     mutates: true,
     async handler(params, ctx): Promise<EntryResource> {

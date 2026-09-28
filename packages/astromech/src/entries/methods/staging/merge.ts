@@ -5,7 +5,7 @@ import { snapshotVersion } from '@/content/versions';
 import { transaction } from '@/database/transaction';
 import { resolveEntryType } from '@/entries/entry-types';
 import { defineServiceMethod } from '@/services/define-service-method';
-import { entryGate } from '../../internal/access';
+import { entryAccess } from '../../internal/access';
 import { toStoredFields } from '../../internal/stored-fields';
 import { getEntryOfType } from '../../read-entry';
 import { syncEntryRelationships } from '../../relationships';
@@ -22,7 +22,7 @@ export const mergeStagedEntry = defineServiceMethod({
     summary: 'Merge the staged change into an entry.',
     input: mergeStagedEntryInput({ type: z.string() }),
     output: entrySchema,
-    access: entryGate('publish'),
+    access: entryAccess('publish'),
     requires: 'staging',
     mutates: true,
     async handler(params, ctx): Promise<EntryResource> {

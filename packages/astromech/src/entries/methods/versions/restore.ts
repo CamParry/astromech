@@ -2,7 +2,7 @@ import type { EntryResource } from '../../repository/types';
 import { z } from '@hono/zod-openapi';
 import { restoreVersion } from '@/content/versions';
 import { defineServiceMethod } from '@/services/define-service-method';
-import { entryGate } from '../../internal/access';
+import { entryAccess } from '../../internal/access';
 import { uniqueSlugIfChanged } from '../../internal/slug';
 import { getEntryOfType } from '../../read-entry';
 import { syncEntryRelationships } from '../../relationships';
@@ -18,7 +18,7 @@ export const restoreEntryVersion = defineServiceMethod({
     summary: 'Roll an entry back to an earlier version.',
     input: restoreEntryVersionInput({ type: z.string() }),
     output: entrySchema,
-    access: entryGate('update'),
+    access: entryAccess('update'),
     requires: 'versioning',
     mutates: true,
     idempotent: true,

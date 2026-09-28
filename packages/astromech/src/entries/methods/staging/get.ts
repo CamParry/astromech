@@ -2,7 +2,7 @@ import type { EntryResource } from '../../repository/types';
 import { z } from '@hono/zod-openapi';
 import { hasDiverged } from '@/content/staging';
 import { defineServiceMethod } from '@/services/define-service-method';
-import { entryGate } from '../../internal/access';
+import { entryAccess } from '../../internal/access';
 import { getEntryOfType } from '../../read-entry';
 import { entryRepository } from '../../repository/entries-table';
 import { stagedEntrySchema } from '../../schema';
@@ -16,7 +16,7 @@ export const getStagedEntry = defineServiceMethod({
     summary: 'Get the staged change of an entry.',
     input: getStagedEntryInput({ type: z.string() }),
     output: stagedEntrySchema.nullable(),
-    access: entryGate('read'),
+    access: entryAccess('read'),
     requires: 'staging',
     mutates: false,
     async handler(params): Promise<(EntryResource & { diverged: boolean }) | null> {

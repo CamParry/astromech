@@ -9,7 +9,7 @@ import type { AppContext } from '@/types/index';
 import { z } from '@hono/zod-openapi';
 import { parseInput } from '@/errors/validation';
 import { defineServiceMethod } from '@/services/define-service-method';
-import { entryGate } from '../internal/access';
+import { entryAccess } from '../internal/access';
 import { batchAddress, fromBatch, oneOrMany } from '../internal/from-batch';
 import { updateEntryBatch } from '../internal/update-batch';
 import { entrySchema, scheduleEntrySchema } from '../schema';
@@ -83,7 +83,7 @@ export const publishEntries = defineServiceMethod({
     summary: 'Publish an entry.',
     input: publishEntriesInput({ type: z.string() }),
     output: entryOrEntries,
-    access: entryGate('publish'),
+    access: entryAccess('publish'),
     requires: 'statuses',
     mutates: true,
     idempotent: true,
@@ -97,7 +97,7 @@ export const unpublishEntries = defineServiceMethod({
     summary: 'Unpublish an entry.',
     input: unpublishEntriesInput({ type: z.string() }),
     output: entryOrEntries,
-    access: entryGate('publish'),
+    access: entryAccess('publish'),
     requires: 'statuses',
     mutates: true,
     // Data-losing in the sense the effect hints mean: the entry stops being
@@ -114,7 +114,7 @@ export const scheduleEntries = defineServiceMethod({
     summary: 'Schedule an entry to publish at a future time.',
     input: scheduleEntriesInput({ type: z.string() }),
     output: entryOrEntries,
-    access: entryGate('publish'),
+    access: entryAccess('publish'),
     requires: 'statuses',
     mutates: true,
     idempotent: true,

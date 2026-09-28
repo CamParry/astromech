@@ -9,7 +9,7 @@ import { flattenEntryFields } from '@/fields/flatten';
 import { collectRelationshipSchemaPaths } from '@/fields/references';
 import { defineServiceMethod } from '@/services/define-service-method';
 import { InvalidReferencesFilterError, PublicTrashedReadError } from '../errors';
-import { entryGate } from '../internal/access';
+import { entryAccess } from '../internal/access';
 import { queryPreviewEntries } from '../internal/preview';
 import { entryRepository } from '../repository/entries-table';
 import { entrySchema } from '../schema';
@@ -27,7 +27,7 @@ export const queryEntries = defineServiceMethod({
         type: z.union([z.string(), z.array(z.string())]),
     }),
     output: queryResultSchema(entrySchema),
-    access: entryGate('read'),
+    access: entryAccess('read'),
     mutates: false,
     async handler(params, ctx): Promise<QueryResult<EntryResource>> {
         const { type: typeParam, where, trashed, search, sort, locale, full } = params;

@@ -9,7 +9,7 @@ import { defineServiceMethod } from '@/services/define-service-method';
 import { parseOutput } from '@/services/parse-method-output';
 import { assertWritableFields } from '../capabilities';
 import { UnknownEntryTypeError } from '../errors';
-import { entryGate } from '../internal/access';
+import { entryAccess } from '../internal/access';
 import { deriveSlug } from '../internal/slug';
 import { toStoredFields } from '../internal/stored-fields';
 import { syncEntryRelationships } from '../relationships';
@@ -26,7 +26,7 @@ export const createEntry = defineServiceMethod({
     // handler re-parses under the type's own, which is the stricter one.
     input: createEntryInput({ type: z.string(), data: createEntryPayloadSchema }),
     output: entrySchema,
-    access: entryGate('create'),
+    access: entryAccess('create'),
     mutates: true,
     async handler(params, ctx): Promise<EntryResource> {
         const { type, data } = params;

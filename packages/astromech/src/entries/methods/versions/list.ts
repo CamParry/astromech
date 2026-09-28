@@ -3,7 +3,7 @@ import { z } from '@hono/zod-openapi';
 import { versionMetadataSchema } from '@/content/schema';
 import { listVersions } from '@/content/versions';
 import { defineServiceMethod } from '@/services/define-service-method';
-import { entryGate } from '../../internal/access';
+import { entryAccess } from '../../internal/access';
 import { getEntryOfType } from '../../read-entry';
 import { entryRepository } from '../../repository/entries-table';
 
@@ -16,7 +16,7 @@ export const listEntryVersions = defineServiceMethod({
     summary: 'List the version history of an entry.',
     input: listEntryVersionsInput({ type: z.string() }),
     output: z.array(versionMetadataSchema),
-    access: entryGate('read'),
+    access: entryAccess('read'),
     requires: 'versioning',
     mutates: false,
     async handler(params): Promise<VersionMetadata[]> {

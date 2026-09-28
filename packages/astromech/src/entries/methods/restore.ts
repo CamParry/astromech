@@ -2,7 +2,7 @@ import type { EntryResource } from '../repository/types';
 import type { AppContext } from '@/types/index';
 import { z } from '@hono/zod-openapi';
 import { defineServiceMethod } from '@/services/define-service-method';
-import { entryGate } from '../internal/access';
+import { entryAccess } from '../internal/access';
 import { batchAddress, fromBatch, oneOrMany } from '../internal/from-batch';
 import { writeBatch } from '../internal/write-batch';
 import { getEntryResources } from '../read-entry';
@@ -40,7 +40,7 @@ export const restoreEntries = defineServiceMethod({
     summary: 'Restore a trashed entry.',
     input: restoreEntriesInput({ type: z.string() }),
     output: z.union([entrySchema, z.array(entrySchema)]),
-    access: entryGate('update'),
+    access: entryAccess('update'),
     requires: 'trash',
     mutates: true,
     idempotent: true,

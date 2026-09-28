@@ -2,7 +2,7 @@ import type { entrySnapshotSchema } from '../../schema';
 import { z } from '@hono/zod-openapi';
 import { readVersion } from '@/content/versions';
 import { defineServiceMethod } from '@/services/define-service-method';
-import { entryGate } from '../../internal/access';
+import { entryAccess } from '../../internal/access';
 import { getEntryOfType } from '../../read-entry';
 import { entryRepository } from '../../repository/entries-table';
 import { entryVersionSchema } from '../../schema';
@@ -17,7 +17,7 @@ export const getEntryVersion = defineServiceMethod({
     summary: 'Read one version of an entry.',
     input: getEntryVersionInput({ type: z.string() }),
     output: entryVersionSchema,
-    access: entryGate('read'),
+    access: entryAccess('read'),
     requires: 'versioning',
     mutates: false,
     async handler(params) {

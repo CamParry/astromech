@@ -1,6 +1,6 @@
 import { z } from '@hono/zod-openapi';
 import { defineServiceMethod } from '@/services/define-service-method';
-import { entryGate } from '../../internal/access';
+import { entryAccess } from '../../internal/access';
 import { generatePreviewSecret, hashPreviewToken } from '../../internal/preview';
 import { getEntryResource } from '../../read-entry';
 import { entryRepository } from '../../repository/entries-table';
@@ -22,7 +22,7 @@ export const issuePreviewToken = defineServiceMethod({
     summary: 'Issue a preview token for an entry.',
     input: issuePreviewTokenInput({ type: z.string() }),
     output: z.object({ token: z.string() }),
-    access: entryGate('update'),
+    access: entryAccess('update'),
     requires: 'staging',
     mutates: true,
     async handler(params): Promise<{ token: string }> {
@@ -58,7 +58,7 @@ export const revokePreviewToken = defineServiceMethod({
     summary: 'Revoke the preview token of an entry.',
     input: revokePreviewTokenInput({ type: z.string() }),
     output: z.void(),
-    access: entryGate('update'),
+    access: entryAccess('update'),
     requires: 'staging',
     mutates: true,
     async handler(params): Promise<void> {

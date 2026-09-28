@@ -1,7 +1,7 @@
 import type { EntryResource } from '../repository/types';
 import { z } from '@hono/zod-openapi';
 import { defineServiceMethod } from '@/services/define-service-method';
-import { entryGate } from '../internal/access';
+import { entryAccess } from '../internal/access';
 import { batchAddress, fromBatch, oneOrMany } from '../internal/from-batch';
 import { updateEntryBatch } from '../internal/update-batch';
 import { entrySchema, updateEntryPayloadSchema } from '../schema';
@@ -26,7 +26,7 @@ export const updateEntries = defineServiceMethod({
         data: updateEntryPayloadSchema,
     }),
     output: z.union([entrySchema, z.array(entrySchema)]),
-    access: entryGate('update'),
+    access: entryAccess('update'),
     mutates: true,
     // Re-applying the same update lands the same end-state — matches the core
     // `users.update` idempotent hint.

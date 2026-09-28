@@ -6,7 +6,7 @@ import { resolveEntryType } from '@/entries/entry-types';
 import { ValidationError } from '@/errors/validation';
 import { flattenEntryFields } from '@/fields/flatten';
 import { defineServiceMethod } from '@/services/define-service-method';
-import { entryGate } from '../internal/access';
+import { entryAccess } from '../internal/access';
 import { getPreviewEntry } from '../internal/preview';
 import { entryRepository } from '../repository/entries-table';
 import { entrySchema } from '../schema';
@@ -22,7 +22,7 @@ export const getEntry = defineServiceMethod({
     summary: 'Read an entry.',
     input: getEntryInput({ type: z.string() }),
     output: entrySchema.nullable(),
-    access: entryGate('read'),
+    access: entryAccess('read'),
     mutates: false,
     async handler(params, ctx): Promise<EntryResource | null> {
         const { type, id, locale, full, previewToken, staged } = params;

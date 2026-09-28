@@ -1,6 +1,6 @@
 import { z } from '@hono/zod-openapi';
 import { defineServiceMethod } from '@/services/define-service-method';
-import { entryGate } from '../internal/access';
+import { entryAccess } from '../internal/access';
 import { deleteEntryBatch } from '../internal/delete-batch';
 import { batchAddress, fromBatch, oneOrMany } from '../internal/from-batch';
 
@@ -16,7 +16,7 @@ export const deleteEntries = defineServiceMethod({
     summary: 'Delete an entry.',
     input: deleteEntriesInput({ type: z.string() }),
     output: z.void(),
-    access: entryGate('delete'),
+    access: entryAccess('delete'),
     mutates: true,
     destructive: true,
     handler(params, ctx): Promise<void> {
