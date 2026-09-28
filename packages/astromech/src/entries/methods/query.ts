@@ -2,7 +2,7 @@ import type { EntryResource, ListParams } from '../repository/types';
 import type { VisibilityShape } from '@/content/visibility';
 import type { Field, QueryResult, ReferencesFilter, ResolvedConfig } from '@/types/index';
 import { z } from '@hono/zod-openapi';
-import { queryPage, queryResultSchema, sortSchema } from '@/content/list';
+import { listKeys, queryPage, queryResultSchema } from '@/content/list';
 import { applyVisibility } from '@/content/visibility';
 import { resolveEntryType } from '@/entries/entry-types';
 import { flattenEntryFields } from '@/fields/flatten';
@@ -15,9 +15,9 @@ import { entryRepository } from '../repository/entries-table';
 import { entrySchema } from '../schema';
 
 /**
- * Lists entries of one or more types, paginated and filtered to the caller's
- * visibility shape. A `previewToken` takes the preview path; a public read of
- * trashed rows throws, since the public shape can never return them.
+ * Paginated unless `limit` is `'all'`, and filtered to the caller's visibility
+ * shape. A `previewToken` reads past the publish gate. Asking for `trashed` rows
+ * in the public shape throws, since that shape never includes them.
  */
 export const queryEntries = defineServiceMethod({
     summary: 'List entries of one type or several.',
@@ -30,94 +30,49 @@ export const queryEntries = defineServiceMethod({
     access: entryAccess('read'),
     mutates: false,
     async handler(params, ctx): Promise<QueryResult<EntryResource>> {
-        const { type: typeParam, where, trashed, search, sort, locale, full } = params;
+        const { type, where, trashed, search, sort, full } = params;
         const { config } = ctx;
-
-        // Preview (forward versioning): token-authorized read that bypasses the
-        // publish gate. Public shape only; diverges enough to take its own path.
-        if (params.previewToken) return queryPreviewEntries(config, params);
-
-        const types = Array.isArray(typeParam) ? Array.from(typeParam) : [typeParam];
-
-        // Absent `full` ⇒ public.
-        const shape: VisibilityShape = full ? 'full' : 'public';
-
-        // A public read can never return a trashed row: the public shape forces
-        // `status: 'published'` below and `applyVisibility` drops every trashed row
-        // afterwards. Asking for both would yield an empty list indistinguishable
-        // from "nothing is trashed", so reject it instead.
-        if (trashed === true && shape === 'public') {
-            throw new PublicTrashedReadError();
-        }
-
-        // A single type resolves one config; a cross-type query resolves per row.
+        const types = Array.isArray(type) ? Array.from(type) : [type];
         const singleType = types.length === 1 ? (types[0] ?? null) : null;
+        const entryType = singleType ? resolveEntryType(config, singleType) : undefined;
+        const shape: VisibilityShape = full ? 'full' : 'public';
+        const now = new Date();
 
-        const singleTypeCfg = singleType
-            ? resolveEntryType(config, singleType)
-            : undefined;
+        if (params.previewToken) return queryPreviewEntries(config, params);
+        if (trashed === true && shape === 'public') throw new PublicTrashedReadError();
+        const references = where?.['references'];
+        if (references !== undefined) assertReferencesFilter(references, types, config);
 
         // The public row filter's status and publish time go into the SQL, so the
         // count matches the rows; `applyVisibility` still projects the fields and
         // repeats the check. A type without statuses has neither column.
-        const hasStatuses = singleTypeCfg
-            ? singleTypeCfg.capabilities.statuses !== false
-            : true;
+        const hasStatuses = entryType ? entryType.capabilities.statuses !== false : true;
         const filtersPublished = shape === 'public' && hasStatuses;
-        const effectiveWhere = filtersPublished
-            ? { ...where, status: 'published' }
-            : where;
-        const now = new Date();
-
-        const references = where?.['references'];
-        if (references !== undefined) {
-            assertReferencesFilter(references, types, config);
-        }
-
         const filters: ListParams = {
             type: singleType ?? types,
-            locale,
+            locale: params.locale,
             trashed: trashed ?? false,
             search,
-            where: effectiveWhere,
+            where: filtersPublished ? { ...where, status: 'published' } : where,
             ...(filtersPublished ? { publishedAsOf: now } : {}),
         };
+
         const { data, pagination } = await queryPage(params, {
             list: (page) => entryRepository.findMany({ ...filters, sort, ...page }),
             count: () => entryRepository.count(filters),
         });
 
-        const audience = { now };
+        const fieldsOf = fieldsByType(config);
+        const visible = data.flatMap(
+            (entry) =>
+                applyVisibility(entry, {
+                    shape,
+                    fields: fieldsOf(entry.type),
+                    audience: { now },
+                }) ?? []
+        );
 
-        // Field definitions per type, flattened once: a cross-type page mixes
-        // types, and a single-type page would otherwise flatten per row.
-        const fieldsByType = new Map<string, Field[]>();
-        const fieldsOf = (type: string): Field[] => {
-            let fields = fieldsByType.get(type);
-            if (fields === undefined) {
-                const entryType = resolveEntryType(config, type);
-                fields = entryType ? flattenEntryFields(entryType.fields) : [];
-                fieldsByType.set(type, fields);
-            }
-            return fields;
-        };
-
-        const visibleData: EntryResource[] = [];
-        for (const entry of data) {
-            const rowFields = fieldsOf(entry.type);
-
-            const filtered = applyVisibility(entry, {
-                shape,
-                fields: rowFields,
-                audience,
-            });
-
-            if (filtered !== null) {
-                visibleData.push(filtered);
-            }
-        }
-
-        return { data: visibleData, pagination };
+        return { data: visible, pagination };
     },
 });
 
@@ -132,9 +87,7 @@ export function queryEntriesInput<T extends z.ZodType>({ type }: { type: T }) {
         search: z.string().optional(),
         where: z.record(z.string(), z.unknown()).optional(),
         trashed: z.boolean().optional(),
-        page: z.number().optional(),
-        limit: z.union([z.number(), z.literal('all')]).optional(),
-        sort: sortSchema,
+        ...listKeys,
         locale: z.string().optional(),
         full: z.boolean().optional(),
         previewToken: z.string().optional(),
@@ -143,9 +96,9 @@ export function queryEntriesInput<T extends z.ZodType>({ type }: { type: T }) {
 }
 
 /**
- * Check `where: { references }` against the queried types' schemas before it
- * reaches the repository. One type declaring the path is enough — a cross-type query
- * is legal and requiring every type to declare it would reject valid reads.
+ * Checks `where: { references }` against the queried types' schemas before it
+ * reaches the repository. One type declaring the path is enough: a cross-type
+ * query is legal, and requiring every type to declare it would reject valid reads.
  */
 function assertReferencesFilter(
     value: unknown,
@@ -184,4 +137,21 @@ function assertReferencesFilter(
             knownPaths,
         });
     }
+}
+
+/**
+ * Each type's flattened fields, resolved once per type however many rows of it a
+ * page holds.
+ */
+function fieldsByType(config: ResolvedConfig): (type: string) => Field[] {
+    const cache = new Map<string, Field[]>();
+    return (type) => {
+        let fields = cache.get(type);
+        if (fields === undefined) {
+            const entryType = resolveEntryType(config, type);
+            fields = entryType ? flattenEntryFields(entryType.fields) : [];
+            cache.set(type, fields);
+        }
+        return fields;
+    };
 }

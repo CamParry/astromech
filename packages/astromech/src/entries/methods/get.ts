@@ -12,11 +12,9 @@ import { entryRepository } from '../repository/entries-table';
 import { entrySchema } from '../schema';
 
 /**
- * Gets one locale of one entry, filtered to the caller's visibility shape.
- * Returns null when that locale has no row, its type differs, or visibility
- * hides it — there is no fallback to another locale. A `previewToken` takes the
- * token-authorized preview path that skips the publish gate, and is what
- * `staged` requires: without one it is a validation error.
+ * Filtered to the caller's visibility shape, and null when that hides it or the
+ * locale has no row of this type; there is no fallback to another locale. A
+ * `previewToken` reads past the publish gate, and `staged` needs one.
  */
 export const getEntry = defineServiceMethod({
     summary: 'Read an entry.',
@@ -25,14 +23,12 @@ export const getEntry = defineServiceMethod({
     access: entryAccess('read'),
     mutates: false,
     async handler(params, ctx): Promise<EntryResource | null> {
-        const { type, id, locale, full, previewToken, staged } = params;
+        const { type, id, full, previewToken, staged } = params;
         const { config } = ctx;
+        const shape: VisibilityShape = full ? 'full' : 'public';
 
-        // Preview (forward versioning): token-authorized, publish-gate-bypassed.
         if (previewToken) return getPreviewEntry(config, params);
-
-        // Without a token there is no staged read here: answering the canonical row
-        // for `staged: true` would silently hand back the wrong content.
+        // Answering the canonical row here would hand back the wrong content.
         if (staged === true) {
             throw ValidationError.fromFieldErrors({}, [
                 `${ctx.method.name}: \`staged\` requires \`previewToken\`; use ` +
@@ -40,16 +36,13 @@ export const getEntry = defineServiceMethod({
             ]);
         }
 
-        const record = await entryRepository.findOne({ type, id, locale });
-
+        const record = await entryRepository.findOne({ type, id, locale: params.locale });
         if (!record) return null;
 
-        const shape: VisibilityShape = full ? 'full' : 'public';
-        const audience = { now: new Date() };
         const entryType = resolveEntryType(config, type);
         const fields = entryType ? flattenEntryFields(entryType.fields) : [];
 
-        return applyVisibility(record, { shape, fields, audience });
+        return applyVisibility(record, { shape, fields, audience: { now: new Date() } });
     },
 });
 

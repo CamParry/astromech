@@ -7,8 +7,8 @@ import { entryAccess } from '../internal/access';
 import { getEntryResource } from '../read-entry';
 
 /**
- * Every reference to an entry, from any resource: what the delete check lists.
- * One row per reference, so a source referencing the entry twice is two rows.
+ * What the delete check lists. One row per reference, so a source that references
+ * the entry twice is two rows. A missing entry, or one of another type, throws.
  */
 export const listEntryUsage = defineServiceMethod({
     summary: 'List the entries, globals, users and media items that reference an entry.',
@@ -19,8 +19,9 @@ export const listEntryUsage = defineServiceMethod({
     async handler(params, ctx): Promise<Usage[]> {
         const { type, id } = params;
         const { config } = ctx;
-        // The entry must exist as this type, so an unknown id answers 404.
+
         await getEntryResource(type, id);
+
         return listUsage(config, { id, kind: 'entry' });
     },
 });
