@@ -56,13 +56,16 @@ reading one teaches the rest. `users/methods/create.ts` and
        rule error (`assertKeepsAnAdmin`).
     3. Prepare: build what is written (`prepareFields`, slug, hash). Slow work
        stays outside the transaction.
-    4. The before hook.
+    4. The before hook. A hook that may change the data runs before the
+       prepare step instead, with a one-line note saying so.
     5. The writes, in one `transaction` when they touch more than one table,
        even through one repository call.
     6. The after hook.
     7. Return.
-       A batch method's handler delegates to `<module>/internal/*-batch.ts`, which
-       keeps the same order.
+       A handler that only forwards (a batch method, a status change) delegates
+       to one function in `<module>/internal/`, which keeps the same order. A
+       batch prepares each item inside its transaction, so a per-item error
+       carries its id.
 - **Comments:** the declaration's doc comment says what the method does beyond
   its `summary`, and reads on its own. Inside the handler, a `//` note only
   where the code would otherwise read as wrong. Three lines each at most.
