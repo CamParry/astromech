@@ -12,8 +12,8 @@ reference: the shape is reviewed there before the rest follow it.
 - [x] Users: `users/methods/` and `users/internal/`.
 - [x] Media and notifications: `media/methods/`, `media/internal/`,
       `notifications/methods/`.
-- [x] Globals: `globals/methods/` and `globals/internal/`; `gate` and
-      `readGate` become `globalAccess`. After `publish-defects` merges.
+- [x] Globals: `globals/methods/` and `globals/internal/`; `gate` becomes
+      `globalAccess` and `readGate` `globalGetAccess`. After `publish-defects` merges.
 - [ ] Entry writes: `create`, `update`, `delete`, `duplicate`, and
       `entries/internal/update-batch.ts` and `delete-batch.ts`; `entryGate`
       becomes `entryAccess`. After `publish-defects` merges.
