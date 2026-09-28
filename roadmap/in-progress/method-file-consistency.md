@@ -14,7 +14,7 @@ reference: the shape is reviewed there before the rest follow it.
       `notifications/methods/`.
 - [x] Globals: `globals/methods/` and `globals/internal/`; `gate` becomes
       `globalAccess` and `readGate` `globalGetAccess`. After `publish-defects` merges.
-- [ ] Entry writes: `create`, `update`, `delete`, `duplicate`, and
+- [x] Entry writes: `create`, `update`, `delete`, `duplicate`, and
       `entries/internal/update-batch.ts` and `delete-batch.ts`; `entryGate`
       becomes `entryAccess`. After `publish-defects` merges.
 - [x] Effect hints agree across the four resources: a version restore saves a
