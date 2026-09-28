@@ -1,6 +1,6 @@
 /**
  * The service methods over stored submissions, behind the Submissions admin
- * resource: list, get and delete, each gated on a plugin permission.
+ * resource: list, get and delete.
  */
 import type { SubmissionRow } from '../tables/submissions';
 import type { QueryResult } from 'astromech';
@@ -42,7 +42,6 @@ export type DeleteSubmissionResult = z.output<typeof deleteSubmissionResultSchem
 const direction = z.enum(['asc', 'desc']);
 
 export const listSubmissions = defineServiceMethod({
-    access: { permission: 'read' },
     summary: 'List stored submissions, newest first, one page at a time.',
     input: z.strictObject({
         search: z.string().optional(),
@@ -58,20 +57,18 @@ export const listSubmissions = defineServiceMethod({
         formSlug: z.string().optional(),
     }),
     output: queryResultSchema(submissionSchema),
+    access: { permission: 'read' },
     mutates: false,
-    handler: async (input, ctx): Promise<QueryResult<SubmissionRow>> => {
-        const { page, limit, sort, search, formSlug } = input;
+    async handler(params, ctx): Promise<QueryResult<SubmissionRow>> {
+        const { search, sort, page, limit, formSlug } = params;
         const submissions = createSubmissionsRepository(ctx.db);
+        const offset = (page - 1) * limit;
+
         const [data, total] = await Promise.all([
-            submissions.findMany({
-                search,
-                formSlug,
-                sort,
-                limit,
-                offset: (page - 1) * limit,
-            }),
+            submissions.findMany({ search, formSlug, sort, limit, offset }),
             submissions.count({ search, formSlug }),
         ]);
+
         return {
             data,
             pagination: { page, limit, total, pages: Math.ceil(total / limit) },
@@ -80,29 +77,36 @@ export const listSubmissions = defineServiceMethod({
 });
 
 export const getSubmission = defineServiceMethod({
-    access: { permission: 'read' },
     summary: 'Fetch one stored submission by id.',
     input: z.strictObject({ id: z.string() }),
     output: submissionSchema.nullable(),
+    access: { permission: 'read' },
     mutates: false,
-    handler: async (input, ctx): Promise<SubmissionRow | null> => {
-        return createSubmissionsRepository(ctx.db).findOne(input.id);
+    async handler(params, ctx): Promise<SubmissionRow | null> {
+        const { id } = params;
+        const submissions = createSubmissionsRepository(ctx.db);
+
+        return submissions.findOne(id);
     },
 });
 
 export const deleteSubmission = defineServiceMethod({
-    access: { permission: 'delete' },
     summary: 'Delete a stored submission.',
     input: z.strictObject({ id: z.string() }),
     output: deleteSubmissionResultSchema,
+    access: { permission: 'delete' },
     mutates: true,
     destructive: true,
-    handler: async (input, ctx): Promise<DeleteSubmissionResult> => {
+    idempotent: true,
+    async handler(params, ctx): Promise<DeleteSubmissionResult> {
+        const { id } = params;
         const submissions = createSubmissionsRepository(ctx.db);
-        if ((await submissions.findOne(input.id)) === null) {
-            return { ok: false, reason: 'not-found' };
-        }
-        await submissions.delete(input.id);
-        return { ok: true, id: input.id };
+
+        const row = await submissions.findOne(id);
+        if (row === null) return { ok: false, reason: 'not-found' };
+
+        await submissions.delete(id);
+
+        return { ok: true, id };
     },
 });

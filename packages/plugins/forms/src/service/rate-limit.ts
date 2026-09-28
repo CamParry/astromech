@@ -1,7 +1,7 @@
 /**
  * Fixed-window rate limit for `submit`, held in process. Counters are capped:
  * at `MAX_KEYS` the oldest window is dropped to make room. Multi-instance
- * deployments are not guarded — each instance counts its own traffic.
+ * deployments are not guarded: each instance counts its own traffic.
  */
 
 export type RateLimitOptions = { limit: number; windowMs: number };
@@ -19,7 +19,7 @@ declare global {
 /** Elapsed windows are swept once the map passes this size. */
 const PRUNE_ABOVE = 1000;
 
-/** Hard cap on live counters — the sweep alone cannot bound a map of live keys. */
+/** Hard cap on live counters, since the sweep alone cannot bound a map of live keys. */
 const MAX_KEYS = 10_000;
 
 /**
