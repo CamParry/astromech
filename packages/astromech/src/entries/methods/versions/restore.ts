@@ -21,7 +21,6 @@ export const restoreEntryVersion = defineServiceMethod({
     access: entryAccess('update'),
     requires: 'versioning',
     mutates: true,
-    idempotent: true,
     async handler(params, ctx): Promise<EntryResource> {
         const { type, id, version } = params;
         const { config, user } = ctx;

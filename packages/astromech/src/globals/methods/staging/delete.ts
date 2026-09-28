@@ -19,6 +19,7 @@ export const deleteStagedGlobal = defineServiceMethod({
     access: globalAccess('update'),
     requires: 'staging',
     mutates: true,
+    destructive: true,
     async handler(params, ctx): Promise<void> {
         const { key } = params;
         const { config } = ctx;

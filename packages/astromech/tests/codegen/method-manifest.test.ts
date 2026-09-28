@@ -453,6 +453,35 @@ describe('generateMethodManifest — staged-entry methods', () => {
     });
 });
 
+describe('generateMethodManifest — effect hints across resources', () => {
+    /** Every method named `<resource>.<name>`, for any resource or entry type. */
+    function methodsNamed(name: string) {
+        const { methods } = parseManifest([]);
+        return methods.filter((m) => String(m['name']).endsWith(`.${name}`));
+    }
+
+    it('marks no restoreVersion idempotent, since each call saves a version', () => {
+        const restores = methodsNamed('restoreVersion');
+        expect(restores.map((m) => m['name'])).toEqual(
+            expect.arrayContaining([
+                'users.restoreVersion',
+                'media.restoreVersion',
+                'globals.restoreVersion',
+                'entries.restoreVersion',
+            ])
+        );
+        for (const m of restores) expect(m['idempotent'], String(m['name'])).toBe(false);
+    });
+
+    it('marks every deleteStaged destructive, since it discards unmerged edits', () => {
+        const deletes = methodsNamed('deleteStaged');
+        expect(deletes.map((m) => m['name'])).toEqual(
+            expect.arrayContaining(['globals.deleteStaged', 'entries.deleteStaged'])
+        );
+        for (const m of deletes) expect(m['destructive'], String(m['name'])).toBe(true);
+    });
+});
+
 describe('generateMethodManifest — plugin entries', () => {
     it('should emit entries.query for plugin entry type widget', () => {
         const { methods } = parseManifest();

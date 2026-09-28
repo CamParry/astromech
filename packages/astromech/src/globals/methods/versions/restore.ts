@@ -18,7 +18,6 @@ export const restoreGlobalVersion = defineServiceMethod({
     access: globalAccess('update'),
     requires: 'versioning',
     mutates: true,
-    idempotent: true,
     async handler(params, ctx): Promise<GlobalResource> {
         const { key, version } = params;
         const { config, user } = ctx;

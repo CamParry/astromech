@@ -17,6 +17,7 @@ export const deleteStagedEntry = defineServiceMethod({
     access: entryAccess('update'),
     requires: 'staging',
     mutates: true,
+    destructive: true,
     async handler(params, ctx): Promise<void> {
         const { type, id } = params;
         const { config } = ctx;

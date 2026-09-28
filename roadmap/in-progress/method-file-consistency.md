@@ -17,10 +17,9 @@ reference: the shape is reviewed there before the rest follow it.
 - [ ] Entry writes: `create`, `update`, `delete`, `duplicate`, and
       `entries/internal/update-batch.ts` and `delete-batch.ts`; `entryGate`
       becomes `entryAccess`. After `publish-defects` merges.
-- [ ] Effect hints agree across the four resources: a version restore saves a
-      version each call, yet `restore` is `idempotent` for entries and globals
-      and not for users and media; no `deleteStaged` is `destructive`. Settle
-      each with the entry groups below.
+- [x] Effect hints agree across the four resources: a version restore saves a
+      version each call, so no `restoreVersion` is `idempotent`; a
+      `deleteStaged` discards unmerged edits, so each is `destructive`.
 - [ ] Entry reads and status: `get`, `query`, `status`, `trash`, `restore`,
       `used-by`, `preview/`.
 - [ ] Entry staging and versions, with the catalogue: building each type's
