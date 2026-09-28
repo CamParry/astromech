@@ -1,7 +1,6 @@
 /**
- * Service methods for @astromech/backups — the JSON half of the plugin's API.
- * Only the two streaming endpoints (download, restore) stay on `rawRoutes`;
- * everything else that is plain JSON belongs here, typed and discoverable.
+ * The backups service: the JSON methods behind the Backups page. Download and
+ * restore stream, so they stay on `rawRoutes`.
  */
 
 import { defineServiceMethod, noInput, withFallback, z } from 'astromech';
@@ -42,10 +41,7 @@ const listRunsResultSchema = z.object({
 
 export type ListRunsResult = z.output<typeof listRunsResultSchema>;
 
-/**
- * RPC returns the handler's result rather than an HTTP status, so the failure
- * cases that were 409/404 as raw routes are values the caller branches on.
- */
+/** A run already in progress is a result the caller branches on, not an error. */
 const triggerRunResultSchema = z.union([
     z.object({ ok: z.literal(true), run: backupRunSchema }),
     z.object({ ok: z.literal(false), reason: z.literal('already-running') }),
@@ -64,14 +60,18 @@ export type DeleteRunResult = z.output<typeof deleteRunResultSchema>;
 export function createBackupsService(defaultKeep: number) {
     return {
         list: defineServiceMethod({
-            access: { permission: 'read' },
             summary: 'List recent backup runs and the driver capabilities.',
             input: noInput(),
             output: listRunsResultSchema,
+            access: { permission: 'read' },
             mutates: false,
-            handler: async (_input, ctx): Promise<ListRunsResult> => {
+            async handler(_params, ctx): Promise<ListRunsResult> {
+                const backupRuns = createBackupRunsRepository(ctx.db);
+
+                const runs = await backupRuns.findRecent(MAX_RUNS);
+
                 return {
-                    runs: await createBackupRunsRepository(ctx.db).findRecent(MAX_RUNS),
+                    runs,
                     capabilities: {
                         canDump: ctx.database.dump !== undefined,
                         canRestore: ctx.database.restore !== undefined,
@@ -81,44 +81,45 @@ export function createBackupsService(defaultKeep: number) {
         }),
 
         run: defineServiceMethod({
-            access: { permission: 'run' },
             summary: 'Take a backup now.',
             input: noInput(),
             output: triggerRunResultSchema,
+            access: { permission: 'run' },
             mutates: true,
-            handler: async (_input, ctx): Promise<TriggerRunResult> => {
+            async handler(_params, ctx): Promise<TriggerRunResult> {
                 if (isBackupRunning()) return { ok: false, reason: 'already-running' };
                 const keep = await resolveKeep(ctx, defaultKeep);
-                return { ok: true, run: await performBackup(ctx, 'manual', { keep }) };
+
+                const run = await performBackup(ctx, 'manual', { keep });
+
+                return { ok: true, run };
             },
         }),
 
         delete: defineServiceMethod({
-            access: { permission: 'delete' },
             summary: 'Delete a backup run and its stored artifact.',
             input: z.strictObject({ id: z.string() }),
             output: deleteRunResultSchema,
+            access: { permission: 'delete' },
             mutates: true,
             destructive: true,
-            handler: async (input, ctx): Promise<DeleteRunResult> => {
-                const id = typeof input?.id === 'string' ? input.id : '';
-                const runs = createBackupRunsRepository(ctx.db);
-                const row = await runs.findOne(id);
+            idempotent: true,
+            async handler(params, ctx): Promise<DeleteRunResult> {
+                const { id } = params;
+                const backupRuns = createBackupRunsRepository(ctx.db);
+
+                const row = await backupRuns.findOne(id);
                 if (row === null) return { ok: false, reason: 'not-found' };
 
-                // A manual delete hard-deletes the row. This differs from
-                // rotation, which marks `artifactDeletedAt` and keeps the row
-                // for audit history — so only drop a live artifact here.
-                if (
-                    row.key !== null &&
-                    row.key !== undefined &&
-                    (row.artifactDeletedAt === null ||
-                        row.artifactDeletedAt === undefined)
-                ) {
+                // Rotation deletes the artifact but keeps the row, marked with
+                // `artifactDeletedAt`, so a marked row has no artifact to delete.
+                const rotated =
+                    row.artifactDeletedAt !== null && row.artifactDeletedAt !== undefined;
+                if (!rotated && row.key !== null && row.key !== undefined) {
                     await ctx.storage.delete(row.key);
                 }
+                await backupRuns.delete(id);
 
-                await runs.delete(id);
                 return { ok: true, id };
             },
         }),
