@@ -1,7 +1,6 @@
 /**
- * Service methods for @astromech/seo. Paths come from each entry type's `url`
- * template (core's single source of truth) via `resolveEntryPath`; entry types
- * without a `url` are skipped, so the plugin never guesses a path.
+ * The SEO service. Paths come from each entry type's `url` template through
+ * `resolveEntryPath`; a type without one is skipped, so no path is guessed.
  */
 
 import type {
@@ -100,74 +99,76 @@ function entryPath(ctx: PluginContext, type: string, entry: Entry): string | nul
 
 export const seoService = {
     /**
-     * Published entries across the plugin footprint, as sitemap URL data.
-     * Public so the app's `/sitemap.xml` endpoint can call it.
+     * Only published entries with a path are listed. Public, so the app's
+     * `/sitemap.xml` endpoint can call it.
      */
     getSitemap: defineServiceMethod({
-        access: 'public',
         summary: 'List sitemap URLs for all SEO-tracked entries.',
         input: noInput(),
         output: seoSitemapSchema,
+        access: 'public',
         mutates: false,
-        handler: async (_input, ctx): Promise<SeoSitemap> => {
+        async handler(_params, ctx): Promise<SeoSitemap> {
+            const tracked = await footprintEntries(ctx, { full: false });
+
             const urls: SeoSitemapUrl[] = [];
-            for (const { type, entry } of await footprintEntries(ctx, { full: false })) {
+            for (const { type, entry } of tracked) {
                 if (entry.status !== 'published') continue;
                 const loc = entryPath(ctx, type, entry);
                 if (!loc) continue;
-                urls.push({
-                    loc,
-                    lastmod: new Date(entry.updatedAt).toISOString(),
-                });
+                const lastmod = new Date(entry.updatedAt).toISOString();
+                urls.push({ loc, lastmod });
             }
+
             return { urls };
         },
     }),
 
     /**
-     * Resolved meta for one published entry: the `seo` field with fallbacks
-     * to the entry title and the default OG image setting.
+     * Only a published entry resolves. An empty `seo` title falls back to the
+     * entry's title, and `ogImage` is the plugin's default image setting.
      */
     getMeta: defineServiceMethod({
-        access: 'public',
         summary: 'Resolve the SEO meta tags for one entry by type + slug.',
         input: z.strictObject({ type: z.string(), slug: z.string() }),
         output: seoResolvedMetaSchema.nullable(),
+        access: 'public',
         mutates: false,
-        handler: async (input, ctx): Promise<SeoResolvedMeta | null> => {
-            const type = typeof input?.type === 'string' ? input.type : null;
-            const slug = typeof input?.slug === 'string' ? input.slug : null;
-            if (!type || !slug) return null;
-            if (!ctx.config.entryTypesWithField(SEO_FIELD_NAME).includes(type)) {
-                return null;
-            }
+        async handler(params, ctx): Promise<SeoResolvedMeta | null> {
+            const { type, slug } = params;
+            const trackedTypes = ctx.config.entryTypesWithField(SEO_FIELD_NAME);
 
+            if (type === '' || slug === '' || !trackedTypes.includes(type)) return null;
             const { data } = await ctx.entries.query({ type, limit: 'all' });
             const entry = data.find(
                 (candidate) => candidate.slug === slug && candidate.status === 'published'
             );
             if (!entry) return null;
+            const ogImage = await resolveDefaultOgImage(ctx);
 
             const meta = parseSeoMetaValue(entry.fields[SEO_FIELD_NAME]);
+
             return {
                 title: meta.title?.trim() ? meta.title : entry.title,
                 description: meta.description?.trim() ? meta.description : null,
-                ogImage: await resolveDefaultOgImage(ctx),
+                ogImage,
                 path: entryPath(ctx, type, entry),
             };
         },
     }),
 
-    /** SEO health across every entry in the footprint — drives the overview dashboard page. */
+    /** The data behind the plugin's SEO overview dashboard page. */
     getOverview: defineServiceMethod({
-        access: { permission: 'read' },
         summary: 'Report SEO coverage across all tracked entries.',
         input: noInput(),
         output: seoOverviewSchema,
+        access: { permission: 'read' },
         mutates: false,
-        handler: async (_input, ctx): Promise<SeoOverview> => {
+        async handler(_params, ctx): Promise<SeoOverview> {
+            const tracked = await footprintEntries(ctx, { full: true });
+
             const items: SeoOverviewItem[] = [];
-            for (const { type, entry } of await footprintEntries(ctx, { full: true })) {
+            for (const { type, entry } of tracked) {
                 const meta = parseSeoMetaValue(entry.fields[SEO_FIELD_NAME]);
                 const titleLength = (meta.title ?? '').length;
                 const descriptionLength = (meta.description ?? '').length;
@@ -192,6 +193,7 @@ export const seoService = {
                     item.metaTitle.status === 'good' &&
                     item.metaDescription.status === 'good'
             ).length;
+
             return {
                 totals: {
                     entries: items.length,
