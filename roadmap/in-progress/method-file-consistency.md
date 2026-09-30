@@ -20,11 +20,13 @@ reference: the shape is reviewed there before the rest follow it.
 - [x] Effect hints agree across the four resources: a version restore saves a
       version each call, so no `restoreVersion` is `idempotent`; a
       `deleteStaged` discards unmerged edits, so each is `destructive`.
-- [ ] Entry reads and status: `get`, `query`, `status`, `trash`, `restore`,
+- [x] Entry reads and status: `get`, `query`, `status`, `trash`, `restore`,
       `used-by`, `preview/`.
 - [ ] Entry staging and versions, with the catalogue: building each type's
       input from the method's own `input` removes the 26 `*Input` builders
-      (the catalogue item in `in-progress/module-cleanup.md`).
-- [ ] Plugin service methods (`packages/plugins/*/src/service/`). A plugin
+      (the catalogue item in `in-progress/module-cleanup.md`). `get` and
+      `query` repeat the read-shape keys (`locale`, `full`, `previewToken`,
+      `staged`), which `report:drift` lists; share them as `listKeys` is.
+- [x] Plugin service methods (`packages/plugins/*/src/service/`). A plugin
       keeps its methods as keys of one service object, so only the declaration
       and handler rules apply.
