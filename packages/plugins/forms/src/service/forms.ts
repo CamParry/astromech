@@ -1,5 +1,5 @@
 /**
- * The plugin's service. The public `get` and `submit` serve a site's visitors
+ * The forms service. The public `get` and `submit` serve a site's visitors
  * and report failure as a result shape; the submission methods serve the admin.
  */
 import type { FormsAfterSubmitPayload, FormsBeforeSubmitPayload } from '../hooks/events';
@@ -38,7 +38,10 @@ const publicFormSchema = z.object({
             })
             .openapi({ type: 'object', additionalProperties: true })
     ),
-    /** Present only when the site configured a provider AND the form uses it. Never carries the secret key. */
+    /**
+     * Present only when the site configured a provider and the form uses it.
+     * Never carries the secret key.
+     */
     spam: z.object({ provider: z.string(), siteKey: z.string() }).optional(),
 });
 
@@ -77,14 +80,19 @@ export function createFormsService(
 
     return {
         get: defineServiceMethod({
-            access: 'public',
             summary: 'Fetch a published form’s public definition by slug.',
             input: z.strictObject({ slug: z.string() }),
             output: publicFormSchema.nullable(),
+            access: 'public',
             mutates: false,
-            handler: async (input, ctx): Promise<PublicForm | null> => {
-                const form = await loadForm(ctx, input?.slug);
+            async handler(params, ctx): Promise<PublicForm | null> {
+                const { slug } = params;
+
+                const form = await loadForm(ctx, slug);
                 if (form === null) return null;
+
+                const stored = entryFields(form);
+                const fields = compileFormFields(stored['fields']);
 
                 // Allow-list, never a spread: the `full` read holds the
                 // notification copy and recipients, and this is the one method
@@ -93,7 +101,7 @@ export function createFormsService(
                     id: form.id,
                     slug: form.slug ?? '',
                     title: form.title,
-                    fields: compileFormFields(entryFields(form)['fields']),
+                    fields,
                     ...(spam !== undefined && usesSpam(form)
                         ? { spam: { provider: spam.name, siteKey: spam.siteKey } }
                         : {}),
@@ -101,38 +109,47 @@ export function createFormsService(
             },
         }),
 
+        /**
+         * `data` is checked against the form's own compiled fields at call time.
+         * Every refusal, the rate limit and spam check included, is an
+         * `ok: false` result rather than a throw.
+         */
         submit: defineServiceMethod({
-            access: 'public',
             summary: 'Validate and store a submission against a published form.',
-            input: submitInputSchema,
+            input: z.strictObject({
+                slug: z.string(),
+                data: z.record(z.string(), z.unknown()),
+                token: z.string().optional(),
+                // A strict copy, so the output schema still strips a stored `meta`.
+                meta: z.strictObject(submissionMetaSchema.shape).optional(),
+            }),
             output: submitResultSchema,
+            access: 'public',
             mutates: true,
-            handler: async (input, ctx): Promise<SubmitResult> => {
+            async handler(params, ctx): Promise<SubmitResult> {
+                const { slug, data, token, meta } = params;
+                const { clientAddress, user } = ctx;
+                const submissions = createSubmissionsRepository(ctx.db);
+
                 // A caller with no connecting address is a trusted local one
                 // (CLI, MCP, in-process) and goes unmetered. `meta.ip` is not
-                // read here: it is caller-supplied, so keying on it would let a
-                // client mint a fresh counter per request.
-                const address = ctx.clientAddress;
-                if (rateLimit !== false && address !== undefined) {
-                    if (!consumeRateLimit(address, rateLimit)) return formError(TOO_MANY);
+                // the key: a client could mint a fresh counter per request.
+                if (rateLimit !== false && clientAddress !== undefined) {
+                    const allowed = consumeRateLimit(clientAddress, rateLimit);
+                    if (!allowed) return formError(TOO_MANY);
                 }
-
-                const form = await loadForm(ctx, input?.slug);
+                const form = await loadForm(ctx, slug);
                 if (form === null) return formError(NOT_ACCEPTING);
-
-                const definitions = compileFormFields(entryFields(form)['fields']);
-                const { values, errors } = await safeParseFields(
-                    isRecord(input?.data) ? input.data : {},
-                    definitions,
-                    {
-                        operation: 'create',
-                        resource: { kind: 'plugin', record: null },
-                        user: ctx.user,
-                        isUnique: refuseUniqueCheck,
-                    }
-                );
-                // Validation runs BEFORE the spam gate so a legitimate user
-                // whose token has expired still sees their field errors.
+                const stored = entryFields(form);
+                const definitions = compileFormFields(stored['fields']);
+                const { values, errors } = await safeParseFields(data, definitions, {
+                    operation: 'create',
+                    resource: { kind: 'plugin', record: null },
+                    user,
+                    isUnique: refuseUniqueCheck,
+                });
+                // Validation runs before the spam check, so a user whose token
+                // has expired still sees their field errors.
                 if (Object.keys(errors).length > 0) return { ok: false, errors };
 
                 const payload: FormsBeforeSubmitPayload = {
@@ -143,12 +160,12 @@ export function createFormsService(
                         spamProtection: usesSpam(form),
                     },
                     data: values,
-                    ...(typeof input?.token === 'string' ? { token: input.token } : {}),
-                    ...(isRecord(input?.meta) ? { meta: input.meta } : {}),
+                    ...(token !== undefined ? { token } : {}),
+                    ...(meta !== undefined ? { meta } : {}),
                 };
 
-                // A throwing subscriber (spam, or a third party's) propagates
-                // from runHook, so nothing is persisted.
+                // A throwing subscriber, the spam check among them, refuses
+                // the submission before anything is stored.
                 try {
                     await ctx.runHook(BEFORE_SUBMIT, payload);
                 } catch (error) {
@@ -157,12 +174,13 @@ export function createFormsService(
                     );
                 }
 
-                const submission = await createSubmissionsRepository(ctx.db).create({
+                const summary = buildSummary(definitions, values);
+
+                const submission = await submissions.create({
                     formId: form.id,
                     formSlug: payload.form.slug,
-                    // The COERCED values, not the raw input.
                     data: values,
-                    summary: buildSummary(definitions, values),
+                    summary,
                     ...(storeMeta && payload.meta !== undefined
                         ? { meta: payload.meta }
                         : {}),
@@ -173,10 +191,10 @@ export function createFormsService(
                     ...payload,
                     submissionId: submission.id,
                 };
-                // Post-commit; a throwing subscriber propagates from here.
+                // Not caught: a throwing subscriber fails the call, though the
+                // row is already stored.
                 await ctx.runHook(AFTER_SUBMIT, after);
-
-                // The row is committed, so a delivery failure is logged, not returned.
+                // The row is stored, so a delivery failure is logged, not returned.
                 try {
                     await sendNotifications(form, definitions, values, ctx);
                 } catch (error) {
@@ -195,19 +213,6 @@ export function createFormsService(
         deleteSubmission,
     };
 }
-
-/**
- * Call schema for `submit`, published to the method manifest. Describes the
- * argument object only — `data` is validated at call time against the form's
- * own compiled fields, which no static schema can know.
- */
-const submitInputSchema = z.strictObject({
-    slug: z.string(),
-    data: z.record(z.string(), z.unknown()),
-    token: z.string().optional(),
-    // A strict copy, so the output schema still strips a stored `meta`.
-    meta: z.strictObject(submissionMetaSchema.shape).optional(),
-});
 
 const NOT_ACCEPTING = 'This form is not accepting submissions';
 
