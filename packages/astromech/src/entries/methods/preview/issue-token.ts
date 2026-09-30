@@ -17,7 +17,11 @@ import { previewTokenSchema } from '../../schema';
  */
 export const issuePreviewToken = defineServiceMethod({
     summary: 'Issue a preview token for an entry.',
-    input: issuePreviewTokenInput({ type: z.string() }),
+    input: z.strictObject({
+        type: z.string(),
+        id: z.string(),
+        ...previewTokenSchema.shape,
+    }),
     output: z.object({ token: z.string() }),
     access: entryAccess('update'),
     requires: 'staging',
@@ -44,12 +48,3 @@ export const issuePreviewToken = defineServiceMethod({
         return { token };
     },
 });
-
-/**
- * `entries.issuePreviewToken`'s input, with `type` as given: any type id on the
- * method, one type's literal in that type's catalogue. `previewTokenSchema`
- * coerces an ISO string, which is what a JSON caller sends.
- */
-export function issuePreviewTokenInput<T extends z.ZodType>({ type }: { type: T }) {
-    return z.strictObject({ type, id: z.string() }).extend(previewTokenSchema.shape);
-}

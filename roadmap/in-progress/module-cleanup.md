@@ -67,7 +67,7 @@ the repository copies.
       `entries/methods/staging/merge.ts` takes the staged fields as they are;
       `globals/methods/staging/merge.ts` patches them over the canonical. One
       helper in `content/staging.ts`, one rule.
-- [ ] **The entry catalogue restates every method.** `entries/catalogue.ts` repeats
+- [x] **The entry catalogue restates every method.** `entries/catalogue.ts` repeats
       each summary in a switch and each input in a per-type builder. Build each
       from the method's own `input` with `safeExtend` and its `summary`.
 - [ ] **The five services are listed by hand four times** in

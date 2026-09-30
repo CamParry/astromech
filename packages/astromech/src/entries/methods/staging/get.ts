@@ -8,31 +8,31 @@ import { entryRepository } from '../../repository/entries-table';
 import { stagedEntrySchema } from '../../schema';
 
 /**
- * Returns the staged copy of one locale of an entry, or null if none exists,
- * with `diverged` set when the canonical was written after the copy was made.
- * Throws if the entry does not exist in that locale or is the wrong type.
+ * Null when the locale has no staged change. `diverged` is set when the canonical
+ * row was written after the staged change was made. Throws when the locale has
+ * no row of this type.
  */
 export const getStagedEntry = defineServiceMethod({
     summary: 'Get the staged change of an entry.',
-    input: getStagedEntryInput({ type: z.string() }),
+    input: z.strictObject({
+        type: z.string(),
+        id: z.string(),
+        locale: z.string().optional(),
+    }),
     output: stagedEntrySchema.nullable(),
     access: entryAccess('read'),
     requires: 'staging',
     mutates: false,
     async handler(params): Promise<(EntryResource & { diverged: boolean }) | null> {
         const { type, id } = params;
+
         const canonical = await getEntryOfType(type, id, params.locale);
-        const { staging } = entryRepository;
-        const staged = await staging.findOne({ id, locale: canonical.locale });
+        const staged = await entryRepository.staging.findOne({
+            id,
+            locale: canonical.locale,
+        });
         if (!staged) return null;
+
         return { ...staged, diverged: hasDiverged(canonical, staged) };
     },
 });
-
-/**
- * `entries.getStaged`'s input, with `type` as given: any type id on the method, one
- * type's literal in that type's catalogue.
- */
-export function getStagedEntryInput<T extends z.ZodType>({ type }: { type: T }) {
-    return z.strictObject({ type, id: z.string(), locale: z.string().optional() });
-}

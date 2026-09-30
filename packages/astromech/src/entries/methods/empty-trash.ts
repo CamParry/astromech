@@ -6,12 +6,12 @@ import { entryAccess } from '../internal/access';
 import { entryRepository } from '../repository/entries-table';
 
 /**
- * Deletes each trashed entry with every locale and version, clearing its
- * relationship rows first. No entry hooks fire.
+ * Deletes each trashed entry of `type` with every locale and version, clearing
+ * its relationship rows first. No entry hooks fire.
  */
 export const emptyTrash = defineServiceMethod({
-    summary: 'Permanently delete every trashed entry of one type.',
-    input: emptyTrashInput({ type: z.string() }),
+    summary: 'Permanently delete every trashed entry.',
+    input: z.strictObject({ type: z.string() }),
     output: z.void(),
     access: entryAccess('delete'),
     requires: 'trash',
@@ -36,11 +36,3 @@ export const emptyTrash = defineServiceMethod({
         });
     },
 });
-
-/**
- * `entries.emptyTrash`'s input, with `type` as given: any type id on the method,
- * one type's literal in that type's catalogue.
- */
-export function emptyTrashInput<T extends z.ZodType>({ type }: { type: T }) {
-    return z.strictObject({ type });
-}

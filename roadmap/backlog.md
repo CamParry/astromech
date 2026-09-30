@@ -33,7 +33,7 @@ Finished items are deleted rather than ticked; the record of what shipped is in
 
 ### Hooks
 
-- [ ] Only entries (create, update, delete) and globals (update) fire hooks; users and media fire none. Payload and Strapi give every collection hooks, uploads and users included. Decide the user and media events and their payloads. The method file shape already reserves the before and after hook steps (`in-progress/method-file-consistency.md`)
+- [ ] Only entries (create, update, delete) and globals (update) fire hooks; users and media fire none. Payload and Strapi give every collection hooks, uploads and users included. Decide the user and media events and their payloads. The method file shape already reserves the before and after hook steps (`completed/method-file-consistency.md`)
 
 ### Plugins
 

@@ -22,8 +22,8 @@ reference: the shape is reviewed there before the rest follow it.
       `deleteStaged` discards unmerged edits, so each is `destructive`.
 - [x] Entry reads and status: `get`, `query`, `status`, `trash`, `restore`,
       `used-by`, `preview/`.
-- [ ] Entry staging and versions, with the catalogue: building each type's
-      input from the method's own `input` removes the 26 `*Input` builders
+- [x] Entry staging and versions, with the catalogue: building each type's
+      input from the method's own `input` removes the 22 `*Input` builders
       (the catalogue item in `in-progress/module-cleanup.md`). `get` and
       `query` repeat the read-shape keys (`locale`, `full`, `previewToken`,
       `staged`), which `report:drift` lists; share them as `listKeys` is.

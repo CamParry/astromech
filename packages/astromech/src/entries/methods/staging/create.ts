@@ -10,34 +10,35 @@ import { entryRepository } from '../../repository/entries-table';
 import { entrySchema } from '../../schema';
 
 /**
- * Creates a staged copy of one locale of an entry so edits can be drafted off
- * the live row. Throws if that locale already has a staged change.
+ * Copies one locale's title, slug and fields into an unpublished staged change,
+ * which `update({ staged: true })` edits and `mergeStaged` makes live. Throws
+ * when the locale has no row of this type, or already has a staged change.
  */
 export const createStagedEntry = defineServiceMethod({
     summary: 'Stage a change to an entry.',
-    input: createStagedEntryInput({ type: z.string() }),
+    input: z.strictObject({
+        type: z.string(),
+        id: z.string(),
+        locale: z.string().optional(),
+    }),
     output: entrySchema,
     access: entryAccess('update'),
     requires: 'staging',
     mutates: true,
     async handler(params, ctx): Promise<EntryResource> {
         const { type, id } = params;
-        const { config } = ctx;
-        const userId = ctx.user?.id ?? null;
+        const { config, user } = ctx;
+        const userId = user?.id ?? null;
+
         const canonical = await getEntryOfType(type, id, params.locale);
-        const { staging } = entryRepository;
+        const { locale } = canonical;
+        const existing = await entryRepository.staging.findOne({ id, locale });
+        if (existing) throw new StagedChangeExistsError('entry', { id, locale });
 
-        const existing = await staging.findOne({ id, locale: canonical.locale });
-        if (existing) {
-            throw new StagedChangeExistsError('entry', { id, locale: canonical.locale });
-        }
-
-        // The staged row copies the canonical's content — slug included, which the
-        // partial unique index allows — and is always unpublished. Write it and its
-        // relationship index atomically.
         return transaction(async () => {
-            const row = await staging.create(
-                { id, locale: canonical.locale },
+            // The partial unique index lets the staged row keep the canonical's slug.
+            const created = await entryRepository.staging.create(
+                { id, locale },
                 {
                     title: canonical.title,
                     slug: canonical.slug,
@@ -48,16 +49,8 @@ export const createStagedEntry = defineServiceMethod({
                     updatedBy: userId,
                 }
             );
-            await syncEntryRelationships(config, row, type);
-            return row;
+            await syncEntryRelationships(config, created, type);
+            return created;
         });
     },
 });
-
-/**
- * `entries.createStaged`'s input, with `type` as given: any type id on the method, one
- * type's literal in that type's catalogue.
- */
-export function createStagedEntryInput<T extends z.ZodType>({ type }: { type: T }) {
-    return z.strictObject({ type, id: z.string(), locale: z.string().optional() });
-}
