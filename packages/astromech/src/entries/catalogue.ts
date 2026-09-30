@@ -29,6 +29,7 @@ export function entryCatalogue(params: {
 }): Record<EntryMethodName, ServiceMethodContract & { requires?: Capability }> {
     const { typeId, titled } = params;
     const type = z.literal(typeId);
+    const typeSentence = `Entry type: "${typeId}".`;
     // The create and update payloads as the schemas this type validates with.
     const payloads: Partial<Record<EntryMethodName, Record<string, z.ZodType>>> = {
         create: { data: createEntrySchema({ titled }) },
@@ -47,7 +48,10 @@ export function entryCatalogue(params: {
                 name,
                 {
                     ...method,
-                    summary: entryMethodSummary(name, typeId),
+                    summary:
+                        method.summary === undefined
+                            ? typeSentence
+                            : `${method.summary} ${typeSentence}`,
                     access:
                         resolved.kind === 'permission'
                             ? resolved.permissions[0]
@@ -80,62 +84,6 @@ function capabilityRequired(requires: string, method: EntryMethodName): Capabili
         );
     }
     return requires;
-}
-
-/**
- * Human-readable summary for one entry method on one type.
- * e.g. method='query', type='posts' → 'List "posts" entries.'
- */
-function entryMethodSummary(method: EntryMethodName, type: string): string {
-    switch (method) {
-        case 'query':
-            return `List "${type}" entries.`;
-        case 'get':
-            return `Read a "${type}" entry.`;
-        case 'create':
-            return `Create a "${type}" entry.`;
-        case 'update':
-            return (
-                `Update a "${type}" entry. Fields merge: omitted fields keep ` +
-                `their current value, and arrays are replaced whole.`
-            );
-        case 'delete':
-            return `Delete a "${type}" entry.`;
-        case 'duplicate':
-            return `Copy a "${type}" entry into a new one.`;
-        case 'publish':
-            return `Publish a "${type}" entry.`;
-        case 'unpublish':
-            return `Unpublish a "${type}" entry.`;
-        case 'schedule':
-            return `Schedule a "${type}" entry to publish at a future time.`;
-        case 'trash':
-            return `Move a "${type}" entry to the trash (reversible).`;
-        case 'restore':
-            return `Restore a trashed "${type}" entry.`;
-        case 'emptyTrash':
-            return `Permanently delete every trashed "${type}" entry.`;
-        case 'versions':
-            return `List the version history of a "${type}" entry.`;
-        case 'getVersion':
-            return `Read one version of a "${type}" entry.`;
-        case 'restoreVersion':
-            return `Roll a "${type}" entry back to an earlier version.`;
-        case 'usedBy':
-            return `List what references a "${type}" entry.`;
-        case 'createStaged':
-            return `Stage a change to a "${type}" entry.`;
-        case 'getStaged':
-            return `Get the staged change of a "${type}" entry.`;
-        case 'mergeStaged':
-            return `Merge the staged change into a "${type}" entry.`;
-        case 'deleteStaged':
-            return `Discard the staged change of a "${type}" entry.`;
-        case 'issuePreviewToken':
-            return `Issue a preview token for a "${type}" entry.`;
-        case 'revokePreviewToken':
-            return `Revoke the preview token of a "${type}" entry.`;
-    }
 }
 
 /**

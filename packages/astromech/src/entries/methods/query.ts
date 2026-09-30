@@ -15,12 +15,12 @@ import { entryRepository } from '../repository/entries-table';
 import { entrySchema } from '../schema';
 
 /**
- * Paginated unless `limit` is `'all'`, and filtered to the caller's visibility
- * shape. A `previewToken` reads past the publish gate. Asking for `trashed` rows
- * in the public shape throws, since that shape never includes them.
+ * `type` names one type or several. Paginated unless `limit` is `'all'`, and
+ * filtered to the caller's visibility shape; a `previewToken` reads past the
+ * publish gate. Asking for `trashed` rows in the public shape throws.
  */
 export const queryEntries = defineServiceMethod({
-    summary: 'List entries of one type or several.',
+    summary: 'List entries.',
     input: z.strictObject({
         // One type or several: a cross-type listing names them all, and the
         // permission is checked per type the call touches.

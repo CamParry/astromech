@@ -105,14 +105,16 @@ describe('the emitted document', () => {
 
     it('describes each operation with the method contract’s own summary', () => {
         const paths = document().paths;
-        expect(paths['/entries/{type}']?.['get']?.summary).toBe('List "{type}" entries.');
+        expect(paths['/entries/{type}']?.['get']?.summary).toBe(
+            'List entries. Entry type: "{type}".'
+        );
         expect(paths['/media/{id}']?.['delete']?.summary).toBe('Delete a media item.');
     });
 
     it('describes a route from its own method contract', () => {
         const doc = document();
         const post = doc.paths['/entries/{type}']?.['post'];
-        expect(post?.summary).toBe('Create a "{type}" entry.');
+        expect(post?.summary).toBe('Create an entry. Entry type: "{type}".');
         // `type` is in the path, so the body is the method's `data` alone — the
         // flat payload the wire has always sent.
         expect(bodyProperties(post, doc)).toContain('title');
