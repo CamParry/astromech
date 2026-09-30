@@ -12,14 +12,9 @@ export const batchAddress = {
         .describe('A list of entries, acted on atomically. Pass this or `id`.'),
 };
 
-/** The keys the status methods are addressed by: `type`, `id` or `ids`, and `locale`. */
-export function localisedBatch<T extends z.ZodType>(type: T) {
-    return z.strictObject({ type, ...batchAddress, locale: z.string().optional() });
-}
-
 /**
  * `schema`, refusing a call that names both `id` and `ids`, or neither. Applied
- * last, since a refined object schema cannot be extended.
+ * last: a refined object schema can only be extended with `safeExtend`.
  */
 export function oneOrMany<T extends z.ZodObject>(schema: T): T {
     return schema.superRefine((value: { id?: unknown; ids?: unknown }, ctx) => {

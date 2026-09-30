@@ -15,7 +15,12 @@ import { entryVersionSchema } from '../../schema';
  */
 export const getEntryVersion = defineServiceMethod({
     summary: 'Read one version of an entry.',
-    input: getEntryVersionInput({ type: z.string() }),
+    input: z.strictObject({
+        type: z.string(),
+        id: z.string(),
+        locale: z.string().optional(),
+        version: z.number().int(),
+    }),
     output: entryVersionSchema,
     access: entryAccess('read'),
     requires: 'versioning',
@@ -32,16 +37,3 @@ export const getEntryVersion = defineServiceMethod({
         });
     },
 });
-
-/**
- * `entries.getVersion`'s input, with `type` as given: any type id on the method, one
- * type's literal in that type's catalogue.
- */
-export function getEntryVersionInput<T extends z.ZodType>({ type }: { type: T }) {
-    return z.strictObject({
-        type,
-        id: z.string(),
-        locale: z.string().optional(),
-        version: z.number().int(),
-    });
-}

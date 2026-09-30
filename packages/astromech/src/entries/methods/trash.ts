@@ -10,7 +10,7 @@ import { batchAddress, fromBatch, oneOrMany } from '../internal/from-batch';
  */
 export const trashEntries = defineServiceMethod({
     summary: 'Move an entry to the trash (reversible).',
-    input: trashEntriesInput({ type: z.string() }),
+    input: oneOrMany(z.strictObject({ type: z.string(), ...batchAddress })),
     output: z.void(),
     access: entryAccess('delete'),
     requires: 'trash',
@@ -21,13 +21,5 @@ export const trashEntries = defineServiceMethod({
         return trashOne(params, ctx);
     },
 });
-
-/**
- * `entries.trash`'s input, with `type` as given: any type id on the method, one
- * type's literal in that type's catalogue.
- */
-export function trashEntriesInput<T extends z.ZodType>({ type }: { type: T }) {
-    return oneOrMany(z.strictObject({ type, ...batchAddress }));
-}
 
 const trashOne = fromBatch(trashEntryBatch);

@@ -2,7 +2,7 @@ import type { EntryResource } from '../repository/types';
 import { z } from '@hono/zod-openapi';
 import { defineServiceMethod } from '@/services/define-service-method';
 import { entryAccess } from '../internal/access';
-import { fromBatch, localisedBatch, oneOrMany } from '../internal/from-batch';
+import { batchAddress, fromBatch, oneOrMany } from '../internal/from-batch';
 import { updateEntryBatch } from '../internal/update-batch';
 import { entrySchema, scheduleEntrySchema } from '../schema';
 
@@ -13,7 +13,14 @@ import { entrySchema, scheduleEntrySchema } from '../schema';
  */
 export const scheduleEntries = defineServiceMethod({
     summary: 'Schedule an entry to publish at a future time.',
-    input: scheduleEntriesInput({ type: z.string() }),
+    input: oneOrMany(
+        z.strictObject({
+            type: z.string(),
+            ...batchAddress,
+            locale: z.string().optional(),
+            ...scheduleEntrySchema.shape,
+        })
+    ),
     output: z.union([entrySchema, z.array(entrySchema)]),
     access: entryAccess('publish'),
     requires: 'statuses',
@@ -32,13 +39,5 @@ export const scheduleEntries = defineServiceMethod({
         );
     },
 });
-
-/**
- * `entries.schedule`'s input, with `type` as given: any type id on the method,
- * one type's literal in that type's catalogue.
- */
-export function scheduleEntriesInput<T extends z.ZodType>({ type }: { type: T }) {
-    return oneOrMany(localisedBatch(type).extend(scheduleEntrySchema.shape));
-}
 
 const updateOne = fromBatch(updateEntryBatch);

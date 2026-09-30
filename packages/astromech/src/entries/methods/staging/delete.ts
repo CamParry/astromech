@@ -12,7 +12,11 @@ import { entryRepository } from '../../repository/entries-table';
  */
 export const deleteStagedEntry = defineServiceMethod({
     summary: 'Discard the staged change of an entry.',
-    input: deleteStagedEntryInput({ type: z.string() }),
+    input: z.strictObject({
+        type: z.string(),
+        id: z.string(),
+        locale: z.string().optional(),
+    }),
     output: z.void(),
     access: entryAccess('update'),
     requires: 'staging',
@@ -33,11 +37,3 @@ export const deleteStagedEntry = defineServiceMethod({
         await syncEntryRelationships(config, canonical, type);
     },
 });
-
-/**
- * `entries.deleteStaged`'s input, with `type` as given: any type id on the method, one
- * type's literal in that type's catalogue.
- */
-export function deleteStagedEntryInput<T extends z.ZodType>({ type }: { type: T }) {
-    return z.strictObject({ type, id: z.string(), locale: z.string().optional() });
-}

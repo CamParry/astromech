@@ -8,28 +8,6 @@ import type { EntriesService, ServiceMethodContract } from '@/types/index';
 import { z } from '@hono/zod-openapi';
 import { isCapability } from '@/entries/capabilities';
 import { resolveAccess } from '@/permissions/access';
-import { createEntryInput } from './methods/create';
-import { deleteEntriesInput } from './methods/delete';
-import { duplicateEntryInput } from './methods/duplicate';
-import { emptyTrashInput } from './methods/empty-trash';
-import { getEntryInput } from './methods/get';
-import { issuePreviewTokenInput } from './methods/preview/issue-token';
-import { revokePreviewTokenInput } from './methods/preview/revoke-token';
-import { publishEntriesInput } from './methods/publish';
-import { queryEntriesInput } from './methods/query';
-import { restoreEntriesInput } from './methods/restore';
-import { scheduleEntriesInput } from './methods/schedule';
-import { createStagedEntryInput } from './methods/staging/create';
-import { deleteStagedEntryInput } from './methods/staging/delete';
-import { getStagedEntryInput } from './methods/staging/get';
-import { mergeStagedEntryInput } from './methods/staging/merge';
-import { trashEntriesInput } from './methods/trash';
-import { unpublishEntriesInput } from './methods/unpublish';
-import { updateEntriesInput } from './methods/update';
-import { listEntryUsageInput } from './methods/used-by';
-import { getEntryVersionInput } from './methods/versions/get';
-import { listEntryVersionsInput } from './methods/versions/list';
-import { restoreEntryVersionInput } from './methods/versions/restore';
 import { createEntrySchema, updateEntrySchema } from './schema';
 import { entriesDefinition } from './service';
 
@@ -50,8 +28,12 @@ export function entryCatalogue(params: {
     titled: boolean;
 }): Record<EntryMethodName, ServiceMethodContract & { requires?: Capability }> {
     const { typeId, titled } = params;
-
-    const schemas = entryInputSchemas(typeId, titled);
+    const type = z.literal(typeId);
+    // The create and update payloads as the schemas this type validates with.
+    const payloads: Partial<Record<EntryMethodName, Record<string, z.ZodType>>> = {
+        create: { data: createEntrySchema({ titled }) },
+        update: { data: updateEntrySchema({ titled }) },
+    };
 
     return Object.fromEntries(
         Object.entries(entriesDefinition.catalogue).map(([key, method]) => {
@@ -70,7 +52,10 @@ export function entryCatalogue(params: {
                         resolved.kind === 'permission'
                             ? resolved.permissions[0]
                             : resolved.kind,
-                    input: schemas[name],
+                    input: objectInput(method.input, name).safeExtend({
+                        type,
+                        ...payloads[name],
+                    }),
                     ...(method.requires !== undefined
                         ? { requires: capabilityRequired(method.requires, name) }
                         : {}),
@@ -154,37 +139,15 @@ function entryMethodSummary(method: EntryMethodName, type: string): string {
 }
 
 /**
- * The call schema each method takes for one type: each method's own input
- * builder with `type` as a literal, and the create and update payloads as the
- * schemas that type actually validates with.
+ * A method's `input` as an object schema, which every entry method declares. It
+ * is typed `ZodType` on the common method shape, so anything else is a wiring
+ * error rather than an input to pass through unfixed.
  */
-function entryInputSchemas(
-    typeId: string,
-    titled: boolean
-): Record<EntryMethodName, z.ZodType> {
-    const type = z.literal(typeId);
-    return {
-        query: queryEntriesInput({ type }),
-        get: getEntryInput({ type }),
-        create: createEntryInput({ type, data: createEntrySchema({ titled }) }),
-        update: updateEntriesInput({ type, data: updateEntrySchema({ titled }) }),
-        delete: deleteEntriesInput({ type }),
-        duplicate: duplicateEntryInput({ type }),
-        trash: trashEntriesInput({ type }),
-        restore: restoreEntriesInput({ type }),
-        emptyTrash: emptyTrashInput({ type }),
-        versions: listEntryVersionsInput({ type }),
-        getVersion: getEntryVersionInput({ type }),
-        restoreVersion: restoreEntryVersionInput({ type }),
-        publish: publishEntriesInput({ type }),
-        unpublish: unpublishEntriesInput({ type }),
-        schedule: scheduleEntriesInput({ type }),
-        usedBy: listEntryUsageInput({ type }),
-        createStaged: createStagedEntryInput({ type }),
-        getStaged: getStagedEntryInput({ type }),
-        mergeStaged: mergeStagedEntryInput({ type }),
-        deleteStaged: deleteStagedEntryInput({ type }),
-        issuePreviewToken: issuePreviewTokenInput({ type }),
-        revokePreviewToken: revokePreviewTokenInput({ type }),
-    };
+function objectInput(input: z.ZodType, method: EntryMethodName): z.ZodObject {
+    if (!(input instanceof z.ZodObject)) {
+        throw new Error(
+            `entries.${method} takes a non-object input, so its type cannot be fixed.`
+        );
+    }
+    return input;
 }

@@ -21,10 +21,18 @@ import { entrySchema } from '../schema';
  */
 export const queryEntries = defineServiceMethod({
     summary: 'List entries of one type or several.',
-    input: queryEntriesInput({
+    input: z.strictObject({
         // One type or several: a cross-type listing names them all, and the
         // permission is checked per type the call touches.
         type: z.union([z.string(), z.array(z.string())]),
+        search: z.string().optional(),
+        where: z.record(z.string(), z.unknown()).optional(),
+        trashed: z.boolean().optional(),
+        ...listKeys,
+        locale: z.string().optional(),
+        full: z.boolean().optional(),
+        previewToken: z.string().optional(),
+        staged: z.boolean().optional(),
     }),
     output: queryResultSchema(entrySchema),
     access: entryAccess('read'),
@@ -75,25 +83,6 @@ export const queryEntries = defineServiceMethod({
         return { data: visible, pagination };
     },
 });
-
-/**
- * `entries.query`'s input, with `type` as given: any type id or list of them on
- * the method, and one type's literal in that type's catalogue
- * (`entries/catalogue.ts`), so the two cannot declare different keys.
- */
-export function queryEntriesInput<T extends z.ZodType>({ type }: { type: T }) {
-    return z.strictObject({
-        type,
-        search: z.string().optional(),
-        where: z.record(z.string(), z.unknown()).optional(),
-        trashed: z.boolean().optional(),
-        ...listKeys,
-        locale: z.string().optional(),
-        full: z.boolean().optional(),
-        previewToken: z.string().optional(),
-        staged: z.boolean().optional(),
-    });
-}
 
 /**
  * Checks `where: { references }` against the queried types' schemas before it

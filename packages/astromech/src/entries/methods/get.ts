@@ -18,7 +18,14 @@ import { entrySchema } from '../schema';
  */
 export const getEntry = defineServiceMethod({
     summary: 'Read an entry.',
-    input: getEntryInput({ type: z.string() }),
+    input: z.strictObject({
+        type: z.string(),
+        id: z.string(),
+        locale: z.string().optional(),
+        full: z.boolean().optional(),
+        previewToken: z.string().optional(),
+        staged: z.boolean().optional(),
+    }),
     output: entrySchema.nullable(),
     access: entryAccess('read'),
     mutates: false,
@@ -45,18 +52,3 @@ export const getEntry = defineServiceMethod({
         return applyVisibility(record, { shape, fields, audience: { now: new Date() } });
     },
 });
-
-/**
- * `entries.get`'s input, with `type` as given: any type id on the method, one
- * type's literal in that type's catalogue.
- */
-export function getEntryInput<T extends z.ZodType>({ type }: { type: T }) {
-    return z.strictObject({
-        type,
-        id: z.string(),
-        locale: z.string().optional(),
-        full: z.boolean().optional(),
-        previewToken: z.string().optional(),
-        staged: z.boolean().optional(),
-    });
-}

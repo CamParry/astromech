@@ -15,12 +15,17 @@ export const updateEntries = defineServiceMethod({
     summary:
         'Update an entry. Fields merge: omitted fields keep their current ' +
         'value, and arrays are replaced whole.',
-    input: updateEntriesInput({
-        type: z.string(),
-        // The titleless payload, since one schema covers every type here;
-        // `update-batch.ts` re-parses under the type's own, which is stricter.
-        data: updateEntryPayloadSchema,
-    }),
+    input: oneOrMany(
+        z.strictObject({
+            type: z.string(),
+            ...batchAddress,
+            locale: z.string().optional(),
+            staged: z.boolean().optional(),
+            // The titleless payload, since one schema covers every type here;
+            // `update-batch.ts` re-parses under the type's own, which is stricter.
+            data: updateEntryPayloadSchema,
+        })
+    ),
     output: z.union([entrySchema, z.array(entrySchema)]),
     access: entryAccess('update'),
     mutates: true,
@@ -29,28 +34,5 @@ export const updateEntries = defineServiceMethod({
         return updateOne(params, ctx);
     },
 });
-
-/**
- * `entries.update`'s input, with `type` and `data` as given: any type id and the
- * titleless patch on the method, one type's literal and its own update schema in
- * that type's catalogue.
- */
-export function updateEntriesInput<T extends z.ZodType, D extends z.ZodType>({
-    type,
-    data,
-}: {
-    type: T;
-    data: D;
-}) {
-    return oneOrMany(
-        z.strictObject({
-            type,
-            ...batchAddress,
-            locale: z.string().optional(),
-            staged: z.boolean().optional(),
-            data,
-        })
-    );
-}
 
 const updateOne = fromBatch(updateEntryBatch);

@@ -17,7 +17,11 @@ import { duplicateOverridesSchema, entrySchema } from '../schema';
  */
 export const duplicateEntry = defineServiceMethod({
     summary: 'Copy an entry into a new one.',
-    input: duplicateEntryInput({ type: z.string() }),
+    input: z.strictObject({
+        type: z.string(),
+        id: z.string(),
+        overrides: duplicateOverridesSchema.optional(),
+    }),
     output: entrySchema,
     access: entryAccess('create'),
     mutates: true,
@@ -59,18 +63,6 @@ export const duplicateEntry = defineServiceMethod({
         });
     },
 });
-
-/**
- * `entries.duplicate`'s input, with `type` as given: any type id on the method,
- * one type's literal in that type's catalogue.
- */
-export function duplicateEntryInput<T extends z.ZodType>({ type }: { type: T }) {
-    return z.strictObject({
-        type,
-        id: z.string(),
-        overrides: duplicateOverridesSchema.optional(),
-    });
-}
 
 /**
  * Copies one locale of the source into the new entry, creating the entry when
