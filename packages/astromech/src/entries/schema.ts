@@ -112,6 +112,14 @@ export const duplicateOverridesSchema = z
  */
 export const previewTokenSchema = z.strictObject({ expiresAt: optionalDate });
 
+/** The locale, visibility and preview keys `get` and `query` both read with. */
+export const entryReadKeys = {
+    locale: z.string().optional(),
+    full: z.boolean().optional(),
+    previewToken: z.string().optional(),
+    staged: z.boolean().optional(),
+};
+
 /**
  * One locale of an entry of any type, as every read answers it: the public
  * `Entry`. `fields` is not walked, and a nullable value that fails falls back

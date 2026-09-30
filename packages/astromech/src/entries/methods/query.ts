@@ -12,7 +12,7 @@ import { InvalidReferencesFilterError, PublicTrashedReadError } from '../errors'
 import { entryAccess } from '../internal/access';
 import { queryPreviewEntries } from '../internal/preview';
 import { entryRepository } from '../repository/entries-table';
-import { entrySchema } from '../schema';
+import { entryReadKeys, entrySchema } from '../schema';
 
 /**
  * `type` names one type or several. Paginated unless `limit` is `'all'`, and
@@ -29,10 +29,7 @@ export const queryEntries = defineServiceMethod({
         where: z.record(z.string(), z.unknown()).optional(),
         trashed: z.boolean().optional(),
         ...listKeys,
-        locale: z.string().optional(),
-        full: z.boolean().optional(),
-        previewToken: z.string().optional(),
-        staged: z.boolean().optional(),
+        ...entryReadKeys,
     }),
     output: queryResultSchema(entrySchema),
     access: entryAccess('read'),

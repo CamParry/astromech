@@ -9,7 +9,7 @@ import { defineServiceMethod } from '@/services/define-service-method';
 import { entryAccess } from '../internal/access';
 import { getPreviewEntry } from '../internal/preview';
 import { entryRepository } from '../repository/entries-table';
-import { entrySchema } from '../schema';
+import { entryReadKeys, entrySchema } from '../schema';
 
 /**
  * Filtered to the caller's visibility shape, and null when that hides it or the
@@ -21,10 +21,7 @@ export const getEntry = defineServiceMethod({
     input: z.strictObject({
         type: z.string(),
         id: z.string(),
-        locale: z.string().optional(),
-        full: z.boolean().optional(),
-        previewToken: z.string().optional(),
-        staged: z.boolean().optional(),
+        ...entryReadKeys,
     }),
     output: entrySchema.nullable(),
     access: entryAccess('read'),
