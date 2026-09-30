@@ -8,9 +8,8 @@ import { getEntryOfType } from '../../read-entry';
 import { entryRepository } from '../../repository/entries-table';
 
 /**
- * Lists the saved versions of one locale of an entry, newest first, as their
- * metadata; `getVersion` reads one's content. Throws if the entry does not
- * exist, has no row in that locale, or is the wrong type.
+ * Newest first, as metadata; `getVersion` reads one's content. A locale with no
+ * row of this type throws, with no fallback to the default locale.
  */
 export const listEntryVersions = defineServiceMethod({
     summary: 'List the version history of an entry.',
@@ -25,7 +24,9 @@ export const listEntryVersions = defineServiceMethod({
     mutates: false,
     async handler(params): Promise<VersionMetadata[]> {
         const { type, id } = params;
+
         const entry = await getEntryOfType(type, id, params.locale);
+
         return listVersions(entryRepository.versions, entry);
     },
 });

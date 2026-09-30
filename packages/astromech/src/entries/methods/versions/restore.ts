@@ -10,9 +10,9 @@ import { entryRepository } from '../../repository/entries-table';
 import { entrySchema } from '../../schema';
 
 /**
- * Restores one locale of an entry to one of its saved versions, by its number:
- * overwrites the content row with the version's title, slug and fields, and
- * re-indexes it. Throws if that locale has no version with the number.
+ * Saves the content it overwrites as a new version first, so a restore can be
+ * undone; the restored slug is made unique in its locale. A locale with no row of
+ * this type, or no version with that number, throws.
  */
 export const restoreEntryVersion = defineServiceMethod({
     summary: 'Roll an entry back to an earlier version.',
@@ -31,32 +31,32 @@ export const restoreEntryVersion = defineServiceMethod({
         const { config, user } = ctx;
         const userId = user?.id ?? null;
 
-        const currentEntry = await getEntryOfType(type, id, params.locale);
+        const current = await getEntryOfType(type, id, params.locale);
 
         return restoreVersion({
             resource: 'entry',
             versions: entryRepository.versions,
-            current: currentEntry,
+            current,
             version,
             address: { id },
             user,
             write: async ({ fields, columns }) => {
                 const slug = await uniqueSlugIfChanged({
                     type,
-                    entry: currentEntry,
+                    entry: current,
                     slug: columns['slug'] as string | null,
                 });
-                const row = await entryRepository.update(
-                    { id, locale: currentEntry.locale },
+                const restored = await entryRepository.update(
+                    { id, locale: current.locale },
                     {
                         title: columns['title'] as string,
-                        slug: slug ?? currentEntry.slug,
+                        slug: slug ?? current.slug,
                         fields,
                         updatedBy: userId,
                     }
                 );
-                await syncEntryRelationships(config, row, type);
-                return row;
+                await syncEntryRelationships(config, restored, type);
+                return restored;
             },
         });
     },

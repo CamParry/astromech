@@ -1,8 +1,6 @@
 /**
- * Atomicity test for entries.createStaged.
- *
- * Asserts that when relationship persistence fails mid-create, the staged
- * row is rolled back and no orphaned record is left in the database.
+ * Atomicity tests for entries.createStaged and entries.deleteStaged: when the
+ * relationship index write fails, the staged row write rolls back with it.
  */
 
 import { rmSync } from 'node:fs';
@@ -16,8 +14,8 @@ import { getDb } from '@/database/registry';
 
 const entriesService = currentServices.entries;
 
-// `createStaged` persists the staged row and its index rows inside a database
-// transaction. `replaceForSource` only rejects once `state.failing` is set,
+// Both methods write the staged row and the index rows in one transaction.
+// `replaceForSource` only rejects once `state.failing` is set,
 // so the canonical entry's own (unrelated) index write still succeeds.
 const state = { failing: false };
 
@@ -36,10 +34,7 @@ let dbPath = '';
 beforeEach(async () => {
     // Each test gets its own named database file, which `afterEach` deletes.
     dbCounter += 1;
-    dbPath = join(
-        tmpdir(),
-        `astromech-staging-create-atomicity-${process.pid}-${dbCounter}.db`
-    );
+    dbPath = join(tmpdir(), `astromech-staging-atomicity-${process.pid}-${dbCounter}.db`);
     await createFileTestDb(`file:${dbPath}`);
     const cfg = makeTestConfig();
     if (cfg.entries.post) cfg.entries.post.staging = true;
@@ -72,5 +67,24 @@ describe('createStaged atomicity', () => {
         const rows = await getDb().selectFrom('entries').selectAll().execute();
         expect(rows).toHaveLength(1);
         expect(rows[0]?.id).toBe(canonical.id);
+    });
+});
+
+describe('deleteStaged atomicity', () => {
+    it('keeps the staged row when relationship persistence throws', async () => {
+        const canonical = await api.create({
+            type: 'post',
+            data: { title: 'Canonical' },
+        });
+        await api.createStaged({ type: 'post', id: canonical.id });
+
+        state.failing = true;
+        await expect(
+            api.deleteStaged({ type: 'post', id: canonical.id })
+        ).rejects.toThrow('boom');
+
+        state.failing = false;
+        const staged = await api.getStaged({ type: 'post', id: canonical.id });
+        expect(staged?.id).toBe(canonical.id);
     });
 });
