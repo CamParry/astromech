@@ -108,4 +108,9 @@ not be re-derived.
 
 ### Test harness follow-ups
 
-- [ ] The test harness leaks its temp database directory when a run is killed. `tests/_support/harness.ts` removes `TEST_DB_DIR` from a `process.on('exit')` handler, which never fires on SIGKILL — so every interrupted vitest run strands an `astromech-test-<pid>-*` directory under `tmpdir()`. 1112 of them had accumulated by 2026-08-28, taking ~3 GB. Needs a signal handler, or a sweep of stale `astromech-test-*` dirs at harness start.
+- [ ] The test run leaks its temp database directory when it is killed. `packages/astromech/tests/_support/global-setup.ts` removes it in its teardown, which never runs on SIGKILL, so every interrupted run strands an `astromech-test-*` directory (template plus one database per test) under `tmpdir()`. Sweep stale `astromech-test-*` directories when global setup starts.
+
+### Permissions follow-ups
+
+- [ ] A plugin service method can demand a permission its plugin never declares in `permissions`, and nothing catches it, so `astromech permissions` would not list it. A check when the plugin registers would, at the cost of a new boot error. Found fixing `completed/permission-catalogue-drifts-from-manifest.md`.
+- [ ] The admin restates which methods a resource offers by reading capabilities directly (`packages/admin/src/components/entries/entry-edit-page.tsx` near line 312, `packages/admin/src/components/globals/global-edit-page.tsx` near line 142, `packages/admin/src/hooks/use-edit-controller.ts` near line 188). They agree with the methods today; reading the method manifest instead would remove the second source.

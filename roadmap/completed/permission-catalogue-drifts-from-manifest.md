@@ -28,10 +28,27 @@ manifest the same way. The fix removes the second source rather than syncing it.
 
 ## The work
 
-- [ ] Write a failing test that every permission a manifest method requires
+- [x] Write a failing test that every permission a manifest method requires
       appears in the catalogue, for every resource in the test config.
-- [ ] Derive the catalogue's action availability from the methods' `requires`,
+- [x] Derive the catalogue's action availability from the methods' `requires`,
       and drop the hand-kept gates.
-- [ ] Rewrite the two catalogue tests to assert the corrected behaviour.
-- [ ] Check the other resource catalogues (media, users, plugins) for the same
+- [x] Rewrite the two catalogue tests to assert the corrected behaviour.
+- [x] Check the other resource catalogues (media, users, plugins) for the same
       restatement.
+
+## Outcome
+
+The catalogue now lists each entry or global action whose permission the
+resource's available methods demand, and moved to
+`packages/astromech/src/policies/permission-catalogue.ts`, because `permissions/`
+sits below the content modules it now reads. One capability check,
+`declaresCapability` in `packages/astromech/src/content/capabilities.ts`, serves
+the runtime guard, the method manifest and the catalogue. Publish now follows
+`statuses` (or `staging`, through `mergeStaged`), so a versioned type with
+statuses and staging off, and a global with `statuses: false`, no longer list it.
+
+`CORE_PERMISSIONS` stays hand-kept: it holds labels and two permissions no
+method declares statically (`admin:access`, `entry:read:full`), and the new
+cross-check fails if a media or users method demands one it does not list. Two
+restatements of the same kind remain, in `roadmap/backlog.md`: plugin methods
+whose permission the plugin never declares, and the admin's capability gates.

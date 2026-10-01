@@ -290,7 +290,7 @@ a request it did not mock. The problems, ranked by the cost of leaving them:
    commands, and the types of `defineServiceMethod`.
 
 The audit also found a live defect, now its own file:
-[permission-catalogue-drifts-from-manifest](../planned/permission-catalogue-drifts-from-manifest.md).
+[permission-catalogue-drifts-from-manifest](../completed/permission-catalogue-drifts-from-manifest.md).
 A question about bound service methods throwing synchronously is in
 `roadmap/backlog.md` to discuss separately.
 
@@ -307,7 +307,7 @@ test count did not drop.
 Independent of the test setup, so it runs as its own small branch alongside any
 other stage rather than ahead of them.
 
-- [ ] Fix [permission-catalogue-drifts-from-manifest](../planned/permission-catalogue-drifts-from-manifest.md),
+- [x] Fix [permission-catalogue-drifts-from-manifest](../completed/permission-catalogue-drifts-from-manifest.md),
       starting with its failing test.
 
 ### Stage 2a: the template database
