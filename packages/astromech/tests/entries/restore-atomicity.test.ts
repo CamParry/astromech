@@ -5,11 +5,8 @@
  * of the pre-restore state and the row update both roll back together.
  */
 
-import { rmSync } from 'node:fs';
-import { tmpdir } from 'node:os';
-import { join } from 'node:path';
-import { createFileTestDb, setupTestConfig } from '@tests/harness';
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { createTestDb, setupTestConfig } from '@tests/harness';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { currentServices } from '@/app-context/services';
 import { relationshipRepository } from '@/content/repository/relationships';
 import { getDb } from '@/database/registry';
@@ -30,26 +27,10 @@ beforeEach(() => {
 
 const api = entriesService;
 
-let dbCounter = 0;
-let dbPath = '';
-
 beforeEach(async () => {
-    // Each test gets its own named database file, which `afterEach` deletes.
-    dbCounter += 1;
-    dbPath = join(tmpdir(), `astromech-restore-atomicity-${process.pid}-${dbCounter}.db`);
-    await createFileTestDb(`file:${dbPath}`);
+    await createTestDb();
     setupTestConfig();
     state.failing = false;
-});
-
-afterEach(() => {
-    for (const suffix of ['', '-wal', '-shm']) {
-        try {
-            rmSync(`${dbPath}${suffix}`);
-        } catch {
-            // best-effort cleanup
-        }
-    }
 });
 
 describe('restoreVersion atomicity', () => {

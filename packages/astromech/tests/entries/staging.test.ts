@@ -14,11 +14,8 @@
  */
 
 import type { JsonObject } from '@/types/index';
-import { rmSync } from 'node:fs';
-import { tmpdir } from 'node:os';
-import { join } from 'node:path';
 import {
-    createFileTestDb,
+    createTestDb,
     createTestUser,
     makeTestConfig,
     runAsUser,
@@ -34,14 +31,8 @@ import { StagedChangeExistsError } from '@/errors/resource';
 
 const api = currentServices.entries;
 
-let dbCounter = 0;
-let dbPath = '';
-
 beforeEach(async () => {
-    // Each test gets its own named database file, which `afterEach` deletes.
-    dbCounter += 1;
-    dbPath = join(tmpdir(), `astromech-staging-${process.pid}-${dbCounter}.db`);
-    await createFileTestDb(`file:${dbPath}`);
+    await createTestDb();
 
     const cfg = makeTestConfig();
     // post: versioning on + relationship field; note: versioning off.
@@ -52,13 +43,6 @@ beforeEach(async () => {
 
 afterEach(() => {
     vi.useRealTimers();
-    for (const suffix of ['', '-wal', '-shm']) {
-        try {
-            rmSync(`${dbPath}${suffix}`);
-        } catch {
-            // best-effort cleanup
-        }
-    }
 });
 
 function relationTargets(entryId: string): Promise<string[]> {

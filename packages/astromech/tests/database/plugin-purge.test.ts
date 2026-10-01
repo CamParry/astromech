@@ -11,7 +11,8 @@
 
 import type { DB } from '@/database/types';
 import type { Kysely } from 'kysely';
-import { createTestDb, FIRST_PARTY_PLUGIN_MIGRATIONS } from '@tests/harness';
+import { createTestDb } from '@tests/harness';
+import { FIRST_PARTY_PLUGIN_MIGRATIONS } from '@tests/test-db';
 import { sql } from 'kysely';
 import { beforeEach, describe, expect, it } from 'vitest';
 import { purgePlugin } from '@/transport/cli/commands/plugin-purge';
@@ -23,7 +24,7 @@ type Db = Kysely<DB>;
  * own tables exist in every test db. They are not part of these fixtures —
  * filter them out so a `plugin%` assertion describes only what the test seeded.
  *
- * Derived from the harness's own list rather than spelled out, so installing a
+ * Derived from the chain's own list rather than spelled out, so installing a
  * new first-party plugin doesn't silently break assertions here (it did once:
  * adding forms turned three of these red).
  */
