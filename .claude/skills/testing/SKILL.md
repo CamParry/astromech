@@ -81,4 +81,4 @@ Thresholds are set per directory in the `vitest.config.ts` of core and of the ad
 
 ## Reviewing a test change
 
-Read a test diff as closely as the code. Look for a removed `expect`, a new `.skip`, `.only` or `vi.mock`, a loosened matcher, and a new test that cannot fail. For each new test, ask which behaviour it protects.
+Read a test diff as closely as the code. Look for a removed `expect`, a new `.skip`, `.only` or `vi.mock`, a loosened matcher, and a new test that cannot fail. `pnpm run report:drift` lists the first four (and lowered coverage thresholds); a loosened matcher and a test that cannot fail need a reader. For each new test, ask which behaviour it protects.

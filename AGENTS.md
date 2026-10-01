@@ -34,7 +34,7 @@ While working, run the test file you touched (`pnpm -F <package> exec vitest run
 | `pnpm run check:boot`            | boots the built demo and drives the admin in chromium; needs `build`                                                                                   |
 | `pnpm run check:boot:cloudflare` | serves `apps/demo-cloudflare` on workerd (see its `AGENTS.md`)                                                                                         |
 | `pnpm run check:install`         | installs packed tarballs into a scratch site per `apps/docs/installation.md`, plus `@astromech/backups`                                                |
-| `pnpm run report:drift`          | not a check: lists drift patterns and copies a branch adds; always exits 0                                                                             |
+| `pnpm run report:drift`          | not a check: lists drift patterns, copies and test weakening a branch adds; always exits 0                                                             |
 
 Each script's header has the detail.
 

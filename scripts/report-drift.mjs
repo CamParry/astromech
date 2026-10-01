@@ -1,9 +1,11 @@
 #!/usr/bin/env node
 /**
- * Prints where a branch adds a known drift pattern or a copy of existing code, for a person to
- * read at review. It compares the merge base of `--base` (default `main`) and HEAD against the
- * working tree, so committed and uncommitted changes both count, and reads only the source files
- * under `packages/*\/src`, `packages/plugins/*\/src` and `apps/*\/src`.
+ * Prints where a branch adds a known drift pattern or a copy of existing code, and where it
+ * weakens the tests, for a person to read at review. It compares the merge base of `--base`
+ * (default `main`) and HEAD against the working tree, so committed and uncommitted changes both
+ * count. It reads three kinds of file under `packages/` and `apps/`: source files under a
+ * package's `src`, test files (anything under a `tests` directory or named `*.test.*`), and
+ * `vitest.config.*` files, whose coverage thresholds it compares with the merge base's.
  *
  * It never fails on what it finds: it exits 0 whatever the report says, and non-zero only on bad
  * arguments or its own crash. `--no-copies` skips the jscpd scan.
@@ -20,9 +22,10 @@ import { fileURLToPath } from 'node:url';
 const STRUCTURAL_TYPES = 'group|accordion|tabs|tab|repeater|blocks|tree';
 
 /**
- * Each entry: `name`, `pattern` (tested per line), `only` / `except` (path prefixes from the
- * repo root, or regular expressions over that path) and `why` (printed under the name). Add a
- * pattern by adding a line.
+ * Each entry: `name`, `pattern` (tested per line), `files` (`'source'`, the default, or
+ * `'tests'`), `lines` (`'added'`, the default, to list lines the branch adds, or `'removed'` to
+ * list lines it removes), `only` / `except` (path prefixes from the repo root, or regular
+ * expressions over that path) and `why` (printed under the name). Add a pattern by adding a line.
  */
 const PATTERNS = [
     {
@@ -70,12 +73,38 @@ const PATTERNS = [
         pattern: /(?<![\w'"`/.-])[cC]ollection\w*\b(?![-'"`])|[a-z0-9]Collection/,
         why: 'TERMINOLOGY.md calls this an entry type.',
     },
+    {
+        name: 'Removed `expect` call',
+        // `expect(`, `expect.soft(` and the like; not `expectTypeOf(`, which tsc checks.
+        pattern: /\bexpect(\.\w+)?\(/,
+        files: 'tests',
+        lines: 'removed',
+        why: 'A removed assertion checks nothing; say which behaviour no longer needs it.',
+    },
+    {
+        name: 'New `.skip`, `.only` or `.todo`',
+        pattern:
+            /\b(it|test|describe|suite)(\.(concurrent|sequential|each|for|fails))*\.(skip|only|todo|skipIf|runIf)\b/,
+        files: 'tests',
+        why: 'A skipped test passes whatever the code does, and `.only` narrows the run.',
+    },
+    {
+        name: 'New `vi.mock`',
+        pattern: /\bvi\.(mock|doMock)\(/,
+        files: 'tests',
+        why: 'Use the real module or a driver seam where one exists (the `testing` skill).',
+    },
 ];
 
-/** Source files the report reads, as paths from the repo root. Tests are excluded. */
+// The four metrics a vitest coverage threshold entry sets.
+const THRESHOLD_METRIC = /\b(lines|functions|branches|statements)\s*:\s*(\d+(?:\.\d+)?)/g;
+
+/** The files the report reads, as paths from the repo root. */
 const SOURCE_FILE =
     /^(packages\/plugins\/[^/]+|packages\/[^/]+|apps\/[^/]+)\/src\/.+\.(ts|tsx|mjs|js)$/;
 const TEST_FILE = /(^|\/)(tests?|__tests__)\/|\.(test|spec)\.[cm]?[jt]sx?$/;
+const CODE_FILE = /\.[cm]?[jt]sx?$/;
+const VITEST_CONFIG = /(^|\/)vitest\.config\.[cm]?[jt]s$/;
 
 // jscpd's defaults. With import statements ignored (below), every clone they
 // found on real branch ranges was a real copy, and the scan of the whole repo
@@ -94,13 +123,25 @@ const lines = [
     `Drift report: ${args.base} (merge base ${mergeBase.slice(0, 8)}) to the working tree`,
 ];
 const patternSection = reportPatterns(files);
-const copySection = args.copies ? await reportCopies(files) : [];
+const thresholdSection = reportThresholds(
+    files.filter(({ kind }) => kind === 'vitest-config'),
+    mergeBase
+);
+const copySection = args.copies
+    ? await reportCopies(files.filter(({ kind }) => kind === 'source'))
+    : [];
 
-if (patternSection.length === 0 && copySection.length === 0) {
+if (
+    patternSection.length === 0 &&
+    thresholdSection.length === 0 &&
+    copySection.length === 0
+) {
     lines.push('', args.copies ? 'Nothing found.' : 'Nothing found (copies skipped).');
 } else {
     lines.push('', 'Patterns', '');
     lines.push(...(patternSection.length > 0 ? patternSection : ['  none']));
+    lines.push('', 'Lowered coverage thresholds', '');
+    lines.push(...(thresholdSection.length > 0 ? thresholdSection : ['  none']));
     if (args.copies) {
         lines.push('', 'Copies', '');
         lines.push(...(copySection.length > 0 ? copySection : ['  none']));
@@ -153,13 +194,14 @@ function resolveMergeBase(base) {
 }
 
 /**
- * The source files this diff changes, each with its added lines (new-file line numbers) and
- * removed lines. Untracked files count as wholly added.
+ * The files this diff changes that the report reads, each with its kind (`fileKind`), its added
+ * lines (new-file line numbers) and its removed lines (old-file line numbers). Untracked files
+ * count as wholly added.
  */
 function readChanges(base) {
     const changes = new Map();
-    const fileFor = (path) => {
-        if (!changes.has(path)) changes.set(path, { path, added: [], removed: [] });
+    const fileFor = (path, kind) => {
+        if (!changes.has(path)) changes.set(path, { path, kind, added: [], removed: [] });
         return changes.get(path);
     };
 
@@ -174,6 +216,7 @@ function readChanges(base) {
         'apps',
     ]);
     let current;
+    let oldLine = 0;
     let newLine = 0;
     // A file's `---`/`+++` header comes before its first hunk; inside a hunk,
     // a removed `-- ` line would otherwise read as a header.
@@ -189,15 +232,18 @@ function readChanges(base) {
         } else if (inHeader && line.startsWith('+++ ')) {
             const newPath = line.slice(4).replace(/^b\//, '');
             const path = newPath === '/dev/null' ? current?.oldPath : newPath;
-            current = path !== undefined && isSource(path) ? fileFor(path) : undefined;
+            const kind = path === undefined ? undefined : fileKind(path);
+            current = kind === undefined ? undefined : fileFor(path, kind);
         } else if (line.startsWith('@@')) {
             inHeader = false;
+            oldLine = Number(/-(\d+)/.exec(line)?.[1] ?? 0);
             newLine = Number(/\+(\d+)/.exec(line)?.[1] ?? 0);
         } else if (current !== undefined && line.startsWith('+')) {
             current.added.push({ line: newLine, text: line.slice(1) });
             newLine += 1;
         } else if (current !== undefined && line.startsWith('-')) {
-            current.removed.push({ text: line.slice(1) });
+            current.removed.push({ line: oldLine, text: line.slice(1) });
+            oldLine += 1;
         }
     }
 
@@ -209,9 +255,11 @@ function readChanges(base) {
         'packages',
         'apps',
     ]);
-    for (const path of untracked.split('\n').filter(isSource)) {
+    for (const path of untracked.split('\n')) {
+        const kind = fileKind(path);
+        if (kind === undefined) continue;
         const text = readFileSync(join(repoRoot, path), 'utf8');
-        fileFor(path).added.push(
+        fileFor(path, kind).added.push(
             ...text
                 .split('\n')
                 .map((content, index) => ({ line: index + 1, text: content }))
@@ -220,8 +268,12 @@ function readChanges(base) {
     return [...changes.values()].sort((a, b) => a.path.localeCompare(b.path));
 }
 
-function isSource(path) {
-    return SOURCE_FILE.test(path) && !TEST_FILE.test(path);
+/** `'source'`, `'tests'` or `'vitest-config'`, or undefined for a file the report skips. */
+function fileKind(path) {
+    if (VITEST_CONFIG.test(path)) return 'vitest-config';
+    if (TEST_FILE.test(path)) return CODE_FILE.test(path) ? 'tests' : undefined;
+    if (SOURCE_FILE.test(path)) return 'source';
+    return undefined;
 }
 
 function inPath(path, scope) {
@@ -230,38 +282,65 @@ function inPath(path, scope) {
 
 function reportPatterns(changed) {
     const out = [];
-    for (const { name, pattern, only, except, why } of PATTERNS) {
+    for (const {
+        name,
+        pattern,
+        files = 'source',
+        lines = 'added',
+        only,
+        except,
+        why,
+    } of PATTERNS) {
         const inScope = changed.filter(
-            ({ path }) =>
+            ({ path, kind }) =>
+                kind === files &&
                 (only === undefined || only.some((scope) => inPath(path, scope))) &&
                 !(except ?? []).some((scope) => inPath(path, scope))
         );
-        let addedCount = 0;
-        let removedCount = 0;
+        // The side whose matches are listed, and the side that cancels them.
+        const [listedSide, otherSide] =
+            lines === 'added' ? ['added', 'removed'] : ['removed', 'added'];
+        let listedCount = 0;
+        let otherCount = 0;
         const listed = [];
         for (const file of inScope) {
-            // A match the same file also removes is an edited line (a class
-            // whose `extends` changed), not a new instance, so it is counted
-            // but not listed.
-            const removedMatches = file.removed
-                .map(({ text }) => pattern.exec(text)?.[0])
-                .filter(Boolean);
-            removedCount += removedMatches.length;
-            for (const { line, text } of file.added) {
+            // A match the same file also has on the other side is an edited or
+            // moved line (a class whose `extends` changed, an assertion
+            // reworded), not a new instance, so it is counted but not listed.
+            // A line moved unchanged pairs with its copy first.
+            const others = file[otherSide]
+                .map(({ text }) => ({
+                    text: text.trim(),
+                    match: pattern.exec(text)?.[0],
+                }))
+                .filter(({ match }) => match !== undefined);
+            otherCount += others.length;
+            const candidates = [];
+            for (const { line, text } of file[listedSide]) {
                 const match = pattern.exec(text)?.[0];
                 if (match === undefined) continue;
-                addedCount += 1;
-                const edited = removedMatches.indexOf(match);
+                listedCount += 1;
+                const moved = others.findIndex((other) => other.text === text.trim());
+                if (moved === -1) candidates.push({ line, text, match });
+                else others.splice(moved, 1);
+            }
+            for (const { line, text, match } of candidates) {
+                const edited = others.findIndex((other) => other.match === match);
                 if (edited === -1) listed.push(`  ${file.path}:${line}  ${text.trim()}`);
-                else removedMatches.splice(edited, 1);
+                else others.splice(edited, 1);
             }
         }
-        if (addedCount === 0 && removedCount === 0) continue;
+        if (listedCount === 0 && otherCount === 0) continue;
 
-        const edited = addedCount - listed.length;
-        const editedNote = edited > 0 ? ` (${edited} on edited lines, not listed)` : '';
+        const [addedCount, removedCount] =
+            lines === 'added' ? [listedCount, otherCount] : [otherCount, listedCount];
+        const edited = listedCount - listed.length;
+        const editedNote =
+            edited > 0 ? ` (${edited} on edited or moved lines, not listed)` : '';
+        const lineNote =
+            lines === 'removed' && listed.length > 0 ? ' (old line numbers)' : '';
         out.push(
-            `${name}: ${addedCount} added, ${removedCount} removed${editedNote}`,
+            `${name}: ${addedCount} added, ${removedCount} removed${editedNote}${lineNote}`,
             `  ${why}`,
             ...listed,
             ''
@@ -269,6 +348,68 @@ function reportPatterns(changed) {
     }
     if (out.at(-1) === '') out.pop();
     return out;
+}
+
+/**
+ * Coverage thresholds a changed vitest config lowers or drops, against the same file at the
+ * merge base.
+ */
+function reportThresholds(configs, base) {
+    const out = [];
+    for (const { path } of configs) {
+        const before = readThresholds(gitShow(base, path));
+        const after = readThresholds(
+            existsSync(join(repoRoot, path))
+                ? readFileSync(join(repoRoot, path), 'utf8')
+                : ''
+        );
+        for (const [key, metrics] of before) {
+            for (const [metric, was] of Object.entries(metrics)) {
+                const now = after.get(key)?.[metric];
+                if (now === undefined)
+                    out.push(`  ${path}  ${key} ${metric}: ${was} → removed`);
+                else if (now < was)
+                    out.push(`  ${path}  ${key} ${metric}: ${was} → ${now}`);
+            }
+        }
+    }
+    if (out.length > 0)
+        out.unshift('  A threshold is only raised (the `testing` skill).');
+    return out;
+}
+
+/**
+ * The `coverage.thresholds` entries in a vitest config's text, as a map from each glob to its
+ * metrics. Reads the text rather than loading the config, so the base side needs no checkout.
+ */
+function readThresholds(text) {
+    const thresholds = new Map();
+    const start = text.indexOf('thresholds:');
+    if (start === -1) return thresholds;
+    const entry = /['"]([^'"]+)['"]\s*:\s*\{([^{}]*)\}/g;
+    for (const [, key, body] of text.slice(start).matchAll(entry)) {
+        const metrics = Object.fromEntries(
+            [...body.matchAll(THRESHOLD_METRIC)].map(([, metric, value]) => [
+                metric,
+                Number(value),
+            ])
+        );
+        if (Object.keys(metrics).length > 0) thresholds.set(key, metrics);
+    }
+    return thresholds;
+}
+
+/** A file's text at a commit, or '' when the file did not exist there. */
+function gitShow(commit, path) {
+    try {
+        return execFileSync('git', ['show', `${commit}:${path}`], {
+            cwd: repoRoot,
+            encoding: 'utf8',
+            stdio: ['ignore', 'pipe', 'ignore'],
+        });
+    } catch {
+        return '';
+    }
 }
 
 /** Clones jscpd finds in the source directories with a side on a line this diff added. */
