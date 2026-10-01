@@ -1,10 +1,20 @@
+import type { EntryRowWrite } from '../internal/prepare-row';
 import type { EntryResource } from '../repository/types';
-import type { EntryDuplicateOverrides } from '@/types/index';
+import type {
+    EntryDuplicateOverrides,
+    ResolvedConfig,
+    ResolvedEntryType,
+    User,
+} from '@/types/index';
 import { z } from '@hono/zod-openapi';
-import { resolvePublishedAt } from '@/content/published-at';
 import { transaction } from '@/database/transaction';
+import { resolveEntryType } from '@/entries/entry-types';
 import { defineServiceMethod } from '@/services/define-service-method';
+import { parseOutput } from '@/services/parse-method-output';
+import { assertWritableFields } from '../capabilities';
+import { UnknownEntryTypeError } from '../errors';
 import { entryAccess } from '../internal/access';
+import { prepareEntryRow } from '../internal/prepare-row';
 import { getEntryOfType, getEntryResource } from '../read-entry';
 import { syncEntryRelationships } from '../relationships';
 import { entryRepository } from '../repository/entries-table';
@@ -12,8 +22,8 @@ import { duplicateOverridesSchema, entrySchema } from '../schema';
 
 /**
  * Copies every locale, or only `overrides.locale`, into a new entry of the same
- * type, `unpublished` unless `overrides` says otherwise. Each slug is made unique
- * in its locale. No entry hooks fire.
+ * type, `unpublished` unless `overrides` says otherwise. Each locale is prepared
+ * as `create` prepares a row, and the create hooks fire once, with the first.
  */
 export const duplicateEntry = defineServiceMethod({
     summary: 'Copy an entry into a new one.',
@@ -26,82 +36,73 @@ export const duplicateEntry = defineServiceMethod({
     access: entryAccess('create'),
     mutates: true,
     async handler(params, ctx): Promise<EntryResource> {
-        const { type, id, overrides } = params;
+        const { type, id, overrides = {} } = params;
         const { config, user } = ctx;
-        const userId = user?.id ?? null;
+        const entryType = resolveEntryType(config, type);
+        if (!entryType) throw new UnknownEntryTypeError(type);
+        const copy = { config, entryType, overrides, user };
 
-        const source = overrides?.locale
+        assertWritableFields(entryType, overrides);
+        const source = overrides.locale
             ? await getEntryOfType(type, id, overrides.locale)
             : await getEntryResource(type, id);
-        const locales = overrides?.locale ? [overrides.locale] : source.locales;
-        const [firstLocale = source.locale, ...restLocales] = locales;
+        const otherLocales = overrides.locale
+            ? []
+            : source.locales.filter((locale) => locale !== source.locale);
 
-        return transaction(async () => {
-            const first = await copyLocale({
-                type,
-                id,
-                source,
-                locale: firstLocale,
-                overrides,
-                createdBy: userId,
-            });
-            for (const locale of restLocales) {
-                await copyLocale({
-                    type,
-                    id,
-                    source,
-                    locale,
-                    overrides,
-                    createdBy: userId,
-                    into: first.id,
-                });
+        const first = await prepareCopy({ ...copy, row: source });
+        const rest: EntryRowWrite[] = [];
+        for (const locale of otherLocales) {
+            const row = await getEntryOfType(type, id, locale);
+            rest.push(await prepareCopy({ ...copy, row }));
+        }
+
+        await ctx.runHook('entry:beforeCreate', { type, data: first, user });
+
+        const created = await transaction(async () => {
+            const row = await entryRepository.create({ type, ...first });
+            for (const write of rest) {
+                await entryRepository.update({ id: row.id, locale: write.locale }, write);
             }
             // Once, at the end: the index is per entry and reads every locale back.
-            await syncEntryRelationships(config, first, type);
+            await syncEntryRelationships(config, row, type);
             // Re-read so `locales` names every copied locale, not just the first.
-            return getEntryOfType(type, first.id, firstLocale);
+            return getEntryOfType(type, row.id, first.locale);
         });
+
+        await ctx.runHook('entry:afterCreate', {
+            type,
+            data: first,
+            user,
+            entry: parseOutput(entrySchema, created, 'The entry in entry:afterCreate'),
+        });
+
+        return created;
     },
 });
 
-/**
- * Copies one locale of the source into the new entry, creating the entry when
- * `into` is absent. The slug is made unique in the locale it lands in.
- */
-async function copyLocale(params: {
-    type: string;
-    id: string;
-    source: EntryResource;
-    locale: string;
-    overrides: EntryDuplicateOverrides | undefined;
-    createdBy: string | null;
-    into?: string;
-}): Promise<EntryResource> {
-    const { type, id, source, locale, overrides, createdBy, into } = params;
-
-    const row =
-        locale === source.locale ? source : await getEntryOfType(type, id, locale);
-
-    const status = overrides?.status ?? 'unpublished';
-    const baseSlug = overrides?.slug ?? row.slug;
-    const write = {
-        title: overrides?.title ?? row.title,
-        slug: baseSlug ? await entryRepository.uniqueSlug(type, locale, baseSlug) : null,
-        locale,
-        fields: { ...(row.fields ?? {}), ...(overrides?.fields ?? {}) },
-        status,
+/** The row one locale of the source writes into the copy, `overrides` over it. */
+function prepareCopy(params: {
+    config: ResolvedConfig;
+    entryType: ResolvedEntryType;
+    overrides: EntryDuplicateOverrides;
+    user: User | null;
+    row: EntryResource;
+}): Promise<EntryRowWrite> {
+    const { config, entryType, overrides, user, row } = params;
+    return prepareEntryRow({
+        config,
+        entryType,
+        locale: row.locale,
+        entryId: undefined,
+        data: {
+            title: overrides.title ?? row.title,
+            slug: overrides.slug ?? row.slug ?? undefined,
+            fields: { ...row.fields, ...overrides.fields },
+            status: overrides.status ?? 'unpublished',
+        },
         // A copy is a new row, so it has no date of its own to keep.
-        publishedAt: resolvePublishedAt({
-            status,
-            given: undefined,
-            current: null,
-            now: new Date(),
-        }),
-        createdBy,
-        updatedBy: createdBy,
-    };
-
-    return into === undefined
-        ? entryRepository.create({ type, ...write })
-        : entryRepository.update({ id: into, locale }, write);
+        current: null,
+        user,
+    });
 }
