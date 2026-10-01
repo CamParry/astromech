@@ -447,7 +447,7 @@ describe('generateMethodManifest — staged-entry methods', () => {
         }
     });
 
-    it('still emits publish (versioning) for the staging type', () => {
+    it('still emits publish (statuses) for the staging type', () => {
         const { methods } = parseManifest([]);
         expect(findMethod(methods, 'entries.publish', 'articles')).toBeDefined();
     });

@@ -7,7 +7,10 @@
 import { QUALIFIED_SEPARATOR } from '@/entries/entry-types';
 
 /** The CRUD+publish actions an entry permission gates. */
-export type EntryAction = 'read' | 'create' | 'update' | 'delete' | 'publish';
+export const ENTRY_ACTIONS = ['read', 'create', 'update', 'delete', 'publish'] as const;
+
+/** One of {@link ENTRY_ACTIONS}. */
+export type EntryAction = (typeof ENTRY_ACTIONS)[number];
 
 /** Permission for a root-mounted entry type, e.g. `entry:posts:create`. */
 export function rootEntryPermission(type: string, action: EntryAction): string {

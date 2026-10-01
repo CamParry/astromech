@@ -1,16 +1,18 @@
 /**
  * Permission catalogue — every grantable permission a resolved config
- * produces, in one flat list. Pure function; four sources: `core`, `entry` and
- * `global` (derived per declared resource) and `plugin` (its declaration).
+ * produces, in one flat list. Four sources: `core`, `entry` and `global` (what
+ * each declared resource's methods demand) and `plugin` (its declaration).
  */
 
 import type { PermissionDeclarations } from '@/permissions/define';
 import type { EntryAction } from '@/permissions/entry-permission';
 import type { GlobalAction } from '@/permissions/global-permission';
 import type { PluginDefinition, ResolvedConfig } from '@/types/index';
+import { entryMethodPermissions } from '@/entries/catalogue';
+import { globalMethodPermissions } from '@/globals/catalogue';
 import { CORE_PERMISSIONS } from '@/permissions/core-permissions';
-import { entryPermission } from '@/permissions/entry-permission';
-import { globalPermission } from '@/permissions/global-permission';
+import { ENTRY_ACTIONS, entryPermission } from '@/permissions/entry-permission';
+import { GLOBAL_ACTIONS, globalPermission } from '@/permissions/global-permission';
 import {
     resolvePluginIdentity,
     resolvePluginPermission,
@@ -26,40 +28,11 @@ export type PermissionCatalogueEntry = {
     owner?: string;
 };
 
-/**
- * Entry actions, with the capability each one needs. `publish` only exists for
- * a versioned type — the same gate `buildEntriesMethods` applies, so the
- * catalogue never offers a grant for something the type cannot do.
- */
-const ENTRY_ACTIONS: { action: EntryAction; requires?: 'versioning' }[] = [
-    { action: 'read' },
-    { action: 'create' },
-    { action: 'update' },
-    { action: 'delete' },
-    { action: 'publish', requires: 'versioning' },
-];
-
-/** Whether an action's capability requirement is met for an entry type's caps. */
-function actionCapabilityMet(
-    requires: 'versioning' | undefined,
-    capabilities: { versioning: boolean }
-): boolean {
-    if (requires === 'versioning') return capabilities.versioning;
-    return true;
-}
-
 /** e.g. action='update', type='posts' → 'Update "posts" entries'. */
 function entryPermissionLabel(action: EntryAction, type: string): string {
     const verb = action.charAt(0).toUpperCase() + action.slice(1);
     return `${verb} "${type}" entries`;
 }
-
-/** Global actions, with the capability each one needs — the entry gate again. */
-const GLOBAL_ACTIONS: { action: GlobalAction; requires?: 'versioning' }[] = [
-    { action: 'read' },
-    { action: 'update' },
-    { action: 'publish', requires: 'versioning' },
-];
 
 /** e.g. action='update', key='site' → 'Update "site" global'. */
 function globalPermissionLabel(action: GlobalAction, key: string): string {
@@ -93,29 +66,31 @@ function buildCorePermissions(): PermissionCatalogueEntry[] {
 }
 
 function buildEntryPermissions(config: ResolvedConfig): PermissionCatalogueEntry[] {
-    return Object.values(config.entryTypes).flatMap((entryType) =>
-        ENTRY_ACTIONS.filter(({ requires }) =>
-            actionCapabilityMet(requires, entryType.capabilities)
-        ).map(({ action }) => ({
+    return Object.values(config.entryTypes).flatMap((entryType) => {
+        const demanded = new Set<string>(entryMethodPermissions(entryType));
+        return ENTRY_ACTIONS.filter((action) =>
+            demanded.has(entryPermission(entryType.id, action))
+        ).map((action) => ({
             permission: entryPermission(entryType.id, action),
             label: entryPermissionLabel(action, entryType.id),
             source: 'entry' as const,
             owner: entryType.id,
-        }))
-    );
+        }));
+    });
 }
 
 function buildGlobalPermissions(config: ResolvedConfig): PermissionCatalogueEntry[] {
-    return Object.values(config.globals).flatMap((global) =>
-        GLOBAL_ACTIONS.filter(({ requires }) =>
-            actionCapabilityMet(requires, global.capabilities)
-        ).map(({ action }) => ({
+    return Object.values(config.globals).flatMap((global) => {
+        const demanded = new Set<string>(globalMethodPermissions(global));
+        return GLOBAL_ACTIONS.filter((action) =>
+            demanded.has(globalPermission(global.id, action))
+        ).map((action) => ({
             permission: globalPermission(global.id, action),
             label: globalPermissionLabel(action, global.id),
             source: 'global' as const,
             owner: global.id,
-        }))
-    );
+        }));
+    });
 }
 
 function buildPluginPermissions(plugins: PluginDefinition[]): PermissionCatalogueEntry[] {
