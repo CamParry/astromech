@@ -1,87 +1,80 @@
 ---
 name: testing
-description: Test conventions for Astromech. Use when writing, editing, or reviewing any test under packages/*/tests.
+description: How Astromech's tests are written, run and reviewed. Use when writing, changing or reviewing a test, a helper under a package's tests/_support, or a vitest.config.ts.
 user-invocable: false
 ---
 
-Where a test file goes, and which files need per-file isolation, is in
-`packages/astromech/AGENTS.md`, `packages/admin/AGENTS.md` and
-`packages/plugins/AGENTS.md`. This skill covers how a test is written.
+This skill says what a good test is here and how to run tests while you work. Where test files live and the module-isolation list are in each package's `AGENTS.md`; the gate commands are in the root `AGENTS.md`.
 
-## Names
+A test here has one job: fail when behaviour a caller depends on breaks, and stay green through any change that keeps that behaviour. The rest of this skill follows from that. When a case is not covered below, ask whether your test would fail if the behaviour broke, and only then.
 
-- **A test name states the behaviour in the present tense.** `it('rejects an
-unknown id')`, `it('answers 405 for POST')`. Not `it('should reject …')`, and
-  not a numbered list.
-- **A file's header comment says what the file tests today.** No phase or slice
-  numbers, no account of the refactor that produced it.
+## Two rules with no exceptions
 
-## The database
+- **Never change a test to get a pass.** Do not delete, loosen or skip an assertion, add `.skip`, `.only` or a retry, or lower a coverage threshold. If a test looks wrong, stop and say why. An assertion changes only when the task changes the behaviour it checks, and then your report names it. A test edited to agree with the code checks nothing, and it is the edit agents make most (in ImpossibleBench, a plain instruction like this one cut it from over 85% of runs to 1%).
+- **Never replace the database with a mock.** A test that touches data runs on real SQLite through the harness. Foreign keys, unique indexes and transactions only behave as they do in a site on the real engine, and the harness makes a real database cheap.
 
-- **Tests run against a real database.** `createTestDb()` from `@tests/harness`
-  builds a file-backed libsql database and applies the committed migration chain
-  from `apps/demo/migrations`, so SQL, foreign keys and transactions are real.
-  Call it in `beforeEach` so each test starts empty. Do not mock a repository to
-  avoid the database.
-- **`setupTestConfig(makeTestConfig())` gives the representative config.** Its
-  entry types (`post`, `note`, `snippet`, `card`) and two locales cover most
-  capability combinations; adjust a copy of it in the test rather than building
-  a config from scratch.
-- **Shared fixtures come from `_support/`**, not a local copy.
-  `@tests/fixtures` holds `noopStorage`, `adminRole` and `roleWith`; add a
-  fixture there once a second file needs it.
+## When this skill does not fit
 
-## Mocks
+If following it would make the code or the test worse, or would need a workaround, stop and raise it: say what you would change and why. Typical cases are a behaviour you can only test by mocking Astromech's own module, setup the harness cannot express, and an existing test that asserts the wrong thing. Workarounds written to satisfy a rule are how tangled code has entered this repo before.
 
-- **Mock the leaf module, not a barrel**, and only at a real boundary: the
-  session, the AI SDK, the network. `vi.mock('@/auth/session')` is the model.
-- **A mock of a module other files import, `vi.resetModules()`, a stubbed
-  global, or a write to `globalThis.__astromech` makes the file isolated.** Core
-  and the admin each keep their own list, described in their `AGENTS.md`. One
-  check, `packages/astromech/tests/_support/isolation-check.ts`, guards both:
-  each package's `tests/isolation-list.test.ts` runs it over that package's
-  tests.
+## What to test
 
-## Time
+- **Test through the public surface**: a service method through `currentServices`, a hand-written route through the real router (`packages/astromech/tests/_support/mount-router.ts`), a component through what a user sees and does. A test there survives a refactor; a test of a private helper fails when the code moves but the behaviour has not. A helper that seems to need its own tests is probably a module of its own: propose that rather than exporting it for the test (`check:unused` fails on an export only tests use).
+- **One test per behaviour, named for the outcome** in the present tense: `it('rejects a duplicate slug')`.
+- **Write fewer, stronger tests.** Agents tend to write too many. Leave out what another check already proves: what `tsc` checks, a mapping with no branches, a route-table row that only forwards to a method (`packages/astromech/tests/transport/http/routes/rest-route.test.ts` covers the table, and the method's own test covers the method). Before adding a test, look for one of the same behaviour and add a case or an `it.each` row to it.
+- **A rule that holds for every member of a set is tested once, over the set.** `packages/astromech/tests/content/resource-conformance.test.ts` runs its checks over every resource, and the parity tests (`packages/astromech/tests/transport/http/routes/rpc-parity.test.ts` and `packages/astromech/tests/transport/mcp/parity.test.ts`) over every manifest method. Add a case there rather than a copy per member.
+- **A bug fix starts with a test that fails for the bug's reason.**
 
-- **Never sleep.** A wall-clock `setTimeout` makes a test slow at best and flaky
-  under load at worst.
-- **Waiting for the UI:** `await screen.findBy…` or `await waitFor(() =>
-expect(…))`. To assert that something does not happen, wait for a positive
-  signal that the work has settled first, then assert the negative.
-- **Separating timestamps:** `vi.useFakeTimers({ toFake: ['Date'] })` and
-  `vi.setSystemTime(…)`. Fake only `Date`, so database IO and promises still run,
-  and restore real timers afterwards.
+## Writing a test with the code
 
-## React
+Write one failing test, see it fail for the reason you expect, then write the code that makes it pass, one small step at a time. Take the expected values from the requirement, not from the implementation: a test copied from the code agrees with every defect in it. A test you never saw fail may pass whatever the code does, so if the code came first, break it briefly and watch the test catch it.
 
-- **Render with `@testing-library/react`** (`render`, `renderHook`, `screen`,
-  `userEvent`).
-- **Component tests live in the admin**, in `packages/admin/tests/`, and
-  `packages/admin/tests/_support/dom-setup.ts` runs before every happy-dom file
-  there. It turns on
-  React's act environment, unmounts what each test rendered, and fails a test on
-  any request it did not mock, naming the URL. Stub `fetch`, mock the client
-  module, or seed the query cache the component reads.
-- **Query by role or label**, as a user finds the element, before reaching for a
-  test id.
+## Real dependencies, and the few you replace
 
-## Assertions
+Use the real version of everything Astromech owns: the database, config, services, repositories, router and plugin hooks. Replace only what leaves the process or cannot be controlled: outbound HTTP, email, the AI SDK and the clock. Prefer a fake registered through a seam the app already has over a `vi.mock`: `packages/astromech/tests/users/password-reset.test.ts` captures email with `setEmailDriver`, and `packages/astromech/tests/_support/fixtures.ts` has `noopStorage`. In the admin the server is the edge, so a test mocks the client module or seeds the query cache, not the admin's own hooks.
 
-- **A test must be able to fail.** An assertion that only checks nothing threw,
-  or that the harness created a table, passes whatever the code does. Assert the
-  value, the rendered output, or the stored row.
-- **A route change is tested through the real router.** A service test calls the
-  Local API and never touches `transport/http/routes/`, so it cannot catch a
-  route that drops a field.
+- **Identity comes from the harness, not a mock.** `runAsUser`, `contextAs` and `mountRouter` set the user and role. `signInTestUser` (`packages/astromech/tests/_support/auth.ts`) gives a real Better Auth session when the session itself is under test.
+- **A spy on one real method is fine when it reaches a state the database cannot be put in**, such as a write that fails mid-transaction (`packages/astromech/tests/entries/create-atomicity.test.ts`) or another worker holding a claim. Everything around it stays real.
+- **Assert on the outcome, not on calls**: the returned value, the row read back through the service, the rendered text, the captured email. Count calls only when the call is the outcome, such as an email sent.
+- **A mock costs more here than elsewhere.** A file that calls `vi.mock` or stubs a global loses the shared module graph and joins the isolated list, which is one more reason to prefer the options above.
+
+## Setup and data
+
+The house setup is `packages/astromech/tests/_support/harness.ts`; read its doc comments rather than guessing. `createTestDb()` in `beforeEach` gives each test its own migrated database file, so no test sees another's rows and code that opens its own transaction runs as it does in a site. `setupTestConfig(makeTestConfig())` publishes a config whose entry types cover most capability combinations; change a copy of it for the test rather than writing a config from scratch.
+
+- **Read a write back through the public read path**, not raw SQL, unless the point is that nothing was written.
+- **Keep every value the assertion depends on visible in the test.** Helpers supply defaults. Some repetition is better than a reader searching `_support/` for the input.
+- **Shared setup moves to `_support/` once a second file needs it**, and a helper there throws when it cannot build what it was asked for, as `createTestUser` does. A fixture that fails quietly hides broken tests.
+- **Build typed values rather than casting.** A typed builder such as `makeUser` in `packages/admin/tests/components/users/users-list-page.test.tsx` breaks when the type changes; `as unknown as User` hides the change, and the next agent copies it.
+
+## How a test reads
+
+- Hard-code the expected value. Recomputing it with the code under test makes the test agree with itself.
+- Use the most specific matcher (`toEqual` on the shape, `rejects.toBeInstanceOf(ValidationError)`), so a failure says what was expected and what happened.
+- Keep snapshots small and inline. A large stored snapshot gets updated without being read. `packages/astromech/tests/codegen/type-generator-golden.test.ts` is the exception, because its output is the product.
+- In a component test, find elements as a user would, by role or label. `packages/admin/tests/_support/dom-setup.ts` fails any test that makes a request it did not mock.
+
+## Order, time and flakes
+
+- **Tests pass in any order and in parallel.** Core and the admin share one module graph per worker, so state one file leaves behind reaches the next. Use unique values (`crypto.randomUUID()`) rather than shared fixed keys, and set what a test needs in its own `beforeEach`.
+- **No real sleeps.** To wait for the UI or other async work, wait on a signal (`findByRole`, `waitFor`); to show that something does not happen, wait for a sign the work has settled first. To separate timestamps, fake only `Date` with `vi.useFakeTimers({ toFake: ['Date'] })`, so database IO and promises still run, and restore real timers afterwards.
+- **An expected `console.error` or `console.warn` is asserted with a spy.** An unexpected one is a defect to fix, not noise to silence.
+- **A flaky test is a defect.** Reproduce it before changing anything: run the file repeatedly, and in the order that failed. Rerunning until green hides it.
+
+## Running tests
+
+Run the cheapest check that can catch your mistake after every edit, and the expensive ones before the change lands.
+
+- **After each edit**: the test files for what you touched, with `pnpm -F <package> exec vitest run <path>`. Not `pnpm -F <package> test:run -- <path>`: pnpm passes the `--` through and vitest then runs the whole suite. Not `vitest related` either: the harness imports most of `src`, so it selects most of the suite and runs slower than all of it.
+- **Before handing work back**: `pnpm -F <package> typecheck` and `pnpm -F <package> test:run`. The admin and the plugins compile core from source, so a change to core's `src` also needs their suites, or `pnpm run verify:fast`, which runs every package suite without coverage thresholds.
+- **Before a change lands**: `pnpm run verify`. Coverage thresholds are checked only by a whole-suite coverage run (`pnpm run test:run`, inside `verify`), so after a failure rerun the whole suite, not the failed files.
+- **Run one full suite at a time.** Parallel runs have been killed for low memory, and other sessions may share the checkout.
+- **Keep output small.** Under Claude Code, Vitest 4.1 uses its agent reporter, which prints only failures; setting `reporters` in a config turns it off. It also hides console output: to count warnings, run with `--reporter=default --silent=false` and count them with `grep -c` rather than reading the log. Judge a run by its summary lines, not the exit code of a pipe.
 
 ## Coverage
 
-- **Thresholds live per directory** in the `vitest.config.ts` of core and of the
-  admin, one entry for each top-level directory of that package's `src`.
-  `pnpm run test:run`, and so `verify`, fails when a directory drops below its
-  entry. `pnpm -F astromech test:coverage` and
-  `pnpm -F @astromech/admin test:coverage` run one suite alone with coverage.
-- **A change that raises a directory's coverage raises its threshold in the same
-  commit.**
-- **Never lower a threshold to pass.** Write the test instead.
+Thresholds are set per directory in the `vitest.config.ts` of core and of the admin. A change that raises a directory's coverage raises its entry in the same commit. Coverage shows what is untested, not what is tested well, so don't write a test only to reach lines.
+
+## Reviewing a test change
+
+Read a test diff as closely as the code. Look for a removed `expect`, a new `.skip`, `.only` or `vi.mock`, a loosened matcher, and a new test that cannot fail. For each new test, ask which behaviour it protects.

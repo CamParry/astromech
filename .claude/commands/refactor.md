@@ -22,7 +22,7 @@ Per `AGENTS.md`, clarify before acting; for structural decisions, discuss the di
 
 ## 3. Safety net first
 
-- A refactor is only safe with a behaviour check. Ensure tests cover the code you're about to move **before** you move it; if coverage is thin, add characterization tests first (use the `tester` agent — Vitest, real fixtures, never mock the DB).
+- A refactor is only safe with a behaviour check. Ensure tests cover the code you're about to move **before** you move it; if coverage is thin, add characterization tests first, following the `testing` skill.
 - Capture the current behaviour (test output, or a browser-verify baseline for admin UI) so you can prove it's unchanged afterward.
 
 ## 4. Set up git
