@@ -129,7 +129,8 @@ function as(actingRole: Role, user: User | null = null): { ctx: AppContext } {
     return { ctx };
 }
 
-beforeEach(() => {
+beforeEach(async () => {
+    await createTestDb();
     setupTestConfig();
     vi.clearAllMocks();
 });

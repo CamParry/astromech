@@ -2,7 +2,6 @@ import type { StorageDriver } from '@/types/index';
 import { createTestDb, makeTestConfig, setupTestConfig } from '@tests/harness';
 import { beforeEach, describe, expect, it } from 'vitest';
 import { currentServices } from '@/app-context/services';
-import { setStorageDriver } from '@/storage/registry';
 
 const mediaService = currentServices.media;
 
@@ -86,9 +85,8 @@ let storage: ReturnType<typeof makeTrackingStorage>;
 
 beforeEach(async () => {
     await createTestDb();
-    setupTestConfig(makeTestConfig());
     storage = makeTrackingStorage();
-    setStorageDriver(storage);
+    setupTestConfig({ ...makeTestConfig(), storage });
 });
 
 describe('mediaService.upload', () => {

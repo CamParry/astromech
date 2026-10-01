@@ -8,6 +8,7 @@ import type {
     User,
 } from '@/types/index';
 import { adminRole } from '@tests/fixtures';
+import { createTestDb } from '@tests/harness';
 import { createElement } from 'react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { z } from 'zod';
@@ -25,7 +26,6 @@ import {
     getPluginServiceMethods,
     registerPlugins,
 } from '@/plugins/runtime/plugin-runtime';
-import { globals } from '@/registry';
 import { buildScopedTools } from '@/transport/tools/scoped-tools';
 
 vi.mock('@/transport/tools/scoped-tools', () => ({
@@ -106,10 +106,9 @@ const user: User = {
     updatedAt: new Date(),
 };
 
-beforeEach(() => {
-    globals().pluginRuntime = undefined;
-    delete globalThis.__astromech?.cronJobs;
-    delete globalThis.__astromech?.email;
+// A database, so `bootPlugins` can record each plugin as it boots.
+beforeEach(async () => {
+    await createTestDb();
     vi.restoreAllMocks();
 });
 

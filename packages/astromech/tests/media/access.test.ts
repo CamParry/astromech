@@ -9,7 +9,6 @@ import { createTestDb, makeTestConfig, setupTestConfig } from '@tests/harness';
 import { describe, expect, it } from 'vitest';
 import { currentServices } from '@/app-context/services';
 import { buildImageAttrs } from '@/media/serving/image/build-image-attrs';
-import { setStorageDriver } from '@/storage/registry';
 
 const mediaService = currentServices.media;
 
@@ -66,10 +65,10 @@ async function setup(
     const base = makeTestConfig();
     const config: AstromechConfig = {
         ...base,
+        storage: makeStorage(publicUrl),
         ...(access === undefined ? {} : { media: { ...base.media, access } }),
     };
     setupTestConfig(config);
-    setStorageDriver(makeStorage(publicUrl));
 }
 
 async function uploadJpeg(): Promise<{ id: string; url: string }> {

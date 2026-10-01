@@ -3,12 +3,12 @@
  *
  * `createTestDb` copies the run's template database (migrated once by
  * `global-setup.ts` with the full chain in `test-db.ts`) to a new file in the
- * run's temp dir, opens it with libsql, and registers it via `setDb` so service
- * modules (which call `getDb()` per-op) hit it. A copy takes a few
- * milliseconds where migrating takes tens, so a fresh database per test is
- * cheap. `setupTestConfig` resolves a small but representative config and
- * publishes it to `config/registry.ts`, which is where every reader takes it
- * from.
+ * run's temp dir, opens it with the `libsql` driver a site runs, and registers
+ * it via `setDb` so service modules (which call `getDb()` per-op) hit it. A
+ * copy takes a few milliseconds where migrating takes tens, so a fresh database
+ * per test is cheap. `setupTestConfig` resolves a small but representative
+ * config, publishes it to `config/registry.ts`, and registers its drivers with
+ * `registerDrivers`, the function boot calls.
  *
  * Why file-based rather than `:memory:`?
  * On a file database, `@libsql/client` keeps a pool of connections: a
@@ -19,7 +19,10 @@
  * connection behaviour a site has, and a file is what the template copy needs.
  *
  * Each `createTestDb()` call uses a unique file name so `beforeEach` calls stay
- * fully isolated even when tests run in a single worker.
+ * fully isolated even when tests run in a single worker. It starts with
+ * `resetRuntime()`, so every global registry is empty, as boot finds it, and
+ * no test file resets one by hand. Files that share a worker's module graph
+ * cannot see one another's drivers, hooks, cron jobs or Better Auth instance.
  *
  * FK enforcement: libsql enables `PRAGMA foreign_keys` by default. Entry
  * inserts still leave `createdBy`/`updatedBy` null, but a version snapshot
@@ -44,20 +47,20 @@ import type {} from './global-setup';
 import type { Kysely } from 'kysely';
 import * as fs from 'node:fs/promises';
 import * as path from 'node:path';
-import { createClient } from '@libsql/client';
 import { noopStorage } from '@tests/fixtures';
 import { inject } from 'vitest';
 import { createAppContext } from '@/app-context/app-context';
 import { setConfig } from '@/config/registry';
 import { resolveConfig } from '@/config/resolve';
 import { decodeWith, encodeWith } from '@/database/codec';
-import { setDatabaseDriver } from '@/database/driver-registry';
+import { getDatabaseDriver, setDatabaseDriver } from '@/database/driver-registry';
+import { libsql } from '@/database/drivers/libsql';
 import { setDb } from '@/database/registry';
 import { userContentTable, usersTable } from '@/database/tables';
 import { DEFAULT_ROLE_SLUG } from '@/permissions/roles';
 import { registerPlugins } from '@/plugins/runtime/plugin-runtime';
+import { registerDrivers } from '@/register-drivers';
 import { runInRequestScope } from '@/request-scope/request-scope';
-import { openTestDb } from './test-db';
 
 type Db = Kysely<DB>;
 
@@ -68,29 +71,39 @@ const TEST_DB_DIR = inject('testDbDir');
 const TEST_DB_TEMPLATE = inject('testDbTemplate');
 
 /**
- * Copy the migrated template to a new file, open it, and register it globally.
+ * Reset the runtime with `resetRuntime()`, then copy the migrated template to
+ * a new file, open it through the `libsql` driver, and register it globally.
  * Returns the Kysely handle (already the active `getDb()` instance).
  */
 export async function createTestDb(): Promise<Db> {
+    resetRuntime();
     const file = path.join(TEST_DB_DIR, `${crypto.randomUUID()}.db`);
     await fs.copyFile(TEST_DB_TEMPLATE, file);
-    const db = openTestDb(createClient({ url: `file:${file}` }));
-    setDb(db);
-    setDatabaseDriver({
-        type: 'libsql',
-        getInstance: () => db,
-        supportsTransactions: true,
-    });
-    return db;
+    const driver = libsql({ url: `file:${file}` });
+    setDb(driver.getInstance());
+    setDatabaseDriver(driver);
+    return driver.getInstance();
 }
 
-// `makeTestConfig()`'s `db` field is never actually resolved: tests wire the
-// active driver themselves via `createTestDb()` → `setDatabaseDriver`, and
-// `setupTestConfig()` never reads `config.db`. This just satisfies the type.
-const noopDriver: DatabaseDriver = {
+/**
+ * Return every global registry to the state boot finds it in: an empty
+ * `globalThis.__astromech`, which each registry refills on first use. The
+ * in-process cron ticker is stopped first, because its handle lives there.
+ */
+export function resetRuntime(): void {
+    const ticker = globalThis.__astromech?.cronInterval;
+    if (ticker !== undefined) clearInterval(ticker);
+    globalThis.__astromech = undefined;
+}
+
+/**
+ * `makeTestConfig()`'s database. It stands for the one `createTestDb()` opened,
+ * which `setupTestConfig()` registers in its place.
+ */
+const testDatabase: DatabaseDriver = {
     type: 'test',
     getInstance(): Kysely<DB> {
-        throw new Error('test driver getInstance should not be called');
+        throw new Error('the test config has no database of its own');
     },
 };
 
@@ -107,7 +120,7 @@ const noopDriver: DatabaseDriver = {
  */
 export function makeTestConfig(): AstromechConfig {
     return {
-        db: noopDriver,
+        db: testDatabase,
         storage: noopStorage,
         defaultLocale: 'en',
         locales: ['en', 'de'],
@@ -175,16 +188,32 @@ export function makeTestConfig(): AstromechConfig {
 }
 
 /**
- * Resolve the test config and publish it, the way the boot lifecycle does. Also
- * resets the plugin runtime (no hooks) unless `plugins` is supplied.
+ * Resolve the test config, publish it and register its drivers, the way boot
+ * does. The database is the one `createTestDb()` opened unless the config names
+ * its own. Also resets the plugin runtime (no hooks) unless `plugins` is supplied.
  */
 export function setupTestConfig(
     config: AstromechConfig = makeTestConfig()
 ): ResolvedConfig {
     const resolved = resolveConfig(config);
     setConfig(resolved);
+    registerDrivers({
+        ...config,
+        db: config.db === testDatabase ? openedDb() : config.db,
+    });
     registerPlugins(config.plugins ?? [], resolved);
     return resolved;
+}
+
+/** The database driver `createTestDb()` registered. Throws when there is none. */
+function openedDb(): DatabaseDriver {
+    const driver = getDatabaseDriver();
+    if (driver === null) {
+        throw new Error(
+            'setupTestConfig() needs a database: call createTestDb() first, or pass `db` in the config'
+        );
+    }
+    return driver;
 }
 
 /**

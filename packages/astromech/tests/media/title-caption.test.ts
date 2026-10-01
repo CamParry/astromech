@@ -4,12 +4,10 @@
  * would otherwise vanish with no error.
  */
 
-import { noopStorage } from '@tests/fixtures';
 import { createTestDb, makeTestConfig, setupTestConfig } from '@tests/harness';
 import { beforeEach, describe, expect, it } from 'vitest';
 import { currentServices } from '@/app-context/services';
 import { mediaRepository } from '@/media/repository';
-import { setStorageDriver } from '@/storage/registry';
 
 const mediaService = currentServices.media;
 
@@ -18,7 +16,6 @@ let id: string;
 beforeEach(async () => {
     await createTestDb();
     setupTestConfig(makeTestConfig());
-    setStorageDriver(noopStorage);
 
     const row = await mediaRepository.create(
         {

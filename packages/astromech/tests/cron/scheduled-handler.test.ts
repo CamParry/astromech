@@ -7,7 +7,7 @@ import type { DB } from '@/database/types';
 import type { AstromechConfig } from '@/types/index';
 import type { Kysely, Updateable } from 'kysely';
 import { createTestDb, makeTestConfig, setupTestConfig } from '@tests/harness';
-import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import { beforeEach, describe, expect, it } from 'vitest';
 import { systemAppContext } from '@/app-context/app-context';
 import { cloudflareCron } from '@/cron/drivers/cloudflare';
 import { interval } from '@/cron/drivers/interval';
@@ -26,14 +26,6 @@ import { createWorkerEntry } from '@/integrations/cloudflare/worker';
 import { globals } from '@/registry';
 
 beforeEach(async () => {
-    delete globalThis.__astromech?.cronJobs;
-    globals().cronTickRunning = false;
-    globals().cronUnscheduledWarned = new Set<string>();
-    // Clear any held scheduler / interval handle between tests.
-    globals().cronInterval = undefined;
-    delete globalThis.__astromech?.scheduler;
-    delete globalThis.__astromech?.defaultScheduler;
-
     await createTestDb();
     config = makeTestConfig() as AstromechConfig;
     setupTestConfig(config);
@@ -46,16 +38,6 @@ beforeEach(async () => {
             scheduled: (at?: Date) => onTick(at ?? new Date(), systemAppContext()),
         }),
     };
-});
-
-afterEach(() => {
-    delete globalThis.__astromech?.astromech;
-    delete globalThis.__astromech?.cronJobs;
-    globals().cronTickRunning = false;
-    globals().cronUnscheduledWarned = new Set<string>();
-    globals().cronInterval = undefined;
-    delete globalThis.__astromech?.scheduler;
-    delete globalThis.__astromech?.defaultScheduler;
 });
 
 /** The site config the worker entry is built with, rebuilt per test. */

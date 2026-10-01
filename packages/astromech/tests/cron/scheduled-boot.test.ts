@@ -8,14 +8,13 @@
 import type { DB } from '@/database/types';
 import type { AstromechConfig } from '@/types/index';
 import type { Kysely, Updateable } from 'kysely';
-import { createTestDb, makeTestConfig } from '@tests/harness';
+import { createTestDb, makeTestConfig, resetRuntime } from '@tests/harness';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { interval } from '@/cron/drivers/interval';
 import { registerCronJob } from '@/cron/registry';
 import { encodePatchWith } from '@/database/codec';
 import { cronTable } from '@/database/tables';
 import { createWorkerEntry } from '@/integrations/cloudflare/worker';
-import { globals } from '@/registry';
 
 let db: Kysely<DB>;
 
@@ -36,26 +35,11 @@ beforeEach(async () => {
 
     // An uncreated application is exactly what a Cron Trigger hits: every slot
     // boot fills is empty, including the db `createTestDb` just set.
-    delete globalThis.__astromech?.db;
-    delete globalThis.__astromech?.config;
-    delete globalThis.__astromech?.astromech;
-    delete globalThis.__astromech?.cronJobs;
-    delete globalThis.__astromech?.scheduler;
-    delete globalThis.__astromech?.defaultScheduler;
-    globals().cronTickRunning = false;
-    globals().cronUnscheduledWarned = new Set<string>();
-    globals().cronInterval = undefined;
+    resetRuntime();
 });
 
 afterEach(() => {
     interval().stop?.();
-    delete globalThis.__astromech?.astromech;
-    delete globalThis.__astromech?.cronJobs;
-    delete globalThis.__astromech?.scheduler;
-    delete globalThis.__astromech?.defaultScheduler;
-    globals().cronTickRunning = false;
-    globals().cronUnscheduledWarned = new Set<string>();
-    globals().cronInterval = undefined;
 });
 
 /** A stand-in for the Astro adapter's worker entry. */

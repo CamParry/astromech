@@ -6,12 +6,12 @@
 import type { EmailDriver, PluginDefinition } from '@/types/index';
 import type { OpenAPIHono } from '@hono/zod-openapi';
 import type { ReactElement } from 'react';
+import { expectConsole } from '@tests/console';
 import { createTestDb, makeTestConfig, setupTestConfig } from '@tests/harness';
 import { createElement } from 'react';
 import { beforeEach, describe, expect, it } from 'vitest';
 import { currentServices } from '@/app-context/services';
 import { getEmailOverride } from '@/email/email-overrides';
-import { setEmailDriver } from '@/email/registry';
 import { DEFAULT_ROLE_SLUG } from '@/permissions/roles';
 import { createHttpApp } from '@/transport/http/app';
 
@@ -26,21 +26,20 @@ let app: OpenAPIHono;
 let basePath: string;
 let sent: EmailMessage[];
 
-// Better Auth binds to the database registered when it is first asked for, so
-// the registry slot is cleared with each fresh database.
 beforeEach(async () => {
-    delete globalThis.__astromech?.auth;
     await createTestDb();
-    const resolved = setupTestConfig(makeTestConfig());
-    basePath = resolved.basePath;
-    app = createHttpApp(resolved) as unknown as OpenAPIHono;
     sent = [];
-    setEmailDriver({
-        name: 'capture',
-        send: async (message) => {
-            sent.push(message);
+    const resolved = setupTestConfig({
+        ...makeTestConfig(),
+        email: {
+            name: 'capture',
+            send: async (message) => {
+                sent.push(message);
+            },
         },
     });
+    basePath = resolved.basePath;
+    app = createHttpApp(resolved) as unknown as OpenAPIHono;
 });
 
 async function postAuth(path: string, body: unknown): Promise<Response> {
@@ -56,6 +55,8 @@ describe('password reset for an admin-created user', () => {
         const user = await usersService.create({
             data: { email: EMAIL, name: 'Invited', role: DEFAULT_ROLE_SLUG },
         });
+        // Better Auth warns on a sign-in for a user with no password yet.
+        expectConsole('warn', 'Credential account not found');
         const before = await postAuth('sign-in/email', {
             email: EMAIL,
             password: PASSWORD,

@@ -7,7 +7,6 @@ import type { AstromechConfig, StorageDriver } from '@/types/index';
 import { createTestDb, makeTestConfig, setupTestConfig } from '@tests/harness';
 import { beforeEach, describe, expect, it } from 'vitest';
 import { currentServices } from '@/app-context/services';
-import { setStorageDriver } from '@/storage/registry';
 
 const mediaService = currentServices.media;
 
@@ -68,6 +67,7 @@ function makeTrackingStorage(): StorageDriver {
 function makeMediaFieldConfig(): AstromechConfig {
     return {
         ...makeTestConfig(),
+        storage: makeTrackingStorage(),
         media: {
             fields: [
                 { name: 'caption', type: 'text', label: 'Caption', required: true },
@@ -81,7 +81,6 @@ function makeMediaFieldConfig(): AstromechConfig {
 beforeEach(async () => {
     await createTestDb();
     setupTestConfig(makeMediaFieldConfig());
-    setStorageDriver(makeTrackingStorage());
 });
 
 describe('mediaService.update — required field', () => {

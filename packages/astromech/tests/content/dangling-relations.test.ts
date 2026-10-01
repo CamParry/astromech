@@ -11,7 +11,6 @@ import type {
     JsonObject,
     ResolvedConfig,
 } from '@/types/index';
-import { noopStorage } from '@tests/fixtures';
 import { createTestDb, makeTestConfig, setupTestConfig } from '@tests/harness';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { currentServices } from '@/app-context/services';
@@ -21,7 +20,6 @@ import { resourceExistenceRepository } from '@/content/repository/resource-exist
 import { setDb } from '@/database/registry';
 import { transaction } from '@/database/transaction';
 import { mediaRepository } from '@/media/repository';
-import { setStorageDriver } from '@/storage/registry';
 import { userRepository } from '@/users/repository';
 
 const api = currentServices.entries;
@@ -70,8 +68,6 @@ let config: ResolvedConfig;
 beforeEach(async () => {
     await createTestDb();
     config = setupTestConfig(makeDanglingConfig());
-    // Reading a media item resolves its URL, which asks the driver.
-    setStorageDriver(noopStorage);
 });
 
 /** Re-save `doc` touching only a scalar, so the prune runs over stored data. */

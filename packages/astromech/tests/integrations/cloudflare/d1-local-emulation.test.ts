@@ -20,7 +20,7 @@ import type { Kysely } from 'kysely';
 import type { MigrationProvider } from 'kysely/migration';
 import { migrateToLatest } from '@astromech/schema-engine';
 import { sql } from 'kysely';
-import { afterAll, beforeAll, describe, expect, it } from 'vitest';
+import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 import { d1 } from '@/database/drivers/d1';
 import { assertForeignKeysEnforced } from '@/database/migrations';
 import { setDb } from '@/database/registry';
@@ -38,9 +38,10 @@ type TestSchema = {
     migrated: { id: string; label: string };
 };
 
-// Local D1 state persists under `.wrangler/state` between runs, so every table
-// this file owns — Kysely's migration bookkeeping included — is dropped up
-// front. Without that the migration case silently no-ops on the second run.
+// Local D1 state persists under `.wrangler/state` between runs and tests, so
+// every table this file owns — Kysely's migration bookkeeping included — is
+// dropped before each test, and each test creates the tables it reads. Without
+// that the migration case silently no-ops on the second run.
 const OWNED_TABLES = [
     'round_trip',
     'migrated',
@@ -61,10 +62,22 @@ beforeAll(async () => {
     clearEnvSource();
     resetBindings();
     db = d1({ binding: 'DB' }).getInstance() as unknown as Kysely<TestSchema>;
+    // The first query boots workerd.
+    await sql`SELECT 1`.execute(db);
+}, BOOT_TIMEOUT);
+
+beforeEach(async () => {
     for (const table of OWNED_TABLES) {
         await sql.raw(`DROP TABLE IF EXISTS ${table}`).execute(db);
     }
-}, BOOT_TIMEOUT);
+});
+
+/** Create the table the CRUD and meta cases write to. */
+async function createRoundTripTable(): Promise<void> {
+    await sql`CREATE TABLE round_trip (id TEXT PRIMARY KEY, title TEXT NOT NULL, count INTEGER NOT NULL)`.execute(
+        db
+    );
+}
 
 afterAll(async () => {
     await db.destroy();
@@ -84,9 +97,7 @@ describe('d1() against local emulation', () => {
     });
 
     it('performs a full CRUD round-trip through Kysely', async () => {
-        await sql`CREATE TABLE round_trip (id TEXT PRIMARY KEY, title TEXT NOT NULL, count INTEGER NOT NULL)`.execute(
-            db
-        );
+        await createRoundTripTable();
 
         await db
             .insertInto('round_trip')
@@ -121,6 +132,7 @@ describe('d1() against local emulation', () => {
     });
 
     it('maps insertId and affected-row counts from D1 meta', async () => {
+        await createRoundTripTable();
         await db
             .insertInto('round_trip')
             .values({ id: 'm1', title: 'meta', count: 1 })

@@ -1,10 +1,11 @@
 /**
  * Test suite for @astromech/backups
  *
- * Uses a real libsql FILE database (dump/restore require file:) with the
- * plugin_backups_runs table created directly via drizzle push. Storage is
- * backed by the filesystem driver pointed at a tmpdir. The PluginContext is
- * built by hand — no need for the full plugin runtime.
+ * The libsql dump and restore cases run on a database file of their own with
+ * the runs table written by hand. Every other case runs the registered plugin
+ * on the harness database, whose runs table comes from the plugin's migration,
+ * with its `ctx` from `createPluginTestApp` and the site's storage on the
+ * filesystem driver in a tmpdir.
  *
  * Cases:
  *  1. libsql dump → restore round-trip (file: URL works, non-file: throws)
@@ -17,24 +18,21 @@
  */
 
 import type { DB } from '@/database/types';
-import type {
-    JsonObject,
-    PluginContext,
-    PluginDatabase,
-    PluginStorage,
-} from '@/types/index';
+import type { JsonObject, PluginContext, PluginStorage } from '@/types/index';
+import type { PluginTestApp } from '@tests/plugin-app';
 import type { Kysely } from 'kysely';
 import { randomUUID } from 'node:crypto';
 import { mkdir, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
+import { makeTestConfig } from '@tests/harness';
+import { createPluginTestApp } from '@tests/plugin-app';
 import { sql } from 'kysely';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { decodeWith } from '@/database/codec';
 import { libsql } from '@/database/drivers/libsql';
 import { resolvePluginIdentity } from '@/plugins/runtime/plugin-identity';
 import { filesystem } from '@/storage/drivers/filesystem';
-import { listAll } from '@/storage/prefix';
 import { isBackupRunning, performBackup, resolveKeep, rotate } from '../src/backup';
 import { backups } from '../src/index';
 import { createBackupsService } from '../src/service/backups';
@@ -85,70 +83,21 @@ async function makeFileDb(dbPath: string): Promise<{
     return { db, driver };
 }
 
-/** Build a minimal PluginContext for the backups plugin. */
-function makeCtx(
-    db: Kysely<DB>,
-    storage: PluginStorage,
-    database: PluginDatabase
-): PluginContext {
-    return {
-        // Cast through unknown: the plugin source is being ported to Kysely in a
-        // sibling agent; the type will be Kysely<DB> once that lands.
-        db: db as unknown as PluginContext['db'],
-        plugin: {
-            package: '@astromech/backups',
-            namespace: 'backups',
-            serviceKey: 'backups',
-            permissionNamespace: 'backups',
-            version: '0.1.0',
-        },
-        config: null as unknown as PluginContext['config'],
-        user: null,
-        role: null,
-        entries: null as unknown as PluginContext['entries'],
-        globals: null as unknown as PluginContext['globals'],
-        media: null as unknown as PluginContext['media'],
-        users: null as unknown as PluginContext['users'],
-        notifications: null as unknown as PluginContext['notifications'],
-        email: { send: async () => undefined },
-        logger: {
-            info: () => undefined,
-            warn: () => undefined,
-            error: () => undefined,
-        },
-        env: {},
-        runHook: async (_event, payload) => payload,
-        notify: async () => undefined,
-        storage,
-        database,
-        methods: { tools: () => [] },
-    };
-}
-
-/**
- * Adapt the filesystem driver to PluginStorage: plugins get the simple
- * all-keys `list`, so the driver's paginated one is followed via `listAll`.
- */
-function makeStorage(dir: string): PluginStorage {
-    const driver = filesystem({ dir });
-    return {
-        put: (key, body, opts) => driver.put(key, body, opts),
-        get: (key) => driver.get(key),
-        delete: (key) => driver.delete(key),
-        list: (prefix = '') => listAll(driver, prefix),
-    };
-}
-
 let tmpBase: string;
 let dbPath: string;
-let storageDir: string;
+let app: PluginTestApp<'backups'>;
 
 beforeEach(async () => {
     tmpBase = makeTmpDir();
     await mkdir(tmpBase, { recursive: true });
     dbPath = join(tmpBase, 'test.db');
-    storageDir = join(tmpBase, 'storage');
+    const storageDir = join(tmpBase, 'storage');
     await mkdir(storageDir, { recursive: true });
+    app = await createPluginTestApp('backups', {
+        ...makeTestConfig(),
+        storage: filesystem({ dir: storageDir }),
+        plugins: [backups()],
+    });
 
     // Reset the in-process backup guard between tests.
     globalThis.__astromechBackupRunning = false;
@@ -331,15 +280,9 @@ describe('libsql.restore — preserve', () => {
 
 describe('performBackup — success', () => {
     it('should create a gzip artifact in storage and a success run row', async () => {
-        const { db, driver } = await makeFileDb(dbPath);
-        const storage = makeStorage(storageDir);
+        const ctx = app.context();
+        const { storage } = ctx;
 
-        const database: PluginDatabase = {
-            dialect: 'libsql',
-            dump: () => driver.dump(),
-        };
-
-        const ctx = makeCtx(db, storage, database);
         const row = await performBackup(ctx, 'manual', { keep: 10 });
 
         expect(row.status).toBe('success');
@@ -359,13 +302,13 @@ describe('performBackup — success', () => {
 
 describe('performBackup — failure', () => {
     it('should mark the run as failed when dump is not supported', async () => {
-        const { db } = await makeFileDb(dbPath);
-        const storage = makeStorage(storageDir);
-
         // Deliberately omit dump from the database capability.
-        const database: PluginDatabase = { dialect: 'test-no-dump' };
+        const ctx: PluginContext = {
+            ...app.context(),
+            database: { dialect: 'test-no-dump' },
+        };
+        const { storage } = ctx;
 
-        const ctx = makeCtx(db, storage, database);
         const row = await performBackup(ctx, 'manual', { keep: 10 });
 
         expect(row.status).toBe('failed');
@@ -380,13 +323,9 @@ describe('performBackup — failure', () => {
 
 describe('rotate', () => {
     it('should delete the oldest artifacts when runs exceed keep', async () => {
-        const { db, driver } = await makeFileDb(dbPath);
-        const storage = makeStorage(storageDir);
-        const database: PluginDatabase = {
-            dialect: 'libsql',
-            dump: () => driver.dump(),
-        };
-        const ctx = makeCtx(db, storage, database);
+        const { db } = app;
+        const ctx = app.context();
+        const { storage } = ctx;
 
         // Create 5 successful runs. To guarantee distinct startedAt seconds we
         // insert the run rows with explicit timestamps rather than relying on
@@ -445,13 +384,9 @@ describe('rotate', () => {
     });
 
     it('should be a no-op when runs are within keep limit', async () => {
-        const { db, driver } = await makeFileDb(dbPath);
-        const storage = makeStorage(storageDir);
-        const database: PluginDatabase = {
-            dialect: 'libsql',
-            dump: () => driver.dump(),
-        };
-        const ctx = makeCtx(db, storage, database);
+        const { db } = app;
+        const ctx = app.context();
+        const { storage } = ctx;
 
         await performBackup(ctx, 'manual', { keep: 99 });
         await performBackup(ctx, 'manual', { keep: 99 });
@@ -498,12 +433,9 @@ describe('rotate — pre-restore snapshots', () => {
     }
 
     it('should neither rotate a pre-restore snapshot nor count it against keep', async () => {
-        const { db, driver } = await makeFileDb(dbPath);
-        const storage = makeStorage(storageDir);
-        const ctx = makeCtx(db, storage, {
-            dialect: 'libsql',
-            dump: () => driver.dump(),
-        });
+        const { db } = app;
+        const ctx = app.context();
+        const { storage } = ctx;
 
         // Two pre-restore snapshots interleaved with three scheduled runs. With
         // pre-restore counted, keep=3 would delete two scheduled backups.
@@ -557,12 +489,9 @@ describe('rotate — pre-restore snapshots', () => {
     });
 
     it('should break a startedAt tie on id, so ordering is total', async () => {
-        const { db, driver } = await makeFileDb(dbPath);
-        const storage = makeStorage(storageDir);
-        const ctx = makeCtx(db, storage, {
-            dialect: 'libsql',
-            dump: () => driver.dump(),
-        });
+        const { db } = app;
+        const ctx = app.context();
+        const { storage } = ctx;
 
         // Same millisecond for all three — only the (ULID) id can order them.
         const sameInstant = '2026-01-01T03:00:00.000Z';
@@ -592,45 +521,38 @@ describe('isBackupRunning / in-process guard', () => {
     });
 
     it('should return true while a backup is in flight', async () => {
-        const { db, driver } = await makeFileDb(dbPath);
-        const storage = makeStorage(storageDir);
+        const base = app.context();
+        const { dump } = base.database;
+        if (dump === undefined) throw new Error('the test database cannot dump');
 
         // Intercept dump to check the flag mid-flight.
         let flagDuringDump = false;
-        const database: PluginDatabase = {
-            dialect: 'libsql',
-            dump: async () => {
-                flagDuringDump = isBackupRunning();
-                return driver.dump();
+        const ctx: PluginContext = {
+            ...base,
+            database: {
+                ...base.database,
+                dump: async () => {
+                    flagDuringDump = isBackupRunning();
+                    return dump();
+                },
             },
         };
-
-        const ctx = makeCtx(db, storage, database);
         await performBackup(ctx, 'manual', { keep: 10 });
 
         expect(flagDuringDump).toBe(true);
     });
 
     it('should return false again after the backup completes', async () => {
-        const { db, driver } = await makeFileDb(dbPath);
-        const storage = makeStorage(storageDir);
-        const database: PluginDatabase = {
-            dialect: 'libsql',
-            dump: () => driver.dump(),
-        };
-
-        const ctx = makeCtx(db, storage, database);
-        await performBackup(ctx, 'manual', { keep: 10 });
+        await performBackup(app.context(), 'manual', { keep: 10 });
 
         expect(isBackupRunning()).toBe(false);
     });
 
     it('should return false after a failed backup', async () => {
-        const { db } = await makeFileDb(dbPath);
-        const storage = makeStorage(storageDir);
-        const database: PluginDatabase = { dialect: 'test-no-dump' };
-
-        const ctx = makeCtx(db, storage, database);
+        const ctx: PluginContext = {
+            ...app.context(),
+            database: { dialect: 'test-no-dump' },
+        };
         await performBackup(ctx, 'manual', { keep: 10 });
 
         expect(isBackupRunning()).toBe(false);
@@ -645,16 +567,16 @@ describe('resolveKeep', () => {
     async function ctxWithGlobal(
         fields: JsonObject | null
     ): Promise<{ ctx: PluginContext; keys: string[] }> {
-        const { db } = await makeFileDb(dbPath);
-        const storage = makeStorage(storageDir);
-        const ctx = makeCtx(db, storage, { dialect: 'test-no-dump' });
         const keys: string[] = [];
-        ctx.globals = {
-            get: async (params: { key: string }) => {
-                keys.push(params.key);
-                return fields === null ? null : { fields };
-            },
-        } as unknown as PluginContext['globals'];
+        const ctx: PluginContext = {
+            ...app.context(),
+            globals: {
+                get: async (params: { key: string }) => {
+                    keys.push(params.key);
+                    return fields === null ? null : { fields };
+                },
+            } as unknown as PluginContext['globals'],
+        };
         return { ctx, keys };
     }
 
@@ -700,12 +622,14 @@ describe('resolveKeep', () => {
     });
 
     it('should fall back when the globals service throws', async () => {
-        const { ctx } = await ctxWithGlobal(null);
-        ctx.globals = {
-            get: async () => {
-                throw new Error('no globals here');
-            },
-        } as unknown as PluginContext['globals'];
+        const ctx: PluginContext = {
+            ...app.context(),
+            globals: {
+                get: async () => {
+                    throw new Error('no globals here');
+                },
+            } as unknown as PluginContext['globals'],
+        };
         expect(await resolveKeep(ctx, 7)).toBe(7);
     });
 });

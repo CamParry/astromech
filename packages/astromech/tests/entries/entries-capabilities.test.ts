@@ -7,8 +7,8 @@
  */
 
 import type { AstromechConfig } from '@/types/index';
-import { createTestDb, setupTestConfig } from '@tests/harness';
-import { beforeAll, describe, expect, it } from 'vitest';
+import { createTestDb, makeTestConfig, setupTestConfig } from '@tests/harness';
+import { beforeEach, describe, expect, it } from 'vitest';
 import { currentServices } from '@/app-context/services';
 import { CapabilityError } from '@/errors/capability';
 
@@ -16,31 +16,7 @@ const entriesService = currentServices.entries;
 
 function makeCapabilityTestConfig(): AstromechConfig {
     return {
-        db: {
-            type: 'test',
-            getInstance() {
-                throw new Error('test driver getInstance should not be called');
-            },
-        },
-        storage: {
-            name: 'test-noop',
-            async put() {
-                return undefined;
-            },
-            async get() {
-                return null;
-            },
-            async stat() {
-                return null;
-            },
-            async delete(): Promise<void> {
-                return undefined;
-            },
-            async list() {
-                return { keys: [] };
-            },
-        },
-        defaultLocale: 'en',
+        ...makeTestConfig(),
         locales: ['en'],
         entries: {
             // All capabilities default ON — no restriction.
@@ -81,7 +57,7 @@ function makeCapabilityTestConfig(): AstromechConfig {
     };
 }
 
-beforeAll(async () => {
+beforeEach(async () => {
     await createTestDb();
     setupTestConfig(makeCapabilityTestConfig());
 });

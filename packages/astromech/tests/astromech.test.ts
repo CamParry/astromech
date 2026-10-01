@@ -55,7 +55,6 @@ describe('createAstromech — the application registry', () => {
 
     beforeEach(async () => {
         db = await createTestDb();
-        delete globalThis.__astromech?.astromech;
     });
 
     it('returns the same instance for the same config object', async () => {

@@ -10,10 +10,9 @@ import { createTestDb, makeTestConfig, setupTestConfig } from '@tests/harness';
 import { beforeAll, describe, expect, it } from 'vitest';
 import { getAuth } from '@/auth/better-auth';
 
-// `getAuth()` builds once and memoises into the registry slot, so the slot is
-// cleared and the config put in place before any test in this file asks for it.
+// `getAuth()` builds once and memoises into the registry slot, so the config
+// is in place before any test in this file asks for it.
 beforeAll(async () => {
-    delete globalThis.__astromech?.auth;
     await createTestDb();
     setupTestConfig({ ...makeTestConfig(), basePath: '/cms' });
 });

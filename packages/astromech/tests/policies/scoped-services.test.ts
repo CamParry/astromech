@@ -30,7 +30,8 @@ import { annotateManifest } from '@/policies/annotate-manifest';
 import { scopeMethods } from '@/policies/scoped-services';
 import { noInput } from '@/services/define-service-method';
 
-beforeEach(() => {
+beforeEach(async () => {
+    await createTestDb();
     setupTestConfig();
 });
 

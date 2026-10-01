@@ -4,13 +4,11 @@
  */
 
 import type { AstromechConfig } from '@/types/index';
-import { noopStorage } from '@tests/fixtures';
 import { createTestDb, makeTestConfig, setupTestConfig } from '@tests/harness';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { currentServices } from '@/app-context/services';
 import { relationshipRepository } from '@/content/repository/relationships';
 import { mediaRepository } from '@/media/repository';
-import { setStorageDriver } from '@/storage/registry';
 
 const entriesService = currentServices.entries;
 const mediaService = currentServices.media;
@@ -63,7 +61,6 @@ async function createMedia(filename = 'a.png'): Promise<string> {
 beforeEach(async () => {
     await createTestDb();
     setupTestConfig(makeUsageConfig());
-    setStorageDriver(noopStorage);
 });
 
 describe('mediaService.usedBy', () => {

@@ -1,58 +1,39 @@
 /**
- * `forms.submit` rate limiting, driven through the registered plugin method
- * with an explicit connecting address (what the HTTP transport supplies), plus
- * the window-reset and cap rules on the counter itself.
+ * `forms.submit` rate limiting, driven over HTTP with the connecting address in
+ * `x-forwarded-for` (the site trusts one proxy), plus the window-reset and cap
+ * rules on the counter itself.
  */
 
 import type { FormsOptions, SubmitResult } from '../src/index';
-import type { DB } from '@/database/types';
-import type { EntriesService, PluginContext } from '@/types/index';
-import type { Kysely } from 'kysely';
-import { createTestDb, makeTestConfig, setupTestConfig } from '@tests/harness';
+import type { PluginTestApp } from '@tests/plugin-app';
+import { makeTestConfig } from '@tests/harness';
+import { createPluginTestApp } from '@tests/plugin-app';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { createAppContext } from '@/app-context/app-context';
-import { currentServices } from '@/app-context/services';
-import { setEmailDriver } from '@/email/registry';
-import {
-    createPluginContext,
-    getPluginIdentity,
-    getPluginServiceMethods,
-} from '@/plugins/runtime/plugin-runtime';
 import { forms } from '../src/index';
 import { createSubmissionsRepository } from '../src/repository';
 import { consumeRateLimit, resetRateLimit } from '../src/service/rate-limit';
 
-const localEntries = currentServices.entries;
-
 const FORM = 'forms/form';
 
-let db: Kysely<DB>;
+let app: PluginTestApp<'forms'>;
 
-/** Call the registered `submit` method with the connecting address a transport would set. */
-function send(clientAddress?: string): Promise<SubmitResult> {
-    const identity = getPluginIdentity('forms');
-    if (!identity) throw new Error('forms plugin not registered');
-    const method = getPluginServiceMethods().get(identity.namespace)?.['submit'];
-    if (!method) throw new Error('forms.submit not registered');
-    const handler = method.handler as (
-        input: unknown,
-        ctx: PluginContext
-    ) => Promise<SubmitResult>;
-    return handler(
-        { slug: 'contact', data: { name: 'Ada' } },
-        createPluginContext(
-            identity,
-            createAppContext({ user: null, role: null, clientAddress })
-        )
-    );
+/** Submit the contact form over HTTP, from `clientAddress` when one is given. */
+async function send(clientAddress?: string): Promise<SubmitResult> {
+    const response = await app.request('POST', '/plugins/forms/submit', {
+        body: { slug: 'contact', data: { name: 'Ada' } },
+        headers: clientAddress === undefined ? {} : { 'x-forwarded-for': clientAddress },
+    });
+    return (await response.json()) as SubmitResult;
 }
 
 async function setup(options?: FormsOptions): Promise<void> {
     resetRateLimit();
-    db = await createTestDb();
-    setEmailDriver({ name: 'test-noop', send: async () => undefined });
-    setupTestConfig({ ...makeTestConfig(), plugins: [forms(options)] });
-    await (localEntries as unknown as EntriesService).create({
+    app = await createPluginTestApp('forms', {
+        ...makeTestConfig(),
+        security: { trustProxy: true },
+        plugins: [forms(options)],
+    });
+    await app.entries.create({
         type: FORM,
         data: {
             title: 'Contact',
@@ -67,7 +48,7 @@ async function setup(options?: FormsOptions): Promise<void> {
 }
 
 async function submissionCount(): Promise<number> {
-    return createSubmissionsRepository(db).count();
+    return createSubmissionsRepository(app.db).count();
 }
 
 const TOO_MANY = 'Too many submissions — please try again shortly';

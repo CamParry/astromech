@@ -39,8 +39,6 @@ function signIn(user: User | null): void {
 let api: string;
 
 async function freshApp(): Promise<OpenAPIHono> {
-    // Better Auth binds to the database registered when it is first asked for.
-    delete globalThis.__astromech?.auth;
     await createTestDb();
     const resolved = setupTestConfig(makeTestConfig());
     api = `${resolved.basePath}/api`;

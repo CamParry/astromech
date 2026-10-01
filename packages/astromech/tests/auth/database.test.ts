@@ -6,6 +6,7 @@
 
 import type { DB } from '@/database/types';
 import type { Kysely } from 'kysely';
+import { expectConsole } from '@tests/console';
 import { createTestDb, setupTestConfig } from '@tests/harness';
 import { sql } from 'kysely';
 import { beforeEach, describe, expect, it } from 'vitest';
@@ -22,10 +23,7 @@ const EMAIL = 'reset@test.dev';
 let db: Kysely<DB>;
 let basePath: string;
 
-// `getAuth()` binds to the database registered when it is first asked for, so
-// the registry slot is cleared with each fresh database.
 beforeEach(async () => {
-    delete globalThis.__astromech?.auth;
     db = await createTestDb();
     basePath = setupTestConfig().basePath;
 });
@@ -50,6 +48,8 @@ function wait(ms: number): Promise<void> {
 
 describe('Better Auth beside an open app transaction', () => {
     it('writes once the transaction commits instead of failing with SQLITE_BUSY', async () => {
+        // The config names no email driver, so the reset link is logged instead.
+        expectConsole('error', `Password reset URL for ${EMAIL}`);
         await usersService.create({
             data: { email: EMAIL, name: 'Reset', role: DEFAULT_ROLE_SLUG },
         });

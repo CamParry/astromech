@@ -8,13 +8,11 @@
 
 import type { RelationshipRow } from '@/database/tables';
 import type { AstromechConfig } from '@/types/index';
-import { noopStorage } from '@tests/fixtures';
 import { createTestDb, makeTestConfig, setupTestConfig } from '@tests/harness';
 import { beforeEach, describe, expect, it } from 'vitest';
 import { currentServices } from '@/app-context/services';
 import { relationshipRepository } from '@/content/repository/relationships';
 import { mediaRepository } from '@/media/repository';
-import { setStorageDriver } from '@/storage/registry';
 import { rebuildRelationshipIndex } from '@/transport/cli/relationship-index';
 
 const entriesService = currentServices.entries;
@@ -42,7 +40,6 @@ let postB: string;
 beforeEach(async () => {
     await createTestDb();
     setupTestConfig(makeConfig());
-    setStorageDriver(noopStorage);
     postA = (await entriesService.create({ type: 'post', data: { title: 'A' } })).id;
     postB = (await entriesService.create({ type: 'post', data: { title: 'B' } })).id;
     const row = await mediaRepository.create(

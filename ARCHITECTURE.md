@@ -29,7 +29,8 @@ apps/
 
 ```
 integrations · transport/cli · transport/mcp         process entry points, each boots the application
-astromech.ts · plugins/runtime/plugin-runtime.ts ·   composition root
+astromech.ts · register-drivers.ts ·                 composition root
+  plugins/runtime/plugin-runtime.ts ·
   app-context/app-context.ts
 transport (http · tools)                             delivery
 codegen                                              generation
@@ -44,7 +45,7 @@ types · services · utilities · errors ·              pure leaves
   env.ts · registry.ts
 ```
 
-- **Composition root.** `createAstromech` in `astromech.ts` resolves the config, wires the drivers and composes the content services onto the application instance. `createPluginContext` in `plugins/runtime/plugin-runtime.ts` builds the plugin `ctx` from the same services. `createAppContext` in `app-context/app-context.ts` builds the `AppContext` a method receives: one per request, and one cached system context (no user, no role) for the CLI, cron jobs and plugin `setup()`. `createServices` in `app-context/services.ts` builds every service handle: bound to one context, trusted or scoped to its role (`overrideAccess: false`). `currentServices` in the same file acts as the current request's context, for callers that hold none.
+- **Composition root.** `createAstromech` in `astromech.ts` resolves the config, wires the drivers through `registerDrivers` (`register-drivers.ts`, which the test harness also calls) and composes the content services onto the application instance. `createPluginContext` in `plugins/runtime/plugin-runtime.ts` builds the plugin `ctx` from the same services. `createAppContext` in `app-context/app-context.ts` builds the `AppContext` a method receives: one per request, and one cached system context (no user, no role) for the CLI, cron jobs and plugin `setup()`. `createServices` in `app-context/services.ts` builds every service handle: bound to one context, trusted or scoped to its role (`overrideAccess: false`). `currentServices` in the same file acts as the current request's context, for callers that hold none.
 - **`exports/`** holds one barrel per published subpath. Only it and `types/index.ts` are barrels; everywhere else an import names the file that declares the symbol.
 - **`integrations/`**: `astro/` is the framework integration (Vite config, virtual modules, injected routes, boot middleware); `cloudflare/` is the runtime integration (the Worker entry and binding lookup). `TERMINOLOGY.md` defines the two kinds.
 - **`codegen/`** generates the site's entry types, the method manifest and the plugin client manifest.

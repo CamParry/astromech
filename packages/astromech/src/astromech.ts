@@ -20,26 +20,16 @@ import { generateMethodManifest } from '@/codegen/method-manifest';
 import { setConfig } from '@/config/registry';
 import { resolveConfig } from '@/config/resolve';
 import { scheduledPublishJob } from '@/content/jobs/scheduled-publish';
-import {
-    getSchedulerDriver,
-    registerCronJob,
-    resolveSchedulerDriver,
-    setSchedulerDriver,
-} from '@/cron/registry';
+import { getSchedulerDriver, registerCronJob } from '@/cron/registry';
 import { onTick } from '@/cron/runner';
-import { setDatabaseDriver } from '@/database/driver-registry';
 import { checkMigrationDrift } from '@/database/migrations';
-import { setDb } from '@/database/registry';
-import { setEmailDriver } from '@/email/registry';
 import { entryJobs } from '@/entries/jobs/entry-jobs';
 import { AstromechError } from '@/errors/astromech-error';
-import { defaultImageWidths, normaliseWidths } from '@/media/image-widths';
-import { setImageConfig } from '@/media/serving/image/registry';
 import { bootPlugins, registerPlugins } from '@/plugins/runtime/plugin-runtime';
+import { registerDrivers } from '@/register-drivers';
 import { createRegistry } from '@/registry';
 import { getCurrentRole, getCurrentUser } from '@/request-scope/request-scope';
 import { typedServices } from '@/services/typed-services';
-import { setStorageDriver } from '@/storage/registry';
 import { createHttpApp } from '@/transport/http/app';
 
 /**
@@ -124,20 +114,8 @@ async function build(config: AstromechConfig): Promise<Astromech> {
     setConfig(resolved);
 
     // Backend registries the domains read from
-    setDb(db);
-    setDatabaseDriver(config.db);
-    setStorageDriver(config.storage);
-    const image = config.media?.image;
-    if (image) {
-        setImageConfig({
-            driver: image.driver,
-            widths: normaliseWidths(image.widths ?? defaultImageWidths),
-            avif: image.avif ?? true,
-        });
-    }
-    if (config.email) setEmailDriver(config.email);
+    registerDrivers(config);
     if (config.ai) setAiModels(await buildAiModels(config.ai));
-    setSchedulerDriver(resolveSchedulerDriver(config.scheduler));
 
     // Verify the schema before anything boots against it
     await checkMigrationDrift(db, plugins, resolved.migrationsDir);

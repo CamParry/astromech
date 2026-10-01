@@ -4,6 +4,7 @@
  */
 
 import type { PluginHooks } from '@/types/index';
+import { expectConsole } from '@tests/console';
 import { createTestDb, registerTestPlugins, setupTestConfig } from '@tests/harness';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { systemAppContext } from '@/app-context/app-context';
@@ -146,10 +147,13 @@ describe('scheduledPublishJob', () => {
     });
 
     it('publishes the other entries when a hook throws for one', async () => {
-        vi.spyOn(console, 'error').mockImplementation(() => undefined);
         const past = new Date(Date.now() - 60_000);
         const blocked = await scheduledPost('Blocked', past);
         const due = await scheduledPost('Due', past);
+        expectConsole(
+            'error',
+            `entry post/${blocked.id} (en) stays scheduled. Error: blocked`
+        );
         probe([
             defineHook('entry:beforeUpdate', (ctx) => {
                 if (ctx.entry.id === blocked.id) throw new Error('blocked');

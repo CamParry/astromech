@@ -10,12 +10,11 @@ import type { HttpRouteSpec } from '@/transport/http/routes/http-routes';
 import type { Role, ServiceMethodContract } from '@/types/index';
 import type { RouteEnv } from '@tests/mount-router';
 import { OpenAPIHono, z } from '@hono/zod-openapi';
-import { noopStorage, roleWith } from '@tests/fixtures';
+import { roleWith } from '@tests/fixtures';
 import { createTestDb, makeTestConfig, setupTestConfig } from '@tests/harness';
 import { mountRouter } from '@tests/mount-router';
 import { beforeEach, describe, expect, it } from 'vitest';
 import { mediaRepository } from '@/media/repository';
-import { setStorageDriver } from '@/storage/registry';
 import { mediaRouter } from '@/transport/http/routes/media';
 import { mountRestRoutes } from '@/transport/http/routes/rest-route';
 
@@ -24,7 +23,6 @@ let id: string;
 beforeEach(async () => {
     await createTestDb();
     setupTestConfig(makeTestConfig());
-    setStorageDriver(noopStorage);
     const row = await mediaRepository.create(
         {
             filename: 'a.png',

@@ -9,12 +9,10 @@
  */
 
 import type { MediaMimeTypeFilter } from '@/types/index';
-import { noopStorage } from '@tests/fixtures';
 import { createTestDb, makeTestConfig, setupTestConfig } from '@tests/harness';
 import { beforeEach, describe, expect, it } from 'vitest';
 import { currentServices } from '@/app-context/services';
 import { mediaRepository } from '@/media/repository';
-import { setStorageDriver } from '@/storage/registry';
 
 const mediaService = currentServices.media;
 
@@ -29,7 +27,6 @@ const FIXTURES = [
 beforeEach(async () => {
     await createTestDb();
     setupTestConfig(makeTestConfig());
-    setStorageDriver(noopStorage);
 
     for (const [filename, mimeType] of FIXTURES) {
         await mediaRepository.create({ filename, mimeType, size: 1 }, {});

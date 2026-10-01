@@ -1,7 +1,7 @@
 /**
  * Walks a method's input schema for the objects that accept a key they do not
- * declare, and for every key it declares. Reads Zod's internal `_zod.def`, so a
- * package that resolves core through `dist` can use it too.
+ * declare, and for every key it declares. Reads Zod's internal `_zod.def`, so it
+ * imports nothing from core.
  */
 
 type SchemaDef = {

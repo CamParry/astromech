@@ -14,7 +14,7 @@ import type {
     Role,
     ToolDefinition,
 } from '@/types/index';
-import { contextAs, makeTestConfig, setupTestConfig } from '@tests/harness';
+import { contextAs, createTestDb, makeTestConfig, setupTestConfig } from '@tests/harness';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { z } from 'zod';
 import { createServices, currentServices } from '@/app-context/services';
@@ -143,7 +143,8 @@ function scopedTool(
     return result.tool;
 }
 
-beforeEach(() => {
+beforeEach(async () => {
+    await createTestDb();
     setupTestConfig();
     vi.mocked(usersService.query).mockClear();
     barHandler.mockClear();

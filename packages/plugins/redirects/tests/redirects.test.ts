@@ -6,30 +6,29 @@
 
 import type { RedirectMatch, RedirectRow } from '../src/index';
 import type { Role } from '@/types/index';
+import type { PluginTestApp } from '@tests/plugin-app';
 import type { QueryResult } from 'astromech';
 import { roleWith } from '@tests/fixtures';
-import { contextAs, createTestDb, makeTestConfig, setupTestConfig } from '@tests/harness';
+import { makeTestConfig } from '@tests/harness';
+import { createPluginTestApp } from '@tests/plugin-app';
 import { sql } from 'kysely';
 import { beforeEach, describe, expect, it } from 'vitest';
-import { createServices, currentServices } from '@/app-context/services';
 import { redirects } from '../src/index';
 import { redirectsService } from '../src/service/redirects';
 
+let app: PluginTestApp<'redirects'>;
+
 /** The plugin's service on the trusted handle, the way site code calls it. */
-const service = () => currentServices.plugins.redirects;
+const service = () => app.service;
 
 /** The plugin's service on a handle scoped to `role`, the way the admin calls it. */
-const serviceAs = (role: Role | null) =>
-    createServices(contextAs(role), { overrideAccess: false }).plugins.redirects;
-
-let db: Awaited<ReturnType<typeof createTestDb>>;
+const serviceAs = (role: Role | null) => app.as(role);
 
 beforeEach(async () => {
-    db = await createTestDb();
     const base = makeTestConfig();
     const post = base.entries['post'];
     if (!post) throw new Error('test harness missing `post` entry type');
-    setupTestConfig({
+    app = await createPluginTestApp('redirects', {
         ...base,
         entries: { ...base.entries, post: { ...post, url: '/{slug}' } },
         plugins: [redirects()],
@@ -40,7 +39,7 @@ beforeEach(async () => {
 async function storedRules(): Promise<Record<string, unknown>[]> {
     const { rows } = await sql<
         Record<string, unknown>
-    >`SELECT * FROM plugin_redirects_redirects ORDER BY rowid`.execute(db);
+    >`SELECT * FROM plugin_redirects_redirects ORDER BY rowid`.execute(app.db);
     return rows;
 }
 
@@ -293,13 +292,13 @@ describe('redirects — lookup', () => {
 
 describe('redirects — slug-change hook', () => {
     it('records a redirect when a root entry slug changes', async () => {
-        const post = await currentServices.entries.create({
+        const post = await app.entries.create({
             type: 'post',
             data: { title: 'Hello' },
         });
         expect(post.slug).toBe('hello');
 
-        await currentServices.entries.update({
+        await app.entries.update({
             type: 'post',
             id: post.id,
             data: { slug: 'goodbye' },
@@ -311,11 +310,11 @@ describe('redirects — slug-change hook', () => {
     });
 
     it('creates nothing when the slug is unchanged', async () => {
-        const post = await currentServices.entries.create({
+        const post = await app.entries.create({
             type: 'post',
             data: { title: 'Stable' },
         });
-        await currentServices.entries.update({
+        await app.entries.update({
             type: 'post',
             id: post.id,
             data: { title: 'Stable Renamed' },

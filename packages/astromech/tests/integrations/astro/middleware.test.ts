@@ -41,14 +41,12 @@ beforeEach(async () => {
         },
         scheduler: noScheduler,
     } as AstromechConfig;
-    delete globalThis.__astromech?.astromech;
     clearEnvSource();
     // A secret in the shell running the suite would otherwise satisfy the check.
     vi.stubEnv('BETTER_AUTH_SECRET', undefined);
 });
 
 afterEach(() => {
-    delete globalThis.__astromech?.astromech;
     clearEnvSource();
     vi.unstubAllEnvs();
 });
