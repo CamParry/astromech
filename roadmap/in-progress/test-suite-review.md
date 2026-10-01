@@ -335,23 +335,37 @@ harness and eight test files and every later stage runs faster for it.
 
 ### Stage 2b: one setup and reset
 
-- [ ] Extract the driver registration in `packages/astromech/src/astromech.ts`
+- [x] Extract the driver registration in `packages/astromech/src/astromech.ts`
       (storage, image, email) into one function that boot and the harness both
       call, and build the test database through the real libsql driver. Delete
-      the 18 hand registrations.
-- [ ] Add one `resetRuntime()` to the harness that resets every global registry
+      the 18 hand registrations. `registerDrivers` in
+      `packages/astromech/src/register-drivers.ts`; 27 files lost a hand
+      `setStorageDriver`. The registrations left are ones a test checks
+      itself, listed in stage 4.
+- [x] Add one `resetRuntime()` to the harness that resets every global registry
       the way boot sets it, and replace the per-file reset blocks
       (`cron/runner`, `scheduled-handler`, `plugin-runtime`, the auth cache).
-- [ ] Add one plugin test helper to core's test support that registers a
+      It empties `globalThis.__astromech`, so a registry added later is
+      covered too, and `createTestDb()` calls it. Eleven files left the
+      isolated list.
+- [x] Add one plugin test helper to core's test support that registers a
       plugin for real on the harness database, and move all six plugins onto
       it. Have the assistant compile core from source like the others, if its
-      `dist` dependency allows.
-- [ ] Fix the D1 order dependency and set `BETTER_AUTH_URL` for tests. Then
+      `dist` dependency allows. `createPluginTestApp` in
+      `packages/astromech/tests/_support/plugin-app.ts` serves forms, menus,
+      redirects, seo and backups. The assistant compiles core from source but
+      mocks it, so its move is part of the stage 4 assistant item.
+- [x] Fix the D1 order dependency and set `BETTER_AUTH_URL` for tests. Then
       shuffle the existing runs (`sequence.shuffle`) rather than adding a
       second run, which cost 208 s. Confirm the seed appears in the output so
-      a failure can be reproduced, and print it if Vitest does not.
-- [ ] Fail a test on an unexpected `console.error` or `console.warn`; an
-      expected one is asserted.
+      a failure can be reproduced, and print it if Vitest does not. Vitest
+      prints the seed on every run. Shuffling also found
+      `entries-capabilities` sharing one database per file, and a product
+      defect: [trashed-entry-slug-collision](../planned/trashed-entry-slug-collision.md).
+- [x] Fail a test on an unexpected `console.error` or `console.warn`; an
+      expected one is asserted. `tests/_support/console-guard.ts`, with
+      `expectConsole` to declare output. A passing run prints no console
+      output in any suite.
 
 ### Stage 3: agent guardrails
 
@@ -382,7 +396,24 @@ harness and eight test files and every later stage runs faster for it.
 - [ ] Assistant: one contract suite run against both the fake approvals and
       the real repository, and stop mocking core and its own repositories.
 - [ ] Backups: build the table from the migration and the context from the
-      plugin helper, and fix the `rotate` timestamps.
+      plugin helper, and fix the `rotate` timestamps. Left after stage 2b: the
+      libsql dump and restore tests still use a hand-written runs table, and
+      `resolveKeep` replaces `ctx.globals` with a fake.
+- [ ] Assistant onto `createPluginTestApp`: `packages/plugins/assistant/tests/service/sessions.test.ts`,
+      `loop/run`, `loop/request` and `sessions/repository` mock `astromech`,
+      and `deleted-user` builds its own Kysely (needs the assistant's
+      migrations in the harness chain).
+- [ ] The hand registrations stage 2b left, each checked by its own test:
+      `plugin-runtime` (`setEmailDriver`), `d1-local-emulation` and
+      `dangling-relations` (`setDb`), `database-transaction-degrade`
+      (`setDatabaseDriver`), `model-access` (`setAiModels`),
+      `scheduled-handler` (`setSchedulerDriver`), the hand drivers in
+      `astromech.test`, `scheduled-boot` and `middleware`, and
+      `src/transport/cli/config.ts`, which calls `setDb` itself. Keep each one
+      that is the behaviour under test; move the rest onto the config.
+- [ ] Plugin structure tests import core internals (`resolvePluginIdentity`,
+      `resolveAdminResources`, `derivePluginNav`); assert through the
+      manifest or the admin output instead.
 - [ ] Fold the copied suites into conformance tables (versions, translation,
       relationships, field validation, definition, atomicity), and the plugin
       contract tests into one `it.each` over every plugin.
