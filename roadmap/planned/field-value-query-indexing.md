@@ -68,14 +68,13 @@ expressions anywhere.
 
 ## Also riding this mechanism
 
-- [ ] **Indexed field uniqueness.** `{ unique: true }` resolves to
-      the validation context's `isUnique`, which today scans candidate rows in
-      memory (`entries/unique.ts`). SQLite supports **unique expression indexes**, so
-      uniqueness is the same declaration with a `UNIQUE` qualifier rather than a
-      second bespoke strategy. One deliberate decision to carry over: the
-      built-in repository's `list` filters `stagedFor IS NULL`, so staged rows are invisible
-      to today's scan — the indexed replacement must decide whether to keep
-      that (a partial index can).
+- [ ] **Indexed field uniqueness.** Fields have no `unique` option
+      (`DECISIONS.md`, "Fields have no `unique` option"). SQLite supports
+      **unique expression indexes**, so it returns as a `UNIQUE` qualifier on a
+      declared field index, and the database enforces it, concurrent writes
+      included. Decide whether a staged row counts: a partial index on
+      `stagedFor IS NULL` lets a staged copy share its canonical's value. Map
+      the constraint violation to a 422 on the field.
 
 ## Prerequisite it shares with relationships
 

@@ -1,7 +1,7 @@
 /**
  * Integration tests for field-processing pipeline wired into the users service
- * (create + update). Validates required fields, defaults, coercion, uniqueness,
- * and self-exclusion on update.
+ * (create + update). Validates required fields, defaults, coercion and the
+ * fields merge on update.
  */
 
 import type { AstromechConfig } from '@/types/index';
@@ -18,12 +18,7 @@ function makeUserFieldConfig(): AstromechConfig {
             fields: [
                 { name: 'bio', type: 'text', label: 'Bio', required: true },
                 { name: 'handle', type: 'slug', label: 'Handle' },
-                {
-                    name: 'badge',
-                    type: 'text',
-                    label: 'Badge',
-                    validation: [{ unique: true }],
-                },
+                { name: 'badge', type: 'text', label: 'Badge' },
                 { name: 'tier', type: 'text', label: 'Tier', defaultValue: 'free' },
             ],
         },
@@ -123,48 +118,6 @@ describe('usersService.create — slug field', () => {
     });
 });
 
-describe('usersService.create — uniqueness', () => {
-    it('rejects a duplicate badge', async () => {
-        await usersService.create({
-            data: {
-                email: uniqueEmail(),
-                name: 'Alice',
-                fields: { bio: 'Hi', badge: 'gold' },
-            },
-        });
-        await expect(
-            usersService.create({
-                data: {
-                    email: uniqueEmail(),
-                    name: 'Bob',
-                    fields: { bio: 'Hey', badge: 'gold' },
-                },
-            })
-        ).rejects.toMatchObject({
-            name: 'ValidationError',
-            fields: { badge: ['Already in use'] },
-        });
-    });
-
-    it('accepts a different badge', async () => {
-        await usersService.create({
-            data: {
-                email: uniqueEmail(),
-                name: 'Alice',
-                fields: { bio: 'Hi', badge: 'gold' },
-            },
-        });
-        const user = await usersService.create({
-            data: {
-                email: uniqueEmail(),
-                name: 'Bob',
-                fields: { bio: 'Hey', badge: 'silver' },
-            },
-        });
-        expect(user.fields?.badge).toBe('silver');
-    });
-});
-
 describe('usersService.update — validation', () => {
     it('rejects when a required field is removed on update', async () => {
         const user = await usersService.create({
@@ -197,51 +150,6 @@ describe('usersService.update — validation', () => {
             },
         });
         expect(updated.fields?.handle).toBe('new-handle');
-    });
-});
-
-describe('usersService.update — uniqueness self-exclusion', () => {
-    it('does not trip "Already in use" when the user keeps its own badge', async () => {
-        const user = await usersService.create({
-            data: {
-                email: uniqueEmail(),
-                name: 'Alice',
-                fields: { bio: 'Hi', badge: 'mycode' },
-            },
-        });
-        const updated = await usersService.update({
-            id: user.id,
-            data: {
-                fields: { bio: 'Updated', badge: 'mycode' },
-            },
-        });
-        expect(updated.fields?.badge).toBe('mycode');
-    });
-
-    it('rejects when badge collides with a different user', async () => {
-        await usersService.create({
-            data: {
-                email: uniqueEmail(),
-                name: 'Alice',
-                fields: { bio: 'Hi', badge: 'taken' },
-            },
-        });
-        const bob = await usersService.create({
-            data: {
-                email: uniqueEmail(),
-                name: 'Bob',
-                fields: { bio: 'Hey', badge: 'free' },
-            },
-        });
-        await expect(
-            usersService.update({
-                id: bob.id,
-                data: { fields: { bio: 'Hey', badge: 'taken' } },
-            })
-        ).rejects.toMatchObject({
-            name: 'ValidationError',
-            fields: { badge: ['Already in use'] },
-        });
     });
 });
 

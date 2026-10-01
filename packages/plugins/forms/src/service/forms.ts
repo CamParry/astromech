@@ -146,7 +146,6 @@ export function createFormsService(
                     operation: 'create',
                     resource: { kind: 'plugin', record: null },
                     user,
-                    isUnique: refuseUniqueCheck,
                 });
                 // Validation runs before the spam check, so a user whose token
                 // has expired still sees their field errors.
@@ -217,18 +216,6 @@ export function createFormsService(
 const NOT_ACCEPTING = 'This form is not accepting submissions';
 
 const TOO_MANY = 'Too many submissions — please try again shortly';
-
-/**
- * `safeParseFields` only reaches this for DB-backed rules, which the form
- * compiler never emits. It throws rather than answering `true` so a compiler
- * change that does emit one fails loudly.
- */
-const refuseUniqueCheck = (): Promise<boolean> => {
-    throw new Error(
-        '[@astromech/forms] a compiled form field emitted a read-backed validation rule, ' +
-            'but forms has no reads port to serve it'
-    );
-};
 
 /** A form-level failure, keyed under the reserved non-field key. */
 function formError(message: string): SubmitResult {

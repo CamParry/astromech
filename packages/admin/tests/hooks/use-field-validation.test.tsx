@@ -10,9 +10,9 @@
  * a field already showing an error clears on the keystroke that fixes it rather
  * than on a second blur.
  *
- * Plus the two data-dependent checks the browser cannot run — `unique` (needs a
- * read) and `custom` (a function, which `JSON.stringify` strips on its way into
- * the admin config) — which must be skipped in silence, never guessed at.
+ * Plus the `custom` rule the browser cannot run (a function, which
+ * `JSON.stringify` strips on its way into the admin config), which must be
+ * skipped in silence, never guessed at.
  *
  * Warnings ride the same reveal set as errors and block nothing, which is why
  * blur reveals a path whether or not it has an error to show.
@@ -193,18 +193,6 @@ describe('required', () => {
 });
 
 describe('server-only rules', () => {
-    it('should never produce a client error for a `unique` rule', async () => {
-        const slug: Field = {
-            name: 'slug',
-            type: 'text',
-            validation: [{ unique: true }],
-        };
-        const m = mountValidation([slug], { slug: 'already-taken' });
-
-        expect(await validateAll(m, 'complete')).toEqual({});
-        m.unmount();
-    });
-
     it('should never produce a client error for a `custom` rule flattened to {}', async () => {
         // Exactly what the admin config does to it: `JSON.stringify` empties an
         // object whose only property is a function, so `runRule` falls through

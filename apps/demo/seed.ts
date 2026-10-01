@@ -1864,8 +1864,8 @@ async function seed(): Promise<void> {
     }
     console.log('  Wrote the menus globals (main + footer, en + fr, published)\n');
 
-    // Through the plugin's own service, which checks each rule against its
-    // fields (a unique `from`, a 301 or 302 status) as the admin form does.
+    // Through the plugin's own service, which checks each rule as the admin form
+    // does: a `from` no other rule holds, a 301 or 302 status.
     for (const data of [
         { from: '/old-home', to: '/', status: '301', enabled: true },
         {

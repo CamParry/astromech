@@ -180,7 +180,7 @@ function createMediaRepository() {
         return content.count(filter(params));
     }
 
-    /** Every content row written in `locale`, for the uniqueness and validity scans. */
+    /** Every content row written in `locale`, for the stored-content validation report. */
     async function findByLocale(locale: string): Promise<MediaResource[]> {
         const raw = await content
             .kysely()

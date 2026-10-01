@@ -202,7 +202,6 @@ describe('compileFormFields', () => {
             operation: 'create',
             resource: { kind: 'entry', record: {} },
             user: null,
-            isUnique: async () => true,
         });
         expect(errors).toEqual({ message: ['This field is required'] });
     });

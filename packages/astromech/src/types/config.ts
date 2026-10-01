@@ -156,7 +156,6 @@ export type SchedulerDriver = {
 
 export type SlugConfig = {
     source?: string;
-    unique?: boolean;
     prefix?: string;
 };
 

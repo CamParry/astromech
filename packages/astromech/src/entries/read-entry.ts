@@ -46,17 +46,6 @@ export async function getEntryResource(type: string, id: string): Promise<EntryR
 }
 
 /**
- * Every live entry of one type in one locale, staged content excluded: what a
- * uniqueness check scans.
- */
-export async function listEntriesInLocale(
-    type: string,
-    locale: string
-): Promise<EntryResource[]> {
-    return entryRepository.findMany({ type, locale, trashed: false });
-}
-
-/**
  * Read a batch of entries of the given type at resource level, preserving input
  * order. Shared by the delete, trash and restore operations.
  */

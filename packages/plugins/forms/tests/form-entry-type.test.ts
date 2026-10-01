@@ -26,7 +26,6 @@ function ctx() {
         operation: 'create' as const,
         resource: { kind: 'entry' as const, record: {} },
         user: null,
-        isUnique: async () => true,
     };
 }
 

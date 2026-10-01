@@ -4,14 +4,12 @@
  * every row the CURRENT rules would reject, with each write path's parse context.
  */
 
-import type { ScannedRow } from '@/content/unique';
 import type { FieldErrors } from '@/types/fields';
 import type { AppContext, EntryStatus, JsonObject, ResourceType } from '@/types/index';
 import { defaultContentLocale } from '@/config/content-locale';
 import { definitionsOf, fieldParseContext } from '@/content/prepare-fields';
 import { isTranslatable } from '@/content/resources';
 import { resolveEntryType } from '@/entries/entry-types';
-import { listEntriesInLocale } from '@/entries/read-entry';
 import { entryRepository } from '@/entries/repository/entries-table';
 import { safeParseFields } from '@/fields/parse-fields';
 import { mediaRepository } from '@/media/repository';
@@ -49,7 +47,6 @@ type StoredRow = {
     fields: JsonObject;
     status: EntryStatus | undefined;
     record: unknown;
-    scan: () => Promise<readonly ScannedRow[]>;
 };
 
 /**
@@ -106,7 +103,6 @@ async function checkEntries(
             status: row.status,
             fields: (row.fields ?? {}) as JsonObject,
             record: row,
-            scan: () => listEntriesInLocale(entry.type, row.locale),
         });
     }
 }
@@ -114,8 +110,7 @@ async function checkEntries(
 /**
  * Every content row of every media item or user. Rows come straight from the
  * repository rather than through `query`, which for media resolves a delivery
- * URL the report has no use for. A `unique` rule compares within one locale, so
- * each locale is a pass of its own, with one load shared by its rows.
+ * URL the report has no use for.
  */
 async function checkContentRows(
     ctx: AppContext,
@@ -127,9 +122,7 @@ async function checkContentRows(
             ? mediaRepository.findByLocale(locale)
             : userRepository.findByLocale(locale);
     for (const locale of locales(ctx, isTranslatable(kind, ctx.config))) {
-        // One load per locale: the run writes nothing, so it cannot go stale.
-        const scan = memoize(() => listContent(locale));
-        for (const row of await scan()) {
+        for (const row of await listContent(locale)) {
             await checkRow(ctx, report, {
                 kind,
                 target: undefined,
@@ -138,7 +131,6 @@ async function checkContentRows(
                 status: undefined,
                 fields: row.fields,
                 record: row,
-                scan,
             });
         }
     }
@@ -162,7 +154,6 @@ async function checkGlobals(ctx: AppContext, report: ValidationReport): Promise<
                 status: row.status,
                 fields: row.fields,
                 record: row,
-                scan: async () => [],
             });
         }
     }
@@ -190,8 +181,6 @@ async function checkRow(
                 existing: row.record,
                 user: null,
                 status: row.status,
-                scan: row.scan,
-                excludeId: row.id,
                 coerceOnly: new Set(),
             }),
             collectWarnings: false,
@@ -230,10 +219,4 @@ function collect(
     for (const message of processed.form) {
         report.findings.push({ ...subject, fieldPath: null, message });
     }
-}
-
-/** Run `load` once and hand every later caller the same promise. */
-function memoize<T>(load: () => Promise<readonly T[]>): () => Promise<readonly T[]> {
-    let pending: Promise<readonly T[]> | undefined;
-    return () => (pending ??= load());
 }

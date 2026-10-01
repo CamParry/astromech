@@ -35,8 +35,6 @@ export async function prepareGlobalFields(input: {
         target: global.id,
         user,
         status,
-        // One row per locale, so there is nothing else to be unique among.
-        scan: async () => [],
     };
 
     return current

@@ -278,7 +278,6 @@ const { values, errors } = await safeParseFields(input, definitions, {
     operation: 'create',
     resource: { kind: 'plugin', record: null },
     user: ctx.user,
-    isUnique: async () => true,
 });
 if (Object.keys(errors).length > 0) return { ok: false, errors };
 ```
@@ -294,11 +293,11 @@ instead: use it when you want to hand the messages back to a caller, as a form
 submission does. Both coerce values and apply defaults as well as check them,
 so the `values` they return are what you store — not the input you passed in.
 
-`isUnique` and `entryTypes` are how the data-backed rules read: `unique` needs to
-scan existing rows, and a relationship's target-type check needs to resolve ids.
-An `isUnique` that reads nothing, with `entryTypes` left out, makes both checks
-pass silently, which is the right trade for an unauthenticated submission and
-the wrong one for an import.
+`entryTypes` is how a relationship's target-type check resolves ids. Left out,
+the check passes silently, which is the right trade for an unauthenticated
+submission and the wrong one for an import. A check that reads your own table,
+such as a value no other row holds, is a `custom` rule you add to the
+definitions for that call.
 `apps/docs/content/field-validation.md` covers what each rule checks and when.
 
 ### Admin pages
@@ -581,6 +580,7 @@ failure answers a 422 and the form shows each message on its field.
 ```ts
 // service/redirects.ts
 import type { RedirectRow } from '../tables/redirects';
+import type { Field, ValidationRule } from 'astromech';
 import { defineServiceMethod, z } from 'astromech';
 import { parseFields } from 'astromech/fields';
 import { redirectFields } from '../fields';
@@ -604,13 +604,21 @@ export const redirectsService = {
         mutates: true,
         handler: async ({ data }, ctx): Promise<RedirectRow> => {
             const redirects = createRedirectsRepository(ctx.db);
-            const values = await parseFields(data, redirectFields, {
+            // Added per call: the static `redirectFields` also feed the admin form.
+            const fromIsFree: ValidationRule = {
+                custom: async ({ value }) =>
+                    (await redirects.findByFrom(String(value))) === null
+                        ? true
+                        : 'Already in use',
+            };
+            const definitions = redirectFields.map(
+                (field): Field =>
+                    field.name === 'from' ? { ...field, validation: [fromIsFree] } : field
+            );
+            const values = await parseFields(data, definitions, {
                 operation: 'create',
                 resource: { kind: 'plugin', record: null },
                 user: ctx.user,
-                // `from` declares `validation: [{ unique: true }]`, which asks this.
-                isUnique: async (_field, value) =>
-                    (await redirects.findByFrom(String(value))) === null,
             });
             return redirects.create({
                 from: String(values['from']),
@@ -625,7 +633,7 @@ export const redirectsService = {
 ```
 
 `resource.kind` is `'plugin'` for a plugin's own row. A duplicate `from` fails
-the `unique` rule and answers a 422 on that field, before the table's unique
+the `custom` rule and answers a 422 on that field, before the table's unique
 index is reached. `@astromech/redirects` is the full worked example: its
 `service/redirects.ts` has all five methods beside the public `lookup`.
 

@@ -1,6 +1,6 @@
 import type { ResourceType } from '@/types/domain';
 import type { Field, FieldValidationContext, ValidationMode } from '@/types/fields';
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { beforeEach, describe, expect, it } from 'vitest';
 import { group, tab, tabs } from '@/fields/builder';
 import { setPluginFieldTypes } from '@/fields/field-type-registry';
 import { safeParseFields } from '@/fields/parse-fields';
@@ -10,7 +10,6 @@ type CtxOverrides = Partial<{
     validation: ValidationMode;
     resource: { kind: ResourceType; record: unknown };
     user: null;
-    isUnique: (field: Field, value: unknown) => Promise<boolean>;
 }>;
 
 function fakeCtx(overrides: CtxOverrides = {}) {
@@ -18,7 +17,6 @@ function fakeCtx(overrides: CtxOverrides = {}) {
         operation: 'create' as const,
         resource: { kind: 'entry' as const, record: {} },
         user: null,
-        isUnique: async () => true,
         ...overrides,
     };
 }
@@ -719,36 +717,6 @@ describe('one message per field', () => {
             fakeCtx()
         );
         expect(errors.sections).toEqual(['Must have at least 2 items']);
-    });
-});
-
-describe('rule: unique', () => {
-    it('isUnique returns true → no error', async () => {
-        const isUnique = vi.fn(async () => true);
-        const { errors } = await safeParseFields(
-            { slug: 'my-slug' },
-            [field({ name: 'slug', type: 'text', validation: [{ unique: true }] })],
-            fakeCtx({ isUnique })
-        );
-        expect(errors.slug).toBeUndefined();
-        expect(isUnique).toHaveBeenCalledWith(
-            expect.objectContaining({ name: 'slug' }),
-            'my-slug'
-        );
-    });
-
-    it('isUnique returns false → ["Already in use"]', async () => {
-        const isUnique = vi.fn(async () => false);
-        const { errors } = await safeParseFields(
-            { slug: 'taken-slug' },
-            [field({ name: 'slug', type: 'text', validation: [{ unique: true }] })],
-            fakeCtx({ isUnique })
-        );
-        expect(errors.slug).toEqual(['Already in use']);
-        expect(isUnique).toHaveBeenCalledWith(
-            expect.objectContaining({ name: 'slug' }),
-            'taken-slug'
-        );
     });
 });
 

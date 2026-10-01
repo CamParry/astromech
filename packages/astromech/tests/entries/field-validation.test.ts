@@ -1,7 +1,7 @@
 /**
  * Integration tests for the field-processing pipeline wired into the entries
  * service (create + update). Validates coercion, defaults, required, email,
- * uniqueness, and version-snapshot guard.
+ * and version-snapshot guard.
  */
 
 import type { AstromechConfig } from '@/types/index';
@@ -34,13 +34,7 @@ function makeValidationConfig(): AstromechConfig {
                     },
                     // Email field (descriptor-level validate)
                     { name: 'contact_email', type: 'email', label: 'Contact Email' },
-                    // Text field with unique constraint
-                    {
-                        name: 'code',
-                        type: 'text',
-                        label: 'Code',
-                        validation: [{ unique: true }],
-                    },
+                    { name: 'code', type: 'text', label: 'Code' },
                     // Text field with defaultValue
                     {
                         name: 'status_label',
@@ -371,36 +365,6 @@ describe('create — valid fields', () => {
     });
 });
 
-describe('create — uniqueness', () => {
-    it('rejects a second entry with a duplicate unique-field value', async () => {
-        await api.create({
-            type: 'post',
-            data: { title: 'First', fields: { title_text: 'T1', code: 'x' } },
-        });
-        await expect(
-            api.create({
-                type: 'post',
-                data: { title: 'Second', fields: { title_text: 'T2', code: 'x' } },
-            })
-        ).rejects.toMatchObject({
-            name: 'ValidationError',
-            fields: { code: ['Already in use'] },
-        });
-    });
-
-    it('accepts a different unique-field value', async () => {
-        await api.create({
-            type: 'post',
-            data: { title: 'First', fields: { title_text: 'T1', code: 'x' } },
-        });
-        const entry = await api.create({
-            type: 'post',
-            data: { title: 'Second', fields: { title_text: 'T2', code: 'y' } },
-        });
-        expect(entry.fields.code).toBe('y');
-    });
-});
-
 describe('update — email validation', () => {
     it('rejects an invalid email value on update', async () => {
         const entry = await api.create({
@@ -463,46 +427,6 @@ describe('update — no spurious version on invalid update', () => {
     });
 });
 
-describe('update — uniqueness excludes self', () => {
-    it('does not trip "Already in use" when an entry keeps its own unique value', async () => {
-        const entry = await api.create({
-            type: 'post',
-            data: { title: 'T', fields: { title_text: 'Hello', code: 'mycode' } },
-        });
-
-        // Update with the same code — should succeed (self-exclusion)
-        const updated = await api.update({
-            type: 'post',
-            id: entry.id,
-            data: { fields: { title_text: 'Hello updated', code: 'mycode' } },
-        });
-        const result = Array.isArray(updated) ? updated[0]! : updated;
-        expect(result.fields.code).toBe('mycode');
-    });
-
-    it('rejects when the code collides with a DIFFERENT entry', async () => {
-        await api.create({
-            type: 'post',
-            data: { title: 'A', fields: { title_text: 'A', code: 'taken' } },
-        });
-        const entryB = await api.create({
-            type: 'post',
-            data: { title: 'B', fields: { title_text: 'B', code: 'free' } },
-        });
-
-        await expect(
-            api.update({
-                type: 'post',
-                id: entryB.id,
-                data: { fields: { title_text: 'B', code: 'taken' } },
-            })
-        ).rejects.toMatchObject({
-            name: 'ValidationError',
-            fields: { code: ['Already in use'] },
-        });
-    });
-});
-
 describe('duplicate — the copy is parsed as a create', () => {
     async function source() {
         return api.create({
@@ -550,19 +474,5 @@ describe('duplicate — the copy is parsed as a create', () => {
             name: 'ValidationError',
             fields: { title_text: ['This field is required'] },
         });
-    });
-
-    it('rejects a copy whose unique field collides with the source', async () => {
-        const entry = await source();
-        await expect(api.duplicate({ type: 'post', id: entry.id })).rejects.toMatchObject(
-            { name: 'ValidationError', fields: { code: ['Already in use'] } }
-        );
-
-        const copy = await api.duplicate({
-            type: 'post',
-            id: entry.id,
-            overrides: { fields: { code: 'copy' } },
-        });
-        expect(copy.fields.code).toBe('copy');
     });
 });

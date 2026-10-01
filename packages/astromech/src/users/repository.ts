@@ -138,7 +138,7 @@ function createUserRepository() {
         return content.count(filter(params));
     }
 
-    /** Every content row written in `locale`, for the relationship and validity scans. */
+    /** Every content row written in `locale`, for the stored-content validation report. */
     async function findByLocale(locale: string): Promise<UserResource[]> {
         const raw = await content
             .kysely()

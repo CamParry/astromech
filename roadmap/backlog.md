@@ -16,7 +16,6 @@ Finished items are deleted rather than ticked; the record of what shipped is in
 ### Fields
 
 - [ ] `columns.field(name, { sortable: true })` sends a sort the entries repository refuses with a 400 (`UnknownSortKeyError`), and `entries-list-page.tsx` re-sorts each page in the browser by string comparison. Implement field sort in the repository or drop `sortable`; delete the client sort either way
-- [ ] Decide whether a field's `unique` option stays. Field values are stored as JSON, so no database constraint backs it: two concurrent writes can both pass the check, and every write with a unique field scans the resource's rows in that locale (the `scan` argument to `prepareFields`). Settle how common the need is before keeping the machinery
 
 ### Search
 

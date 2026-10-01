@@ -1,7 +1,7 @@
 /**
  * The edges of the helpers the resources share: what a resource config answers for a
  * target nothing declares, and the early returns of the translatable, index,
- * uniqueness, restore and usage helpers, and that each version snapshot
+ * restore and usage helpers, and that each version snapshot
  * carries exactly the columns a version stores.
  */
 
@@ -15,7 +15,6 @@ import { mergeContentReferences } from '@/content/relationships';
 import { relationshipRepository } from '@/content/repository/relationships';
 import { RESOURCE_CONFIG } from '@/content/resources';
 import { inheritSharedFields, propagateSharedFields } from '@/content/translatable';
-import { isUniqueAmong } from '@/content/unique';
 import { listUsage } from '@/content/usage';
 import { restoreVersion } from '@/content/versions';
 import { entrySnapshotSchema } from '@/entries/schema';
@@ -179,13 +178,6 @@ describe('the relationship helpers', () => {
         expect(result.values).toEqual({
             nav: [{ _id: 'a', page: null, _children: [{ _id: 'b', page: null }] }],
         });
-    });
-});
-
-describe('isUniqueAmong', () => {
-    it('reads a row with no fields as holding nothing', async () => {
-        const isUnique = isUniqueAmong(async () => [{ id: 'a' }]);
-        expect(await isUnique({ name: 'code', type: 'text' }, 'x')).toBe(true);
     });
 });
 

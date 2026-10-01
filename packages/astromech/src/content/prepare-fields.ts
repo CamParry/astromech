@@ -4,7 +4,6 @@
  * a global, a user and a media item goes through it.
  */
 
-import type { ScannedRow } from './unique';
 import type { DataField } from '@/types/fields';
 import type {
     EntryStatus,
@@ -21,7 +20,6 @@ import { mergePatch, projectToSchema } from '@/fields/values';
 import { parseOutput } from '@/services/parse-method-output';
 import { pruneDanglingRelations } from './dangling-relations';
 import { RESOURCE_CONFIG } from './resources';
-import { isUniqueAmong } from './unique';
 
 /** What the field parse needs to know about the write, beyond the values. */
 export type FieldWrite = {
@@ -32,10 +30,6 @@ export type FieldWrite = {
     user: User | null;
     /** The status the row has after the write; it decides the validation mode. */
     status?: EntryStatus | undefined;
-    /** The rows a `unique` field is checked against. */
-    scan: () => Promise<readonly ScannedRow[]>;
-    /** Rows the uniqueness scan ignores: usually the row being written. */
-    excludeId?: string | readonly string[] | undefined;
 } & (
     | { operation: 'create' }
     /** `existing` is the row as it stands, handed to validators. */
@@ -120,7 +114,7 @@ export async function prepareFields(input: PrepareFieldsInput): Promise<JsonObje
 
 /**
  * The context `parseFields` runs with for one write to a resource: the
- * validation mode its status implies, its uniqueness scan, its validator.
+ * validation mode its status implies and its validator.
  * `coerceOnly` names the root fields new in this write; absent coerces every field.
  */
 export function fieldParseContext(
@@ -140,7 +134,6 @@ export function fieldParseContext(
             record: write.operation === 'update' ? write.existing : null,
         },
         user: write.user,
-        isUnique: isUniqueAmong(write.scan, write.excludeId),
         entryTypes: (ids) => resourceExistenceRepository.findEntryTypes(ids),
         ...(write.coerceOnly !== undefined ? { coerceOnly: write.coerceOnly } : {}),
         ...(validate !== undefined ? { validate } : {}),

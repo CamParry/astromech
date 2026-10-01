@@ -49,8 +49,6 @@ export const updateMedia = defineServiceMethod({
                       operation: 'update',
                       existing: base,
                       user,
-                      scan: () => mediaRepository.findByLocale(locale),
-                      excludeId: id,
                       base: base.fields,
                       patch,
                   });

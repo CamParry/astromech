@@ -83,8 +83,7 @@ export type ValidationSeverity = 'error' | 'warning';
  * Rules are serializable (so they can be mirrored client-side later) — except
  * `custom`, which is an imperative server-only validator. `{ required: true }`
  * is intentionally absent: required-ness is the `Field.required` flag,
- * declared in exactly one place. `{ unique: true }` resolves to
- * `ctx.isUnique(field, value)` in the pipeline.
+ * declared in exactly one place.
  */
 export type ValidationRule = (
     | { minLength: number }
@@ -95,7 +94,6 @@ export type ValidationRule = (
     | { email: true }
     | { url: true }
     | { enum: string[] }
-    | { unique: true }
     | { custom: FieldValidator }
 ) & { severity?: ValidationSeverity };
 
@@ -159,8 +157,6 @@ export type FieldValidationContext = {
     validation: ValidationMode;
     resource: ValidatedRecord;
     user: User | null;
-    /** True when no other record of the same resource holds `value` for `field`. */
-    isUnique: (field: DataField, value: unknown) => Promise<boolean>;
     /**
      * The entry type each id resolves to, for the relationship target-type
      * check. Ids with no entry row are simply absent. Optional: a caller with no
@@ -171,9 +167,9 @@ export type FieldValidationContext = {
 };
 
 /**
- * A field validator. Async-only (no sync/async split): uniqueness and other
- * read-backed checks are just custom validators handed a reads handle. Returns
- * `true` when valid, or an error message string.
+ * A field validator. Async-only (no sync/async split), so a read-backed check
+ * such as uniqueness is a validator that does its own read. Returns `true`
+ * when valid, or an error message string.
  */
 export type FieldValidator = (ctx: FieldValidationContext) => Promise<true | string>;
 

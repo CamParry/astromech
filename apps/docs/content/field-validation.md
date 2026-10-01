@@ -19,7 +19,7 @@ draft is allowed to be half-typed; that is what a draft is for.
 
 **Correctness — "is what you typed valid?"** Everything else: `url`, `email`,
 `pattern`, `enum`, length bounds, a container's maximum item count, malformed
-JSON, `unique`, `custom`. These run on **every** write, drafts included.
+JSON, `custom`. These run on **every** write, drafts included.
 Storing a malformed URL is a data-integrity problem, not an incomplete one.
 
 ```ts
@@ -66,16 +66,20 @@ fields.text('handle', {
         { minLength: 3 },
         { maxLength: 30 },
         { pattern: '^[a-z0-9_]+$', message: 'Lowercase letters, digits and underscores only' },
-        { unique: true },
     ],
 }),
 ```
 
 The available rules are `minLength`, `maxLength`, `min`, `max`, `pattern`
-(with an optional `message`), `email`, `url`, `enum`, `unique` and `custom`.
+(with an optional `message`), `email`, `url`, `enum` and `custom`.
 
 There is deliberately no `{ required: true }` rule — required-ness is the
 `required` flag, declared in exactly one place.
+
+There is no `unique` rule either. Field values are stored in one JSON column
+with no index behind them, so the database could not enforce one. A value that
+must be unique belongs in a column with a unique index, such as a plugin
+table's.
 
 ## One message per field
 
@@ -173,8 +177,8 @@ validity are not matters of taste.
 > Warnings are an **editor** feature. The server does not evaluate them at all —
 > not "evaluates and discards", genuinely skips. A rule that needs a database
 > read costs nothing when nobody is looking at it. The practical consequence is
-> that `{ unique: true, severity: 'warning' }` never fires, because the browser
-> has no way to answer it.
+> that a `custom` rule with `severity: 'warning'` never fires, because a function
+> cannot reach the browser.
 
 ## Custom validators
 
@@ -188,8 +192,9 @@ fields.text('sku', {
         {
             custom: async (ctx) => {
                 if (typeof ctx.value !== 'string') return true;
-                const taken = !(await ctx.isUnique(ctx.field, ctx.value));
-                return taken ? 'That SKU is already in use' : true;
+                // `inventory` is your own client for the product catalogue.
+                const known = await inventory.has(ctx.value);
+                return known ? true : 'No product has that SKU';
             },
         },
     ],
@@ -200,8 +205,7 @@ The context carries `value`, `values` (the field's siblings, for cross-field
 rules), `field`, `path`, `operation` (`'create'` or `'update'`), `validation`
 (`'partial'` on a draft save, `'complete'` otherwise, so a rule can relax itself
 on a draft), `resource` (the kind being written and the record as it stands),
-`user`, `isUnique` for the uniqueness check, and `entryTypes` when the caller
-can read entries.
+`user`, and `entryTypes` when the caller can read entries.
 
 `values` is scoped to the field's own container, not the whole record — a rule
 on a field inside a repeater item sees that item's siblings.
@@ -258,8 +262,9 @@ message appears in the browser the moment it appears on the server.
 What the browser skips is decided by **data-dependence**, not by whether a
 check is declarative:
 
-- **`unique`** needs a database read the browser cannot make. Skipped in
-  silence — no "checking…" state. The server runs it on submit.
+- **A relationship's target-type check** needs a database read the browser
+  cannot make. Skipped in silence — no "checking…" state. The server runs it on
+  submit.
 - **`custom`** and the resource-level **`validate`** are functions. The admin
   config is serialized as JSON to reach the browser, which strips them.
   Server-only, and not by choice.
