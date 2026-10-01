@@ -1,11 +1,7 @@
-import { beforeEach, describe, expect, it } from 'vitest';
+import { describe, expect, it } from 'vitest';
 import { createKeyedRegistry, createRegistry } from '@/registry';
 
 type Driver = { name: string };
-
-beforeEach(() => {
-    globalThis.__astromech = undefined;
-});
 
 describe('createRegistry', () => {
     it('round-trips a value through set/getOrThrow', () => {

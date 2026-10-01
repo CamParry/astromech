@@ -22,11 +22,8 @@ const usersService = currentServices.users;
 
 let db: Kysely<DB>;
 
-// `getAuth()` memoises its Kysely instance into the registry slot on first ask,
-// so the slot is cleared and one db is shared for the file, as in the other
-// auth suites.
+// One db for the file, as in the other auth suites.
 beforeAll(async () => {
-    delete globalThis.__astromech?.auth;
     db = await createTestDb();
     setupTestConfig();
 });

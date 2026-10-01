@@ -6,11 +6,12 @@
  */
 
 import type { CoreManifestMethod, MethodManifest } from '@/types/index';
+import { resetRuntime } from '@tests/harness';
 import { beforeEach, describe, expect, it } from 'vitest';
 import { getMethodManifest, setMethodManifest } from '@/codegen/manifest-registry';
 
 beforeEach(() => {
-    globalThis.__astromech = undefined;
+    resetRuntime();
 });
 
 const method: CoreManifestMethod = {
@@ -41,7 +42,7 @@ describe('method manifest registry', () => {
 
     it('is undefined again once the slot is reset', () => {
         setMethodManifest(manifest);
-        globalThis.__astromech = undefined;
+        resetRuntime();
 
         expect(getMethodManifest()).toBeUndefined();
     });

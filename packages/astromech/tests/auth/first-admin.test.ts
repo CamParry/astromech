@@ -25,10 +25,7 @@ let db: Kysely<DB>;
 
 const ADMIN = { name: 'First Admin', email: 'first@test.dev', password: 'password123' };
 
-// `getAuth()` binds its Kysely instance to the database registered when it is
-// first asked for, so the registry slot is cleared with each fresh database.
 beforeEach(async () => {
-    delete globalThis.__astromech?.auth;
     db = await createTestDb();
     setupTestConfig();
 });

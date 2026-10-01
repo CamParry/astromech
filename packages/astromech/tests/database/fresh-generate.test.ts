@@ -12,7 +12,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { migrateToLatest } from '@astromech/schema-engine';
-import { makeTestConfig, setupTestConfig } from '@tests/harness';
+import { makeTestConfig, resetRuntime, setupTestConfig } from '@tests/harness';
 import { getMigrations } from 'better-auth/db/migration';
 import { sql } from 'kysely';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
@@ -49,7 +49,7 @@ beforeAll(async () => {
         allowUnorderedMigrations: true,
     });
 
-    delete globalThis.__astromech?.auth;
+    resetRuntime();
     setupTestConfig({ ...makeTestConfig(), db: driver });
 });
 

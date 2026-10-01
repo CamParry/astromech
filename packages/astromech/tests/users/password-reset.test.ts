@@ -25,10 +25,7 @@ let app: OpenAPIHono;
 let basePath: string;
 let sent: EmailMessage[];
 
-// Better Auth binds to the database registered when it is first asked for, so
-// the registry slot is cleared with each fresh database.
 beforeEach(async () => {
-    delete globalThis.__astromech?.auth;
     await createTestDb();
     sent = [];
     const resolved = setupTestConfig({

@@ -5,12 +5,13 @@ import type {
     LanguageModelV4StreamResult,
     LanguageModelV4Usage,
 } from '@ai-sdk/provider';
+import { resetRuntime } from '@tests/harness';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { buildAiModels, getModel, hasModel } from '@/ai/models';
 import { setAiModels } from '@/ai/registry';
 
 beforeEach(() => {
-    globalThis.__astromech = undefined;
+    resetRuntime();
     vi.restoreAllMocks();
 });
 

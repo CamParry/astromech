@@ -16,7 +16,6 @@ import { getSession } from '@/auth/session';
 import { registerCronJob } from '@/cron/registry';
 import { encodePatchWith } from '@/database/codec';
 import { cronTable } from '@/database/tables';
-import { globals } from '@/registry';
 import { runInRequestScope } from '@/request-scope/request-scope';
 import { cronRouter } from '@/transport/http/routes/cron';
 
@@ -49,11 +48,6 @@ const SECRET = 'test-secret-abc';
 let originalSecret: string | undefined;
 
 beforeEach(async () => {
-    // Reset cron globals.
-    delete globalThis.__astromech?.cronJobs;
-    globals().cronTickRunning = false;
-    globals().cronUnscheduledWarned = new Set<string>();
-
     // Reset session mock.
     mockGetSession.mockReset();
     mockGetSession.mockResolvedValue(null);
@@ -74,10 +68,6 @@ afterEach(() => {
     } else {
         process.env.ASTROMECH_CRON_SECRET = originalSecret;
     }
-
-    delete globalThis.__astromech?.cronJobs;
-    globals().cronTickRunning = false;
-    globals().cronUnscheduledWarned = new Set<string>();
 });
 
 /**

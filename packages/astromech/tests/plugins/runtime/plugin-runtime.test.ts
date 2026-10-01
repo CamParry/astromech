@@ -8,6 +8,7 @@ import type {
     User,
 } from '@/types/index';
 import { adminRole } from '@tests/fixtures';
+import { resetRuntime } from '@tests/harness';
 import { createElement } from 'react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { z } from 'zod';
@@ -25,7 +26,6 @@ import {
     getPluginServiceMethods,
     registerPlugins,
 } from '@/plugins/runtime/plugin-runtime';
-import { globals } from '@/registry';
 import { buildScopedTools } from '@/transport/tools/scoped-tools';
 
 vi.mock('@/transport/tools/scoped-tools', () => ({
@@ -107,9 +107,7 @@ const user: User = {
 };
 
 beforeEach(() => {
-    globals().pluginRuntime = undefined;
-    delete globalThis.__astromech?.cronJobs;
-    delete globalThis.__astromech?.email;
+    resetRuntime();
     vi.restoreAllMocks();
 });
 

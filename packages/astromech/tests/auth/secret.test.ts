@@ -18,7 +18,6 @@ beforeEach(() => {
 });
 
 afterEach(() => {
-    delete globalThis.__astromech?.auth;
     clearEnvSource();
     vi.unstubAllEnvs();
 });
@@ -39,9 +38,6 @@ describe('assertAuthSecret', () => {
 
 describe('the secret Better Auth signs with', () => {
     it('comes from the registered env source', async () => {
-        // `getAuth()` builds once into the registry slot, so the slot is
-        // cleared before the source is set.
-        delete globalThis.__astromech?.auth;
         await createTestDb();
         setupTestConfig(makeTestConfig());
         setEnvSource({ BETTER_AUTH_SECRET: SECRET });

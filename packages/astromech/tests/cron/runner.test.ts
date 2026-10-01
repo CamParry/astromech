@@ -10,7 +10,7 @@ import type { DB } from '@/database/types';
 import type { Kysely, Updateable } from 'kysely';
 import { createTestDb, makeTestConfig, setupTestConfig } from '@tests/harness';
 import { Cron } from 'croner';
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { systemAppContext } from '@/app-context/app-context';
 import { registerCronJob } from '@/cron/registry';
 import { cronRepository } from '@/cron/repository';
@@ -33,19 +33,8 @@ function singleRow(rows: CronRow[]): CronRow {
 }
 
 beforeEach(async () => {
-    // Reset all cron globalThis state between tests.
-    delete globalThis.__astromech?.cronJobs;
-    globals().cronTickRunning = false;
-    globals().cronUnscheduledWarned = new Set<string>();
-
     await createTestDb();
     setupTestConfig(makeTestConfig());
-});
-
-afterEach(() => {
-    delete globalThis.__astromech?.cronJobs;
-    globals().cronTickRunning = false;
-    globals().cronUnscheduledWarned = new Set<string>();
 });
 
 describe('onTick / runDue', () => {

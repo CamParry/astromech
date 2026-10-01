@@ -20,11 +20,9 @@ const usersService = currentServices.users;
 
 let db: Kysely<DB>;
 
-// One db for the file: `getAuth()` builds its Kysely instance on first ask and
-// keeps it in the registry slot, so a per-test db would leave it reading the
-// previous one. The slot is cleared first so no earlier build is reused.
+// One db for the file. `createTestDb()` clears the Better Auth instance an
+// earlier file built, so `getAuth()` builds against this one.
 beforeAll(async () => {
-    delete globalThis.__astromech?.auth;
     db = await createTestDb();
     setupTestConfig(makeTestConfig());
 });

@@ -22,10 +22,7 @@ const EMAIL = 'reset@test.dev';
 let db: Kysely<DB>;
 let basePath: string;
 
-// `getAuth()` binds to the database registered when it is first asked for, so
-// the registry slot is cleared with each fresh database.
 beforeEach(async () => {
-    delete globalThis.__astromech?.auth;
     db = await createTestDb();
     basePath = setupTestConfig().basePath;
 });

@@ -19,7 +19,10 @@
  * connection behaviour a site has, and a file is what the template copy needs.
  *
  * Each `createTestDb()` call uses a unique file name so `beforeEach` calls stay
- * fully isolated even when tests run in a single worker.
+ * fully isolated even when tests run in a single worker. It starts with
+ * `resetRuntime()`, so every global registry is empty, as boot finds it, and
+ * no test file resets one by hand. Files that share a worker's module graph
+ * cannot see one another's drivers, hooks, cron jobs or Better Auth instance.
  *
  * FK enforcement: libsql enables `PRAGMA foreign_keys` by default. Entry
  * inserts still leave `createdBy`/`updatedBy` null, but a version snapshot
@@ -68,17 +71,29 @@ const TEST_DB_DIR = inject('testDbDir');
 const TEST_DB_TEMPLATE = inject('testDbTemplate');
 
 /**
- * Copy the migrated template to a new file, open it through the `libsql`
- * driver, and register it globally. Returns the Kysely handle (already the
- * active `getDb()` instance).
+ * Reset the runtime with `resetRuntime()`, then copy the migrated template to
+ * a new file, open it through the `libsql` driver, and register it globally.
+ * Returns the Kysely handle (already the active `getDb()` instance).
  */
 export async function createTestDb(): Promise<Db> {
+    resetRuntime();
     const file = path.join(TEST_DB_DIR, `${crypto.randomUUID()}.db`);
     await fs.copyFile(TEST_DB_TEMPLATE, file);
     const driver = libsql({ url: `file:${file}` });
     setDb(driver.getInstance());
     setDatabaseDriver(driver);
     return driver.getInstance();
+}
+
+/**
+ * Return every global registry to the state boot finds it in: an empty
+ * `globalThis.__astromech`, which each registry refills on first use. The
+ * in-process cron ticker is stopped first, because its handle lives there.
+ */
+export function resetRuntime(): void {
+    const ticker = globalThis.__astromech?.cronInterval;
+    if (ticker !== undefined) clearInterval(ticker);
+    globalThis.__astromech = undefined;
 }
 
 /**
