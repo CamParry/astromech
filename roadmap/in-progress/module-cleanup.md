@@ -26,10 +26,11 @@ the repository copies.
           entries only, and the public read hides any status other than
           `published`. The job now sits in `content/jobs/scheduled-publish.ts`
           and moves globals too.
-    - [ ] The scheduler publishes with one bulk write per resource
+    - [x] The scheduler publishes with one bulk write per resource
           (`entries/repository/maintenance.ts`, `globals/repository.ts`), so no
           update hook fires when a scheduled row goes live. Publishing through
-          the update path also removes the two copies of that write.
+          the update path also removes the two copies of that write. The job
+          now reads the due rows and publishes each through `update`.
 - [x] **`globals.createStaged` stores fields unvalidated.** It merges `data.fields`
       over the canonical and stores the result without the field parse
       (`globals/methods/staging/create.ts`), so no validation, no repeater ids,

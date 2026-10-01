@@ -9,7 +9,7 @@ import type { GlobalContentRow, GlobalTableRow } from '@/globals/tables';
 import type { EntryStatus, JsonObject } from '@/types/index';
 import { getDefaultContentLocale } from '@/config/content-locale';
 import { createContentRepository, lastUpdate } from '@/content/repository/content-table';
-import { encodePatchWith, kyselyTableKey } from '@/database/codec';
+import { decodeWith, kyselyTableKey } from '@/database/codec';
 import { getDb } from '@/database/registry';
 import { createRepository } from '@/database/repository/create-repository';
 import { globalContentTable, globalsTable, globalVersionsTable } from '@/database/tables';
@@ -97,29 +97,37 @@ function createGlobalRepository() {
     }
 
     /**
-     * Move every canonical scheduled row whose publish time has passed to
-     * published, for the `scheduled-publish` job. Returns the number moved.
+     * The key, locale and publish time of every canonical scheduled row whose
+     * publish time has passed, for the `scheduled-publish` job to publish.
      */
-    async function publishDueScheduled(now: Date): Promise<number> {
-        const result = await getDb()
-            .updateTable('globalContent')
-            .set(encodePatchWith(globalContentTable, { status: 'published' }))
+    async function findDueScheduled(
+        now: Date
+    ): Promise<{ key: string; locale: string; publishedAt: Date | null }[]> {
+        const rows = await getDb()
+            .selectFrom('globalContent')
+            .innerJoin('globals', 'globals.id', 'globalContent.globalId')
+            .select(['globals.key', 'globalContent.locale', 'globalContent.publishedAt'])
             .where((eb) =>
                 eb.and([
-                    eb('status', '=', 'scheduled'),
-                    eb('publishedAt', '<=', now.toISOString()),
+                    eb('globalContent.status', '=', 'scheduled'),
+                    eb('globalContent.publishedAt', '<=', now.toISOString()),
                     // Canonical rows only: a staged change publishes at its merge.
-                    eb('stagedFor', 'is', null),
+                    eb('globalContent.stagedFor', 'is', null),
                 ])
             )
-            .executeTakeFirst();
-        return Number(result.numUpdatedRows);
+            .execute();
+        return rows.map((row) => {
+            const { publishedAt } = decodeWith(globalContentTable, {
+                publishedAt: row.publishedAt,
+            });
+            return { ...row, publishedAt };
+        });
     }
 
     return {
         findByKey,
         findIdByKey,
-        publishDueScheduled,
+        findDueScheduled,
         findOne: content.findOne,
         create: content.create,
         update: content.update,

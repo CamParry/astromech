@@ -55,8 +55,8 @@ describe('the exported repository', () => {
     });
 });
 
-describe('publishDueScheduled', () => {
-    it('publishes each due canonical row and leaves the rest alone', async () => {
+describe('findDueScheduled', () => {
+    it('finds each due canonical row, with its date, and none of the rest', async () => {
         const past = new Date(Date.now() - 60_000);
         const future = new Date(Date.now() + 60_000);
         const site = await globalRepository.create(
@@ -76,19 +76,8 @@ describe('publishDueScheduled', () => {
             { status: 'published', publishedAt: past }
         );
 
-        expect(await globalRepository.publishDueScheduled(new Date())).toBe(1);
-
-        expect((await globalRepository.findByKey('site'))?.status).toBe('published');
-        expect((await globalRepository.findByKey('site', 'de'))?.status).toBe(
-            'scheduled'
-        );
-        expect(
-            (await globalRepository.staging.findOne({ id: site.id, locale: 'en' }))
-                ?.status
-        ).toBe('scheduled');
-        // Publishing keeps the date the row was scheduled for.
-        expect((await globalRepository.findByKey('site'))?.publishedAt?.getTime()).toBe(
-            past.getTime()
-        );
+        expect(await globalRepository.findDueScheduled(new Date())).toEqual([
+            { key: 'site', locale: 'en', publishedAt: past },
+        ]);
     });
 });

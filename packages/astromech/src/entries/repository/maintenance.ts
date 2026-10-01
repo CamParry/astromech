@@ -4,10 +4,18 @@
  * the per-type repository contract; keeping them here keeps raw DB out of jobs.
  */
 
-import { encodePatchWith } from '@/database/codec';
+import { decodeWith } from '@/database/codec';
 import { getDb } from '@/database/registry';
 import { createRepository } from '@/database/repository/create-repository';
 import { entriesTable, entryContentTable } from '@/database/tables';
+
+/** One locale of one entry, as `findDueScheduled` names it, with its publish time. */
+type DueScheduledEntry = {
+    type: string;
+    id: string;
+    locale: string;
+    publishedAt: Date | null;
+};
 
 export type EntryMaintenanceRepository = ReturnType<
     typeof createEntryMaintenanceRepository
@@ -17,33 +25,37 @@ function createEntryMaintenanceRepository() {
     const entries = createRepository(entriesTable);
 
     /**
-     * Transition every scheduled content row whose publish time has passed to
-     * published. Returns the number of rows transitioned.
+     * Every canonical content row of a live entry that is scheduled and whose
+     * publish time has passed, for the `scheduled-publish` job to publish.
      */
-    async function publishDueScheduled(now: Date): Promise<number> {
+    async function findDueScheduled(now: Date): Promise<DueScheduledEntry[]> {
         // Raw: the trash filter lives on the entry row, which the `where` DSL
         // cannot reach from `entry_content`.
-        const result = await getDb()
-            .updateTable('entryContent')
-            .set(encodePatchWith(entryContentTable, { status: 'published' }))
+        const rows = await getDb()
+            .selectFrom('entryContent')
+            .innerJoin('entries', 'entries.id', 'entryContent.entryId')
+            .select([
+                'entries.type',
+                'entryContent.entryId as id',
+                'entryContent.locale',
+                'entryContent.publishedAt',
+            ])
             .where((eb) =>
                 eb.and([
-                    eb('status', '=', 'scheduled'),
-                    eb('publishedAt', '<=', now.toISOString()),
+                    eb('entryContent.status', '=', 'scheduled'),
+                    eb('entryContent.publishedAt', '<=', now.toISOString()),
                     // Canonical rows only: a staged change publishes at its merge.
-                    eb('stagedFor', 'is', null),
-                    eb(
-                        'entryId',
-                        'in',
-                        eb
-                            .selectFrom('entries')
-                            .select('entries.id')
-                            .where('entries.deletedAt', 'is', null)
-                    ),
+                    eb('entryContent.stagedFor', 'is', null),
+                    eb('entries.deletedAt', 'is', null),
                 ])
             )
-            .executeTakeFirst();
-        return Number(result.numUpdatedRows);
+            .execute();
+        return rows.map((row) => {
+            const { publishedAt } = decodeWith(entryContentTable, {
+                publishedAt: row.publishedAt,
+            });
+            return { ...row, publishedAt };
+        });
     }
 
     /**
@@ -60,7 +72,7 @@ function createEntryMaintenanceRepository() {
         return doomed;
     }
 
-    return { publishDueScheduled, purgeTrashedBefore };
+    return { findDueScheduled, purgeTrashedBefore };
 }
 
 /** The entry maintenance repository. Stateless: the db handle resolves per call. */
