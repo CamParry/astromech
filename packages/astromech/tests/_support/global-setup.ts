@@ -2,9 +2,9 @@
  * Vitest `globalSetup` for every suite that loads `harness.ts`: core's and the
  * plugins' (through `plugin-vitest-config.ts`).
  *
- * It makes one temp directory per run for the harness's test databases, and
- * migrates one database file there, the template that `createTestDb()` copies
- * for each test. Copying a file is far cheaper than running the migration chain
+ * It sets the environment every such suite shares, makes one temp directory per
+ * run for the harness's test databases, and migrates one database file there,
+ * the template that `createTestDb()` copies for each test. Copying a file is far cheaper than running the migration chain
  * per test. Both paths reach the workers through `provide`. The returned
  * teardown runs in the main process once every worker has finished, so the
  * directory goes even though a worker thread never sees `process.on('exit')`.
@@ -49,6 +49,9 @@ async function buildTemplate(file: string): Promise<void> {
 }
 
 export default async function setup(project: TestProject): Promise<() => void> {
+    // Better Auth warns on every instance built without a base URL. Set here,
+    // before the workers start, so they inherit it.
+    process.env['BETTER_AUTH_URL'] ??= 'http://localhost:4321';
     const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'astromech-test-'));
     const template = path.join(dir, 'template.db');
     try {

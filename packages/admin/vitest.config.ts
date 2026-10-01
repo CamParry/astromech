@@ -77,6 +77,11 @@ const projects = [
 export default defineConfig({
     test: {
         projects,
+        // Files and tests run in a random order, so a test that leans on another's
+        // leftovers fails. Vitest reads this for every project from here, not from
+        // a project's own config, and prints the seed as the run starts;
+        // `--sequence.seed=<n>` replays that order.
+        sequence: { shuffle: true },
         // Shared by both projects. Reports go to `coverage/`, which git ignores.
         coverage: {
             provider: 'v8',

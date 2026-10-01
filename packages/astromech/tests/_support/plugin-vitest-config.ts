@@ -15,6 +15,9 @@ export function pluginVitestConfig(): ViteUserConfig {
         test: {
             environment: 'node',
             include: ['tests/**/*.test.ts', 'tests/**/*.test.tsx'],
+            // A random order, as in core's config. Vitest prints the seed as the
+            // run starts; `--sequence.seed=<n>` replays that order.
+            sequence: { shuffle: true },
             // Undoes every `vi.spyOn` before the next test, as core's config does.
             restoreMocks: true,
             // Makes the run's temp directory for `harness.ts`'s test databases

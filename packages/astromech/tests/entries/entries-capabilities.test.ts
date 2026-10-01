@@ -8,7 +8,7 @@
 
 import type { AstromechConfig } from '@/types/index';
 import { createTestDb, makeTestConfig, setupTestConfig } from '@tests/harness';
-import { beforeAll, describe, expect, it } from 'vitest';
+import { beforeEach, describe, expect, it } from 'vitest';
 import { currentServices } from '@/app-context/services';
 import { CapabilityError } from '@/errors/capability';
 
@@ -57,7 +57,7 @@ function makeCapabilityTestConfig(): AstromechConfig {
     };
 }
 
-beforeAll(async () => {
+beforeEach(async () => {
     await createTestDb();
     setupTestConfig(makeCapabilityTestConfig());
 });
