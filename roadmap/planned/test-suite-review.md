@@ -201,7 +201,7 @@ Measured here, that comes out as three steps:
   the admin and plugin suites when core's `src` changed, because they compile
   core from source. Beck's "always run all the tests (except long-running
   tests)" applies once the package suite is fast: core takes 84 s today and
-  25 s with the template database (stage 2).
+  25 s with the template database (stage 2a).
 - **Before a change lands**: `pnpm run verify`, plus the boot and install
   checks, plus a shuffled run.
 
@@ -296,26 +296,44 @@ A question about bound service methods throwing synchronously is in
 
 ## Implementation plan
 
-Each stage lands on main before the next starts. The audit reports in
-`specs/test-suite-review/` name the files for every item. Stages 2 and 4 touch
-many test files, so each runs on its own branch and worktree, one commit per
-item, with the whole core suite run before and after to show the test count
-did not drop.
+From stage 2 on, each stage lands on main before the next starts. The audit
+reports in `specs/test-suite-review/` name the files for every item. Stages 2b
+and 4 touch many test files, so each runs on its own branch and worktree, one
+commit per item, with the whole core suite run before and after to show the
+test count did not drop.
 
 ### Stage 1: the live defect
+
+Independent of the test setup, so it runs as its own small branch alongside any
+other stage rather than ahead of them.
 
 - [ ] Fix [permission-catalogue-drifts-from-manifest](permission-catalogue-drifts-from-manifest.md),
       starting with its failing test.
 
-### Stage 2: the test setup
+### Stage 2a: the template database
 
-The foundation for everything after it, and the source of most of the speed.
+Lands alone, before anything else in stage 2, because it touches only the
+harness and eight test files and every later stage runs faster for it.
 
 - [ ] Build the migrated template database once per run in
       `packages/astromech/tests/_support/global-setup.ts`, `provide` its path,
-      and have `createTestDb()` copy it. Move the eight files that call
-      `createFileTestDb` onto `createTestDb` and delete the helper. Expect core
-      near 25 s.
+      and have `createTestDb()` copy it. Close the template's connection, or
+      turn off WAL, before the first copy: a copy of the `.db` file alone
+      misses anything still in the write-ahead log. The measured version
+      migrated one template per worker inside `createTestDb()`; if the
+      global-setup version gives trouble, fall back to that.
+- [ ] Move the eight files that call `createFileTestDb` onto `createTestDb` and
+      delete the helper. Expect core near 25 s.
+- [ ] Update the setup paragraph of the `testing` skill to describe the
+      template database.
+- [ ] Measure `verify:fast` again, step by step, and pick the next speed target
+      from the result. Typecheck (69 s) and lint (76 s) measured slower than
+      core will be, and the admin (30 s) becomes the slowest suite, all on a
+      loaded machine. Running only the packages a branch touched (stage 3) is
+      the likely candidate.
+
+### Stage 2b: one setup and reset
+
 - [ ] Extract the driver registration in `packages/astromech/src/astromech.ts`
       (storage, image, email) into one function that boot and the harness both
       call, and build the test database through the real libsql driver. Delete
@@ -327,15 +345,20 @@ The foundation for everything after it, and the source of most of the speed.
       plugin for real on the harness database, and move all six plugins onto
       it. Have the assistant compile core from source like the others, if its
       `dist` dependency allows.
-- [ ] Fix the D1 order dependency, set `BETTER_AUTH_URL` for tests, and add a
-      shuffled run with the seed printed to `verify`.
+- [ ] Fix the D1 order dependency and set `BETTER_AUTH_URL` for tests. Then
+      shuffle the existing runs (`sequence.shuffle`) rather than adding a
+      second run, which cost 208 s. Confirm the seed appears in the output so
+      a failure can be reproduced, and print it if Vitest does not.
 - [ ] Fail a test on an unexpected `console.error` or `console.warn`; an
       expected one is asserted.
-- [ ] Update the setup paragraph of the `testing` skill to describe the
-      template database.
 
 ### Stage 3: agent guardrails
 
+- [ ] Make `pnpm -F <package> test:run -- <path>` run only that file, or fail
+      loudly. Today pnpm passes the `--` through and vitest runs the whole
+      suite (160 to 200 s instead of about 2 s). Without the `--` it already
+      filters. Root `AGENTS.md` and the `testing` skill name the working
+      command, but agents reach for this one first.
 - [ ] Share one base vitest config across packages for the settings that should
       not differ: `requireAssertions`, `allowOnly: false`, timeouts, the
       console policy and `restoreMocks`. Record why any package differs.
