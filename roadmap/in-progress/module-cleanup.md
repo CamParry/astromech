@@ -36,6 +36,9 @@ the repository copies.
       and an index built from raw input. Drop `data`, as `entries.createStaged`
       has, or parse it. An entry staged update may also write `status`, which
       globals refuse.
+- [ ] **A staged slug is lost at merge.** `entries/methods/staging/merge.ts`
+      writes only the staged `title` and `fields`. Carry the slug, or refuse a
+      slug in a staged write.
 - [ ] **`valuesEqual` depends on key order.** `utilities/values-equal.ts` compares
       with `JSON.stringify`, so a `unique` check sees `{a,b}` and `{b,a}` as
       different. Keep only `utilities/deep-equal.ts`.
@@ -45,12 +48,6 @@ the repository copies.
       from one `useAdminNav()`.
 - [ ] **Creating a user toasts "User updated."** (`packages/admin/src/`, the users
       mutation table).
-- [ ] **A plugin method's string or function `access` reads as allowed.** The
-      manifest carries core access as `permission` + `permissionDynamic` and
-      plugin access as `access` + `permission` (`codegen/method-manifest.ts`), so
-      `policies/annotate-manifest.ts` branches on source and annotates those forms
-      `allowed: true`. No first-party plugin uses them. Give every manifest
-      method one access shape, read through `permissions/access.ts`.
 
 ## Copies
 
@@ -121,8 +118,8 @@ the repository copies.
       time: `content/schema.ts` builds `usageSchema` from it, and
       `content/resources.ts` imports the resource schemas, which import
       `content/schema.ts`. Break that cycle first.
-- [ ] `utilities/` is a mixed bag: `ai-context.ts` to `ai/`,
-      `permission-match.ts` to `permissions/`, `locale.ts` to its one consumer.
+- [ ] `utilities/` is a mixed bag: `ai-context.ts` to `ai/`, `locale.ts` to its
+      one consumer. `permission-match.ts` is in `planned/permissions.md`.
 - [ ] The plugin runtime keeps its own config copy with its own defaults
       (`plugins/runtime/plugin-runtime.ts`); read `app.config`.
 - [ ] `MediaQueryParams` and `UserQueryParams` are hand-written copies of their
@@ -140,7 +137,7 @@ the repository copies.
       override and a client override, all to answer `{ data: { count } }`.
 - [ ] `globals.get({ staged })`, which only a test uses; the admin calls
       `getStaged`.
-- [ ] `defineAbsolutePermissions`, `CELL_KINDS`, `badRequest`'s `details`, the
+- [ ] `CELL_KINDS`, `badRequest`'s `details`, the
       unreachable try/catch in `transport/mcp/tools.ts`, and
       `createEntriesService`'s two parameters that only ever take one value.
 - [ ] Two unrelated `pluginNamespace` exports; rename the Proxy builder.

@@ -31,15 +31,9 @@ Finished items are deleted rather than ticked; the record of what shipped is in
 - [ ] Reconcile entry `destructive` semantics: `entries.publish` collapses publish+unpublish into one action, so "unpublish is destructive" can't be expressed. Revisit when the permission model gains an `unpublish` action
 - [ ] No way for a plugin service method to opt out of the method manifest. Every method a plugin declares becomes a CLI/MCP/AI tool, but some exist only to serve the plugin's own admin UI — P9's assistant session read/clear are the first, and they surface as MCP tools that no model should be reaching for. The loop already refuses plugin-source methods when scoped and MCP is dev-only, so today it is noise rather than exposure. The precedent for a declaration that steers the transport is `binaryInput` on `media.upload`
 
-### Hooks
-
-- [ ] Only entries (create, update, delete) and globals (update) fire hooks; users and media fire none. Payload and Strapi give every collection hooks, uploads and users included. Decide the user and media events and their payloads. The method file shape already reserves the before and after hook steps (`completed/method-file-consistency.md`)
-
 ### Plugins
 
 - [ ] `PluginDefinition.requiredEnv` exists, is validated at boot with a clear error, and no shipped plugin declares it. The one env var a plugin genuinely depends on — the assistant's `ANTHROPIC_API_KEY` — can't use it, because the AI SDK reads the key during config evaluation (before plugin boot), which is why site configs must open with `import 'dotenv/config'`. Either find `requiredEnv` a real first user or decide the config-evaluation-time class of env needs its own answer
-- [ ] A plugin can't type its own declared hook-event payloads. `AstromechPluginHookEvents` is codegen-augmented per **site**, so inside a plugin package `defineHook`'s handler parameter resolves to `unknown` and every handler needs an in-body cast (see `@astromech/forms`' spam hook). Annotating the parameter directly is a contravariance error. Some way for a plugin to declare the payload type alongside the event name would remove the cast
-- [ ] A plugin service method cannot throw core's typed errors. `ValidationError` and a not-found error are not exported to plugins, so `@astromech/redirects` answers `null` for an `update` of an unknown id instead of a 404, and two writers racing past its `isUnique` check hit the unique index on `from` and get a 500 instead of a 422. Export the errors a plugin method may throw (from `completed/plugin-owned-data.md`)
 
 ### Tooling
 
