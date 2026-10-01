@@ -139,6 +139,8 @@ the repository copies.
       unreachable try/catch in `transport/mcp/tools.ts`, and
       `createEntriesService`'s two parameters that only ever take one value.
 - [ ] Two unrelated `pluginNamespace` exports; rename the Proxy builder.
+- [ ] `SlugConfig`'s `source` and `prefix` (`types/config.ts`): nothing reads
+      them, since a slug always derives from the title.
 
 ## Public API
 
