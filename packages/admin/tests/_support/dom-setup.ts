@@ -1,9 +1,12 @@
 /**
  * Setup for every admin test file, registered in the admin's `vitest.config.ts`.
  *
- * It does nothing in a node-environment file. In a happy-dom file it does three
- * things:
+ * In every file it turns off i18next's sponsor notice. In a happy-dom file it
+ * also does four things:
  *
+ * - It starts i18next with no strings, so a component's `useTranslation` renders
+ *   each key rather than warning, whichever file ran before. A file that needs
+ *   strings starts it again with its own.
  * - It turns on React's act environment (`IS_REACT_ACT_ENVIRONMENT`), which
  *   React checks before it warns about `act(...)`.
  * - It unmounts whatever Testing Library rendered after each test. Vitest's
@@ -30,14 +33,25 @@
  * both globals back, so neither reaches a node file that runs next in the same
  * worker.
  */
-import { afterAll, afterEach } from 'vitest';
+import { afterAll, afterEach, beforeAll } from 'vitest';
 
 const reactGlobals = globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean | undefined };
 
+// i18next logs a sponsor notice on its first start in each worker otherwise.
+process.env['I18NEXT_NO_SUPPORT_NOTICE'] = 'true';
+
 if (typeof window !== 'undefined') {
-    // Imported here so node-environment files never load react-dom.
+    // Imported here so node-environment files never load React.
     const { cleanup } = await import('@testing-library/react');
+    const { default: i18n } = await import('i18next');
+    const { initReactI18next } = await import('react-i18next');
     installDomGuards(cleanup);
+    beforeAll(async () => {
+        await i18n.use(initReactI18next).init({
+            lng: 'en',
+            resources: { en: { translation: {} } },
+        });
+    });
 }
 
 function installDomGuards(cleanup: () => void): void {

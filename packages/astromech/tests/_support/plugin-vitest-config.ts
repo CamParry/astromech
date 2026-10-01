@@ -23,6 +23,8 @@ export function pluginVitestConfig(): ViteUserConfig {
             // Makes the run's temp directory for `harness.ts`'s test databases
             // and removes it at the end.
             globalSetup: [fileURLToPath(new URL('./global-setup.ts', import.meta.url))],
+            // Fails a test on console output it did not declare with `expectConsole`.
+            setupFiles: [fileURLToPath(new URL('./console-guard.ts', import.meta.url))],
         },
     };
 }

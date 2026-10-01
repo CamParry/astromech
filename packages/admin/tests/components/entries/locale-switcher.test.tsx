@@ -97,6 +97,8 @@ function mountSwitcher(options: {
     const router = createRouter({
         routeTree: rootRoute.addChildren([switcherRoute]),
         history: createMemoryHistory({ initialEntries: ['/'] }),
+        // The switcher navigates to the edit page, which this tree leaves out.
+        defaultNotFoundComponent: () => null,
     });
 
     render(

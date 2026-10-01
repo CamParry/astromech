@@ -138,6 +138,8 @@ function mountPage() {
     const router = createRouter({
         routeTree: rootRoute.addChildren([versionsRoute]),
         history: createMemoryHistory({ initialEntries: [`${BASE_PATH}/versions`] }),
+        // A restore navigates to the edit page, which this tree leaves out.
+        defaultNotFoundComponent: () => null,
     });
 
     render(

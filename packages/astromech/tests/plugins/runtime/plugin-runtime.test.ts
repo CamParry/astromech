@@ -8,7 +8,7 @@ import type {
     User,
 } from '@/types/index';
 import { adminRole } from '@tests/fixtures';
-import { resetRuntime } from '@tests/harness';
+import { createTestDb } from '@tests/harness';
 import { createElement } from 'react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { z } from 'zod';
@@ -106,8 +106,9 @@ const user: User = {
     updatedAt: new Date(),
 };
 
-beforeEach(() => {
-    resetRuntime();
+// A database, so `bootPlugins` can record each plugin as it boots.
+beforeEach(async () => {
+    await createTestDb();
     vi.restoreAllMocks();
 });
 

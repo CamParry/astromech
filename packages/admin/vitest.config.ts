@@ -24,8 +24,12 @@ const alias = {
 
 const include = ['tests/**/*.test.ts', 'tests/**/*.test.tsx'];
 
-// Runs before every test file, and only acts in a happy-dom one.
-const setupFiles = ['tests/_support/dom-setup.ts'];
+// Run before every test file. Core's console guard fails a test on console
+// output it did not declare; `dom-setup.ts` only acts in a happy-dom file.
+const setupFiles = [
+    fromHere('../astromech/tests/_support/console-guard.ts'),
+    'tests/_support/dom-setup.ts',
+];
 
 // Worker threads start faster than child processes and share the transform
 // cache, and nothing here needs a process of its own.

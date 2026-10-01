@@ -6,6 +6,7 @@
 import type { EmailDriver, PluginDefinition } from '@/types/index';
 import type { OpenAPIHono } from '@hono/zod-openapi';
 import type { ReactElement } from 'react';
+import { expectConsole } from '@tests/console';
 import { createTestDb, makeTestConfig, setupTestConfig } from '@tests/harness';
 import { createElement } from 'react';
 import { beforeEach, describe, expect, it } from 'vitest';
@@ -54,6 +55,8 @@ describe('password reset for an admin-created user', () => {
         const user = await usersService.create({
             data: { email: EMAIL, name: 'Invited', role: DEFAULT_ROLE_SLUG },
         });
+        // Better Auth warns on a sign-in for a user with no password yet.
+        expectConsole('warn', 'Credential account not found');
         const before = await postAuth('sign-in/email', {
             email: EMAIL,
             password: PASSWORD,

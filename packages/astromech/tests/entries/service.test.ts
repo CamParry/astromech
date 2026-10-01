@@ -5,6 +5,7 @@
  */
 
 import type { Entry, PluginDefinition } from '@/types/index';
+import { expectConsole } from '@tests/console';
 import {
     createTestDb,
     makeTestConfig,
@@ -1405,7 +1406,7 @@ describe('hooks', () => {
 
     it('fails as the hook’s error when beforeUpdate leaves data its schema refuses', async () => {
         const entry = await api.create({ type: 'post', data: { title: 'Before' } });
-        vi.spyOn(console, 'error').mockImplementation(() => undefined);
+        expectConsole('error', 'entry:beforeUpdate returned data that fails its schema');
         const resolved = setupTestConfig();
         registerTestPlugins(
             [

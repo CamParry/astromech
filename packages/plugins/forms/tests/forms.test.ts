@@ -29,6 +29,7 @@ import type {
     PluginDefinition,
 } from '@/types/index';
 import type { PluginTestApp } from '@tests/plugin-app';
+import { expectConsole } from '@tests/console';
 import { roleWith } from '@tests/fixtures';
 import { makeTestConfig, registerTestPlugins, setupTestConfig } from '@tests/harness';
 import { createPluginTestApp } from '@tests/plugin-app';
@@ -391,6 +392,7 @@ describe('forms.submit — emails', () => {
         await setup();
         await createContactForm(NOTIFYING);
         vi.spyOn(recordingEmail, 'send').mockRejectedValue(new Error('smtp is down'));
+        expectConsole('error', 'failed to send form notification to ops@example.com');
 
         const result = await submit({
             slug: 'contact',

@@ -12,6 +12,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { migrateToLatest } from '@astromech/schema-engine';
+import { expectConsole } from '@tests/console';
 import { makeTestConfig, resetRuntime, setupTestConfig } from '@tests/harness';
 import { getMigrations } from 'better-auth/db/migration';
 import { sql } from 'kysely';
@@ -71,6 +72,11 @@ describe('a fresh generate from CORE_TABLES', () => {
     });
 
     it('creates every table and column Better Auth needs', async () => {
+        // Better Auth expects a date column type; Astromech stores ISO text.
+        expectConsole(
+            'warn',
+            /has a different type in the database\. Expected date but got TEXT/
+        );
         const { toBeCreated, toBeAdded } = await getMigrations(getAuth().options);
 
         expect(toBeCreated).toEqual([]);
