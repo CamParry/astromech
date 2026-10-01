@@ -30,6 +30,10 @@ Finished items are deleted rather than ticked; the record of what shipped is in
 - [ ] Reconcile entry `destructive` semantics: `entries.publish` collapses publish+unpublish into one action, so "unpublish is destructive" can't be expressed. Revisit when the permission model gains an `unpublish` action
 - [ ] No way for a plugin service method to opt out of the method manifest. Every method a plugin declares becomes a CLI/MCP/AI tool, but some exist only to serve the plugin's own admin UI — P9's assistant session read/clear are the first, and they surface as MCP tools that no model should be reaching for. The loop already refuses plugin-source methods when scoped and MCP is dev-only, so today it is noise rather than exposure. The precedent for a declaration that steers the transport is `binaryInput` on `media.upload`
 
+### Services
+
+- [ ] To discuss: a bound service method throws synchronously when its input fails to parse, rather than returning a rejected promise, so a caller's `.catch()` misses the error and tests need an `attempt()` wrapper (`packages/astromech/tests/entries/write-policy.test.ts`, `packages/astromech/tests/services/define-service.test.ts`). Decide whether bound methods always reject. Raised by the test suite review (`roadmap/planned/test-suite-review.md`)
+
 ### Plugins
 
 - [ ] `PluginDefinition.requiredEnv` exists, is validated at boot with a clear error, and no shipped plugin declares it. The one env var a plugin genuinely depends on — the assistant's `ANTHROPIC_API_KEY` — can't use it, because the AI SDK reads the key during config evaluation (before plugin boot), which is why site configs must open with `import 'dotenv/config'`. Either find `requiredEnv` a real first user or decide the config-evaluation-time class of env needs its own answer
