@@ -2,7 +2,7 @@
 
 Scope: `packages/astromech/tests/` directories `database`, `entries`, `content`,
 `fields`, `services`, `globals`, `media`, `users`, `storage`, and `_support/`.
-Yardstick: the 31 principles in `roadmap/planned/test-suite-review.md` (cited as P1 to P31).
+Yardstick: the 31 principles in `roadmap/in-progress/test-suite-review.md` (cited as P1 to P31).
 Read-only audit done on 2026-10-01. No tests were run. The coverage figures come
 from `packages/astromech/coverage/coverage-summary.json`, dated 2026-09-28.
 

@@ -28,7 +28,7 @@ are deleted when this work ships.
   `AGENTS.md`, the per-feature `test/<feature>/config.ts` pattern and the Vitest
   fixtures in `test/__helpers/int/vitest.ts`.
 - **Strapi** (https://github.com/strapi/strapi): `AGENTS.md`, the API test
-  builder in `packages/utils/api-tests/`, and the CI matrix.
+  builder in packages/utils/api-tests/, and the CI matrix.
 - **WordPress**: the core handbook
   (https://make.wordpress.org/core/handbook/testing/automated-testing/writing-phpunit-tests/),
   `tests/phpunit/includes/abstract-testcase.php` in wordpress-develop, and
@@ -278,7 +278,7 @@ a request it did not mock. The problems, ranked by the cost of leaving them:
    from its migration.
 5. **Suites copied across resources.** About 158 tests repeat across entries,
    globals, media and users, and the plugin contract tests are copied three to
-   five times. `content/resource-conformance.test.ts` already shows the cure.
+   five times. `packages/astromech/tests/content/resource-conformance.test.ts` already shows the cure.
 6. **About 190 `as unknown as` and `as never` casts**, some in the shared
    test helpers that agents copy.
 7. **Commands that mislead an agent.** `test:run -- <file>` runs the whole
@@ -290,7 +290,7 @@ a request it did not mock. The problems, ranked by the cost of leaving them:
    commands, and the types of `defineServiceMethod`.
 
 The audit also found a live defect, now its own file:
-[permission-catalogue-drifts-from-manifest](permission-catalogue-drifts-from-manifest.md).
+[permission-catalogue-drifts-from-manifest](../planned/permission-catalogue-drifts-from-manifest.md).
 A question about bound service methods throwing synchronously is in
 `roadmap/backlog.md` to discuss separately.
 
@@ -307,7 +307,7 @@ test count did not drop.
 Independent of the test setup, so it runs as its own small branch alongside any
 other stage rather than ahead of them.
 
-- [ ] Fix [permission-catalogue-drifts-from-manifest](permission-catalogue-drifts-from-manifest.md),
+- [ ] Fix [permission-catalogue-drifts-from-manifest](../planned/permission-catalogue-drifts-from-manifest.md),
       starting with its failing test.
 
 ### Stage 2a: the template database
@@ -396,9 +396,9 @@ harness and eight test files and every later stage runs faster for it.
 - [ ] Replace the seven hand-written storage fakes with the filesystem driver,
       plus one `StorageDriver` contract test run against every driver.
 - [ ] Delete or rewrite the tests that cannot fail (`cron-table`,
-      `content/repository-surface`, `content/shared-helpers`, the admin
+      `packages/astromech/tests/content/repository-surface.test.ts`, `packages/astromech/tests/content/shared-helpers.test.ts`, the admin
       `cell-registry` case), fix the admin field-registry leak, rewrite
-      `cron/runner.test.ts` and `method-manifest.test.ts` as tables, and move
+      `packages/astromech/tests/cron/runner.test.ts` and `method-manifest.test.ts` as tables, and move
       `permission-match.test.ts` off the retired permission grammar.
 
 ### Stage 5: missing coverage

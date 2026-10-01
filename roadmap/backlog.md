@@ -32,7 +32,7 @@ Finished items are deleted rather than ticked; the record of what shipped is in
 
 ### Services
 
-- [ ] To discuss: a bound service method throws synchronously when its input fails to parse, rather than returning a rejected promise, so a caller's `.catch()` misses the error and tests need an `attempt()` wrapper (`packages/astromech/tests/entries/write-policy.test.ts`, `packages/astromech/tests/services/define-service.test.ts`). Decide whether bound methods always reject. Raised by the test suite review (`roadmap/planned/test-suite-review.md`)
+- [ ] To discuss: a bound service method throws synchronously when its input fails to parse, rather than returning a rejected promise, so a caller's `.catch()` misses the error and tests need an `attempt()` wrapper (`packages/astromech/tests/entries/write-policy.test.ts`, `packages/astromech/tests/services/define-service.test.ts`). Decide whether bound methods always reject. Raised by the test suite review (`roadmap/in-progress/test-suite-review.md`)
 
 ### Plugins
 

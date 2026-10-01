@@ -1,4 +1,4 @@
-# Core platform tests: audit against `roadmap/planned/test-suite-review.md`
+# Core platform tests: audit against `roadmap/in-progress/test-suite-review.md`
 
 Scope: `packages/astromech/tests/` directories transport, auth, permissions,
 policies, plugins, config, codegen, integrations, ai, cron, notifications,

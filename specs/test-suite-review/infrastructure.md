@@ -7,7 +7,7 @@ absolute numbers as indicative and the ratios between runs as the signal.
 Paired comparisons (current harness against template harness) ran back to back
 at the same load.
 
-Yardstick: `roadmap/planned/test-suite-review.md` (principle numbers cited as
+Yardstick: `roadmap/in-progress/test-suite-review.md` (principle numbers cited as
 P13 and so on), `.claude/_skills/testing/SKILL.md`, the `AGENTS.md` files,
 `roadmap/completed/verification-gate-speed.md`,
 `roadmap/completed/ci-runs-the-whole-gate.md`.
