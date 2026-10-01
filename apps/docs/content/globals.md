@@ -224,8 +224,11 @@ puts it live at once.
 Unpublishing clears the date, and scheduling keeps the one it names. A
 scheduled global goes live on the first run of the built-in `scheduled-publish`
 job after its date, as a scheduled entry does
-([../configuration/scheduler.md](../configuration/scheduler.md)); that move is
-one bulk write and fires no hooks.
+([../configuration/scheduler.md](../configuration/scheduler.md)). The job
+publishes each row as an update, so the update hooks fire, and it keeps the
+scheduled date. A row the job cannot publish, such as one whose fields have
+since become incomplete, is logged and stays scheduled, and the next run tries
+it again.
 
 ## Staged changes
 

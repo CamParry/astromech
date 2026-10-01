@@ -21,8 +21,8 @@ beforeEach(async () => {
     setupTestConfig();
 });
 
-describe('publishDueScheduled', () => {
-    it('publishes every due entry in a single batch and leaves the rest untouched', async () => {
+describe('findDueScheduled', () => {
+    it('finds each due scheduled entry, with its date, and none of the rest', async () => {
         const past = new Date(Date.now() - 60_000);
         const future = new Date(Date.now() + 60_000);
 
@@ -34,20 +34,20 @@ describe('publishDueScheduled', () => {
             publishedAt: past,
         });
         const due2 = await entryRepository.create({
-            type: 'post',
+            type: 'note',
             title: 'Due 2',
             slug: 'due-2',
             status: 'scheduled',
             publishedAt: past,
         });
-        const notDue = await entryRepository.create({
+        await entryRepository.create({
             type: 'post',
             title: 'Not due',
             slug: 'not-due',
             status: 'scheduled',
             publishedAt: future,
         });
-        const alreadyPublished = await entryRepository.create({
+        await entryRepository.create({
             type: 'post',
             title: 'Already',
             slug: 'already',
@@ -55,25 +55,18 @@ describe('publishDueScheduled', () => {
             publishedAt: past,
         });
 
-        const count = await entryMaintenanceRepository.publishDueScheduled(new Date());
-        expect(count).toBe(2);
+        const due = await entryMaintenanceRepository.findDueScheduled(new Date());
 
-        expect(
-            (await entryRepository.findOne({ type: 'post', id: due1.id }))?.status
-        ).toBe('published');
-        expect(
-            (await entryRepository.findOne({ type: 'post', id: due2.id }))?.status
-        ).toBe('published');
-        expect(
-            (await entryRepository.findOne({ type: 'post', id: notDue.id }))?.status
-        ).toBe('scheduled');
-        expect(
-            (await entryRepository.findOne({ type: 'post', id: alreadyPublished.id }))
-                ?.status
-        ).toBe('published');
+        expect(due).toEqual(
+            expect.arrayContaining([
+                { type: 'post', id: due1.id, locale: 'en', publishedAt: past },
+                { type: 'note', id: due2.id, locale: 'en', publishedAt: past },
+            ])
+        );
+        expect(due).toHaveLength(2);
     });
 
-    it('publishes each due locale independently', async () => {
+    it('finds each due locale on its own', async () => {
         const past = new Date(Date.now() - 60_000);
         const entry = await entryRepository.create({
             type: 'post',
@@ -87,18 +80,12 @@ describe('publishDueScheduled', () => {
             { title: 'DE', slug: 'de-not-due', status: 'unpublished' }
         );
 
-        expect(await entryMaintenanceRepository.publishDueScheduled(new Date())).toBe(1);
+        const due = await entryMaintenanceRepository.findDueScheduled(new Date());
 
-        expect(
-            (await entryRepository.findOne({ type: 'post', id: entry.id }))?.status
-        ).toBe('published');
-        expect(
-            (await entryRepository.findOne({ type: 'post', id: entry.id, locale: 'de' }))
-                ?.status
-        ).toBe('unpublished');
+        expect(due.map((row) => row.locale)).toEqual(['en']);
     });
 
-    it('leaves a due staged row scheduled: it publishes at its merge', async () => {
+    it('skips a due staged row: it publishes at its merge', async () => {
         const past = new Date(Date.now() - 60_000);
         const entry = await entryRepository.create({
             type: 'post',
@@ -111,16 +98,10 @@ describe('publishDueScheduled', () => {
             { title: 'Staged', slug: 'live', status: 'scheduled', publishedAt: past }
         );
 
-        expect(await entryMaintenanceRepository.publishDueScheduled(new Date())).toBe(0);
-
-        const staged = await entryRepository.staging.findOne({ id: entry.id });
-        expect(staged?.status).toBe('scheduled');
-        expect(
-            (await entryRepository.findOne({ type: 'post', id: entry.id }))?.status
-        ).toBe('unpublished');
+        expect(await entryMaintenanceRepository.findDueScheduled(new Date())).toEqual([]);
     });
 
-    it('excludes trashed entries even if their publish time has passed', async () => {
+    it('skips trashed entries even if their publish time has passed', async () => {
         const past = new Date(Date.now() - 60_000);
         const trashed = await entryRepository.create({
             type: 'post',
@@ -131,8 +112,7 @@ describe('publishDueScheduled', () => {
         });
         await entryRepository.trash.trash(trashed.id);
 
-        const count = await entryMaintenanceRepository.publishDueScheduled(new Date());
-        expect(count).toBe(0);
+        expect(await entryMaintenanceRepository.findDueScheduled(new Date())).toEqual([]);
     });
 });
 
