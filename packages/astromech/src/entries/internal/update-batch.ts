@@ -1,7 +1,7 @@
 import type { EntryResource } from '../repository/types';
+import type { EntryRowWrite } from './prepare-row';
 import type {
     AppContext,
-    EntryCreateContext,
     EntryStatus,
     JsonObject,
     ParsedEntryUpdateData,
@@ -24,10 +24,11 @@ import { UnknownEntryTypeError } from '../errors';
 import { getEntryOfType } from '../read-entry';
 import { syncEntryRelationships } from '../relationships';
 import { entryRepository } from '../repository/entries-table';
-import { createEntrySchema, entrySchema, updateEntrySchema } from '../schema';
+import { entrySchema, updateEntrySchema } from '../schema';
 import { entryValidationMode } from '../validation-mode';
 import { prepareEntryFields } from './prepare-fields';
-import { deriveSlug, uniqueSlugIfChanged } from './slug';
+import { prepareEntryRow } from './prepare-row';
+import { uniqueSlugIfChanged } from './slug';
 import { writeBatch } from './write-batch';
 
 /**
@@ -174,16 +175,10 @@ export async function updateEntryBatch(
     return results;
 }
 
-/** The row a new translation writes: `create`'s row, so the same hooks see it. */
-type TranslationWrite = EntryCreateContext['data'] & {
-    createdBy: string | null;
-    updatedBy: string | null;
-};
-
 /** What one id in the batch turns out to be: an edit, or a new translation. */
 type UpdatePlan =
     | { kind: 'update'; id: string; record: EntryResource }
-    | { kind: 'translate'; id: string; write: TranslationWrite };
+    | { kind: 'translate'; id: string; write: EntryRowWrite };
 
 /**
  * Updates one entry with a parsed patch: saves the state it replaces as a
@@ -296,8 +291,8 @@ function completes(
 
 /**
  * The row a missing locale gets: the default-locale row's columns with the
- * caller's patch over them, its shared fields inherited, and `create`'s
- * validation applied to the result. Throws when the entry itself is absent.
+ * caller's patch over them, prepared as `create` prepares a row. Throws when the
+ * entry itself is absent.
  */
 async function planTranslation(params: {
     config: ResolvedConfig;
@@ -306,50 +301,28 @@ async function planTranslation(params: {
     locale: string;
     data: ParsedEntryUpdateData;
     user: User | null;
-}): Promise<TranslationWrite> {
+}): Promise<EntryRowWrite> {
     const { config, entryType, id, locale, data, user } = params;
-    const schema = createEntrySchema({ titled: entryType.titleField !== false });
 
     const source = await getEntryOfType(entryType.id, id);
-    const validated = parseInput(schema, {
-        title: data.title ?? source.title,
-        slug: data.slug ?? source.slug ?? undefined,
-        fields: data.fields,
-        status: data.status ?? source.status,
-        publishedAt: data.publishedAt,
-    });
 
-    const title = validated.title ?? '';
-    const status = validated.status ?? 'unpublished';
-    const slug = await deriveSlug({ entryType, locale, title, slug: validated.slug });
-    const fields = await prepareEntryFields({
-        kind: 'create',
+    // The source row is the current one, so a translation of a scheduled entry
+    // keeps its schedule.
+    return prepareEntryRow({
         config,
         entryType,
-        values: validated.fields ?? {},
         locale,
         entryId: id,
-        status,
+        data: {
+            title: data.title ?? source.title,
+            slug: data.slug ?? source.slug ?? undefined,
+            fields: data.fields,
+            status: data.status ?? source.status,
+            publishedAt: data.publishedAt,
+        },
+        current: source,
         user,
     });
-
-    return {
-        title,
-        slug,
-        locale,
-        fields,
-        status,
-        // The source row is the current one, so a translation of a scheduled
-        // entry keeps its schedule.
-        publishedAt: resolvePublishedAt({
-            status,
-            given: validated.publishedAt,
-            current: source,
-            now: new Date(),
-        }),
-        createdBy: user?.id ?? null,
-        updatedBy: user?.id ?? null,
-    };
 }
 
 /** Writes the planned translation and folds its references into the entry's index. */
@@ -358,7 +331,7 @@ async function writeTranslation(params: {
     type: string;
     id: string;
     locale: string;
-    write: TranslationWrite;
+    write: EntryRowWrite;
 }): Promise<EntryResource> {
     const { config, type, id, locale, write } = params;
     const entry = await entryRepository.update({ id, locale }, write);
