@@ -4,8 +4,15 @@
  * manifest generator and the REST mount call this factory once per type.
  */
 import type { Capability } from '@/entries/capabilities';
-import type { EntriesService, ServiceMethodContract } from '@/types/index';
+import type {
+    EntriesService,
+    Permission,
+    ResolvedEntryType,
+    ServiceMethodContract,
+} from '@/types/index';
 import { z } from '@hono/zod-openapi';
+import { declaresCapability } from '@/content/capabilities';
+import { availableMethodPermissions } from '@/content/method-permissions';
 import { isCapability } from '@/entries/capabilities';
 import { resolveAccess } from '@/permissions/access';
 import { createEntrySchema, updateEntrySchema } from './schema';
@@ -13,6 +20,9 @@ import { entriesDefinition } from './service';
 
 /** A key on `EntriesService` — the manifest name is `entries.<key>`. */
 export type EntryMethodName = keyof EntriesService;
+
+/** One entry method fixed to a type, with its `requires` narrowed to an entry capability. */
+type EntryMethodContract = ServiceMethodContract & { requires?: Capability };
 
 /**
  * The full method catalogue for one entry type, keyed as `EntriesService` keys
@@ -26,7 +36,7 @@ export type EntryMethodName = keyof EntriesService;
 export function entryCatalogue(params: {
     typeId: string;
     titled: boolean;
-}): Record<EntryMethodName, ServiceMethodContract & { requires?: Capability }> {
+}): Record<EntryMethodName, EntryMethodContract> {
     const { typeId, titled } = params;
     const type = z.literal(typeId);
     const typeSentence = `Entry type: "${typeId}".`;
@@ -66,10 +76,34 @@ export function entryCatalogue(params: {
                 },
             ];
         })
-    ) as unknown as Record<
-        EntryMethodName,
-        ServiceMethodContract & { requires?: Capability }
-    >;
+    ) as unknown as Record<EntryMethodName, EntryMethodContract>;
+}
+
+/**
+ * The methods one entry type offers: its catalogue less each method whose
+ * `requires` the type does not declare.
+ */
+export function availableEntryMethods(
+    entryType: ResolvedEntryType
+): Partial<Record<EntryMethodName, EntryMethodContract>> {
+    const catalogue = entryCatalogue({
+        typeId: entryType.id,
+        titled: entryType.titleField !== false,
+    });
+    return Object.fromEntries(
+        Object.entries(catalogue).filter(([, contract]) =>
+            declaresCapability(entryType, contract.requires)
+        )
+    );
+}
+
+/** The permissions the methods one entry type offers demand, each named once. */
+export function entryMethodPermissions(entryType: ResolvedEntryType): Permission[] {
+    return availableMethodPermissions(
+        entryType,
+        Object.values(entriesDefinition.catalogue),
+        { type: entryType.id }
+    );
 }
 
 /**

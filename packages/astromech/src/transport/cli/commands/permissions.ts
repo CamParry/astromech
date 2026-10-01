@@ -1,5 +1,5 @@
 import { defineCommand } from 'citty';
-import { buildPermissionCatalogue } from '@/permissions/catalogue';
+import { buildPermissionCatalogue } from '@/policies/permission-catalogue';
 import { configArgs, jsonArgs, toAllowRemoteOption } from '../common-args';
 import { loadConfig } from '../config';
 import { printError } from '../output';

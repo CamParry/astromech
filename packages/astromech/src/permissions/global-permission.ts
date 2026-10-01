@@ -7,7 +7,10 @@
 import { QUALIFIED_SEPARATOR } from '@/entries/entry-types';
 
 /** The actions a global permission gates. A global is never created or deleted. */
-export type GlobalAction = 'read' | 'update' | 'publish';
+export const GLOBAL_ACTIONS = ['read', 'update', 'publish'] as const;
+
+/** One of {@link GLOBAL_ACTIONS}. */
+export type GlobalAction = (typeof GLOBAL_ACTIONS)[number];
 
 /** Permission for a host global, e.g. `global:site:update`. */
 export function rootGlobalPermission(key: string, action: GlobalAction): string {

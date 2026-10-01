@@ -770,8 +770,8 @@ exist.
 
 **Entry permissions are derived, never declared.** If your plugin contributes
 entry types, core already generates `plugin:<ns>:entry:<type>:<action>` for
-`read`, `create`, `update`, `delete` (and `publish`, for a versioned type) from
-the registered type. Don't mirror them in `definePermissions` — a site grants
+`read`, `create`, `update`, `delete` (and `publish`, for a type with statuses or
+staging) from the registered type. Don't mirror them in `definePermissions` — a site grants
 them from the qualified type id:
 
 ```ts

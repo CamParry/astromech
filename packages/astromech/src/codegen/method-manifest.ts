@@ -3,7 +3,6 @@
  * methods, per-type entry methods, and plugin service methods. Pure
  * function — a method's `input` is its ARGUMENT object, not the HTTP body.
  */
-import type { Capability } from '@/entries/capabilities';
 import type {
     CoreManifestMethod,
     EntriesManifestMethod,
@@ -14,13 +13,12 @@ import type {
     PluginDefinition,
     PluginManifestMethod,
     ResolvedConfig,
-    ResolvedEntryCapabilities,
     ResolvedEntryType,
     ServiceMethodAccess,
     ServiceMethodContract,
 } from '@/types/index';
 import type { z } from '@hono/zod-openapi';
-import { entryCatalogue } from '@/entries/catalogue';
+import { availableEntryMethods } from '@/entries/catalogue';
 import { globalsDefinition } from '@/globals/service';
 import { mediaDefinition } from '@/media/service';
 import { notificationsDefinition } from '@/notifications/service';
@@ -63,18 +61,6 @@ function staticPermission(contract: ServiceMethodContract): string | null {
     const { access } = contract;
     if (typeof access !== 'string') return null;
     return access === 'public' || access === 'authenticated' ? null : access;
-}
-
-/**
- * Whether a method's capability requirement is met for an entry type's caps.
- * Reads the capability by name rather than branching per capability, so adding
- * one to `Capability` cannot silently leave a method ungated here.
- */
-function methodCapabilityMet(
-    requires: Capability | undefined,
-    capabilities: ResolvedEntryCapabilities
-): boolean {
-    return requires === undefined || capabilities[requires];
 }
 
 function buildCoreMethods(): CoreManifestMethod[] {
@@ -137,16 +123,7 @@ function buildEntriesMethods(config: ResolvedConfig): EntriesManifestMethod[] {
     const methods: EntriesManifestMethod[] = [];
 
     for (const entryType of Object.values(config.entryTypes)) {
-        const catalogue = entryCatalogue({
-            typeId: entryType.id,
-            titled: entryType.titleField !== false,
-        });
-        for (const [name, contract] of Object.entries(catalogue)) {
-            // Gate capability-bound methods: `publish` needs versioning; the
-            // staged-entry/preview methods need the `staging` capability.
-            if (!methodCapabilityMet(contract.requires, entryType.capabilities)) {
-                continue;
-            }
+        for (const [name, contract] of Object.entries(availableEntryMethods(entryType))) {
             methods.push(projectEntryMethod(contract, name, entryType));
         }
     }
