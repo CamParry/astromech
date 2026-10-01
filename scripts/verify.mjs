@@ -63,10 +63,8 @@ const stagesByMode = {
             ['typecheck:packages', 'pnpm -r -F "./packages/**" typecheck'],
             [
                 'test:packages',
-                // The assistant is left out: its suite resolves core through
-                // `dist`, which this stage does not build. Every other plugin
-                // resolves core to source and needs no build.
-                'pnpm -F @astromech/schema-engine test:run && pnpm -F astromech test:run && pnpm -F @astromech/admin test:run && pnpm -F @astromech/forms -F @astromech/menus -F @astromech/redirects -F @astromech/backups -F @astromech/seo test:run',
+                // Every plugin resolves core to source, so this stage needs no build.
+                'pnpm -F @astromech/schema-engine test:run && pnpm -F astromech test:run && pnpm -F @astromech/admin test:run && pnpm -F @astromech/forms -F @astromech/menus -F @astromech/redirects -F @astromech/backups -F @astromech/seo -F @astromech/assistant test:run',
             ],
             ['lint', 'pnpm run lint'],
             ['check:unused', 'pnpm run check:unused'],

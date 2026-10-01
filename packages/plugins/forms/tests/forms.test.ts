@@ -20,35 +20,19 @@
  * here too, with their permissions.
  */
 
-import type {
-    DeleteSubmissionResult,
-    FormsOptions,
-    PublicForm,
-    SubmitResult,
-} from '../src/index';
+import type { FormsOptions, SubmitInput } from '../src/index';
 import type { NewSubmissionRow, SubmissionRow } from '../src/tables/submissions';
-import type { DB } from '@/database/types';
 import type {
     AstromechConfig,
+    EmailDriver,
     EmailMessage,
-    EntriesService,
     PluginDefinition,
-    QueryResult,
-    ResolvedConfig,
-    Role,
 } from '@/types/index';
-import type { Kysely } from 'kysely';
+import type { PluginTestApp } from '@tests/plugin-app';
 import { roleWith } from '@tests/fixtures';
-import {
-    contextAs,
-    createTestDb,
-    makeTestConfig,
-    registerTestPlugins,
-    setupTestConfig,
-} from '@tests/harness';
-import { beforeEach, describe, expect, it } from 'vitest';
-import { createServices, currentServices } from '@/app-context/services';
-import { setEmailDriver } from '@/email/registry';
+import { makeTestConfig, registerTestPlugins, setupTestConfig } from '@tests/harness';
+import { createPluginTestApp } from '@tests/plugin-app';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { PermissionDeniedError } from '@/errors/permission';
 import { defineHook } from '@/plugins/define-hook';
 import { resolvePluginIdentity } from '@/plugins/runtime/plugin-identity';
@@ -57,9 +41,6 @@ import { forms, turnstile } from '../src/index';
 import { createSubmissionsRepository } from '../src/repository';
 import { resetRateLimit } from '../src/service/rate-limit';
 import { getSubmission as getSubmissionMethod } from '../src/service/submissions';
-
-const localEntries = currentServices.entries;
-const pluginServices = currentServices.plugins;
 
 const FORM = 'forms/form';
 
@@ -70,30 +51,22 @@ const SPAM: NonNullable<FormsOptions['spam']> = turnstile({
     secretKey: SPAM_SECRET_KEY,
 });
 
-/** The one entries service, typed to the wide API for these round-trips. */
-const entriesService = (): EntriesService => localEntries as unknown as EntriesService;
+let app: PluginTestApp<'forms'>;
 
-type FormsService = Record<string, (input?: unknown) => Promise<unknown>>;
+const getForm = (slug: string) => app.service.get({ slug });
 
-function callForms(method: string, input?: unknown): Promise<unknown> {
-    const service = pluginServices['forms'] as unknown as FormsService | undefined;
-    const fn = service?.[method];
-    if (!fn) throw new Error(`forms.${method} not registered`);
-    return fn(input);
-}
+const submit = (input: SubmitInput) => app.service.submit(input);
 
-const getForm = (slug: string): Promise<PublicForm | null> =>
-    callForms('get', { slug }) as Promise<PublicForm | null>;
-
-const submit = (input: {
-    slug: string;
-    data: Record<string, unknown>;
-    token?: string;
-    meta?: { ip?: string };
-}): Promise<SubmitResult> => callForms('submit', input) as Promise<SubmitResult>;
-
-let db: Kysely<DB>;
+/** The messages the recording email driver was handed in this test. */
 let sent: EmailMessage[];
+
+/** Records every message, so a test can read what was sent. */
+const recordingEmail: EmailDriver = {
+    name: 'test-recorder',
+    send: async (message: EmailMessage): Promise<void> => {
+        sent.push(message);
+    },
+};
 
 /** The blocks the fixture form composes its answer schema from. */
 const CONTACT_BLOCKS = [
@@ -103,22 +76,10 @@ const CONTACT_BLOCKS = [
 ];
 
 function configWithForms(options?: FormsOptions): AstromechConfig {
-    return { ...makeTestConfig(), plugins: [forms(options)] };
+    return { ...makeTestConfig(), email: recordingEmail, plugins: [forms(options)] };
 }
 
-/** Recording email driver — the failure case swaps in a throwing one. */
-function recordEmails(send?: () => never): void {
-    sent = [];
-    setEmailDriver({
-        name: 'test-recorder',
-        send: async (message: EmailMessage): Promise<void> => {
-            if (send) send();
-            sent.push(message);
-        },
-    });
-}
-
-async function setup(options?: FormsOptions): Promise<ResolvedConfig> {
+async function setup(options?: FormsOptions): Promise<void> {
     // `plugin_forms_submissions` comes from the plugin's own generated
     // migration chain, which the harness applies — forms is registered in
     // `FIRST_PARTY_PLUGIN_MIGRATIONS`. Emitting the table from its `Table`
@@ -128,15 +89,14 @@ async function setup(options?: FormsOptions): Promise<ResolvedConfig> {
     // connecting address, so they go unmetered — the reset only clears a
     // counter another test file may have left behind.
     resetRateLimit();
-    db = await createTestDb();
-    recordEmails();
-    return setupTestConfig(configWithForms(options));
+    sent = [];
+    app = await createPluginTestApp('forms', configWithForms(options));
 }
 
 async function createContactForm(
     fields: Record<string, unknown> = {}
 ): Promise<{ id: string }> {
-    return entriesService().create({
+    return app.entries.create({
         type: FORM,
         data: {
             title: 'Contact',
@@ -147,26 +107,20 @@ async function createContactForm(
     });
 }
 
-const listSubmissions = (input: Record<string, unknown> = {}) =>
-    callForms('listSubmissions', input) as Promise<QueryResult<SubmissionRow>>;
+type ListSubmissionsInput = Parameters<
+    PluginTestApp<'forms'>['service']['listSubmissions']
+>[0];
 
-const getSubmission = (id: string) =>
-    callForms('getSubmission', { id }) as Promise<SubmissionRow | null>;
+const listSubmissions = (input: ListSubmissionsInput = {}) =>
+    app.service.listSubmissions(input);
 
-const deleteSubmission = (id: string) =>
-    callForms('deleteSubmission', { id }) as Promise<DeleteSubmissionResult>;
+const getSubmission = (id: string) => app.service.getSubmission({ id });
+
+const deleteSubmission = (id: string) => app.service.deleteSubmission({ id });
 
 /** Every stored submission, through the list method the admin calls. */
 async function submissionRows(): Promise<SubmissionRow[]> {
     return (await listSubmissions({ limit: 100 })).data;
-}
-
-/** The forms service on a handle scoped to `role`, checked as a transport checks it. */
-function formsAs(role: Role | null) {
-    const service = createServices(contextAs(role), { overrideAccess: false }).plugins
-        .forms;
-    if (service === undefined) throw new Error('forms is missing from the handle');
-    return service;
 }
 
 describe('forms.get', () => {
@@ -208,7 +162,7 @@ describe('forms.get', () => {
         // The read `get` performs is `full`-shaped, so all of the above IS on
         // the entry it holds. Prove that first — otherwise the assertions below
         // would pass for the wrong reason.
-        const stored = await entriesService().get({
+        const stored = await app.entries.get({
             type: FORM,
             id: created.id,
             full: true,
@@ -260,7 +214,7 @@ describe('forms.get', () => {
     });
 
     it('returns null for an unpublished form', async () => {
-        await entriesService().create({
+        await app.entries.create({
             type: FORM,
             data: {
                 title: 'Draft',
@@ -436,9 +390,7 @@ describe('forms.submit — emails', () => {
     it('still returns ok when the driver throws — the row is already committed', async () => {
         await setup();
         await createContactForm(NOTIFYING);
-        recordEmails(() => {
-            throw new Error('smtp is down');
-        });
+        vi.spyOn(recordingEmail, 'send').mockRejectedValue(new Error('smtp is down'));
 
         const result = await submit({
             slug: 'contact',
@@ -537,7 +489,7 @@ describe('forms.submit — emails', () => {
 async function storeSubmission(
     row: Partial<NewSubmissionRow> & { submittedAt: Date }
 ): Promise<SubmissionRow> {
-    return createSubmissionsRepository(db).create({
+    return createSubmissionsRepository(app.db).create({
         formId: 'form-1',
         formSlug: 'contact',
         data: {},
@@ -579,6 +531,8 @@ describe('forms.listSubmissions', () => {
     });
 
     it('refuses a sort on a column it cannot order by', async () => {
+        // A caller over HTTP is not held to the type, so the method checks it.
+        // @ts-expect-error `summary` is not a sortable column.
         await expect(listSubmissions({ sort: { summary: 'asc' } })).rejects.toMatchObject(
             {
                 name: 'ValidationError',
@@ -670,11 +624,11 @@ describe('forms submission permissions', () => {
     });
 
     it('refuses to list submissions without the read permission', async () => {
-        await expect(formsAs(roleWith([])).listSubmissions({})).rejects.toThrow(
+        await expect(app.as(roleWith([])).listSubmissions({})).rejects.toThrow(
             PermissionDeniedError
         );
         await expect(
-            formsAs(roleWith([])).getSubmission({ id: 'x' })
+            app.as(roleWith([])).getSubmission({ id: 'x' })
         ).rejects.toMatchObject({ permission: 'plugin:forms:read' });
     });
 
@@ -682,7 +636,7 @@ describe('forms submission permissions', () => {
         const stored = await storeSubmission({ submittedAt: new Date('2026-01-01') });
         const read = forms.permissions('read');
 
-        const result = await formsAs(roleWith(read)).listSubmissions({});
+        const result = await app.as(roleWith(read)).listSubmissions({});
         expect(result.data.map((row) => row.id)).toEqual([stored.id]);
     });
 
@@ -690,7 +644,7 @@ describe('forms submission permissions', () => {
         const stored = await storeSubmission({ submittedAt: new Date('2026-01-01') });
 
         await expect(
-            formsAs(roleWith(forms.permissions('read'))).deleteSubmission({
+            app.as(roleWith(forms.permissions('read'))).deleteSubmission({
                 id: stored.id,
             })
         ).rejects.toMatchObject({ permission: 'plugin:forms:delete' });
@@ -700,7 +654,7 @@ describe('forms submission permissions', () => {
     it('leaves submit public', async () => {
         await createContactForm();
 
-        const result = await formsAs(null).submit({
+        const result = await app.as(null).submit({
             slug: 'contact',
             data: { name: 'Ada', email: 'ada@example.com' },
         });

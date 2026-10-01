@@ -1,5 +1,5 @@
 /**
- * The vitest config every first-party plugin except the assistant uses.
+ * The vitest config every first-party plugin uses.
  *
  * The aliases resolve core to its source, so the plugin's own code and its
  * tests share one module graph. Plugins keep vitest's default per-file
@@ -15,6 +15,8 @@ export function pluginVitestConfig(): ViteUserConfig {
         test: {
             environment: 'node',
             include: ['tests/**/*.test.ts', 'tests/**/*.test.tsx'],
+            // Undoes every `vi.spyOn` before the next test, as core's config does.
+            restoreMocks: true,
             // Makes the run's temp directory for `harness.ts`'s test databases
             // and removes it at the end.
             globalSetup: [fileURLToPath(new URL('./global-setup.ts', import.meta.url))],

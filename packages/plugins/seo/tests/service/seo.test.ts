@@ -1,47 +1,27 @@
 /**
  * The seo plugin's public `getSitemap` and `getMeta` methods and its `getOverview`
  * report, against a real database and the real plugin registration. Calls go
- * through `pluginServices`, which is trusted server code and skips `access`.
+ * through the trusted service handle, which is server code and skips `access`.
  */
 
-import type { SeoOverview, SeoResolvedMeta, SeoSitemap } from '../../src/index';
-import type {
-    AstromechConfig,
-    EntriesService,
-    Entry,
-    StorageDriver,
-    StorageList,
-} from '@/types/index';
-import { createTestDb, makeTestConfig, setupTestConfig } from '@tests/harness';
+import type { AstromechConfig, Entry, StorageDriver, StorageList } from '@/types/index';
+import type { PluginTestApp } from '@tests/plugin-app';
+import { makeTestConfig, setupTestConfig } from '@tests/harness';
+import { createPluginTestApp } from '@tests/plugin-app';
 import { beforeEach, describe, expect, it } from 'vitest';
 import { currentServices } from '@/app-context/services';
 import { seo } from '../../src/index';
 import { seoService } from '../../src/service/seo';
 
-const globalsService = currentServices.globals;
-const localEntries = currentServices.entries;
 const mediaService = currentServices.media;
-const pluginServices = currentServices.plugins;
 
-type SeoService = Record<string, (input?: unknown) => Promise<unknown>>;
+let app: PluginTestApp<'seo'>;
 
-function callSeo(method: string, input?: unknown): Promise<unknown> {
-    const service = pluginServices['seo'] as unknown as SeoService | undefined;
-    const fn = service?.[method];
-    if (!fn) throw new Error(`seo.${method} not registered`);
-    return fn(input);
-}
+const sitemap = () => app.service.getSitemap();
 
-const sitemap = (): Promise<SeoSitemap> => callSeo('getSitemap') as Promise<SeoSitemap>;
+const meta = (type: string, slug: string) => app.service.getMeta({ type, slug });
 
-const meta = (type: string, slug: string): Promise<SeoResolvedMeta | null> =>
-    callSeo('getMeta', { type, slug }) as Promise<SeoResolvedMeta | null>;
-
-const overview = (): Promise<SeoOverview> =>
-    callSeo('getOverview') as Promise<SeoOverview>;
-
-/** The one entries service, typed to the wide API for these round-trips. */
-const entries = (): EntriesService => localEntries as unknown as EntriesService;
+const overview = () => app.service.getOverview();
 
 /** Accepts every write and serves nothing back; the upload only needs a put. */
 const storage: StorageDriver = {
@@ -103,7 +83,7 @@ async function createEntry(
         seo?: { title?: string; description?: string };
     }
 ): Promise<Entry> {
-    return entries().create({
+    return app.entries.create({
         type,
         data: {
             title: data.title,
@@ -114,8 +94,7 @@ async function createEntry(
 }
 
 beforeEach(async () => {
-    await createTestDb();
-    setupTestConfig(configWithSeo());
+    app = await createPluginTestApp('seo', configWithSeo());
 });
 
 describe('seo sitemap', () => {
@@ -135,7 +114,7 @@ describe('seo sitemap', () => {
 
     it('leaves out trashed entries', async () => {
         const entry = await createEntry('post', { title: 'Gone', status: 'published' });
-        await entries().trash({ type: 'post', id: entry.id });
+        await app.entries.trash({ type: 'post', id: entry.id });
 
         expect((await sitemap()).urls).toEqual([]);
     });
@@ -202,7 +181,7 @@ describe('seo meta', () => {
         const image = await mediaService.upload({
             file: new File(['not really an image'], 'share.txt', { type: 'text/plain' }),
         });
-        await globalsService.update({
+        await app.globals.update({
             key: 'seo/settings',
             data: { fields: { defaultOgImage: image.id } },
         });

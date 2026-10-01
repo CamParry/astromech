@@ -21,7 +21,7 @@ While working, run the test file you touched (`pnpm -F <package> exec vitest run
 | Command                          | Checks                                                                                                                                                 |
 | -------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------ |
 | `pnpm run typecheck`             | `tsc` over every package, then `astro sync && tsc --noEmit` in both demo apps                                                                          |
-| `pnpm run test:run`              | vitest over every package, with per-directory coverage thresholds; the assistant suite needs `build` first                                             |
+| `pnpm run test:run`              | vitest over every package, with per-directory coverage thresholds                                                                                      |
 | `pnpm run build`                 | tsup (out of memory: see `packages/astromech/AGENTS.md`)                                                                                               |
 | `pnpm run lint`                  | eslint over packages and scripts, type-aware over package sources                                                                                      |
 | `pnpm run lint:css`              | stylelint over the admin's styles                                                                                                                      |

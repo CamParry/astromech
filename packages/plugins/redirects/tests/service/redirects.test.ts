@@ -5,15 +5,16 @@
  */
 
 import type { RedirectMatch } from '../../src/index';
-import type { DB } from '@/database/types';
-import type { Kysely } from 'kysely';
-import { createTestDb, makeTestConfig, setupTestConfig } from '@tests/harness';
+import type { PluginTestApp } from '@tests/plugin-app';
+import { makeTestConfig } from '@tests/harness';
+import { createPluginTestApp } from '@tests/plugin-app';
 import { sql } from 'kysely';
 import { beforeEach, describe, expect, it } from 'vitest';
-import { currentServices } from '@/app-context/services';
 import { redirects } from '../../src/index';
 
-const service = () => currentServices.plugins.redirects;
+let app: PluginTestApp<'redirects'>;
+
+const service = () => app.service;
 
 /** Public `lookup`, called the way a frontend middleware calls it. */
 function lookup(input: unknown): Promise<RedirectMatch | null> {
@@ -24,11 +25,11 @@ async function addRule(data: Record<string, unknown>): Promise<void> {
     await service().create({ data });
 }
 
-let db: Kysely<DB>;
-
 beforeEach(async () => {
-    db = await createTestDb();
-    setupTestConfig({ ...makeTestConfig(), plugins: [redirects()] });
+    app = await createPluginTestApp('redirects', {
+        ...makeTestConfig(),
+        plugins: [redirects()],
+    });
 });
 
 describe('redirects lookup', () => {
@@ -46,7 +47,7 @@ describe('redirects lookup', () => {
 
     it('answers any stored status other than 302 as a 301', async () => {
         await addRule({ from: '/old', to: '/new', status: '302', enabled: true });
-        await sql`UPDATE plugin_redirects_redirects SET status = '307'`.execute(db);
+        await sql`UPDATE plugin_redirects_redirects SET status = '307'`.execute(app.db);
 
         expect(await lookup({ from: '/old' })).toEqual({ to: '/new', status: '301' });
     });

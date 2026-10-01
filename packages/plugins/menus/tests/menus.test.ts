@@ -11,32 +11,23 @@
 
 import type { MenuItem } from '../src/index';
 import type { AstromechConfig, JsonObject, PluginDefinition } from '@/types/index';
-import { createTestDb, makeTestConfig, setupTestConfig } from '@tests/harness';
+import type { PluginTestApp } from '@tests/plugin-app';
+import { makeTestConfig } from '@tests/harness';
+import { createPluginTestApp } from '@tests/plugin-app';
 import { beforeEach, describe, expect, it } from 'vitest';
-import { currentServices } from '@/app-context/services';
 import { resolveConfig } from '@/config/resolve';
 import { derivePluginNav } from '@/plugins/runtime/plugin-admin';
 import { resolvePluginIdentity } from '@/plugins/runtime/plugin-identity';
 import { menus } from '../src/index';
 import { createMenusService } from '../src/service/menus';
 
-const entriesService = currentServices.entries;
-const globalsService = currentServices.globals;
-const pluginServices = currentServices.plugins;
-
-type MenusService = {
-    get(input: { key: string; locale?: string }): Promise<MenuItem[] | null>;
-};
-
-function menusService(): MenusService {
-    return pluginServices['menus'] as unknown as MenusService;
-}
+let app: PluginTestApp<'menus'>;
 
 async function get(key: string, locale?: string): Promise<MenuItem[] | null> {
     if (locale !== undefined) {
-        return menusService().get({ key, locale });
+        return app.service.get({ key, locale });
     }
-    return menusService().get({ key });
+    return app.service.get({ key });
 }
 
 /** Write and publish one locale of a menu's global, as the admin does. */
@@ -45,11 +36,11 @@ async function writeMenu(key: string, items: unknown[], locale?: string): Promis
         key: `menus/menu-${key}`,
         ...(locale === undefined ? {} : { locale }),
     };
-    await globalsService.update({
+    await app.globals.update({
         ...address,
         data: { fields: { items } as JsonObject },
     });
-    await globalsService.publish(address);
+    await app.globals.publish(address);
 }
 
 function makeMenusConfig(
@@ -66,8 +57,7 @@ function makeMenusConfig(
 }
 
 beforeEach(async () => {
-    await createTestDb();
-    setupTestConfig(makeMenusConfig());
+    app = await createPluginTestApp('menus', makeMenusConfig());
 });
 
 describe('menus — plugin structure', () => {
@@ -286,7 +276,7 @@ describe('menus.get — locale', () => {
 describe('menus.get — entry ref resolution', () => {
     it('resolves an entry ref to its front-end URL', async () => {
         // Create a published post entry so it passes the public visibility filter
-        const post = await entriesService.create({
+        const post = await app.entries.create({
             type: 'post',
             data: { title: 'Hello World', locale: 'en', status: 'published' },
         });
@@ -300,7 +290,7 @@ describe('menus.get — entry ref resolution', () => {
     });
 
     it('prefers entry url over url field when both are set', async () => {
-        const post = await entriesService.create({
+        const post = await app.entries.create({
             type: 'post',
             data: { title: 'Override Test', locale: 'en', status: 'published' },
         });
@@ -315,15 +305,15 @@ describe('menus.get — entry ref resolution', () => {
     });
 
     it('resolves no URL for an entry a visitor cannot see', async () => {
-        const draft = await entriesService.create({
+        const draft = await app.entries.create({
             type: 'post',
             data: { title: 'Draft', locale: 'en' },
         });
-        const trashed = await entriesService.create({
+        const trashed = await app.entries.create({
             type: 'post',
             data: { title: 'Trashed', locale: 'en', status: 'published' },
         });
-        await entriesService.trash({ type: 'post', id: trashed.id });
+        await app.entries.trash({ type: 'post', id: trashed.id });
 
         await writeMenu('main', [
             { _id: 'd1', label: 'Draft', entry: draft.id },
