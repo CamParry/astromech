@@ -108,12 +108,8 @@ load-and-check and outside any transaction. Decide the order there first.
       `statusVariant`). Add `ENTRY_STATUSES` and derive the rest. Backups
       restates its status and trigger the same way
       (`packages/plugins/backups/src/tables/runs.ts:14`).
-- [ ] **11. Migrate the test database once.** `createTestDb()` runs the full
-      migration chain for each of about 150 call sites
-      (`tests/_support/harness.ts:118`). Measured: 330-506 ms to migrate one
-      database against 3-4 ms to copy a migrated file. Migrate a template in
-      `tests/_support/global-setup.ts` and copy it. Record the timings and the
-      rejected options in `DECISIONS.md`. Overlaps `test-suite-review.md`.
+- [ ] **11. Migrate the test database once.** Planned as stage 2a of
+      [test-suite-review](test-suite-review.md), which has the measurements.
 - [ ] **12. Turn on the `no-unsafe-*` rules.** A trial run of the five rules
       finds 26 hits, all untyped data flows, e.g. `params: any` in
       `entries/internal/preview.ts:29` and an `any` stream chunk in
@@ -145,14 +141,14 @@ load-and-check and outside any transaction. Decide the order there first.
       `errors` key to `defineServiceMethod` and derive the refusals and OpenAPI
       statuses from it. A lint rule can then ban `throw new Error` under
       `methods/` and `internal/`.
-- [ ] **17. Shared boundary doubles.** Add `memoryStorage()` and
-      `recordingEmail()` to `tests/_support/fixtures.ts` and replace the 12
-      inline storage drivers and the per-file email drivers. Then remove mocks
-      of Astromech's own modules, worst first:
-      `tests/transport/tools/scoped-tools.test.ts:15-18`,
+- [ ] **17. Shared boundary doubles.** Planned in stages 2b and 4 of
+      [test-suite-review](test-suite-review.md), which uses the real
+      filesystem driver plus a `StorageDriver` contract test rather than a
+      memory fake. Add a `recordingEmail()` double there for the per-file email
+      drivers, and include these mocks of Astromech's own modules in its
+      clean-up: `tests/transport/tools/scoped-tools.test.ts:15-18`,
       `packages/plugins/assistant/tests/service/sessions.test.ts:28`,
-      `tests/transport/cli/commands.test.ts:29-41`. Overlaps
-      `test-suite-review.md`.
+      `tests/transport/cli/commands.test.ts:29-41`.
 - [ ] **18. Cancellation follows the platform.** Add `signal?: AbortSignal` to
       the `astromech/fetch` client (`transport/http/client.ts:102`) and pass it
       from the admin's query functions.
