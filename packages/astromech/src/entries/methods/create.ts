@@ -1,20 +1,17 @@
 import type { EntryResource } from '../repository/types';
 import { z } from '@hono/zod-openapi';
 import { resolveResourceLocale } from '@/content/locale';
-import { resolvePublishedAt } from '@/content/published-at';
 import { transaction } from '@/database/transaction';
 import { resolveEntryType } from '@/entries/entry-types';
-import { parseInput } from '@/errors/validation';
 import { defineServiceMethod } from '@/services/define-service-method';
 import { parseOutput } from '@/services/parse-method-output';
 import { assertWritableFields } from '../capabilities';
 import { UnknownEntryTypeError } from '../errors';
 import { entryAccess } from '../internal/access';
-import { prepareEntryFields } from '../internal/prepare-fields';
-import { deriveSlug } from '../internal/slug';
+import { prepareEntryRow } from '../internal/prepare-row';
 import { syncEntryRelationships } from '../relationships';
 import { entryRepository } from '../repository/entries-table';
-import { createEntryPayloadSchema, createEntrySchema, entrySchema } from '../schema';
+import { createEntryPayloadSchema, entrySchema } from '../schema';
 
 /**
  * `data` is parsed under the type's own schema. The slug, given or derived from
@@ -32,50 +29,21 @@ export const createEntry = defineServiceMethod({
     async handler(params, ctx): Promise<EntryResource> {
         const { type, data } = params;
         const { config, user } = ctx;
-        const userId = user?.id ?? null;
         const entryType = resolveEntryType(config, type);
         if (!entryType) throw new UnknownEntryTypeError(type);
-        const schema = createEntrySchema({ titled: entryType.titleField !== false });
 
         assertWritableFields(entryType, data);
-        const validated = parseInput(schema, {
-            title: data.title,
-            slug: data.slug,
-            fields: data.fields,
-            status: data.status,
-            publishedAt: data.publishedAt,
-        });
         const locale = resolveResourceLocale('entry', config, entryType.id, data.locale);
 
-        const title = validated.title ?? '';
-        const status = validated.status ?? 'unpublished';
-        const publishedAt = resolvePublishedAt({
-            status,
-            given: validated.publishedAt,
-            current: null,
-            now: new Date(),
-        });
-        const slug = await deriveSlug({ entryType, locale, title, slug: validated.slug });
-        const fields = await prepareEntryFields({
-            kind: 'create',
+        const write = await prepareEntryRow({
             config,
             entryType,
-            values: validated.fields ?? {},
             locale,
             entryId: undefined,
-            status,
+            data,
+            current: null,
             user,
         });
-        const write = {
-            title,
-            slug,
-            locale,
-            fields,
-            status,
-            publishedAt,
-            createdBy: userId,
-            updatedBy: userId,
-        };
 
         await ctx.runHook('entry:beforeCreate', { type, data: write, user });
 

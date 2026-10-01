@@ -1304,6 +1304,75 @@ describe('hooks', () => {
         expect(seen.afterTitle).toBe('Hooked');
     });
 
+    it('fires one beforeCreate/afterCreate pair for a duplicate, with the first locale', async () => {
+        const src = await api.create({
+            type: 'post',
+            data: { title: 'EN', locale: 'en', fields: { body: 'a' } },
+        });
+        await api.update({
+            type: 'post',
+            id: src.id,
+            locale: 'de',
+            data: { title: 'DE', fields: { body: 'b' } },
+        });
+        const before: { locale: string; title: string }[] = [];
+        const after: { id: string; locale: string; locales: string[] }[] = [];
+        const resolved = setupTestConfig();
+        registerTestPlugins(
+            [
+                {
+                    package: '@test/probe',
+                    hooks: [
+                        defineHook('entry:beforeCreate', (ctx) => {
+                            before.push({
+                                locale: ctx.data.locale,
+                                title: ctx.data.title,
+                            });
+                        }),
+                        defineHook('entry:afterCreate', (ctx) => {
+                            after.push({
+                                id: ctx.entry.id,
+                                locale: ctx.entry.locale,
+                                locales: ctx.entry.locales,
+                            });
+                        }),
+                    ],
+                },
+            ],
+            resolved
+        );
+
+        const dup = await api.duplicate({ type: 'post', id: src.id });
+
+        expect(dup.locale).toBe('en');
+        expect(before).toEqual([{ locale: 'en', title: 'EN' }]);
+        expect(after).toEqual([{ id: dup.id, locale: 'en', locales: ['de', 'en'] }]);
+    });
+
+    it('a throwing beforeCreate aborts a duplicate before any row is written', async () => {
+        const src = await api.create({ type: 'post', data: { title: 'Source' } });
+        const resolved = setupTestConfig();
+        registerTestPlugins(
+            [
+                {
+                    package: '@test/probe',
+                    hooks: [
+                        defineHook('entry:beforeCreate', () => {
+                            throw new Error('blocked');
+                        }),
+                    ],
+                },
+            ],
+            resolved
+        );
+
+        await expect(api.duplicate({ type: 'post', id: src.id })).rejects.toThrow(
+            'blocked'
+        );
+        const rows = await getDb().selectFrom('entries').selectAll().execute();
+        expect(rows).toHaveLength(1);
+    });
+
     it('hands the update hooks the public entry, without the content row id', async () => {
         const entry = await api.create({ type: 'post', data: { title: 'Before' } });
         const seen: Record<string, unknown>[] = [];

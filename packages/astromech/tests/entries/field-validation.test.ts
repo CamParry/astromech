@@ -502,3 +502,67 @@ describe('update — uniqueness excludes self', () => {
         });
     });
 });
+
+describe('duplicate — the copy is parsed as a create', () => {
+    async function source() {
+        return api.create({
+            type: 'post',
+            data: { title: 'Source', fields: { title_text: 'Kept', code: 'src' } },
+        });
+    }
+
+    it('rejects an invalid value in overrides.fields', async () => {
+        const entry = await source();
+        await expect(
+            api.duplicate({
+                type: 'post',
+                id: entry.id,
+                overrides: { fields: { code: 'copy', contact_email: 'bad' } },
+            })
+        ).rejects.toMatchObject({
+            name: 'ValidationError',
+            fields: { contact_email: ['Must be a valid email address'] },
+        });
+    });
+
+    it('drops a key in overrides.fields that names no field', async () => {
+        const entry = await source();
+        const copy = await api.duplicate({
+            type: 'post',
+            id: entry.id,
+            overrides: { fields: { code: 'copy', stray: 'dropped' } },
+        });
+        expect(copy.fields).not.toHaveProperty('stray');
+    });
+
+    it('rejects a published copy with a missing required field', async () => {
+        const entry = await api.create({
+            type: 'post',
+            data: { title: 'Draft', fields: { code: 'src' } },
+        });
+        await expect(
+            api.duplicate({
+                type: 'post',
+                id: entry.id,
+                overrides: { status: 'published', fields: { code: 'copy' } },
+            })
+        ).rejects.toMatchObject({
+            name: 'ValidationError',
+            fields: { title_text: ['This field is required'] },
+        });
+    });
+
+    it('rejects a copy whose unique field collides with the source', async () => {
+        const entry = await source();
+        await expect(api.duplicate({ type: 'post', id: entry.id })).rejects.toMatchObject(
+            { name: 'ValidationError', fields: { code: ['Already in use'] } }
+        );
+
+        const copy = await api.duplicate({
+            type: 'post',
+            id: entry.id,
+            overrides: { fields: { code: 'copy' } },
+        });
+        expect(copy.fields.code).toBe('copy');
+    });
+});

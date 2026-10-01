@@ -123,6 +123,25 @@ describe('payload columns the type does not keep', () => {
         ).rejects.toMatchObject({ name: 'CapabilityError', capability: 'statuses' });
     });
 
+    it('refuses a duplicate whose overrides set a column the type does not keep', async () => {
+        const entry = await entriesService.create({ type: 'snippet', data: {} });
+
+        await expect(
+            entriesService.duplicate({
+                type: 'snippet',
+                id: entry.id,
+                overrides: { status: 'published' },
+            })
+        ).rejects.toMatchObject({ name: 'CapabilityError', capability: 'statuses' });
+        await expect(
+            entriesService.duplicate({
+                type: 'snippet',
+                id: entry.id,
+                overrides: { slug: 'nope' },
+            })
+        ).rejects.toMatchObject({ name: 'CapabilityError', capability: 'slug' });
+    });
+
     it('refuses a publishedAt on update for a type without statuses', async () => {
         const entry = await entriesService.create({ type: 'snippet', data: {} });
 

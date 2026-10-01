@@ -90,7 +90,7 @@ the repository copies.
 - [ ] **Plugins rebuild the API base URL** from a private build global
       (`@astromech/backups`, `@astromech/assistant`). Add a route helper to the
       plugin context; rename its misnamed `modal` to `confirm`.
-- [ ] **Entry create and a new translation derive the title, status, slug and
+- [x] **Entry create and a new translation derive the title, status, slug and
       fields the same way** (`entries/methods/create.ts` and `planTranslation`
       in `entries/internal/update-batch.ts`), which `report:drift` lists;
       `entries/methods/duplicate.ts` writes its copy without either (no field
