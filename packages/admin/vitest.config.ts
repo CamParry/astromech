@@ -1,7 +1,10 @@
 import { fileURLToPath } from 'node:url';
 import { defaultExclude, defineConfig } from 'vitest/config';
 import { coreAliases } from '../astromech/tests/_support/vitest-aliases';
+import { assertNoArgumentsAfterDoubleDash } from '../astromech/tests/_support/vitest-base-config';
 import { isolatedTests } from './tests/_support/isolated-tests';
+
+assertNoArgumentsAfterDoubleDash();
 
 function fromHere(path: string): string {
     return fileURLToPath(new URL(path, import.meta.url));

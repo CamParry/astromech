@@ -8,8 +8,10 @@
 import type { ViteUserConfig } from 'vitest/config';
 import { fileURLToPath } from 'node:url';
 import { coreAliases } from './vitest-aliases';
+import { assertNoArgumentsAfterDoubleDash } from './vitest-base-config';
 
 export function pluginVitestConfig(): ViteUserConfig {
+    assertNoArgumentsAfterDoubleDash();
     return {
         resolve: { alias: coreAliases() },
         test: {

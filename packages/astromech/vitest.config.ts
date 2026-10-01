@@ -1,6 +1,9 @@
 import { defaultExclude, defineConfig } from 'vitest/config';
 import { isolatedTests } from './tests/_support/isolated-tests';
 import { coreAliases } from './tests/_support/vitest-aliases';
+import { assertNoArgumentsAfterDoubleDash } from './tests/_support/vitest-base-config';
+
+assertNoArgumentsAfterDoubleDash();
 
 const alias = coreAliases();
 
