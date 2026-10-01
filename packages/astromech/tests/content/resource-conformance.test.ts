@@ -8,14 +8,12 @@
 
 import type { JsonObject, ResourceType } from '@/types/index';
 import type { z } from 'zod';
-import { noopStorage } from '@tests/fixtures';
 import { createTestDb, makeTestConfig, setupTestConfig } from '@tests/harness';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { currentServices } from '@/app-context/services';
 import { RESOURCE_CONFIG } from '@/content/resources';
 import { getDb } from '@/database/registry';
 import { mediaRepository } from '@/media/repository';
-import { setStorageDriver } from '@/storage/registry';
 import { RESOURCE_TYPES } from '@/types/domain';
 
 const entriesService = currentServices.entries;
@@ -158,7 +156,6 @@ beforeEach(async () => {
         users: { fields: [...FIELDS] },
         media: { fields: [...FIELDS] },
     });
-    setStorageDriver(noopStorage);
 });
 
 /** The stored `updatedAt` of the resource row whose `column` is `value`. */

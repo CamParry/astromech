@@ -4,8 +4,6 @@ import { createTestDb, makeTestConfig, setupTestConfig } from '@tests/harness';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { currentServices } from '@/app-context/services';
 import { handleMediaRequest } from '@/media/serving/handler';
-import { setImageConfig } from '@/media/serving/image/registry';
-import { setStorageDriver } from '@/storage/registry';
 
 const mediaService = currentServices.media;
 
@@ -138,18 +136,14 @@ let fakeDriver: ReturnType<typeof makeFakeImageDriver>;
 
 beforeEach(async () => {
     await createTestDb();
-    setupTestConfig(makeTestConfig());
-
     storage = makeMemoryStorage() as ReturnType<typeof makeMemoryStorage> & {
         _store: Map<string, Uint8Array>;
     };
-    setStorageDriver(storage);
-
     fakeDriver = makeFakeImageDriver();
-    setImageConfig({
-        driver: fakeDriver.driver,
-        widths: [320, 640],
-        avif: true,
+    setupTestConfig({
+        ...makeTestConfig(),
+        storage,
+        media: { image: { driver: fakeDriver.driver, widths: [320, 640], avif: true } },
     });
 });
 
@@ -485,17 +479,9 @@ describe('handleMediaRequest failures', () => {
 
     it('serves the original under its own cache headers when the transform throws', async () => {
         const errors = vi.spyOn(console, 'error').mockImplementation(() => undefined);
-        setImageConfig({
-            driver: {
-                name: 'broken',
-                cachesVariants: false,
-                async transform() {
-                    throw new Error('corrupt image');
-                },
-            },
-            widths: [320, 640],
-            avif: true,
-        });
+        vi.spyOn(fakeDriver.driver, 'transform').mockRejectedValue(
+            new Error('corrupt image')
+        );
         const jpegBytes = makeJpegBytes();
         const media = await mediaService.upload({
             file: new File([jpegBytes as BlobPart], 'photo.jpg', { type: 'image/jpeg' }),
@@ -529,12 +515,7 @@ describe('handleMediaRequest failures', () => {
                 type: 'image/jpeg',
             }),
         });
-        setStorageDriver({
-            ...storage,
-            async get() {
-                throw new Error('storage unavailable');
-            },
-        });
+        vi.spyOn(storage, 'get').mockRejectedValue(new Error('storage unavailable'));
 
         const res = await handleMediaRequest({
             id: media.id,

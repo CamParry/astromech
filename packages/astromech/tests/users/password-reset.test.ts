@@ -11,7 +11,6 @@ import { createElement } from 'react';
 import { beforeEach, describe, expect, it } from 'vitest';
 import { currentServices } from '@/app-context/services';
 import { getEmailOverride } from '@/email/email-overrides';
-import { setEmailDriver } from '@/email/registry';
 import { DEFAULT_ROLE_SLUG } from '@/permissions/roles';
 import { createHttpApp } from '@/transport/http/app';
 
@@ -31,16 +30,18 @@ let sent: EmailMessage[];
 beforeEach(async () => {
     delete globalThis.__astromech?.auth;
     await createTestDb();
-    const resolved = setupTestConfig(makeTestConfig());
-    basePath = resolved.basePath;
-    app = createHttpApp(resolved) as unknown as OpenAPIHono;
     sent = [];
-    setEmailDriver({
-        name: 'capture',
-        send: async (message) => {
-            sent.push(message);
+    const resolved = setupTestConfig({
+        ...makeTestConfig(),
+        email: {
+            name: 'capture',
+            send: async (message) => {
+                sent.push(message);
+            },
         },
     });
+    basePath = resolved.basePath;
+    app = createHttpApp(resolved) as unknown as OpenAPIHono;
 });
 
 async function postAuth(path: string, body: unknown): Promise<Response> {

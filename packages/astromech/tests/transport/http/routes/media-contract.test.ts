@@ -6,13 +6,12 @@
  */
 
 import type { Media, MediaVersion, Role, VersionMetadata } from '@/types/index';
-import { adminRole, noopStorage, roleWith } from '@tests/fixtures';
+import { adminRole, roleWith } from '@tests/fixtures';
 import { createTestDb, makeTestConfig, setupTestConfig } from '@tests/harness';
 import { mountRouter, seedTestUser } from '@tests/mount-router';
 import { beforeEach, describe, expect, it } from 'vitest';
 import { currentServices } from '@/app-context/services';
 import { mediaRepository } from '@/media/repository';
-import { setStorageDriver } from '@/storage/registry';
 import { mediaRouter } from '@/transport/http/routes/media';
 
 const mediaService = currentServices.media;
@@ -28,7 +27,6 @@ beforeEach(async () => {
     // has to exist or the foreign key fails.
     await seedTestUser(await createTestDb());
     setupTestConfig(makeTestConfig());
-    setStorageDriver(noopStorage);
     const row = await mediaRepository.create(
         {
             filename: 'photo.png',

@@ -6,13 +6,11 @@
  * index write must leave all three untouched.
  */
 
-import { noopStorage } from '@tests/fixtures';
 import { createTestDb, setupTestConfig } from '@tests/harness';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { currentServices } from '@/app-context/services';
 import { relationshipRepository } from '@/content/repository/relationships';
 import { mediaRepository } from '@/media/repository';
-import { setStorageDriver } from '@/storage/registry';
 import { makeTranslatableMediaConfig } from './media-config';
 
 const api = currentServices.media;
@@ -33,7 +31,6 @@ let id: string;
 beforeEach(async () => {
     await createTestDb();
     setupTestConfig(makeTranslatableMediaConfig());
-    setStorageDriver(noopStorage);
     state.failing = false;
 
     const row = await mediaRepository.create(

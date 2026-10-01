@@ -6,28 +6,24 @@
  */
 
 import type { DB } from '@/database/types';
-import type { Client } from '@libsql/client';
+import type { Kysely } from 'kysely';
 import { mkdtemp, rm, symlink } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { migrateToLatest } from '@astromech/schema-engine';
-import { createClient } from '@libsql/client';
-import { LibsqlDialect } from '@libsql/kysely-libsql';
-import { setupTestConfig } from '@tests/harness';
+import { makeTestConfig, setupTestConfig } from '@tests/harness';
 import { getMigrations } from 'better-auth/db/migration';
-import { CamelCasePlugin, Kysely, sql } from 'kysely';
+import { sql } from 'kysely';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { getAuth } from '@/auth/better-auth';
 import { createFirstAdmin } from '@/auth/setup';
 import { loadAppMigrations } from '@/database/app-migrations';
-import { setDatabaseDriver } from '@/database/driver-registry';
+import { libsql } from '@/database/drivers/libsql';
 import { generateMigrations } from '@/database/generate';
-import { setDb } from '@/database/registry';
 import { CORE_TABLES } from '@/database/tables';
 
 let siteDir: string;
-let client: Client;
 let db: Kysely<DB>;
 
 beforeAll(async () => {
@@ -47,30 +43,18 @@ beforeAll(async () => {
     });
     expect(generated.status).toBe('generated');
 
-    client = createClient({ url: `file:${join(siteDir, 'database.db')}` });
-    db = new Kysely<DB>({
-        // `@libsql/kysely-libsql` pins an older `@libsql/core` Client type; the
-        // runtime client is compatible (see the libsql driver).
-        dialect: new LibsqlDialect({ client: client as never }),
-        plugins: [new CamelCasePlugin()],
-    });
-    setDb(db);
-    setDatabaseDriver({
-        type: 'libsql',
-        getInstance: () => db,
-        supportsTransactions: true,
-    });
+    const driver = libsql({ url: `file:${join(siteDir, 'database.db')}` });
+    db = driver.getInstance();
     await migrateToLatest(db, await loadAppMigrations(join(siteDir, 'migrations')), {
         allowUnorderedMigrations: true,
     });
 
     delete globalThis.__astromech?.auth;
-    setupTestConfig();
+    setupTestConfig({ ...makeTestConfig(), db: driver });
 });
 
 afterAll(async () => {
     await db.destroy();
-    client.close();
     await rm(siteDir, { recursive: true, force: true });
 });
 

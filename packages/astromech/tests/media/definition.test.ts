@@ -5,7 +5,6 @@
  */
 
 import type { Role } from '@/types/index';
-import { noopStorage } from '@tests/fixtures';
 import {
     createTestDb,
     createTestUser,
@@ -16,7 +15,6 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { createAppContext } from '@/app-context/app-context';
 import { getDb } from '@/database/registry';
 import { mediaDefinition } from '@/media/service';
-import { setStorageDriver } from '@/storage/registry';
 
 const admin: Role = {
     slug: 'admin',
@@ -45,7 +43,6 @@ const BINARY = ['upload', 'replace'];
 beforeEach(async () => {
     await createTestDb();
     setupTestConfig(makeTestConfig());
-    setStorageDriver(noopStorage);
 });
 
 describe('the catalogue', () => {

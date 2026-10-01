@@ -38,7 +38,6 @@ import { createAppContext } from '@/app-context/app-context';
 import { currentServices } from '@/app-context/services';
 import { entriesDefinition } from '@/entries/service';
 import { ValidationError } from '@/errors/validation';
-import { setStorageDriver } from '@/storage/registry';
 import { onError } from '@/transport/http/middleware/errors';
 import { createEntriesRouter } from '@/transport/http/routes/entries';
 import { mediaRouter } from '@/transport/http/routes/media';
@@ -120,6 +119,7 @@ function makeConfig(): AstromechConfig {
     const base = makeTestConfig();
     return {
         ...base,
+        storage: memoryStorage(),
         entries: {
             ...base.entries,
             post: {
@@ -200,7 +200,6 @@ function makeConfig(): AstromechConfig {
 beforeEach(async () => {
     await seedTestUser(await createTestDb());
     setupTestConfig(makeConfig());
-    setStorageDriver(memoryStorage());
 });
 
 afterEach(() => {

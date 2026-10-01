@@ -4,12 +4,10 @@
  */
 
 import type { AstromechConfig } from '@/types/index';
-import { noopStorage } from '@tests/fixtures';
 import { createTestDb, makeTestConfig, setupTestConfig } from '@tests/harness';
 import { beforeEach, describe, expect, it } from 'vitest';
 import { currentServices } from '@/app-context/services';
 import { mediaRepository } from '@/media/repository';
-import { setStorageDriver } from '@/storage/registry';
 
 const api = currentServices.entries;
 const globalsService = currentServices.globals;
@@ -175,7 +173,6 @@ describe('usedBy', () => {
     });
 
     it('reports a global, a user and a media item holding a reference', async () => {
-        setStorageDriver(noopStorage);
         const target = await api.create({ type: 'post', data: { title: 'Target' } });
         const global = await globalsService.update({
             key: 'site',

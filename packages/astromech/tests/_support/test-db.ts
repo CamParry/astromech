@@ -1,10 +1,10 @@
 /**
- * How a test database is opened and which migrations it gets.
+ * How the run's template database is opened and which migrations it gets.
  *
- * `global-setup.ts` uses both to build the run's migrated template, and
- * `harness.ts` uses `openTestDb` to open each copy of it. This module must not
- * call `inject`, because global setup runs in the main process, where `inject`
- * is unavailable.
+ * `global-setup.ts` uses both to build the migrated template; `harness.ts`
+ * opens each copy of it through the `libsql` driver a site runs. This module
+ * must not call `inject`, because global setup runs in the main process, where
+ * `inject` is unavailable.
  */
 import type { DB } from '@/database/types';
 import type { Client } from '@libsql/client';
@@ -18,7 +18,8 @@ export const FIRST_PARTY_PLUGIN_MIGRATIONS = ['redirects', 'backups', 'forms'] a
 
 /**
  * A Kysely instance over `client`, set up the way the libsql driver sets up a
- * site's. Destroying it does not close `client`; the caller does that.
+ * site's. The template needs its own client because the driver has no way to
+ * close one. Destroying it does not close `client`; the caller does that.
  */
 export function openTestDb(client: Client): Kysely<DB> {
     return new Kysely<DB>({

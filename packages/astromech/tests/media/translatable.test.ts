@@ -4,13 +4,11 @@
  * the default. Non-translatable media refuses any locale but the default.
  */
 
-import { noopStorage } from '@tests/fixtures';
 import { createTestDb, makeTestConfig, setupTestConfig } from '@tests/harness';
 import { beforeEach, describe, expect, it } from 'vitest';
 import { currentServices } from '@/app-context/services';
 import { ResourceValidationError } from '@/errors/resource';
 import { mediaRepository } from '@/media/repository';
-import { setStorageDriver } from '@/storage/registry';
 import { makeTranslatableMediaConfig } from './media-config';
 
 const api = currentServices.media;
@@ -38,7 +36,6 @@ async function seed(): Promise<string> {
 beforeEach(async () => {
     await createTestDb();
     setupTestConfig(makeTranslatableMediaConfig());
-    setStorageDriver(noopStorage);
     id = await seed();
 });
 

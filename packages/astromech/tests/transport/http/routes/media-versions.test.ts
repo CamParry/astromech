@@ -7,13 +7,12 @@
  * version give, and the grant a restore demands.
  */
 
-import { adminRole, noopStorage, roleWith } from '@tests/fixtures';
+import { adminRole, roleWith } from '@tests/fixtures';
 import { createTestDb, setupTestConfig } from '@tests/harness';
 import { mountRouter, seedTestUser } from '@tests/mount-router';
 import { beforeEach, describe, expect, it } from 'vitest';
 import { currentServices } from '@/app-context/services';
 import { mediaRepository } from '@/media/repository';
-import { setStorageDriver } from '@/storage/registry';
 import { mediaRouter } from '@/transport/http/routes/media';
 import { makeTranslatableMediaConfig } from '../../../media/media-config';
 
@@ -29,7 +28,6 @@ let id: string;
 beforeEach(async () => {
     const db = await createTestDb();
     setupTestConfig(makeTranslatableMediaConfig());
-    setStorageDriver(noopStorage);
     await seedTestUser(db);
     const row = await mediaRepository.create(
         { filename: 'photo.png', mimeType: 'image/png', size: 1 },

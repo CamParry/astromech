@@ -5,13 +5,11 @@
  * locale and its number.
  */
 
-import { noopStorage } from '@tests/fixtures';
 import { createTestDb, setupTestConfig } from '@tests/harness';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { currentServices } from '@/app-context/services';
 import { ResourceNotFoundError } from '@/errors/resource';
 import { mediaRepository } from '@/media/repository';
-import { setStorageDriver } from '@/storage/registry';
 import { makeTranslatableMediaConfig } from './media-config';
 
 const api = currentServices.media;
@@ -27,7 +25,6 @@ let id: string;
 beforeEach(async () => {
     await createTestDb();
     setupTestConfig(makeTranslatableMediaConfig());
-    setStorageDriver(noopStorage);
     // Authored through the repository, so the item starts with content but no
     // version: an `update` is then the first thing that replaces a state.
     const row = await mediaRepository.create(

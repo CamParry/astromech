@@ -15,7 +15,6 @@ import type {
 import { createTestDb, makeTestConfig, setupTestConfig } from '@tests/harness';
 import { beforeEach, describe, expect, it } from 'vitest';
 import { currentServices } from '@/app-context/services';
-import { setStorageDriver } from '@/storage/registry';
 import { seo } from '../../src/index';
 import { seoService } from '../../src/service/seo';
 
@@ -81,6 +80,7 @@ function configWithSeo(postUrl = '/blog/{slug}'): AstromechConfig {
     }
     return {
         ...base,
+        storage,
         entries: {
             ...base.entries,
             post: {
@@ -116,7 +116,6 @@ async function createEntry(
 beforeEach(async () => {
     await createTestDb();
     setupTestConfig(configWithSeo());
-    setStorageDriver(storage);
 });
 
 describe('seo sitemap', () => {

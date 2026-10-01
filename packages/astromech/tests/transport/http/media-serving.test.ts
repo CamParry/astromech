@@ -4,13 +4,16 @@
  * text rather than the API's JSON envelope.
  */
 
-import type { AstromechConfig, MediaAccess, StorageDriver } from '@/types/index';
+import type {
+    AstromechConfig,
+    ImageConfig,
+    MediaAccess,
+    StorageDriver,
+} from '@/types/index';
 import type { OpenAPIHono } from '@hono/zod-openapi';
 import { createTestDb, makeTestConfig, setupTestConfig } from '@tests/harness';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { currentServices } from '@/app-context/services';
-import { setImageConfig } from '@/media/serving/image/registry';
-import { setStorageDriver } from '@/storage/registry';
 import { createHttpApp } from '@/transport/http/app';
 
 const mediaService = currentServices.media;
@@ -66,13 +69,19 @@ type Setup = {
 };
 
 /** Build the whole app over a fresh database holding one uploaded JPEG. */
-async function setup(access: MediaAccess = 'public'): Promise<Setup> {
+async function setup(
+    access: MediaAccess = 'public',
+    image?: ImageConfig
+): Promise<Setup> {
     await createTestDb();
     const base = makeTestConfig();
-    const config: AstromechConfig = { ...base, media: { ...base.media, access } };
-    const resolved = setupTestConfig(config);
     const storage = makeStorage();
-    setStorageDriver(storage);
+    const config: AstromechConfig = {
+        ...base,
+        storage,
+        media: { ...base.media, access, ...(image === undefined ? {} : { image }) },
+    };
+    const resolved = setupTestConfig(config);
 
     const media = await mediaService.upload({
         file: new File([JPEG as BlobPart], 'photo.jpg', { type: 'image/jpeg' }),
@@ -147,8 +156,7 @@ describe('caching and range headers', () => {
     });
 
     it('carries the immutable Cache-Control on a canonical variant', async () => {
-        const { app, mediaUrl, version } = await setup();
-        setImageConfig({
+        const { app, mediaUrl, version } = await setup('public', {
             driver: {
                 name: 'fake',
                 cachesVariants: false,
@@ -198,12 +206,7 @@ describe('failures', () => {
     it('answers a plain-text 500 when storage throws, not the JSON envelope', async () => {
         const errors = vi.spyOn(console, 'error').mockImplementation(() => undefined);
         const { app, mediaUrl, storage } = await setup();
-        setStorageDriver({
-            ...storage,
-            async get() {
-                throw new Error('storage unavailable');
-            },
-        });
+        vi.spyOn(storage, 'get').mockRejectedValue(new Error('storage unavailable'));
 
         const res = await app.request(mediaUrl);
         expect(res.status).toBe(500);
