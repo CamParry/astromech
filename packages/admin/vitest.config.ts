@@ -1,7 +1,11 @@
 import { fileURLToPath } from 'node:url';
 import { defaultExclude, defineConfig } from 'vitest/config';
 import { coreAliases } from '../astromech/tests/_support/vitest-aliases';
-import { assertNoArgumentsAfterDoubleDash } from '../astromech/tests/_support/vitest-base-config';
+import {
+    assertNoArgumentsAfterDoubleDash,
+    baseRootTestOptions,
+    baseTestOptions,
+} from '../astromech/tests/_support/vitest-base-config';
 import { isolatedTests } from './tests/_support/isolated-tests';
 
 assertNoArgumentsAfterDoubleDash();
@@ -27,12 +31,9 @@ const alias = {
 
 const include = ['tests/**/*.test.ts', 'tests/**/*.test.tsx'];
 
-// Run before every test file. Core's console guard fails a test on console
-// output it did not declare; `dom-setup.ts` only acts in a happy-dom file.
-const setupFiles = [
-    fromHere('../astromech/tests/_support/console-guard.ts'),
-    'tests/_support/dom-setup.ts',
-];
+// Run before every test file, after the base config's console guard.
+// `dom-setup.ts` only acts in a happy-dom file.
+const setupFiles = [...baseTestOptions.setupFiles, 'tests/_support/dom-setup.ts'];
 
 // Worker threads start faster than child processes and share the transform
 // cache, and nothing here needs a process of its own.
@@ -47,6 +48,7 @@ const projects = [
     {
         resolve: { alias },
         test: {
+            ...baseTestOptions,
             name: 'admin',
             environment: 'node',
             pool,
@@ -61,6 +63,7 @@ const projects = [
     {
         resolve: { alias },
         test: {
+            ...baseTestOptions,
             name: 'admin-isolated',
             environment: 'node',
             pool,
@@ -71,6 +74,7 @@ const projects = [
     {
         resolve: { alias },
         test: {
+            ...baseTestOptions,
             name: 'admin-timezone',
             environment: 'node',
             pool: 'forks',
@@ -83,12 +87,8 @@ const projects = [
 
 export default defineConfig({
     test: {
+        ...baseRootTestOptions,
         projects,
-        // Files and tests run in a random order, so a test that leans on another's
-        // leftovers fails. Vitest reads this for every project from here, not from
-        // a project's own config, and prints the seed as the run starts;
-        // `--sequence.seed=<n>` replays that order.
-        sequence: { shuffle: true },
         // Shared by both projects. Reports go to `coverage/`, which git ignores.
         coverage: {
             provider: 'v8',

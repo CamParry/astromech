@@ -1,7 +1,11 @@
 import { defaultExclude, defineConfig } from 'vitest/config';
 import { isolatedTests } from './tests/_support/isolated-tests';
 import { coreAliases } from './tests/_support/vitest-aliases';
-import { assertNoArgumentsAfterDoubleDash } from './tests/_support/vitest-base-config';
+import {
+    assertNoArgumentsAfterDoubleDash,
+    baseRootTestOptions,
+    baseTestOptions,
+} from './tests/_support/vitest-base-config';
 
 assertNoArgumentsAfterDoubleDash();
 
@@ -12,9 +16,6 @@ const include = ['tests/**/*.test.ts', 'tests/**/*.test.tsx'];
 // Makes the run's temp directory for test databases and removes it at the end.
 const globalSetup = ['tests/_support/global-setup.ts'];
 
-// Fails a test on console output it did not declare with `expectConsole`.
-const setupFiles = ['tests/_support/console-guard.ts'];
-
 // Worker threads start faster than child processes and share the transform
 // cache, and nothing here needs a process of its own.
 const pool = 'threads';
@@ -23,14 +24,11 @@ const projects = [
     {
         resolve: { alias },
         test: {
+            ...baseTestOptions,
             name: 'core',
             environment: 'node',
             pool,
             globalSetup,
-            setupFiles,
-            // Undoes every `vi.spyOn` before the next test. Needed here most:
-            // with `isolate: false` a spy would otherwise outlive its file.
-            restoreMocks: true,
             // One module graph per worker instead of one per file, which
             // is where the speed-up comes from. `isolatedTests` names the
             // files that cannot live with it.
@@ -42,12 +40,11 @@ const projects = [
     {
         resolve: { alias },
         test: {
+            ...baseTestOptions,
             name: 'core-isolated',
             environment: 'node',
             pool,
             globalSetup,
-            setupFiles,
-            restoreMocks: true,
             include: isolatedTests,
         },
     },
@@ -55,12 +52,8 @@ const projects = [
 
 export default defineConfig({
     test: {
+        ...baseRootTestOptions,
         projects,
-        // Files and tests run in a random order, so a test that leans on another's
-        // leftovers fails. Vitest reads this for every project from here, not from
-        // a project's own config, and prints the seed as the run starts;
-        // `--sequence.seed=<n>` replays that order.
-        sequence: { shuffle: true },
         // Shared by both projects. Reports go to `coverage/`, which git ignores.
         coverage: {
             provider: 'v8',
