@@ -6,7 +6,7 @@
 import type { RedirectsRepository } from '../repository';
 import type { NewRedirectRow, RedirectRow } from '../tables/redirects';
 import type { RedirectMatch } from '../types';
-import type { PluginContext, QueryResult } from 'astromech';
+import type { Field, PluginContext, QueryResult, ValidationRule } from 'astromech';
 import { defineServiceMethod, queryResultSchema, z } from 'astromech';
 import { parseFields } from 'astromech/fields';
 import { redirectFields } from '../fields';
@@ -168,9 +168,9 @@ export const redirectsService = {
 };
 
 /**
- * Check a rule's values against `redirectFields`, throwing a 422 with the
- * failures by field. `existing` is the rule an update writes to, which may keep
- * its own `from`.
+ * Check a rule's values against `redirectFields`, plus a `from` no other rule
+ * holds, throwing a 422 with the failures by field. `existing` is the rule an
+ * update writes to, which may keep its own `from`.
  */
 async function parseRedirect(
     ctx: PluginContext,
@@ -178,15 +178,19 @@ async function parseRedirect(
     data: Record<string, unknown>,
     existing: RedirectRow | null
 ): Promise<NewRedirectRow> {
-    const values = await parseFields(data, redirectFields, {
+    const fromIsFree: ValidationRule = {
+        custom: ({ value }) => checkFromIsFree(redirects, value, existing),
+    };
+    const definitions = redirectFields.map(
+        (field): Field =>
+            field.name === 'from'
+                ? { ...field, validation: [...(field.validation ?? []), fromIsFree] }
+                : field
+    );
+    const values = await parseFields(data, definitions, {
         operation: existing === null ? 'create' : 'update',
         resource: { kind: 'plugin', record: existing },
         user: ctx.user,
-        isUnique: async (field, value) => {
-            if (field.name !== 'from' || typeof value !== 'string') return true;
-            const holder = await redirects.findByFrom(value);
-            return holder === null || holder.id === existing?.id;
-        },
     });
     return {
         from: typeof values['from'] === 'string' ? values['from'] : '',
@@ -194,4 +198,15 @@ async function parseRedirect(
         status: values['status'] === '302' ? '302' : '301',
         enabled: values['enabled'] !== false,
     };
+}
+
+/** `true` when no rule but `existing` holds the path, else the field's message. */
+async function checkFromIsFree(
+    redirects: RedirectsRepository,
+    value: unknown,
+    existing: RedirectRow | null
+): Promise<true | string> {
+    if (typeof value !== 'string') return true;
+    const holder = await redirects.findByFrom(value);
+    return holder === null || holder.id === existing?.id ? true : 'Already in use';
 }

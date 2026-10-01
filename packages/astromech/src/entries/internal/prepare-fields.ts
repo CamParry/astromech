@@ -9,7 +9,6 @@ import type {
 } from '@/types/index';
 import { prepareFields } from '@/content/prepare-fields';
 import { inheritSharedFields } from '@/content/translatable';
-import { listEntriesInLocale } from '../read-entry';
 import { entryRepository } from '../repository/entries-table';
 
 /**
@@ -65,7 +64,6 @@ export async function prepareEntryFields(
             operation: 'create',
             user,
             status: input.status,
-            scan: () => listEntriesInLocale(type, input.locale),
             values: input.values,
             inherit: (values) =>
                 inheritSharedFields('entry', config, {
@@ -108,9 +106,5 @@ export async function prepareEntryFields(
         existing: current,
         user,
         status,
-        scan: () => listEntriesInLocale(type, current.locale),
-        // The entry's own row is the only one the scan must ignore: its staged
-        // copy shares its id and `list` excludes staged rows anyway.
-        excludeId: current.id,
     });
 }

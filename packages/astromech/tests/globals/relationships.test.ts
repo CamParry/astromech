@@ -145,32 +145,6 @@ describe('global relationships', () => {
         expect(await storedRows()).toEqual(written);
     });
 
-    // A global has one row per locale, so a `unique` field has nothing to collide with.
-    it('accepts any value for a unique field', async () => {
-        setupTestConfig({
-            ...makeConfig(),
-            globals: [
-                {
-                    key: 'site',
-                    label: 'Site',
-                    fields: [
-                        {
-                            name: 'code',
-                            type: 'text',
-                            label: 'Code',
-                            validation: [{ unique: true }],
-                        },
-                    ],
-                },
-            ],
-        });
-        const saved = await globalsService.update({
-            key: 'site',
-            data: { fields: { code: 'A' } },
-        });
-        expect(saved.fields).toEqual({ code: 'A' });
-    });
-
     it('refuses a capability name that is not a global one', () => {
         expect(() =>
             assertRequiredCapability(

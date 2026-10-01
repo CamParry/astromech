@@ -1,6 +1,7 @@
 /**
  * The field definitions of a redirect rule: what the admin form renders and
- * what the service's `create` and `update` check their input against.
+ * what the service's `create` and `update` check their input against. The
+ * service adds the check that no other rule holds `from`, since it reads the table.
  */
 
 import type { Field } from 'astromech';
@@ -11,7 +12,6 @@ export const redirectFields: Field[] = [
         label: 'From',
         description: 'The request path to redirect, such as /old-page.',
         required: true,
-        validation: [{ unique: true }],
     }),
     fields.text('to', {
         label: 'To',

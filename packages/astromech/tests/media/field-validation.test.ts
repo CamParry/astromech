@@ -1,6 +1,6 @@
 /**
  * Integration tests for field-processing pipeline wired into the media service
- * (update). Validates coercion, required fields, uniqueness, and self-exclusion.
+ * (update). Validates coercion, required fields and the fields merge.
  */
 
 import type { AstromechConfig, StorageDriver } from '@/types/index';
@@ -72,12 +72,7 @@ function makeMediaFieldConfig(): AstromechConfig {
             fields: [
                 { name: 'caption', type: 'text', label: 'Caption', required: true },
                 { name: 'slug_field', type: 'slug', label: 'Slug' },
-                {
-                    name: 'tag',
-                    type: 'text',
-                    label: 'Tag',
-                    validation: [{ unique: true }],
-                },
+                { name: 'tag', type: 'text', label: 'Tag' },
             ],
         },
     };
@@ -140,60 +135,6 @@ describe('mediaService.update — slug field', () => {
             },
         });
         expect(updated.fields?.slug_field).toBe('my-image-title');
-    });
-});
-
-describe('mediaService.update — uniqueness', () => {
-    it('rejects a duplicate tag across two media items', async () => {
-        const a = await mediaService.upload({ file: textFile('a.txt') });
-        await mediaService.update({
-            id: a.id,
-            data: { fields: { caption: 'A', tag: 'alpha' } },
-        });
-
-        const b = await mediaService.upload({ file: textFile('b.txt') });
-        await expect(
-            mediaService.update({
-                id: b.id,
-                data: { fields: { caption: 'B', tag: 'alpha' } },
-            })
-        ).rejects.toMatchObject({
-            name: 'ValidationError',
-            fields: { tag: ['Already in use'] },
-        });
-    });
-
-    it('allows a media item to keep its own unique tag (self-exclusion)', async () => {
-        const m = await mediaService.upload({ file: textFile() });
-        await mediaService.update({
-            id: m.id,
-            data: { fields: { caption: 'First', tag: 'beta' } },
-        });
-
-        const updated = await mediaService.update({
-            id: m.id,
-            data: {
-                fields: { caption: 'Updated', tag: 'beta' },
-            },
-        });
-        expect(updated.fields?.tag).toBe('beta');
-    });
-
-    it('accepts a different unique tag', async () => {
-        const a = await mediaService.upload({ file: textFile('a.txt') });
-        await mediaService.update({
-            id: a.id,
-            data: { fields: { caption: 'A', tag: 'gamma' } },
-        });
-
-        const b = await mediaService.upload({ file: textFile('b.txt') });
-        const updated = await mediaService.update({
-            id: b.id,
-            data: {
-                fields: { caption: 'B', tag: 'delta' },
-            },
-        });
-        expect(updated.fields?.tag).toBe('delta');
     });
 });
 

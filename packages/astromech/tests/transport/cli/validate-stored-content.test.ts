@@ -22,8 +22,8 @@ const globalsService = currentServices.globals;
 const usersService = currentServices.users;
 
 /**
- * `article` carries a bounded number and a unique code; `report` carries the
- * same code field so `--type` scoping has a second type to leave alone. Two
+ * `article` carries a bounded number and a required summary; `report` carries a
+ * bounded number too, so `--type` scoping has a second type to leave alone. Two
  * globals cover the resource with a locale per row: `branding` in the default
  * content locale alone, `site` in each configured one.
  */
@@ -43,12 +43,7 @@ function makeValidateConfig(): AstromechConfig {
                         label: 'Rating',
                         validation: [{ min: 1 }, { max: 5 }],
                     },
-                    {
-                        name: 'code',
-                        type: 'text',
-                        label: 'Code',
-                        validation: [{ unique: true }],
-                    },
+                    { name: 'code', type: 'text', label: 'Code' },
                     { name: 'summary', type: 'text', label: 'Summary', required: true },
                     {
                         name: 'sections',
@@ -240,32 +235,6 @@ describe('validateStoredContent', () => {
                 message: 'This field is required',
             },
         ]);
-    });
-
-    // Without `excludeId` the row's own stored value is what it collides with.
-    it('does not report a unique value as colliding with itself', async () => {
-        await api.create({
-            type: 'article',
-            data: { title: 'One', fields: { rating: 1, code: 'only' } },
-        });
-
-        expect((await validateStoredContent(systemAppContext())).findings).toEqual([]);
-    });
-
-    it('reports two rows that share a unique value', async () => {
-        const first = await api.create({
-            type: 'article',
-            data: { title: 'One', fields: { code: 'dup' } },
-        });
-        const second = await api.create({ type: 'article', data: { title: 'Two' } });
-        await storeFields(second.id, { code: 'dup' });
-
-        const report = await validateStoredContent(systemAppContext());
-
-        expect(report.findings.map((finding) => finding.id).sort()).toEqual(
-            [first.id, second.id].sort()
-        );
-        expect(report.findings.every((f) => f.message === 'Already in use')).toBe(true);
     });
 
     it('skips trashed rows', async () => {

@@ -8,13 +8,6 @@ import type { Field, FieldErrors, ValidationMode } from 'astromech';
 import { safeParseFields } from 'astromech/shared';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
-/**
- * Data-dependent checks are server-only and skipped in silence: `unique` and
- * a relationship's target-type check need a DB read the browser cannot make.
- * None is surfaced as "pending" — the server re-runs them all on submit.
- */
-const CLIENT_IS_UNIQUE = (): Promise<boolean> => Promise.resolve(true);
-
 export type FieldValidationHandle = {
     /** What the UI should render: server errors, overlaid by revealed client ones. */
     errors: FieldErrors;
@@ -85,7 +78,9 @@ export function useFieldValidation({
         // `structuredClone` is belt-and-braces. The pipeline clones on its
         // way in, but it also writes coerced values and (on 'create') seeded
         // defaults back into what it was handed, and none of that may leak
-        // into the live form state. Only the message maps are used.
+        // into the live form state. Only the message maps are used. With no
+        // `entryTypes`, a relationship's target-type check is skipped in silence
+        // and the server runs it on submit.
         const { errors, warnings } = await safeParseFields(
             structuredClone(valuesRef.current),
             definitionsRef.current,
@@ -94,7 +89,6 @@ export function useFieldValidation({
                 validation,
                 resource: { kind: 'entry', record: null },
                 user: null,
-                isUnique: CLIENT_IS_UNIQUE,
                 collectWarnings: true,
             }
         );

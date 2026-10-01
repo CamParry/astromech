@@ -30,7 +30,6 @@ function ctx(value: unknown, field: DataField): FieldValidationContext {
         validation: 'complete',
         resource: { kind: 'entry', record: null },
         user: null,
-        isUnique: async () => true,
     };
 }
 
@@ -39,7 +38,6 @@ function fakeCtx() {
         operation: 'create' as const,
         resource: { kind: 'entry' as const, record: null },
         user: null,
-        isUnique: async () => true,
     };
 }
 

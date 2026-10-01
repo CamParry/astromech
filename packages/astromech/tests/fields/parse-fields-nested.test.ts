@@ -19,7 +19,6 @@ function fakeCtx(operation: 'create' | 'update' = 'create', validation?: Validat
         ...(validation !== undefined ? { validation } : {}),
         resource: { kind: 'entry' as const, record: {} },
         user: null,
-        isUnique: async () => true,
     };
 }
 

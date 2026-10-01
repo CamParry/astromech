@@ -40,9 +40,6 @@ the repository copies.
 - [ ] **A staged slug is lost at merge.** `entries/methods/staging/merge.ts`
       writes only the staged `title` and `fields`. Carry the slug, or refuse a
       slug in a staged write.
-- [ ] **`valuesEqual` depends on key order.** `utilities/values-equal.ts` compares
-      with `JSON.stringify`, so a `unique` check sees `{a,b}` and `{b,a}` as
-      different. Keep only `utilities/deep-equal.ts`.
 - [ ] **The command palette ignores read permissions.** It rebuilds the sidebar's
       nav (`packages/admin/src/components/ui/command-palette.tsx`) without
       `canReadMedia`/`canReadUsers`, and omits globals and app pages. Build both

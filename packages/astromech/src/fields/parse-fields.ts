@@ -131,12 +131,6 @@ async function runRule(
         return null;
     }
 
-    if ('unique' in rule) {
-        const isUniq = await ctx.isUnique(ctx.field, value);
-        if (!isUniq) return 'Already in use';
-        return null;
-    }
-
     if ('custom' in rule) {
         const r = await rule.custom(ctx);
         if (r !== true) {
@@ -354,7 +348,6 @@ async function processScope(
                 validation: ctx.validation,
                 resource: ctx.resource,
                 user: ctx.user,
-                isUnique: ctx.isUnique,
                 ...(ctx.entryTypes !== undefined ? { entryTypes: ctx.entryTypes } : {}),
             };
             ({ error, warning } = await checkCorrectness(
@@ -445,7 +438,6 @@ export async function safeParseFields(
             validation,
             resource: ctx.resource,
             user: ctx.user,
-            isUnique: ctx.isUnique,
             ...(ctx.entryTypes !== undefined ? { entryTypes: ctx.entryTypes } : {}),
         });
         if (typeof reported === 'string') {

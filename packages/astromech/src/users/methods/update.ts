@@ -54,8 +54,6 @@ export const updateUser = defineServiceMethod({
                       operation: 'update',
                       existing: base,
                       user,
-                      scan: () => userRepository.findByLocale(locale),
-                      excludeId: id,
                       base: base.fields,
                       patch,
                   });
