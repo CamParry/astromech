@@ -315,22 +315,23 @@ other stage rather than ahead of them.
 Lands alone, before anything else in stage 2, because it touches only the
 harness and eight test files and every later stage runs faster for it.
 
-- [ ] Build the migrated template database once per run in
+- [x] Build the migrated template database once per run in
       `packages/astromech/tests/_support/global-setup.ts`, `provide` its path,
       and have `createTestDb()` copy it. Close the template's connection, or
       turn off WAL, before the first copy: a copy of the `.db` file alone
-      misses anything still in the write-ahead log. The measured version
-      migrated one template per worker inside `createTestDb()`; if the
-      global-setup version gives trouble, fall back to that.
-- [ ] Move the eight files that call `createFileTestDb` onto `createTestDb` and
-      delete the helper. Expect core near 25 s.
-- [ ] Update the setup paragraph of the `testing` skill to describe the
+      misses anything still in the write-ahead log. libsql opens a local file
+      with a rollback journal, so closing the client is enough; global setup
+      fails if a journal or WAL file is ever left beside the template.
+- [x] Move the eight files that call `createFileTestDb` onto `createTestDb` and
+      delete the helper. Core went from 70.9 s to 11.2 s, with the same 3,153
+      tests.
+- [x] Update the setup paragraph of the `testing` skill to describe the
       template database.
-- [ ] Measure `verify:fast` again, step by step, and pick the next speed target
-      from the result. Typecheck (69 s) and lint (76 s) measured slower than
-      core will be, and the admin (30 s) becomes the slowest suite, all on a
-      loaded machine. Running only the packages a branch touched (stage 3) is
-      the likely candidate.
+- [x] Measure `verify:fast` again, step by step, and pick the next speed target
+      from the result. Run alone on a quiet machine: typecheck 25.6 s, package
+      tests 35.7 s (core 13.4 s, admin 11.1 s), lint 17.6 s, `check:unused`
+      7.8 s. The tests no longer dominate, so the next target is running only
+      the packages a branch touched (stage 3).
 
 ### Stage 2b: one setup and reset
 
