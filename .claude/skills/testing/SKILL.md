@@ -40,7 +40,7 @@ Use the real version of everything Astromech owns: the database, config, service
 
 ## Setup and data
 
-The house setup is `packages/astromech/tests/_support/harness.ts`; read its doc comments rather than guessing. `createTestDb()` in `beforeEach` gives each test its own migrated database file, so no test sees another's rows and code that opens its own transaction runs as it does in a site. `setupTestConfig(makeTestConfig())` publishes a config whose entry types cover most capability combinations; change a copy of it for the test rather than writing a config from scratch.
+The house setup is `packages/astromech/tests/_support/harness.ts`; read its doc comments rather than guessing. `createTestDb()` in `beforeEach` gives each test its own database file, so no test sees another's rows and code that opens its own transaction runs as it does in a site. Each call copies a database migrated once per run, so a fresh database per test costs a few milliseconds. `setupTestConfig(makeTestConfig())` publishes a config whose entry types cover most capability combinations; change a copy of it for the test rather than writing a config from scratch.
 
 - **Read a write back through the public read path**, not raw SQL, unless the point is that nothing was written.
 - **Keep every value the assertion depends on visible in the test.** Helpers supply defaults. Some repetition is better than a reader searching `_support/` for the input.

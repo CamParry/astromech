@@ -7,11 +7,8 @@
  * every other row untouched.
  */
 
-import { rmSync } from 'node:fs';
-import { tmpdir } from 'node:os';
-import { join } from 'node:path';
-import { createFileTestDb, setupTestConfig } from '@tests/harness';
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { createTestDb, setupTestConfig } from '@tests/harness';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { currentServices } from '@/app-context/services';
 import { relationshipRepository } from '@/content/repository/relationships';
 import { createRepository } from '@/database/repository/create-repository';
@@ -36,15 +33,10 @@ beforeEach(() => {
     );
 });
 
-let dbCounter = 0;
-let dbPath = '';
 let id: string;
 
 beforeEach(async () => {
-    // Each test gets its own named database file, which `afterEach` deletes.
-    dbCounter += 1;
-    dbPath = join(tmpdir(), `astromech-users-atomicity-${process.pid}-${dbCounter}.db`);
-    await createFileTestDb(`file:${dbPath}`);
+    await createTestDb();
     setupTestConfig(makeTranslatableUsersConfig());
     state.failing = false;
     state.failingDelete = false;
@@ -53,16 +45,6 @@ beforeEach(async () => {
         data: { email: 'ann@test.dev', name: 'Ann', fields: { bio: 'first bio' } },
     });
     id = user.id;
-});
-
-afterEach(() => {
-    for (const suffix of ['', '-wal', '-shm']) {
-        try {
-            rmSync(`${dbPath}${suffix}`);
-        } catch {
-            // best-effort cleanup
-        }
-    }
 });
 
 describe('create atomicity', () => {

@@ -9,19 +9,14 @@
  * tests/entries/staging.test.ts — these tests own the route wiring:
  * status codes, the 409 duplicate-stage envelope (carrying `locale`), the
  * capability 409, and the permission matrix (merge = publish; the rest = update).
- *
- * Each test gets its own named database file, which `afterEach` deletes.
  */
 
 import type { AuthVariables } from '@/transport/http/middleware/auth';
 import type { Role } from '@/types/index';
-import { rmSync } from 'node:fs';
-import { tmpdir } from 'node:os';
-import { join } from 'node:path';
 import { OpenAPIHono } from '@hono/zod-openapi';
-import { createFileTestDb, makeTestConfig, setupTestConfig } from '@tests/harness';
+import { createTestDb, makeTestConfig, setupTestConfig } from '@tests/harness';
 import { seedTestUser, testUser } from '@tests/mount-router';
-import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import { beforeEach, describe, expect, it } from 'vitest';
 import { createAppContext } from '@/app-context/app-context';
 import { currentServices } from '@/app-context/services';
 import { onError } from '@/transport/http/middleware/errors';
@@ -40,27 +35,12 @@ function roleWith(permissions: string[]): Role {
     };
 }
 
-let dbCounter = 0;
-let dbPath = '';
-
 beforeEach(async () => {
-    dbCounter += 1;
-    dbPath = join(tmpdir(), `astromech-staging-http-${process.pid}-${dbCounter}.db`);
-    await seedTestUser(await createFileTestDb(`file:${dbPath}`));
+    await seedTestUser(await createTestDb());
 
     const cfg = makeTestConfig();
     if (cfg.entries.post) cfg.entries.post.staging = true; // versioning on + staging on
     setupTestConfig(cfg);
-});
-
-afterEach(() => {
-    for (const suffix of ['', '-wal', '-shm']) {
-        try {
-            rmSync(`${dbPath}${suffix}`);
-        } catch {
-            // best-effort cleanup
-        }
-    }
 });
 
 /** Mount the root entries router with an injected role. */

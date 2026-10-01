@@ -1,13 +1,14 @@
 /**
  * Test harness for the entry data layer.
  *
- * `createTestDb` spins up a file-based libsql database in the run's temp dir,
- * applies `apps/demo/migrations`' full migration chain, and registers it via
- * `setDb` so service modules (which call `getDb()` per-op) hit it. Running the real
- * migration chain (rather than a throwaway test-only schema) means every
- * harness-based test also exercises the generated `migrationProvider`.
- * `setupTestConfig` resolves a small but representative config and publishes it
- * to `config/registry.ts`, which is where every reader takes it from.
+ * `createTestDb` copies the run's template database (migrated once by
+ * `global-setup.ts` with the full chain in `test-db.ts`) to a new file in the
+ * run's temp dir, opens it with libsql, and registers it via `setDb` so service
+ * modules (which call `getDb()` per-op) hit it. A copy takes a few
+ * milliseconds where migrating takes tens, so a fresh database per test is
+ * cheap. `setupTestConfig` resolves a small but representative config and
+ * publishes it to `config/registry.ts`, which is where every reader takes it
+ * from.
  *
  * Why file-based rather than `:memory:`?
  * On a file database, `@libsql/client` keeps a pool of connections: a
@@ -15,8 +16,7 @@
  * site runs. A `:memory:` database has a single connection, so while a
  * transaction is open, any query outside it fails with `TRANSACTION_ACTIVE`
  * instead of running. The suite passes on either; the file keeps it on the
- * connection behaviour a site has, and stays about as fast for the small
- * migration set here.
+ * connection behaviour a site has, and a file is what the template copy needs.
  *
  * Each `createTestDb()` call uses a unique file name so `beforeEach` calls stay
  * fully isolated even when tests run in a single worker.
@@ -38,15 +38,14 @@ import type {
     Role,
     User,
 } from '@/types/index';
-import type { MigrationProvider } from 'kysely/migration';
-// Declares `testDbDir` on vitest's `ProvidedContext`, for `inject` below.
+// Declares `testDbDir` and `testDbTemplate` on vitest's `ProvidedContext`,
+// for `inject` below.
 import type {} from './global-setup';
+import type { Kysely } from 'kysely';
+import * as fs from 'node:fs/promises';
 import * as path from 'node:path';
-import { mergeMigrationProviders, migrateToLatest } from '@astromech/schema-engine';
 import { createClient } from '@libsql/client';
-import { LibsqlDialect } from '@libsql/kysely-libsql';
 import { noopStorage } from '@tests/fixtures';
-import { CamelCasePlugin, Kysely } from 'kysely';
 import { inject } from 'vitest';
 import { createAppContext } from '@/app-context/app-context';
 import { setConfig } from '@/config/registry';
@@ -58,73 +57,31 @@ import { userContentTable, usersTable } from '@/database/tables';
 import { DEFAULT_ROLE_SLUG } from '@/permissions/roles';
 import { registerPlugins } from '@/plugins/runtime/plugin-runtime';
 import { runInRequestScope } from '@/request-scope/request-scope';
+import { openTestDb } from './test-db';
 
 type Db = Kysely<DB>;
 
-/** Plugins whose generated baselines the harness chain includes. */
-export const FIRST_PARTY_PLUGIN_MIGRATIONS = ['redirects', 'backups', 'forms'] as const;
+// Written by `global-setup.ts`, which removes both once every worker has
+// finished: the run's temp dir for test databases, and the migrated template
+// each test database is copied from.
+const TEST_DB_DIR = inject('testDbDir');
+const TEST_DB_TEMPLATE = inject('testDbTemplate');
 
 /**
- * Build a Kysely instance over a libsql `url`, register it (+ a driver wrapping
- * it) globally, and apply the full migration chain. The app-owned migration
- * provider lives outside this package's rootDir, so it is imported
- * dynamically by URL (vitest resolves the .ts) to avoid pulling apps/demo
- * into the tsconfig project.
+ * Copy the migrated template to a new file, open it, and register it globally.
+ * Returns the Kysely handle (already the active `getDb()` instance).
  */
-async function buildTestDb(url: string): Promise<Db> {
-    const client = createClient({ url });
-    const db = new Kysely<DB>({
-        // `@libsql/kysely-libsql` pins an older `@libsql/core` Client type; the
-        // runtime client is compatible (see the libsql driver).
-        dialect: new LibsqlDialect({ client: client as never }),
-        plugins: [new CamelCasePlugin()],
-    });
+export async function createTestDb(): Promise<Db> {
+    const file = path.join(TEST_DB_DIR, `${crypto.randomUUID()}.db`);
+    await fs.copyFile(TEST_DB_TEMPLATE, file);
+    const db = openTestDb(createClient({ url: `file:${file}` }));
     setDb(db);
     setDatabaseDriver({
         type: 'libsql',
         getInstance: () => db,
         supportsTransactions: true,
     });
-    const { migrationProvider } = await import(
-        new URL('../../../../apps/demo/migrations/index.ts', import.meta.url).href
-    );
-    // The first-party plugins own their tables, so the app chain alone does not
-    // create them. Apply exactly what a real boot applies: the merged provider.
-    // `allowUnorderedMigrations` mirrors `database/migrations.ts`, because plugin
-    // migrations interleave with the app's in one `kysely_migration` table.
-    const plugins = await Promise.all(
-        FIRST_PARTY_PLUGIN_MIGRATIONS.map(async (alias) => {
-            const mod = await import(
-                new URL(`../../../plugins/${alias}/migrations/index.ts`, import.meta.url)
-                    .href
-            );
-            return { alias, provider: mod.migrationProvider as MigrationProvider };
-        })
-    );
-    await migrateToLatest(db, mergeMigrationProviders(migrationProvider, plugins), {
-        allowUnorderedMigrations: true,
-    });
     return db;
-}
-
-// Temp dir for test databases, one per run: `global-setup.ts` creates it and
-// removes it once every worker has finished.
-const TEST_DB_DIR = inject('testDbDir');
-
-/**
- * Create a fresh temp-file database, migrate it, and register it globally.
- * Returns the Kysely handle (already the active `getDb()` instance).
- */
-export async function createTestDb(): Promise<Db> {
-    return buildTestDb(`file:${path.join(TEST_DB_DIR, `${crypto.randomUUID()}.db`)}`);
-}
-
-/**
- * Like {@link createTestDb} but against a caller-named file db (e.g.
- * `file:/tmp/x.db`), for tests that want to inspect or clean up the file.
- */
-export async function createFileTestDb(url: string): Promise<Db> {
-    return buildTestDb(url);
 }
 
 // `makeTestConfig()`'s `db` field is never actually resolved: tests wire the
