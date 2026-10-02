@@ -8,10 +8,14 @@ export function deepEqual(a: unknown, b: unknown): boolean {
         if (a.length !== (b as unknown[]).length) return false;
         return (a as unknown[]).every((v, i) => deepEqual(v, (b as unknown[])[i]));
     }
-    const keysA = Object.keys(a).sort();
-    const keysB = Object.keys(b as object).sort();
-    if (keysA.length !== keysB.length) return false;
-    return keysA.every((k) =>
-        deepEqual((a as Record<string, unknown>)[k], (b as Record<string, unknown>)[k])
+    const keysA = Object.keys(a);
+    if (keysA.length !== Object.keys(b as object).length) return false;
+    return keysA.every(
+        (k) =>
+            Object.hasOwn(b as object, k) &&
+            deepEqual(
+                (a as Record<string, unknown>)[k],
+                (b as Record<string, unknown>)[k]
+            )
     );
 }
