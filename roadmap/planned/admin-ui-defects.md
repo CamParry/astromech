@@ -18,3 +18,10 @@ expected failure (`it.fails`) until fixed.
 - [ ] The notification bell's unread count is `aria-hidden` and the button's
       label is only "Notifications", so a screen reader never hears the count
       (not tested).
+- [ ] A clickable table row opens by mouse only: `Table.Row` in
+      `packages/admin/src/components/ui/table.tsx` renders a `<tr data-href>`
+      with an `onClick` and no link or focus, so a keyboard user cannot open
+      the entry. Every clickable admin table is affected; the seo overview is
+      where the tests found it.
+- [ ] The seo overview's Status column shows the raw value (`published`,
+      `draft`) where the admin's own strings have "Published".

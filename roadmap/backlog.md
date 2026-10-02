@@ -119,3 +119,5 @@ not be re-derived.
 ### Content follow-ups
 
 - [ ] `packages/astromech/src/content/versions.ts` falls back to the current fields (`?? current.fields`) when a stored version has none, but no write can store a version without fields: every repository maps null to `{}` before `snapshotVersion`. Remove the fallback, or say what old data it is for. Found in stage 4 of `roadmap/in-progress/test-suite-review.md`.
+- [ ] Decide what a slug is for a title with no ASCII letters. `slugify` keeps only ASCII letters and digits, so a Japanese, Greek or Cyrillic title gets no slug, and accents are dropped rather than converted (`Café` becomes `caf`). Transliterate, allow Unicode slugs, or keep it and say so. Found by the slug property tests in stage 5 of `roadmap/in-progress/test-suite-review.md`.
+- [ ] The assistant's `readChatRequest` checks only that `aiContext` is an array, so an item of any shape gets through and `formatAiContextMessage` then throws a TypeError. Validate each item's shape and update the existing `chat.test.ts` case that asserts arbitrary objects are accepted. Recorded as an expected failure in the assistant's `readChatRequest` property tests.
