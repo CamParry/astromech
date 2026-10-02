@@ -1,15 +1,10 @@
 /**
  * The backups plugin registered on a fresh harness database, with the site's
- * storage on the filesystem driver, plus a way to call its raw routes as a
- * role. `PluginTestApp.request` sends no identity, and download and restore
- * refuse an anonymous caller, so those requests go through `requestAs`.
+ * storage on the filesystem driver.
  */
-import type { Role, User } from '@/types/index';
 import type { PluginTestApp } from '@tests/plugin-app';
-import { makeUser } from '@tests/fixtures';
-import { createTestStorage, makeTestConfig, requestAs } from '@tests/harness';
+import { createTestStorage, makeTestConfig } from '@tests/harness';
 import { createPluginTestApp } from '@tests/plugin-app';
-import { createHttpApp } from '@/transport/http/app';
 import { backups } from '../../src/index';
 
 declare global {
@@ -25,25 +20,6 @@ export async function createBackupsApp(): Promise<PluginTestApp<'backups'>> {
     });
     globalThis.__astromechBackupRunning = false;
     return app;
-}
-
-/**
- * Send `method` to `path` (relative to `{basePath}/api`) on the whole HTTP app
- * as a signed-in user holding `role`, or as nobody when `role` is null.
- */
-export function requestAsRole(
-    app: PluginTestApp<'backups'>,
-    role: Role | null,
-    method: string,
-    path: string
-): Promise<Response> {
-    const user: User | null = role === null ? null : makeUser();
-    return requestAs(
-        createHttpApp(app.config),
-        { user, role },
-        `${app.config.basePath}/api${path}`,
-        { method }
-    );
 }
 
 /** Take a backup through the trusted service and return its run, failing the test if none was taken. */

@@ -1,9 +1,8 @@
 /**
  * The chat route through the whole HTTP app: who may post a turn, what a bad
  * body gets back, and that the stream it answers with is stored as the
- * caller's own session. `PluginTestApp.request` sends no identity, so requests
- * go through the harness's `requestAs` on `createHttpApp`. Only `streamText`,
- * the call out to the model, is replaced.
+ * caller's own session. Only `streamText`, the call out to the model, is
+ * replaced.
  */
 
 import type { ChatEvent, ChatMessage } from '../../src/types';
@@ -11,13 +10,12 @@ import type { AiConfig, Role, User } from '@/types/index';
 import type { PluginTestApp } from '@tests/plugin-app';
 import type * as AiModule from 'ai';
 import { roleWith } from '@tests/fixtures';
-import { makeTestConfig, requestAs } from '@tests/harness';
+import { makeTestConfig } from '@tests/harness';
 import { createPluginTestApp } from '@tests/plugin-app';
 import { streamText } from 'ai';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { buildAiModels } from '@/ai/models';
 import { setAiModels } from '@/ai/registry';
-import { createHttpApp } from '@/transport/http/app';
 import { createApprovalsRepository } from '../../src/approvals/repository';
 import { assistant } from '../../src/index';
 import { createSessionsRepository } from '../../src/sessions/repository';
@@ -99,16 +97,7 @@ function postChat(
     caller: { user: User | null; role: Role | null },
     body: unknown
 ): Promise<Response> {
-    return requestAs(
-        createHttpApp(app.config),
-        caller,
-        `${app.config.basePath}/api/plugins/assistant/chat`,
-        {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: typeof body === 'string' ? body : JSON.stringify(body),
-        }
-    );
+    return app.request('POST', '/plugins/assistant/chat', { as: caller, body });
 }
 
 /** The SSE frames of a response, parsed. */

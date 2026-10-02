@@ -5,10 +5,10 @@
  */
 
 import type { PluginTestApp } from '@tests/plugin-app';
-import { roleWith } from '@tests/fixtures';
+import { makeUser, roleWith } from '@tests/fixtures';
 import { beforeEach, describe, expect, it } from 'vitest';
 import { backups } from '../src/index';
-import { createBackupsApp, requestAsRole, takeBackup } from './_support/backups-app';
+import { createBackupsApp, takeBackup } from './_support/backups-app';
 
 let app: PluginTestApp<'backups'>;
 
@@ -19,7 +19,9 @@ beforeEach(async () => {
 });
 
 function restore(id: string): Promise<Response> {
-    return requestAsRole(app, restorer, 'POST', `/plugins/backups/runs/${id}/restore`);
+    return app.request('POST', `/plugins/backups/runs/${id}/restore`, {
+        as: { user: makeUser(), role: restorer },
+    });
 }
 
 describe('POST /plugins/backups/runs/:id/restore', () => {

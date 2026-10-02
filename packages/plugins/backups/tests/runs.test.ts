@@ -6,15 +6,10 @@
 
 import type { PluginTestApp } from '@tests/plugin-app';
 import { gunzipSync } from 'node:zlib';
-import { roleWith } from '@tests/fixtures';
+import { makeUser, roleWith } from '@tests/fixtures';
 import { beforeEach, describe, expect, it } from 'vitest';
 import { backups } from '../src/index';
-import {
-    artifactKey,
-    createBackupsApp,
-    requestAsRole,
-    takeBackup,
-} from './_support/backups-app';
+import { artifactKey, createBackupsApp, takeBackup } from './_support/backups-app';
 
 let app: PluginTestApp<'backups'>;
 
@@ -48,12 +43,9 @@ describe('GET /plugins/backups/runs/:id/download', () => {
         const run = await takeBackup(app);
         const key = artifactKey(run);
 
-        const res = await requestAsRole(
-            app,
-            downloader,
-            'GET',
-            `/plugins/backups/runs/${run.id}/download`
-        );
+        const res = await app.request('GET', `/plugins/backups/runs/${run.id}/download`, {
+            as: { user: makeUser(), role: downloader },
+        });
 
         expect(res.status).toBe(200);
         expect(res.headers.get('Content-Type')).toBe('application/gzip');
@@ -72,11 +64,12 @@ describe('GET /plugins/backups/runs/:id/download', () => {
     });
 
     it('answers 404 for a run that does not exist', async () => {
-        const res = await requestAsRole(
-            app,
-            downloader,
+        const res = await app.request(
             'GET',
-            '/plugins/backups/runs/no-such-run/download'
+            '/plugins/backups/runs/no-such-run/download',
+            {
+                as: { user: makeUser(), role: downloader },
+            }
         );
 
         expect(res.status).toBe(404);
@@ -87,12 +80,9 @@ describe('GET /plugins/backups/runs/:id/download', () => {
         const run = await takeBackup(app);
         await app.context().storage.delete(artifactKey(run));
 
-        const res = await requestAsRole(
-            app,
-            downloader,
-            'GET',
-            `/plugins/backups/runs/${run.id}/download`
-        );
+        const res = await app.request('GET', `/plugins/backups/runs/${run.id}/download`, {
+            as: { user: makeUser(), role: downloader },
+        });
 
         expect(res.status).toBe(410);
     });

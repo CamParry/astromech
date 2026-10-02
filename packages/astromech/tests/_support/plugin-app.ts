@@ -18,7 +18,7 @@ import type {
     UsersService,
 } from '@/types/index';
 import type { Kysely } from 'kysely';
-import { createTestDb, setupTestConfig } from '@tests/harness';
+import { createTestDb, requestAs, setupTestConfig } from '@tests/harness';
 import { createAppContext, systemAppContext } from '@/app-context/app-context';
 import { createServices, currentServices } from '@/app-context/services';
 import { setMethodManifest } from '@/codegen/manifest-registry';
@@ -58,14 +58,24 @@ export type PluginTestApp<K extends PluginKey> = {
     users: UsersService;
     /** The `ctx` the plugin's own code receives, acting as the system. */
     context(): PluginContext;
-    /** Send a request to the app's API. `path` is relative to `{basePath}/api`. */
+    /**
+     * Send a request to the app's API. `path` is relative to `{basePath}/api`.
+     * The request carries no session, so the app sees an anonymous caller,
+     * unless `init.as` names the signed-in user and role to send it as.
+     */
     request(method: string, path: string, init?: TestRequestInit): Promise<Response>;
 };
 
-/** The body (sent as JSON) and headers of a `PluginTestApp.request`. */
+/** The body, headers and caller of a `PluginTestApp.request`. */
 export type TestRequestInit = {
+    /** Sent as JSON, with a JSON `Content-Type`. A string is sent as it is, so a test can send malformed JSON. */
     body?: unknown;
     headers?: Record<string, string>;
+    /**
+     * The caller, set through the harness's `requestAs` on the real request
+     * scope, the way the session middleware sets a signed-in user and role.
+     */
+    as?: { user: User | null; role: Role | null };
 };
 
 /**
@@ -111,11 +121,22 @@ export async function createPluginTestApp<K extends PluginKey>(
             http ??= createHttpApp(resolved);
             const headers = { ...init.headers };
             if (init.body !== undefined) headers['Content-Type'] = 'application/json';
-            return http.request(`${resolved.basePath}/api${path}`, {
+            const url = `${resolved.basePath}/api${path}`;
+            const requestInit: RequestInit = {
                 method,
                 headers,
-                ...(init.body === undefined ? {} : { body: JSON.stringify(init.body) }),
-            });
+                ...(init.body === undefined
+                    ? {}
+                    : {
+                          body:
+                              typeof init.body === 'string'
+                                  ? init.body
+                                  : JSON.stringify(init.body),
+                      }),
+            };
+            return init.as === undefined
+                ? http.request(url, requestInit)
+                : requestAs(http, init.as, url, requestInit);
         },
     };
 }

@@ -1,21 +1,17 @@
 /**
  * Each backups operation refuses a role without its own permission. Service
  * methods are called on the scoped handle (`app.as`), the way a transport
- * calls them; download and restore are raw routes, sent over the HTTP app.
+ * calls them; download and restore are raw routes, sent over the HTTP app with
+ * `app.request`.
  * Each refusal is checked against a role that holds every other backups
  * permission, so a grant cannot leak from one operation to another.
  */
 
 import type { PluginTestApp } from '@tests/plugin-app';
-import { roleWith } from '@tests/fixtures';
+import { makeUser, roleWith } from '@tests/fixtures';
 import { beforeEach, describe, expect, it } from 'vitest';
 import { backups } from '../src/index';
-import {
-    artifactKey,
-    createBackupsApp,
-    requestAsRole,
-    takeBackup,
-} from './_support/backups-app';
+import { artifactKey, createBackupsApp, takeBackup } from './_support/backups-app';
 
 type BackupsPermission = 'read' | 'run' | 'download' | 'restore' | 'delete';
 
@@ -95,11 +91,10 @@ describe('backups raw route permissions', () => {
         async (permission, method, action) => {
             const run = await takeBackup(app);
 
-            const res = await requestAsRole(
-                app,
-                roleWithout(permission),
+            const res = await app.request(
                 method,
-                `/plugins/backups/runs/${run.id}/${action}`
+                `/plugins/backups/runs/${run.id}/${action}`,
+                { as: { user: makeUser(), role: roleWithout(permission) } }
             );
 
             expect(res.status).toBe(403);
@@ -116,9 +111,7 @@ describe('backups raw route permissions', () => {
     ] as const)('refuses %s to a caller who is not signed in', async (action, method) => {
         const run = await takeBackup(app);
 
-        const res = await requestAsRole(
-            app,
-            null,
+        const res = await app.request(
             method,
             `/plugins/backups/runs/${run.id}/${action}`
         );

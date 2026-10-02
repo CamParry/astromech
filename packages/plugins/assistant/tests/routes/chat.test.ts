@@ -1,11 +1,15 @@
 /**
- * Body validation on the chat route. Content blocks are checked for a `type`
- * and nothing more — deeper checks would reject the block types the transcript
+ * The chat route module: its handler's own refusal of a caller with no user,
+ * and body validation. Content blocks are checked for a `type` and nothing
+ * more — deeper checks would reject the block types the transcript
  * deliberately carries through, and the API is the real validator.
  */
 
+import { makeTestConfig } from '@tests/harness';
+import { createPluginTestApp } from '@tests/plugin-app';
 import { describe, expect, it } from 'vitest';
-import { readChatRequest } from '../../src/routes/chat';
+import { assistant, resolveOptions } from '../../src/index';
+import { chatRoutes, readChatRequest } from '../../src/routes/chat';
 
 /** A POST carrying `body` verbatim, so malformed JSON stays malformed. */
 function post(body: string): Request {
@@ -24,6 +28,31 @@ function postJson(body: unknown): Request {
 function text(role: 'user' | 'assistant', value: string): unknown {
     return { role, content: [{ type: 'text', text: value }] };
 }
+
+// The HTTP app's `enforceAccess` refuses an anonymous caller before the
+// handler runs, so the route test cannot tell which of the two refused. This
+// calls the handler directly to prove its own check holds without the other.
+describe('the chat handler', () => {
+    it('refuses a context with no user', async () => {
+        const app = await createPluginTestApp('assistant', {
+            ...makeTestConfig(),
+            plugins: [assistant()],
+        });
+        const [route] = chatRoutes(resolveOptions());
+        if (route === undefined) throw new Error('the chat route is not defined');
+
+        const res = await route.handler(
+            postJson({ messages: [text('user', 'hi')] }),
+            app.context(),
+            {}
+        );
+
+        expect(res.status).toBe(401);
+        await expect(res.json()).resolves.toEqual({
+            error: 'Sign in to use the assistant.',
+        });
+    });
+});
 
 describe('readChatRequest', () => {
     it('parses a body of turns with no aiContext', async () => {
