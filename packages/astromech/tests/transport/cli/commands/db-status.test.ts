@@ -7,7 +7,7 @@
 
 import { readdir, readFile, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
-import { createTempSite, run, writeSiteConfig } from '@tests/cli';
+import { createTempSite, run, runOk, writeSiteConfig } from '@tests/cli';
 import { resetRuntime } from '@tests/harness';
 import { sql } from 'kysely';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
@@ -37,15 +37,15 @@ function writeConfig(options: { remote?: boolean } = {}): Promise<string> {
  * having gained since the last generate.
  */
 async function generateUnappliedMigration(config: string): Promise<void> {
-    await run(dbGenerate, ['--config', config]);
-    await run(dbInit, ['--config', config]);
+    await runOk(dbGenerate, ['--config', config]);
+    await runOk(dbInit, ['--config', config]);
     const snapshotPath = join(migrationsDir, 'snapshot.json');
     const snapshot = JSON.parse(await readFile(snapshotPath, 'utf-8')) as {
         tables: Record<string, unknown>;
     };
     delete snapshot.tables['_astromech_cron'];
     await writeFile(snapshotPath, JSON.stringify(snapshot));
-    await run(dbGenerate, ['--config', config, '--name', 'add-cron']);
+    await runOk(dbGenerate, ['--config', config, '--name', 'add-cron']);
 }
 
 beforeEach(async () => {
@@ -75,8 +75,8 @@ describe('db:status', () => {
 
     it('lists the migrations db:init applied', async () => {
         const config = await writeConfig();
-        await run(dbGenerate, ['--config', config]);
-        await run(dbInit, ['--config', config]);
+        await runOk(dbGenerate, ['--config', config]);
+        await runOk(dbInit, ['--config', config]);
 
         expect(await run(dbStatus, ['--config', config])).toEqual({
             stdout: ['Applied migrations:', '  0000_migration'],
@@ -97,6 +97,13 @@ describe('db:status', () => {
             name: string;
         }>`SELECT name FROM kysely_migration ORDER BY name`.execute(getDb());
         expect(rows).toEqual([{ name: '0000_migration' }]);
+        // Today's output in this state: the case below fails only on the
+        // missing `0001_add-cron` line.
+        expect(await run(dbStatus, ['--config', config])).toEqual({
+            stdout: ['Applied migrations:', '  0000_migration'],
+            stderr: [],
+            exitCode: 0,
+        });
     });
 
     // Defect: `db:status` reads only `kysely_migration`, never the config's

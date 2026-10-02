@@ -9,7 +9,7 @@
 
 import { readFile, rm } from 'node:fs/promises';
 import { join } from 'node:path';
-import { createTempSite, run, writeSiteConfig } from '@tests/cli';
+import { createTempSite, run, runOk, writeSiteConfig } from '@tests/cli';
 import { resetRuntime } from '@tests/harness';
 import { beforeEach, describe, expect, it } from 'vitest';
 import generateTypes from '@/transport/cli/commands/generate-types';
@@ -70,12 +70,12 @@ describe('generate:types', () => {
     it('writes the same bytes when run twice', async () => {
         const out = join(siteDir, 'astromech.d.ts');
 
-        await run(generateTypes, ['--config', configPath, '--out', out]);
+        await runOk(generateTypes, ['--config', configPath, '--out', out]);
         const first = await readFile(out, 'utf-8');
         // Deleted, so the comparison reads what the second run wrote.
         await rm(out);
         resetRuntime();
-        await run(generateTypes, ['--config', configPath, '--out', out]);
+        await runOk(generateTypes, ['--config', configPath, '--out', out]);
 
         expect(await readFile(out, 'utf-8')).toBe(first);
     });

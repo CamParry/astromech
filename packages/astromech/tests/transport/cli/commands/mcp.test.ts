@@ -152,8 +152,9 @@ describe('mcp', () => {
     );
 
     it('refuses an unknown --confirm mode before the server starts', async () => {
-        // The CLI's `runMain` reports this error and exits with code 1
-        // (`index.test.ts` covers that path).
+        // The command throws; the CLI's `runMain` catches what a command
+        // throws, prints it and exits 1. `index.test.ts` shows that catch path
+        // only for an unknown command, not for this error.
         await expect(
             run(mcp, ['--config', configPath, '--confirm', 'always'])
         ).rejects.toThrow('Unknown --confirm mode "always"');

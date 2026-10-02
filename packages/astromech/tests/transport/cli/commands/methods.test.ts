@@ -9,7 +9,7 @@
 
 import { copyFile } from 'node:fs/promises';
 import { join } from 'node:path';
-import { createTempSite, run, writeSiteConfig } from '@tests/cli';
+import { createTempSite, run, runOk, writeSiteConfig } from '@tests/cli';
 import { resetRuntime } from '@tests/harness';
 import { afterEach, beforeEach, describe, expect, inject, it } from 'vitest';
 import { getDb } from '@/database/registry';
@@ -74,7 +74,7 @@ describe('methods', () => {
     });
 
     it('lists only what --read-only keeps, and counts what it excluded', async () => {
-        const { stdout } = await run(methods, [
+        const { stdout } = await runOk(methods, [
             '--config',
             configPath,
             '--source',
@@ -91,7 +91,7 @@ describe('methods', () => {
     });
 
     it('carries the excluded methods alongside the kept ones under --json', async () => {
-        const { stdout } = await run(methods, [
+        const { stdout } = await runOk(methods, [
             '--config',
             configPath,
             '--filter',
@@ -115,9 +115,9 @@ describe('methods', () => {
         const result = await run(methods, ['--config', configPath, '--role', 'nobody']);
 
         expect(result.stdout).toEqual([]);
-        expect(result.stderr.at(-1)).toContain(
-            'Unknown role "nobody". Configured roles: admin, editor, reader'
-        );
+        expect(result.stderr).toEqual([
+            'Error: Validation failed:\n  role: Unknown role "nobody". Configured roles: admin, editor, reader',
+        ]);
         expect(result.exitCode).toBe(1);
     });
 });

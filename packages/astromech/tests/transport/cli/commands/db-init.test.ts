@@ -8,7 +8,7 @@
 import type { DB } from '@/database/types';
 import type { Kysely } from 'kysely';
 import { join } from 'node:path';
-import { createTempSite, run, writeSiteConfig } from '@tests/cli';
+import { createTempSite, run, runOk, writeSiteConfig } from '@tests/cli';
 import { resetRuntime } from '@tests/harness';
 import { sql } from 'kysely';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
@@ -66,7 +66,7 @@ afterEach(async () => {
 describe('db:init', () => {
     it('migrates an empty database to every core table', async () => {
         const config = await writeConfig();
-        await run(dbGenerate, ['--config', config]);
+        await runOk(dbGenerate, ['--config', config]);
 
         const result = await run(dbInit, ['--config', config]);
 
@@ -85,8 +85,8 @@ describe('db:init', () => {
 
     it('changes nothing when run a second time', async () => {
         const config = await writeConfig();
-        await run(dbGenerate, ['--config', config]);
-        await run(dbInit, ['--config', config]);
+        await runOk(dbGenerate, ['--config', config]);
+        await runOk(dbInit, ['--config', config]);
         const db = getDb();
         await sql`
             INSERT INTO _astromech_cron (name, schedule) VALUES ('kept', '* * * * *')
@@ -95,8 +95,11 @@ describe('db:init', () => {
 
         const result = await run(dbInit, ['--config', config]);
 
-        expect(result.stdout.at(-1)).toBe('Database migrations applied');
-        expect(result.exitCode).toBe(0);
+        expect(result).toEqual({
+            stdout: ['Running migrations...', 'Database migrations applied'],
+            stderr: [],
+            exitCode: 0,
+        });
         expect(await appliedMigrations(db)).toEqual(['0000_migration']);
         expect(await tableNames(db)).toEqual(tablesBefore);
         const { rows } = await sql<{

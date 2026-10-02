@@ -92,7 +92,7 @@ describe('plugin:generate', () => {
         ]);
 
         expect(exitCode).toBe(1);
-        expect(stderr[0]).toContain('"plugin_acme_seo_"');
+        expect(stderr).toEqual([expect.stringContaining('"plugin_acme_seo_"')]);
         expect(stderr[0]).toContain('plugin_acme_other_links');
         await expect(readdir(dir)).rejects.toThrow('ENOENT');
     });
@@ -111,7 +111,9 @@ describe('plugin:generate', () => {
         ]);
 
         expect(exitCode).toBe(1);
-        expect(stderr[0]).toContain(`no tables exported from ${tables}`);
+        expect(stderr).toEqual([
+            expect.stringContaining(`no tables exported from ${tables}`),
+        ]);
     });
 
     it('refuses to guess a package name when there is no package.json', async () => {
@@ -120,7 +122,9 @@ describe('plugin:generate', () => {
         const { stderr, exitCode } = await run(pluginGenerate, []);
 
         expect(exitCode).toBe(1);
-        expect(stderr[0]).toContain('could not read a package name');
+        expect(stderr).toEqual([
+            expect.stringContaining('could not read a package name'),
+        ]);
         expect(stderr[0]).toContain('--package');
     });
 });

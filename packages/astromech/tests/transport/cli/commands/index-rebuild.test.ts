@@ -8,7 +8,7 @@
 
 import { copyFile } from 'node:fs/promises';
 import { join } from 'node:path';
-import { createTempSite, run, writeSiteConfig } from '@tests/cli';
+import { createTempSite, run, runOk, writeSiteConfig } from '@tests/cli';
 import { resetRuntime } from '@tests/harness';
 import { afterEach, beforeEach, describe, expect, inject, it } from 'vitest';
 import { currentServices } from '@/app-context/services';
@@ -136,7 +136,7 @@ describe('index:rebuild', () => {
         expect(drift.stderr.at(-1)).toBe('Run `astromech index:rebuild` to repair.');
         expect(await usedByTypes(target)).toEqual([]);
 
-        await run(indexRebuild, ['--config', config]);
+        await runOk(indexRebuild, ['--config', config]);
 
         expect(await run(indexRebuild, ['--config', config, '--check'])).toEqual({
             stdout: ['Relationships index is in sync (3 sources scanned).'],

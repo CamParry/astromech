@@ -6,7 +6,7 @@
 
 import { readdir, readFile, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
-import { createTempSite, run, writeSiteConfig } from '@tests/cli';
+import { createTempSite, run, runOk, writeSiteConfig } from '@tests/cli';
 import { resetRuntime } from '@tests/harness';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { getDb } from '@/database/registry';
@@ -80,7 +80,7 @@ describe('db:generate', () => {
 
     it('writes nothing when the tables match the snapshot', async () => {
         const config = await writeConfig();
-        await run(dbGenerate, ['--config', config]);
+        await runOk(dbGenerate, ['--config', config]);
         const before = await migrationFiles();
 
         const result = await run(dbGenerate, ['--config', config]);
@@ -95,7 +95,7 @@ describe('db:generate', () => {
 
     it('writes a migration named by --name for a table the snapshot lacks', async () => {
         const config = await writeConfig();
-        await run(dbGenerate, ['--config', config]);
+        await runOk(dbGenerate, ['--config', config]);
         // Stand in for a core table added since the last generate.
         const snapshotPath = join(migrationsDir, 'snapshot.json');
         const snapshot = JSON.parse(await readFile(snapshotPath, 'utf-8')) as {

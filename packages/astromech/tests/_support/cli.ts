@@ -33,11 +33,14 @@ const NODE_MODULES = join(import.meta.dirname, '../../node_modules');
 
 /** What one command run printed, line by line, and the code it exits with. */
 export type CliResult = {
-    /** `console.log` and `console.info` lines. */
+    /** `console.log`, `console.info` and `console.debug` lines. */
     stdout: string[];
-    /** `console.error` and `console.warn` lines. */
+    /** `console.error` and `console.warn` lines, and `process.stderr.write` text split into lines. */
     stderr: string[];
-    /** The code passed to `process.exit`, else `process.exitCode`, else 0. */
+    /**
+     * The code passed to `process.exit`, else `process.exitCode`, else 0. A bare
+     * `process.exit()` reports `process.exitCode ?? 0`, as Node exits with.
+     */
     exitCode: number;
 };
 
@@ -54,8 +57,11 @@ class ProcessExit extends Error {
  * and reports as exit code `n`. Output after `process.exit` is dropped, as a
  * real process would have ended: a command whose own `catch` swallows the
  * thrown value (`withApplication`) can still print, but a site never sees it.
- * Any other error is rethrown. Console methods, `process.exit` and
- * `process.exitCode` are restored afterwards.
+ * Any other error is rethrown. Console methods, `process.stderr.write`,
+ * `process.exit` and `process.exitCode` are restored afterwards.
+ *
+ * Output is captured, so the console guard never sees it: a test reads all of
+ * `stderr`, or runs through `runOk`.
  */
 export async function run<T extends ArgsDef>(
     command: CommandDef<T>,
@@ -72,10 +78,21 @@ export async function run<T extends ArgsDef>(
     const spies = [
         vi.spyOn(console, 'log').mockImplementation(capture(stdout)),
         vi.spyOn(console, 'info').mockImplementation(capture(stdout)),
+        vi.spyOn(console, 'debug').mockImplementation(capture(stdout)),
         vi.spyOn(console, 'error').mockImplementation(capture(stderr)),
         vi.spyOn(console, 'warn').mockImplementation(capture(stderr)),
+        vi.spyOn(process.stderr, 'write').mockImplementation((chunk, ...rest) => {
+            if (exitedWith === undefined) {
+                const text =
+                    typeof chunk === 'string' ? chunk : new TextDecoder().decode(chunk);
+                stderr.push(...text.replace(/\n$/, '').split('\n'));
+            }
+            const callback = rest.find((arg) => typeof arg === 'function');
+            callback?.();
+            return true;
+        }),
         vi.spyOn(process, 'exit').mockImplementation((code) => {
-            exitedWith ??= Number(code ?? 0);
+            exitedWith ??= Number(code ?? process.exitCode ?? 0);
             throw new ProcessExit(exitedWith);
         }),
     ];
@@ -95,6 +112,25 @@ export async function run<T extends ArgsDef>(
 }
 
 /**
+ * `run` for a setup step: throws, with what the command printed, unless it
+ * exits 0 with nothing on stderr. A setup run's output is captured and never
+ * read, so this is what stops an unexpected warning there from passing.
+ */
+export async function runOk<T extends ArgsDef>(
+    command: CommandDef<T>,
+    argv: string[]
+): Promise<CliResult> {
+    const result = await run(command, argv);
+    if (result.exitCode !== 0 || result.stderr.length > 0) {
+        throw new Error(
+            `setup run [${argv.join(' ')}] exited ${result.exitCode} with stderr:\n` +
+                result.stderr.join('\n')
+        );
+    }
+    return result;
+}
+
+/**
  * A new directory in the run's temp dir, which global setup removes, with
  * `node_modules` linked to core's so a config or migration in it can import
  * `kysely` by name.
@@ -110,7 +146,8 @@ export type SiteConfigOptions = {
     /**
      * The libsql database file the config's driver opens. Leave it out for a
      * command that registers the database but never queries it (codegen):
-     * `getInstance()` then returns an empty stand-in, so no file is opened.
+     * `getInstance()` then returns a stand-in that throws on any property
+     * read, so no file is opened and a query fails the run.
      */
     database?: string;
     /** The config's `migrationsDir`. */
@@ -139,7 +176,11 @@ export async function writeSiteConfig(
     const file = join(site, 'astromech.config.mjs');
     const open =
         options.database === undefined
-            ? `instance ??= {};`
+            ? `instance ??= new Proxy({}, {
+                get(_, key) {
+                    throw new Error('read ' + String(key) + ' on the stand-in database: give writeSiteConfig a database for a command that queries it');
+                },
+            });`
             : `instance ??= new Kysely({
                 dialect: new LibsqlDialect({ url: ${JSON.stringify(`file:${options.database}`)} }),
                 plugins: [new CamelCasePlugin()],

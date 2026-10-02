@@ -10,7 +10,7 @@
 import type { MethodManifest } from '@/types/index';
 import { readFile, rm } from 'node:fs/promises';
 import { join } from 'node:path';
-import { createTempSite, run, writeSiteConfig } from '@tests/cli';
+import { createTempSite, run, runOk, writeSiteConfig } from '@tests/cli';
 import { resetRuntime } from '@tests/harness';
 import { beforeEach, describe, expect, it } from 'vitest';
 import generateManifest from '@/transport/cli/commands/generate-manifest';
@@ -66,12 +66,12 @@ describe('generate:manifest', () => {
     it('writes the same bytes when run twice', async () => {
         const out = join(siteDir, 'methods.json');
 
-        await run(generateManifest, ['--config', configPath, '--out', out]);
+        await runOk(generateManifest, ['--config', configPath, '--out', out]);
         const first = await readFile(out, 'utf-8');
         // Deleted, so the comparison reads what the second run wrote.
         await rm(out);
         resetRuntime();
-        await run(generateManifest, ['--config', configPath, '--out', out]);
+        await runOk(generateManifest, ['--config', configPath, '--out', out]);
 
         expect(await readFile(out, 'utf-8')).toBe(first);
     });

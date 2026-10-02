@@ -8,7 +8,7 @@
  */
 
 import { join } from 'node:path';
-import { createTempSite, run, writeSiteConfig } from '@tests/cli';
+import { createTempSite, run, runOk, writeSiteConfig } from '@tests/cli';
 import { resetRuntime } from '@tests/harness';
 import { beforeEach, describe, expect, it } from 'vitest';
 import permissions from '@/transport/cli/commands/permissions';
@@ -55,7 +55,7 @@ describe('permissions', () => {
     });
 
     it('narrows to one source, as JSON under --json', async () => {
-        const { stdout } = await run(permissions, [
+        const { stdout } = await runOk(permissions, [
             '--config',
             configPath,
             '--source',
@@ -73,7 +73,7 @@ describe('permissions', () => {
     });
 
     it('lists core permissions before the config’s own', async () => {
-        const { stdout } = await run(permissions, ['--config', configPath, '--json']);
+        const { stdout } = await runOk(permissions, ['--config', configPath, '--json']);
 
         const listed = listedPermissions(stdout);
         // `users:update` is a core permission that sorts after `entry:` and
@@ -99,7 +99,12 @@ describe('permissions', () => {
         ]);
 
         expect(result.stdout).toEqual([]);
-        expect(JSON.parse(result.stderr.at(-1) ?? '{}')).toHaveProperty('error');
+        expect(result.stderr).toHaveLength(1);
+        expect(JSON.parse(result.stderr[0] ?? '{}')).toEqual({
+            error: expect.stringContaining(
+                `Cannot find module '${join(siteDir, 'missing.config.mjs')}'`
+            ),
+        });
         expect(result.exitCode).toBe(1);
     });
 });

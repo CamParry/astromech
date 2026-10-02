@@ -159,7 +159,9 @@ describe('db:rebaseline', () => {
         const { stderr, exitCode } = await run(dbRebaseline, ['--config', config]);
 
         expect(exitCode).toBe(1);
-        expect(stderr[0]).toMatch(/^\[astromech db:rebaseline\] .*--collapse/);
+        expect(stderr).toEqual([
+            expect.stringMatching(/^\[astromech db:rebaseline\] .*--collapse/),
+        ]);
         expect(await chainContents()).toEqual(before);
     });
 
@@ -175,7 +177,7 @@ describe('db:rebaseline', () => {
         ]);
 
         expect(exitCode).toBe(1);
-        expect(stderr[0]).toContain('cannot collapse');
+        expect(stderr).toEqual([expect.stringContaining('cannot collapse')]);
         expect(stderr[0]).toContain('0001_seed-editor-role.ts');
         expect(await chainContents()).toEqual(before);
     });
@@ -187,11 +189,12 @@ describe('db:rebaseline', () => {
 
         const refused = await run(dbRebaseline, ['--config', config]);
         expect(refused.exitCode).toBe(1);
-        expect(refused.stderr[0]).toContain('--allow-remote');
+        expect(refused.stderr).toEqual([expect.stringContaining('--allow-remote')]);
         expect(await chainContents()).toEqual(before);
 
         const allowed = await run(dbRebaseline, ['--config', config, '--allow-remote']);
         expect(allowed.exitCode).toBe(0);
+        expect(allowed.stderr).toEqual([]);
         const snapshot = JSON.parse(
             await readFile(join(migrations, 'snapshot.json'), 'utf-8')
         );
@@ -210,7 +213,9 @@ describe('db:rebaseline', () => {
         const { stderr, exitCode } = await run(dbRebaseline, ['--config', config]);
 
         expect(exitCode).toBe(1);
-        expect(stderr[0]).toContain('sits before the first `// ── <table> ──` banner');
+        expect(stderr).toEqual([
+            expect.stringContaining('sits before the first `// ── <table> ──` banner'),
+        ]);
     });
 
     // DEFECT: `db:generate` writes a baseline with no `// ── <table> ──`
