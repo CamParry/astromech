@@ -78,7 +78,7 @@ Run the cheapest check that can catch your mistake after every edit, and the exp
 
 ## Coverage
 
-Thresholds are set per directory in the `vitest.config.ts` of core and of the admin. A change that raises a directory's coverage raises its entry in the same commit. Coverage shows what is untested, not what is tested well, so don't write a test only to reach lines.
+Thresholds are set per directory in the `vitest.config.ts` of core, the admin and schema-engine, and in each plugin's `vitest.config.ts` through `pluginVitestConfig`'s `coverageThresholds`. A change that raises a directory's coverage raises its entry in the same commit. Coverage shows what is untested, not what is tested well, so don't write a test only to reach lines.
 
 ## Reviewing a test change
 

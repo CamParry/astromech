@@ -40,7 +40,7 @@ export type PluginVitestOptions = {
     /** Run the `.test.tsx` files under `tests/admin/` as admin page tests. */
     adminPages?: boolean;
     /**
-     * Each entry set one point below what it measured. Raise an entry as
+     * Each entry is set one point below what it measured. Raise an entry as
      * coverage rises; never lower one to pass.
      */
     coverageThresholds?: NonNullable<TestUserConfig['coverage']>['thresholds'];

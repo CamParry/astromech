@@ -56,6 +56,13 @@ async function findRow(text: string): Promise<HTMLElement> {
     return row;
 }
 
+/** The text of each cell in `row`, in column order. */
+function cellsOf(row: HTMLElement): (string | null)[] {
+    return within(row)
+        .getAllByRole('cell')
+        .map((cell) => cell.textContent);
+}
+
 /** The number shown beside a total's label. */
 function totalBeside(label: string): string | null | undefined {
     return screen.getByText(label).previousElementSibling?.textContent;
@@ -85,19 +92,28 @@ describe('SeoOverviewPage', () => {
         seo.getOverview.mockResolvedValue(overview);
         renderPage();
 
-        const complete = await findRow('Hello world');
-        expect(within(complete).getByRole('cell', { name: 'posts' })).not.toBeNull();
-        expect(within(complete).getByText('published')).not.toBeNull();
-        expect(within(complete).getAllByText('Good')).toHaveLength(2);
-
-        const draft = await findRow('About us');
-        expect(within(draft).getByRole('cell', { name: 'pages' })).not.toBeNull();
-        expect(within(draft).getByText('draft')).not.toBeNull();
-        expect(within(draft).getByText('Missing')).not.toBeNull();
-        expect(within(draft).getByText('Short')).not.toBeNull();
-
-        const long = await findRow('Launch notes');
-        expect(within(long).getByText('Too long')).not.toBeNull();
+        // Each row's cells in column order, so a badge in the wrong column fails.
+        expect(cellsOf(await findRow('Hello world'))).toEqual([
+            'Hello world',
+            'posts',
+            'published',
+            'Good',
+            'Good',
+        ]);
+        expect(cellsOf(await findRow('About us'))).toEqual([
+            'About us',
+            'pages',
+            'draft',
+            'Missing',
+            'Short',
+        ]);
+        expect(cellsOf(await findRow('Launch notes'))).toEqual([
+            'Launch notes',
+            'posts',
+            'published',
+            'Too long',
+            'Good',
+        ]);
 
         expect(totalBeside('Entries')).toBe('3');
         expect(totalBeside('Complete')).toBe('1');

@@ -379,12 +379,13 @@ function reportThresholds(configs, base) {
 }
 
 /**
- * The `coverage.thresholds` entries in a vitest config's text, as a map from each glob to its
- * metrics. Reads the text rather than loading the config, so the base side needs no checkout.
+ * The `coverage.thresholds` entries in a vitest config's text (or a plugin config's
+ * `coverageThresholds`), as a map from each glob to its metrics. Reads the text rather than
+ * loading the config, so the base side needs no checkout.
  */
 function readThresholds(text) {
     const thresholds = new Map();
-    const start = text.indexOf('thresholds:');
+    const start = text.search(/\b(?:coverageThresholds|thresholds)\s*:/);
     if (start === -1) return thresholds;
     const entry = /['"]([^'"]+)['"]\s*:\s*\{([^{}]*)\}/g;
     for (const [, key, body] of text.slice(start).matchAll(entry)) {
