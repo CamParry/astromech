@@ -41,6 +41,30 @@ another provider rather than loading its whole catalogue.
 assistant({
     effort: 'medium', // default; 'low' | 'medium' | 'high'
     readOnly: false, // default; `true` drops every mutating method from the surface
+    instructions: '', // default; house rules appended to the system prompt
+});
+```
+
+## Staying on topic
+
+The assistant works on the site. A request is on topic when its result would end
+up in, or act on, the site: body copy for a post, alt text, advice on a page's
+SEO, a translation of an entry, how to use the admin. It declines a cover letter,
+homework or general trivia in a sentence and says what it can help with instead,
+and when it cannot tell where the result would go, it asks which entry or page
+it is for.
+
+That is the system prompt's default, not a limit. What the assistant can do is
+set by its tools, `readOnly` and the user's role.
+
+`instructions` adds a site's own rules, such as a house style or a topic to
+avoid. They are appended after the fixed prompt under a "Site instructions"
+heading; there is no way to replace the prompt, whose paragraph on naming tools
+is what the tool search depends on.
+
+```ts
+assistant({
+    instructions: 'Write in British English. Leave prices to the sales team.',
 });
 ```
 

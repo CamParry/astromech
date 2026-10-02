@@ -51,12 +51,14 @@
                 "src/tables/index.ts!",
                 "src/admin/**/*.tsx!",
                 "migrations/**/*.ts!",
+                "scripts/*.ts",
                 "tests/**/*.test.{ts,tsx}",
                 "tests/**/*.test-d.ts"
             ],
             "project": [
                 "src/**/*.{ts,tsx}!",
                 "tests/**/*.{ts,tsx}",
+                "scripts/**/*.ts",
                 "migrations/**/*.ts!"
             ]
         },

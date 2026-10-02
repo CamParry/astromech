@@ -38,14 +38,14 @@ const conversation: ChatMessage[] = [
 
 describe('buildRequest', () => {
     it('appends the context after a lone user turn', () => {
-        const { system, messages } = buildRequest([text('user', 'hi')], items);
+        const { system, messages } = buildRequest([text('user', 'hi')], items, '');
 
         expect(messages).toEqual([text('user', 'hi'), CONTEXT]);
         expect(system).toBe(SYSTEM_PROMPT);
     });
 
     it('appends the context after the final user turn', () => {
-        const { system, messages } = buildRequest(conversation, items);
+        const { system, messages } = buildRequest(conversation, items, '');
 
         expect(messages).toHaveLength(4);
         expect(messages[2]).toEqual(text('user', 'latest'));
@@ -76,7 +76,7 @@ describe('buildRequest', () => {
         ];
         const turn: ChatMessage = { role: 'assistant', content: blocks };
 
-        const { messages } = buildRequest([text('user', 'find pages'), turn], items);
+        const { messages } = buildRequest([text('user', 'find pages'), turn], items, '');
 
         expect(messages[1]?.content).toEqual(blocks);
         expect(messages[1]?.content).toBe(turn.content);
@@ -97,7 +97,8 @@ describe('buildRequest', () => {
 
         const { system, messages } = buildRequest(
             [text('user', 'find pages'), result],
-            items
+            items,
+            ''
         );
 
         expect(messages).toEqual([text('user', 'find pages'), result, CONTEXT]);
@@ -106,7 +107,7 @@ describe('buildRequest', () => {
     });
 
     it('leaves the prompt and turns alone when there is no context', () => {
-        const { system, messages } = buildRequest(conversation, []);
+        const { system, messages } = buildRequest(conversation, [], '');
 
         expect(system).toBe(SYSTEM_PROMPT);
         expect(messages).toEqual(conversation);
@@ -115,7 +116,8 @@ describe('buildRequest', () => {
     it('falls back to the system prompt when an assistant turn is last', () => {
         const { system, messages } = buildRequest(
             [text('user', 'first'), text('assistant', 'reply')],
-            items
+            items,
+            ''
         );
 
         expect(messages).toHaveLength(2);
@@ -123,8 +125,22 @@ describe('buildRequest', () => {
         expect(system).toContain(CONTEXT.content);
     });
 
+    it("puts the site's instructions after the fixed prompt and before a context that falls back", () => {
+        const { system } = buildRequest([], items, '  Write in British English.\n');
+
+        expect(system).toBe(
+            `${SYSTEM_PROMPT}\n\nSite instructions:\nWrite in British English.\n\n${CONTEXT.content}`
+        );
+    });
+
+    it('leaves the fixed prompt alone when the instructions are blank', () => {
+        const { system } = buildRequest(conversation, [], ' \n ');
+
+        expect(system).toBe(SYSTEM_PROMPT);
+    });
+
     it('does not throw on an empty conversation', () => {
-        const { system, messages } = buildRequest([], items);
+        const { system, messages } = buildRequest([], items, '');
 
         expect(messages).toEqual([]);
         expect(system).toContain(CONTEXT.content);
@@ -196,7 +212,7 @@ describe('buildRequest through the Anthropic provider', () => {
                 ],
             },
         ];
-        const { system, messages } = buildRequest(approved, items);
+        const { system, messages } = buildRequest(approved, items, '');
 
         await generateText({
             model: anthropic('claude-opus-4-5'),

@@ -20,6 +20,11 @@ export type AssistantOptions = {
      * hidden from the assistant. Set it to `true` to drop them entirely.
      */
     readOnly?: boolean;
+    /**
+     * House rules appended after the assistant's own system prompt, such as a
+     * house style or a topic to avoid. They add to the prompt; nothing replaces it.
+     */
+    instructions?: string;
 };
 
 /** Options with every default applied — what the plugin's own code sees. */

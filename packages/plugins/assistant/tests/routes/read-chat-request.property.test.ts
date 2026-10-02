@@ -62,11 +62,7 @@ const chatRequest = fc.record(
     { requiredKeys: ['messages'] }
 );
 
-/**
- * Any value at one of the request's keys: sometimes right, often not. An
- * `aiContext` is either well-formed or not an array; an array holding a
- * malformed item is the open defect at the end of this file.
- */
+/** Any value at one of the request's keys: sometimes right, often not. */
 const nearMiss = fc.record(
     {
         messages: fc.oneof(
@@ -76,7 +72,8 @@ const nearMiss = fc.record(
         ),
         aiContext: fc.oneof(
             fc.array(aiContextItem),
-            fc.jsonValue().filter((value) => !Array.isArray(value))
+            fc.array(fc.oneof(aiContextItem, fc.jsonValue()), { maxLength: 3 }),
+            fc.jsonValue()
         ),
         decisions: fc.oneof(
             fc.array(fc.oneof(decision, fc.jsonValue()), { maxLength: 3 }),
@@ -163,18 +160,6 @@ function isChatRequest(value: unknown): boolean {
     );
 }
 
-/** Does this body post an `aiContext` array holding an item of the wrong shape? */
-function postsMalformedAiContextItem(text: string): boolean {
-    let parsed: unknown;
-    try {
-        parsed = JSON.parse(text);
-    } catch {
-        return false;
-    }
-    if (!isRecord(parsed) || !Array.isArray(parsed.aiContext)) return false;
-    return !parsed.aiContext.every(isAiContextItem);
-}
-
 describe('readChatRequest', () => {
     it('returns a ChatRequest or null for any body, and never throws', async () => {
         const body = fc.oneof(
@@ -184,9 +169,12 @@ describe('readChatRequest', () => {
         );
         await fc.assert(
             fc.asyncProperty(body, async (text) => {
-                fc.pre(!postsMalformedAiContextItem(text));
                 const result = await readChatRequest(post(text));
                 expect(result === null || isChatRequest(result)).toBe(true);
+                if (result === null) return;
+                expect(() =>
+                    formatAiContextMessage(result.aiContext ?? [])
+                ).not.toThrow();
             }),
             { numRuns: 300 }
         );
@@ -217,26 +205,7 @@ describe('readChatRequest', () => {
         );
     });
 
-    // The precondition for the open defect below: the reader returns a request
-    // for this body today, so the failing case fails for the right reason.
-    it('returns a request whose aiContext item has no reference', async () => {
-        const body = JSON.stringify({
-            messages: [{ role: 'user', content: 'hi' }],
-            aiContext: [{ anything: 'at all' }],
-        });
-
-        await expect(readChatRequest(post(body))).resolves.toEqual({
-            messages: [{ role: 'user', content: 'hi' }],
-            aiContext: [{ anything: 'at all' }],
-        });
-    });
-
-    // Found by asking whether every accepted aiContext can be rendered: only
-    // `Array.isArray` is checked, so an item without a `reference` is accepted
-    // and `formatAiContextMessage` then throws a TypeError inside the loop.
-    // The existing case 'parses an aiContext of arbitrary objects' in
-    // chat.test.ts asserts the acceptance. Kept failing until it is decided.
-    it.fails('accepts only an aiContext the loop can render', async () => {
+    it('accepts only an aiContext the loop can render', async () => {
         const body = JSON.stringify({
             messages: [{ role: 'user', content: 'hi' }],
             aiContext: [{ anything: 'at all' }],

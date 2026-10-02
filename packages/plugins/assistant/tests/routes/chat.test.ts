@@ -95,13 +95,46 @@ describe('readChatRequest', () => {
         });
     });
 
-    it('parses an aiContext of arbitrary objects', async () => {
+    it('parses an aiContext of references with their positions', async () => {
         const messages = [text('user', 'hi')];
-        const aiContext = [{ anything: 'at all' }, { depth: 2 }];
+        const aiContext = [
+            { reference: { kind: 'pages', label: 'Dashboard' }, depth: 0, order: 0 },
+            {
+                reference: {
+                    kind: 'entries',
+                    type: 'post',
+                    id: 'post_1',
+                    label: 'Hello',
+                },
+                depth: 1,
+                order: 0,
+            },
+        ];
 
         await expect(readChatRequest(postJson({ messages, aiContext }))).resolves.toEqual(
             { messages, aiContext }
         );
+    });
+
+    it.each([
+        ['an arbitrary object', { anything: 'at all' }],
+        ['no reference', { depth: 2, order: 0 }],
+        [
+            'an unknown kind',
+            { reference: { kind: 'widgets', label: 'Home' }, depth: 0, order: 0 },
+        ],
+        ['no label', { reference: { kind: 'pages' }, depth: 0, order: 0 }],
+        [
+            'a numeric id',
+            { reference: { kind: 'media', id: 7, label: 'Logo' }, depth: 0, order: 0 },
+        ],
+        ['no position', { reference: { kind: 'pages', label: 'Home' } }],
+    ])('rejects an aiContext item with %s', async (_case, item) => {
+        await expect(
+            readChatRequest(
+                postJson({ messages: [text('user', 'hi')], aiContext: [item] })
+            )
+        ).resolves.toBeNull();
     });
 
     it('rejects malformed JSON', async () => {

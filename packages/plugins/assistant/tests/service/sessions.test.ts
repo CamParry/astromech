@@ -21,6 +21,7 @@ import { approvalsTable } from '../../src/tables/approvals';
 const OPTIONS: ResolvedAssistantOptions = {
     effort: 'medium',
     readOnly: false,
+    instructions: '',
 };
 
 const TRANSCRIPT: ChatMessage[] = [

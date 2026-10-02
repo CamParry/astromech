@@ -142,4 +142,6 @@ provider you configured. Configuring no model at all gets a 503 too, rather than
 a failure part-way through a conversation.
 
 Everything else about the plugin — reasoning effort, whether mutating methods
-appear on the tool surface at all — stays in `assistant()`'s own options.
+appear on the tool surface at all, house rules appended to its system prompt —
+stays in `assistant()`'s own options, listed in the
+[plugin's README](../../../packages/plugins/assistant/README.md#options).

@@ -18,6 +18,7 @@ import { buildAiModels } from '@/ai/models';
 import { setAiModels } from '@/ai/registry';
 import { createApprovalsRepository } from '../../src/approvals/repository';
 import { assistant } from '../../src/index';
+import { SYSTEM_PROMPT } from '../../src/loop/request';
 import { createSessionsRepository } from '../../src/sessions/repository';
 
 vi.mock('ai', async (importOriginal) => ({
@@ -172,6 +173,10 @@ describe('POST /plugins/assistant/chat', () => {
         ['malformed JSON', '{ not json'],
         ['a body with no messages', {}],
         ['a turn with an unknown role', { messages: [{ role: 'system', content: 'x' }] }],
+        [
+            'an aiContext item with no reference',
+            { messages: [GREETING], aiContext: [{ anything: 'at all' }] },
+        ],
     ])('answers %s with 400 and the shape it expected', async (_label, body) => {
         const res = await postChat({ user, role: ROLE }, body);
 
@@ -180,6 +185,27 @@ describe('POST /plugins/assistant/chat', () => {
             error: 'Expected { messages: [{ role, content: [{ type, … }] }], aiContext?: [], decisions?: [{ approvalId, action }] }',
         });
         expect(streamTextMock).not.toHaveBeenCalled();
+    });
+
+    it("sends the site's instructions after the fixed system prompt", async () => {
+        app = await createPluginTestApp('assistant', {
+            ...makeTestConfig(),
+            plugins: [assistant({ instructions: 'Write in British English.' })],
+        });
+        setAiModels(await buildAiModels({ model: anthropicModel() }));
+        const author = await createUser();
+        modelReplies('hello');
+
+        const res = await postChat(
+            { user: author, role: ROLE },
+            { messages: [GREETING] }
+        );
+        await events(res);
+
+        const [options] = streamTextMock.mock.calls[0] as [{ system: string }];
+        expect(options.system).toBe(
+            `${SYSTEM_PROMPT}\n\nSite instructions:\nWrite in British English.`
+        );
     });
 
     // The body carries no session id: the session is the signed-in user's, so

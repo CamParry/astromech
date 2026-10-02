@@ -124,8 +124,47 @@ export async function readChatRequest(request: Request): Promise<ChatRequest | n
     const answered = decisions === undefined ? {} : { decisions };
 
     if (aiContext === undefined) return { messages, ...answered };
-    if (!Array.isArray(aiContext)) return null;
-    return { messages, aiContext: aiContext as AiContextItem[], ...answered };
+    if (!isAiContext(aiContext)) return null;
+    return { messages, aiContext, ...answered };
+}
+
+/** Is this an array of AI context items the loop can render? */
+function isAiContext(value: unknown): value is AiContextItem[] {
+    return Array.isArray(value) && value.every(isAiContextItem);
+}
+
+/** Is this one item: a reference of a known kind with a label, and its position? */
+function isAiContextItem(value: unknown): value is AiContextItem {
+    if (typeof value !== 'object' || value === null) return false;
+    const { reference, depth, order } = value as {
+        reference?: unknown;
+        depth?: unknown;
+        order?: unknown;
+    };
+    if (typeof depth !== 'number' || typeof order !== 'number') return false;
+    if (typeof reference !== 'object' || reference === null) return false;
+    const { kind, label, type, id } = reference as {
+        kind?: unknown;
+        label?: unknown;
+        type?: unknown;
+        id?: unknown;
+    };
+    if (typeof kind !== 'string' || !Object.hasOwn(AI_CONTEXT_KINDS, kind)) return false;
+    if (typeof label !== 'string') return false;
+    return isOptionalString(type) && isOptionalString(id);
+}
+
+/** Every reference kind, keyed so a kind added to core's type must be added here. */
+const AI_CONTEXT_KINDS: Record<AiContextItem['reference']['kind'], true> = {
+    entries: true,
+    globals: true,
+    media: true,
+    users: true,
+    pages: true,
+};
+
+function isOptionalString(value: unknown): boolean {
+    return value === undefined || typeof value === 'string';
 }
 
 /** Is this an array of `{ approvalId, action }` answers? */

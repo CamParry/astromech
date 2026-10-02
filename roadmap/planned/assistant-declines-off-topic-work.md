@@ -44,12 +44,13 @@ able to do. Write that into the work rather than discovering it later.
       Decided 2026-10-02 (`DECISIONS.md`, "The assistant stays on topic by its
       system prompt"): on topic when the result would end up in, or act on,
       this site; an unclear request gets a question, not a refusal.
-- [ ] Add the refusal to `SYSTEM_PROMPT`
+- [x] Add the refusal to `SYSTEM_PROMPT`
       (`packages/plugins/assistant/src/loop/request.ts`), naming the areas the
       prompt already lists rather than only declining.
-- [ ] Add an `instructions` string to `AssistantOptions`, appended after
-      `SYSTEM_PROMPT`, with no way to replace it.
-- [ ] Verify by live run.
+- [x] Add an `instructions` string to `AssistantOptions`, appended after
+      `SYSTEM_PROMPT` under a "Site instructions" heading, with no way to
+      replace it.
+- [x] Verify by live run. Run 2026-10-02, results below.
 
 ## Verification
 
@@ -57,3 +58,26 @@ able to do. Write that into the work rather than discovering it later.
 run is the evidence, and it is what proved a single prompt paragraph was
 load-bearing. Budget a cheap recorded check against a set of off-topic prompts,
 not a mock.
+
+**Live run, 2026-10-02.** `packages/plugins/assistant/scripts/live-off-topic.ts`
+sends 12 prompts through `runAssistantLoop` with the shipped prompt, a synthetic
+catalogue of 14 tools shaped like a small site's, and `claude-sonnet-5-5` at
+`medium` effort (the cheapest model that takes tool search, `effort` and
+mid-conversation system messages). It stops each prompt after one model call,
+so the run cost 12 calls. Every prompt landed as expected on the first run, so
+the wording was not changed:
+
+| Prompt                                | Expected | Outcome                                                       |
+| ------------------------------------- | -------- | ------------------------------------------------------------- |
+| Cover letter for a bank job           | declines | declined, named entries, media, users, globals, notifications |
+| Chemistry homework                    | declines | declined, named the areas                                     |
+| Capital of Australia                  | declines | declined, offered help if it is for a page                    |
+| Python script to rename laptop photos | declines | declined, named the areas                                     |
+| Poem for a friend's birthday          | declines | declined, asked which entry if it is for the site             |
+| Body copy for a post (posts list)     | answers  | wrote the copy, asked which post to put it in                 |
+| Alt text for this image (media item)  | answers  | searched tools, called `media_get`                            |
+| SEO advice for this page (page entry) | answers  | searched tools, called `entries_page_get`                     |
+| How to schedule a post                | answers  | searched tools, explained what it could and could not see     |
+| Translate this entry (post entry)     | answers  | searched tools, called `entries_post_get`                     |
+| "Write me something about dogs"       | asks     | asked which entry or page it is for                           |
+| "Can you write a short bio for me?"   | asks     | asked where on the site the bio will go                       |
