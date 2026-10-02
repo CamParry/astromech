@@ -34,8 +34,10 @@ describe('defineHook', () => {
     });
 
     it("rejects a handler reading a key another event's payload has", () => {
-        // @ts-expect-error `global` belongs to the global events' payload.
-        defineHook('entry:beforeCreate', (ctx) => ctx.global);
+        defineHook('entry:beforeCreate', (ctx) => {
+            // @ts-expect-error `global` belongs to the global events' payload.
+            void ctx.global;
+        });
     });
 
     it('rejects a before-handler returning something other than its payload', () => {

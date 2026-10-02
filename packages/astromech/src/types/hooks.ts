@@ -130,9 +130,6 @@ export type HookHandler<Payload = unknown> = (
 ) => Promise<void | Payload> | void | Payload;
 /* eslint-enable @typescript-eslint/no-invalid-void-type */
 
-/** Union of every core handler signature — the index-signature value type. */
-export type AnyCoreHookHandler = CoreHookHandlers[KnownCoreEvent];
-
 /** Resolve the correct handler signature for an event key. */
 export type HookHandlerFor<E extends HookEvent> = E extends keyof CoreHookHandlers
     ? CoreHookHandlers[E]
@@ -146,10 +143,14 @@ export type HookContextFor<E extends KnownCoreEvent> = Parameters<CoreHookHandle
 /** The payload type for `event` — known core event, plugin-declared, or custom. */
 export type HookPayloadFor<E extends HookEvent> = Parameters<HookHandlerFor<E>>[0];
 
-/** One hook: an event key bound to its handler. */
+/**
+ * One hook: an event key bound to its handler. `handler` is the union of every
+ * event's handler, so a handler for an event a plugin declares on
+ * `AstromechPluginHookEvents` belongs to it as well.
+ */
 export type Hook = {
     event: HookEvent;
-    handler: AnyCoreHookHandler | HookHandler;
+    handler: HookHandlerFor<HookEvent>;
 };
 
 /** A plugin's hooks: an array of `defineHook(...)` results. Multiple handlers per event are allowed. */

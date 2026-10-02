@@ -63,13 +63,17 @@ describe('defineServiceMethod', () => {
     });
 
     it('rejects a handler returning a shape the output schema does not accept', () => {
-        // @ts-expect-error The handler's `count` is a string; the output schema wants a number.
+        const output = z.object({ id: z.string(), count: z.number() });
         defineServiceMethod({
             access: 'public',
             input: z.object({ id: z.string() }),
-            output: z.object({ id: z.string(), count: z.number() }),
+            output,
             mutates: false,
-            handler: (input) => ({ id: input.id, count: 'one' }),
+            handler: (input): z.input<typeof output> => ({
+                id: input.id,
+                // @ts-expect-error The output schema wants a number.
+                count: 'one',
+            }),
         });
     });
 });
