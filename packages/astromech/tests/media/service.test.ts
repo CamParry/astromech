@@ -77,6 +77,9 @@ describe('mediaService.upload', () => {
         expect(media.height).toBeNull();
         expect(media.metadata?.version).toBeUndefined();
         expect(lastPutStreamed(put)).toBe(true);
+        const result = await storage.get(`${media.id}.txt`);
+        if (!result) throw new Error('expected notes.txt in storage');
+        expect(await new Response(result.body).text()).toBe('hello world');
     });
 });
 
