@@ -33,6 +33,10 @@ pnpm-debug.log*
 # Test coverage
 coverage/
 
+# Mutation testing (Stryker). Its stryker.log is covered by *.log above.
+packages/astromech/reports/
+packages/astromech/.stryker-tmp/
+
 # Cloudflare
 .wrangler/
 

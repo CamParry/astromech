@@ -80,6 +80,8 @@ Run the cheapest check that can catch your mistake after every edit, and the exp
 
 Thresholds are set per directory in the `vitest.config.ts` of core, the admin and schema-engine, and in each plugin's `vitest.config.ts` through `pluginVitestConfig`'s `coverageThresholds`. A change that raises a directory's coverage raises its entry in the same commit. Coverage shows what is untested, not what is tested well, so don't write a test only to reach lines.
 
+Mutation testing shows the other half: whether a test fails when a line changes, where coverage only shows the line ran. Core has it as a manual check, run on demand one directory at a time, because a run is slow (minutes for `src/utilities`, hours for all of `src`): `env -u NODE_ENV BETTER_AUTH_SECRET=check-boot-secret-0123456789abcdef pnpm -F astromech test:mutation src/utilities`. Never make it a gate. Read the surviving mutants by hand: about a third are equivalent mutants (the change does not alter behaviour), and a survivor that is a real gap gets an assertion. The first run, on files at 97% line coverage, found missing assertions and a bug in `deepEqual`.
+
 ## Reviewing a test change
 
 Read a test diff as closely as the code. Look for a removed `expect`, a new `.skip`, `.only` or `vi.mock`, a loosened matcher, and a new test that cannot fail. `pnpm run report:drift` lists the first four (and lowered coverage thresholds); a loosened matcher and a test that cannot fail need a reader. For each new test, ask which behaviour it protects.
