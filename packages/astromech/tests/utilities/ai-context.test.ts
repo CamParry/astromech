@@ -71,6 +71,12 @@ describe('formatAiContextMessage', () => {
                 })
             ).toBe('Entry `Contact` (type `forms/form`, id `r1`)');
         });
+
+        it('falls back to the kind and label when there is no type', () => {
+            expect(lineFor({ kind: 'entries', id: 'abc', label: 'Posts' })).toBe(
+                'entries `Posts`'
+            );
+        });
     });
 
     describe('globals', () => {
@@ -188,6 +194,21 @@ describe('formatAiContextMessage', () => {
             const match = /`(.+)`/.exec(line);
             expect(match?.[1]).toHaveLength(120);
             expect(match?.[1]?.endsWith('…')).toBe(true);
+        });
+
+        it.each([
+            [120, 'a'.repeat(120)],
+            [121, `${'a'.repeat(119)}…`],
+        ])('keeps 120 characters of a %i-character label', (length, expected) => {
+            expect(lineFor({ kind: 'pages', label: 'a'.repeat(length) })).toBe(
+                `Admin page \`${expected}\``
+            );
+        });
+
+        it('collapses a run of spaces in a label to one space', () => {
+            expect(lineFor({ kind: 'pages', label: 'Site    settings' })).toBe(
+                'Admin page `Site settings`'
+            );
         });
 
         it('renders a whitespace-only label as (untitled)', () => {

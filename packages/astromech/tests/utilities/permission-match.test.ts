@@ -38,6 +38,8 @@ describe('matchesPermission', () => {
         // the root segment never crosses over
         ['entry:*', 'plugin:ns:entry:redirect:read', false],
         ['plugin:*', 'entry:posts:read', false],
+        // an empty pattern grants nothing
+        ['', 'entry:posts:read', false],
     ])('%s against %s is %s', (pattern, check, expected) => {
         expect(matchesPermission(pattern, check)).toBe(expected);
     });
