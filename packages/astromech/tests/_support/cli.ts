@@ -81,15 +81,16 @@ export async function run<T extends ArgsDef>(
     ];
     const exitCodeBefore = process.exitCode;
     process.exitCode = undefined;
+    let exitCode: number;
     try {
         await runCommand(command, { rawArgs: argv });
     } catch (error) {
         if (!(error instanceof ProcessExit)) throw error;
     } finally {
         for (const spy of spies) spy.mockRestore();
+        exitCode = exitedWith ?? Number(process.exitCode ?? 0);
+        process.exitCode = exitCodeBefore;
     }
-    const exitCode = exitedWith ?? Number(process.exitCode ?? 0);
-    process.exitCode = exitCodeBefore;
     return { stdout, stderr, exitCode };
 }
 
@@ -106,12 +107,20 @@ export async function createTempSite(): Promise<string> {
 
 /** What `writeSiteConfig` puts in the config. */
 export type SiteConfigOptions = {
-    /** The libsql database file the config's driver opens. */
-    database: string;
+    /**
+     * The libsql database file the config's driver opens. Leave it out for a
+     * command that registers the database but never queries it (codegen):
+     * `getInstance()` then returns an empty stand-in, so no file is opened.
+     */
+    database?: string;
     /** The config's `migrationsDir`. */
-    migrationsDir: string;
+    migrationsDir?: string;
     /** The config's `entries`, as plain data. */
     entries?: Record<string, unknown>;
+    /** The config's `globals`, as plain data. Left out of the config when absent. */
+    globals?: unknown[];
+    /** The config's `roles`, as plain data. Left out of the config when absent. */
+    roles?: Record<string, unknown>;
     /** What the driver's `isRemote()` returns. */
     remote?: boolean;
     /** Make `getInstance()` throw, so a test sees a refusal come before the database opens. */
@@ -128,6 +137,24 @@ export async function writeSiteConfig(
     options: SiteConfigOptions
 ): Promise<string> {
     const file = join(site, 'astromech.config.mjs');
+    const open =
+        options.database === undefined
+            ? `instance ??= {};`
+            : `instance ??= new Kysely({
+                dialect: new LibsqlDialect({ url: ${JSON.stringify(`file:${options.database}`)} }),
+                plugins: [new CamelCasePlugin()],
+            });`;
+    const optional = [
+        options.migrationsDir !== undefined
+            ? `    migrationsDir: ${JSON.stringify(options.migrationsDir)},\n`
+            : '',
+        options.globals !== undefined
+            ? `    globals: ${JSON.stringify(options.globals)},\n`
+            : '',
+        options.roles !== undefined
+            ? `    roles: ${JSON.stringify(options.roles)},\n`
+            : '',
+    ].join('');
     await writeFile(
         file,
         `import { LibsqlDialect } from '@libsql/kysely-libsql';
@@ -140,15 +167,11 @@ export default {
         isRemote: () => ${options.remote === true},
         getInstance() {
             if (${options.throwOnOpen === true}) throw new Error('opened the database');
-            instance ??= new Kysely({
-                dialect: new LibsqlDialect({ url: ${JSON.stringify(`file:${options.database}`)} }),
-                plugins: [new CamelCasePlugin()],
-            });
+            ${open}
             return instance;
         },
     },
-    migrationsDir: ${JSON.stringify(options.migrationsDir)},
-    entries: ${JSON.stringify(options.entries ?? {})},
+${optional}    entries: ${JSON.stringify(options.entries ?? {})},
 };
 `
     );

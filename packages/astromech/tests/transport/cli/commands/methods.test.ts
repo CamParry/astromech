@@ -2,118 +2,87 @@
  * `astromech methods`: boots the site named by `--config` and lists the
  * methods its manifest offers, narrowed by the view and surface filters.
  *
- * The config is a real file in a temp directory, loaded and booted the way the
- * CLI boots one, over a copy of the run's migrated test database. It builds
- * its own libsql Kysely from absolute paths, because a file outside the package
- * cannot resolve Astromech's modules or its dependencies by name.
+ * The config is a real file in a temp site, loaded and booted the way the CLI
+ * boots one (`tests/_support/cli.ts`), over a copy of the run's migrated test
+ * database.
  */
 
-import { copyFile, mkdtemp, rm, writeFile } from 'node:fs/promises';
-import { createRequire } from 'node:module';
-import { tmpdir } from 'node:os';
+import { copyFile } from 'node:fs/promises';
 import { join } from 'node:path';
+import { createTempSite, run, writeSiteConfig } from '@tests/cli';
 import { resetRuntime } from '@tests/harness';
-import { afterEach, beforeEach, describe, expect, inject, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, inject, it } from 'vitest';
+import { getDb } from '@/database/registry';
 import methods from '@/transport/cli/commands/methods';
 
-const require = createRequire(import.meta.url);
-
-/** A config file over the libsql database at `dbFile`. */
-function configSource(dbFile: string): string {
-    const path = (id: string) => JSON.stringify(require.resolve(id));
-    return `const { createClient } = require(${path('@libsql/client')});
-const { LibsqlDialect } = require(${path('@libsql/kysely-libsql')});
-const { CamelCasePlugin, Kysely } = require(${path('kysely')});
-
-const db = new Kysely({
-    dialect: new LibsqlDialect({ client: createClient({ url: ${JSON.stringify(`file:${dbFile}`)} }) }),
-    plugins: [new CamelCasePlugin()],
-});
-
-module.exports = {
-    db: { type: 'libsql', getInstance: () => db },
-    entries: {
-        recipe: { single: 'Recipe', plural: 'Recipes', fields: [] },
-    },
-    roles: { reader: { name: 'Reader', permissions: ['entry:recipe:read'] } },
-};
-`;
-}
-
-let dir: string;
 let configPath: string;
-let printed: string[];
-let errors: string[];
 
 beforeEach(async () => {
     resetRuntime();
-    dir = await mkdtemp(join(tmpdir(), 'astromech-cli-methods-'));
-    const dbFile = join(dir, 'site.db');
-    await copyFile(inject('testDbTemplate'), dbFile);
-    configPath = join(dir, 'astromech.config.cjs');
-    await writeFile(configPath, configSource(dbFile));
-    printed = [];
-    errors = [];
-    vi.spyOn(console, 'log').mockImplementation((line: unknown) => {
-        printed.push(String(line));
-    });
-    vi.spyOn(console, 'error').mockImplementation((line: unknown) => {
-        errors.push(String(line));
+    const siteDir = await createTempSite();
+    const database = join(siteDir, 'site.db');
+    await copyFile(inject('testDbTemplate'), database);
+    configPath = await writeSiteConfig(siteDir, {
+        database,
+        entries: {
+            recipe: { single: 'Recipe', plural: 'Recipes', fields: [] },
+        },
+        roles: { reader: { name: 'Reader', permissions: ['entry:recipe:read'] } },
     });
 });
 
 afterEach(async () => {
-    vi.restoreAllMocks();
+    await getDb().destroy();
     resetRuntime();
-    process.exitCode = 0;
-    await rm(dir, { recursive: true, force: true });
 });
-
-/** Run the command with `args`, as citty would after parsing them. */
-async function run(args: Record<string, unknown>): Promise<void> {
-    const runner = methods.run as (context: { args: unknown }) => Promise<void>;
-    await runner({
-        args: {
-            config: configPath,
-            json: false,
-            'allow-remote': false,
-            'read-only': false,
-            ...args,
-        },
-    });
-}
 
 describe('methods', () => {
     it('lists each method of a source with its effects and permission', async () => {
-        await run({ source: 'entries' });
+        const { stdout, stderr } = await run(methods, [
+            '--config',
+            configPath,
+            '--source',
+            'entries',
+        ]);
 
-        expect(printed).toContain(
+        expect(stdout).toContain(
             'entries.create  [mutates]  (permission: entry:recipe:create)'
         );
-        expect(printed).toContain(
+        expect(stdout).toContain(
             'entries.delete  [mutates destructive]  (permission: entry:recipe:delete)'
         );
-        expect(printed).toContain('entries.get  (permission: entry:recipe:read)');
-        expect(printed.every((line) => line.startsWith('entries.'))).toBe(true);
-        expect(errors).toEqual([]);
+        expect(stdout).toContain('entries.get  (permission: entry:recipe:read)');
+        expect(stdout.every((line) => line.startsWith('entries.'))).toBe(true);
+        expect(stderr).toEqual([]);
     });
 
     it('marks what a role may not call, or may depending on the target, under --role', async () => {
-        await run({ role: 'reader' });
+        const { stdout, stderr } = await run(methods, [
+            '--config',
+            configPath,
+            '--role',
+            'reader',
+        ]);
 
-        expect(printed).toContain('entries.get  (permission: entry:recipe:read)');
-        expect(printed).toContain(
+        expect(stdout).toContain('entries.get  (permission: entry:recipe:read)');
+        expect(stdout).toContain(
             'entries.create  [mutates denied]  (permission: entry:recipe:create)'
         );
-        expect(printed).toContain('globals.get  [depends]  (permission: dynamic)');
-        expect(printed).toContain('notifications.count  (permission: none)');
-        expect(errors).toEqual([]);
+        expect(stdout).toContain('globals.get  [depends]  (permission: dynamic)');
+        expect(stdout).toContain('notifications.count  (permission: none)');
+        expect(stderr).toEqual([]);
     });
 
     it('lists only what --read-only keeps, and counts what it excluded', async () => {
-        await run({ source: 'entries', 'read-only': true });
+        const { stdout } = await run(methods, [
+            '--config',
+            configPath,
+            '--source',
+            'entries',
+            '--read-only',
+        ]);
 
-        expect(printed).toEqual([
+        expect(stdout).toEqual([
             'entries.get  (permission: entry:recipe:read)',
             'entries.query  (permission: entry:recipe:read)',
             'entries.usedBy  (permission: entry:recipe:read)',
@@ -122,9 +91,16 @@ describe('methods', () => {
     });
 
     it('carries the excluded methods alongside the kept ones under --json', async () => {
-        await run({ filter: 'entries.c', 'read-only': true, json: true });
+        const { stdout } = await run(methods, [
+            '--config',
+            configPath,
+            '--filter',
+            'entries.c',
+            '--read-only',
+            '--json',
+        ]);
 
-        expect(JSON.parse(printed.join('\n'))).toMatchObject({
+        expect(JSON.parse(stdout.join('\n'))).toMatchObject({
             methods: [],
             excluded: [
                 {
@@ -136,12 +112,12 @@ describe('methods', () => {
     });
 
     it('reports a role the config does not define as the command’s error', async () => {
-        await run({ role: 'nobody' });
+        const result = await run(methods, ['--config', configPath, '--role', 'nobody']);
 
-        expect(printed).toEqual([]);
-        expect(errors.at(-1)).toContain(
+        expect(result.stdout).toEqual([]);
+        expect(result.stderr.at(-1)).toContain(
             'Unknown role "nobody". Configured roles: admin, editor, reader'
         );
-        expect(process.exitCode).toBe(1);
+        expect(result.exitCode).toBe(1);
     });
 });

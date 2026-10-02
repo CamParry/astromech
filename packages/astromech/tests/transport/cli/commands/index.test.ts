@@ -8,12 +8,11 @@
  */
 
 import { execFile } from 'node:child_process';
-import { mkdtemp, rm, writeFile } from 'node:fs/promises';
 import { createRequire } from 'node:module';
-import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
 import { promisify } from 'node:util';
-import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import { createTempSite, writeSiteConfig } from '@tests/cli';
+import { describe, expect, it } from 'vitest';
 
 const require = createRequire(import.meta.url);
 const packageRoot = resolve(import.meta.dirname, '../../../..');
@@ -21,6 +20,9 @@ const entryPoint = join(packageRoot, 'src/transport/cli/index.ts');
 
 /** A child process start through tsx takes a few seconds on a loaded machine. */
 const SPAWN_TIMEOUT_MS = 30_000;
+
+/** How long a child may run before it is killed, short of the test's own timeout. */
+const CHILD_TIMEOUT_MS = SPAWN_TIMEOUT_MS - 5_000;
 
 type Result = { code: number; stdout: string; stderr: string };
 
@@ -30,38 +32,38 @@ async function cli(args: string[]): Promise<Result> {
         const { stdout, stderr } = await promisify(execFile)(
             process.execPath,
             [require.resolve('tsx/cli'), entryPoint, ...args],
-            { cwd: packageRoot, env: { ...process.env, NO_COLOR: '1' } }
+            {
+                cwd: packageRoot,
+                env: { ...process.env, NO_COLOR: '1' },
+                timeout: CHILD_TIMEOUT_MS,
+                killSignal: 'SIGKILL',
+            }
         );
         return { code: 0, stdout, stderr };
     } catch (error) {
-        const failed = error as { code: number; stdout: string; stderr: string };
+        const failed = error as {
+            code: number;
+            killed?: boolean;
+            stdout: string;
+            stderr: string;
+        };
+        if (failed.killed === true) {
+            throw new Error(
+                `astromech ${args.join(' ')} was killed after ${CHILD_TIMEOUT_MS}ms:\n${failed.stderr}`,
+                { cause: error }
+            );
+        }
         return { code: failed.code, stdout: failed.stdout, stderr: failed.stderr };
     }
 }
-
-let dir: string;
-
-beforeEach(async () => {
-    dir = await mkdtemp(join(tmpdir(), 'astromech-cli-index-'));
-});
-
-afterEach(async () => {
-    await rm(dir, { recursive: true, force: true });
-});
 
 describe('astromech', () => {
     it(
         'dispatches a known command with its flags',
         async () => {
-            const configPath = join(dir, 'astromech.config.mjs');
-            await writeFile(
-                configPath,
-                `export default {
-                    db: { type: 'test', getInstance: () => ({}) },
-                    entries: {},
-                    globals: [{ key: 'site', label: 'Site', fields: [] }],
-                };`
-            );
+            const configPath = await writeSiteConfig(await createTempSite(), {
+                globals: [{ key: 'site', label: 'Site', fields: [] }],
+            });
 
             const result = await cli([
                 'permissions',

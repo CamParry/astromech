@@ -2,22 +2,24 @@
  * `astromech mcp`: boots the site named by `--config` and serves its methods
  * as MCP tools over stdio.
  *
- * It runs in a child process, from source through tsx: `runMcpServer` builds
- * its `StdioServerTransport` over `process.stdin` and `process.stdout` and
- * returns no handle to close it, so in process it would take over the test
- * worker's own stdio. The config file builds its own libsql Kysely from
- * absolute paths, because a file outside the package cannot resolve
- * Astromech's modules or its dependencies by name.
+ * The server runs in a child process, from source through tsx: `runMcpServer`
+ * builds its `StdioServerTransport` over `process.stdin` and `process.stdout`
+ * and returns no handle to close it, so in process it would take over the test
+ * worker's own stdio. A refusal that comes before the server starts runs in
+ * process. The config is a real file in a temp site (`tests/_support/cli.ts`),
+ * over a copy of the run's migrated test database.
  */
 
 import type { ChildProcessWithoutNullStreams } from 'node:child_process';
 import { spawn } from 'node:child_process';
-import { copyFile, mkdtemp, rm, writeFile } from 'node:fs/promises';
+import { copyFile } from 'node:fs/promises';
 import { createRequire } from 'node:module';
-import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
 import { createInterface } from 'node:readline';
+import { createTempSite, run, writeSiteConfig } from '@tests/cli';
+import { resetRuntime } from '@tests/harness';
 import { afterEach, beforeEach, describe, expect, inject, it } from 'vitest';
+import mcp from '@/transport/cli/commands/mcp';
 
 const require = createRequire(import.meta.url);
 const packageRoot = resolve(import.meta.dirname, '../../../..');
@@ -26,28 +28,9 @@ const entryPoint = join(packageRoot, 'src/transport/cli/index.ts');
 /** A child process start through tsx takes a few seconds on a loaded machine. */
 const SPAWN_TIMEOUT_MS = 30_000;
 
-/** A config file over the libsql database at `dbFile`. */
-function configSource(dbFile: string): string {
-    const path = (id: string) => JSON.stringify(require.resolve(id));
-    return `const { createClient } = require(${path('@libsql/client')});
-const { LibsqlDialect } = require(${path('@libsql/kysely-libsql')});
-const { CamelCasePlugin, Kysely } = require(${path('kysely')});
-
-const db = new Kysely({
-    dialect: new LibsqlDialect({ client: createClient({ url: ${JSON.stringify(`file:${dbFile}`)} }) }),
-    plugins: [new CamelCasePlugin()],
-});
-
-module.exports = {
-    db: { type: 'libsql', getInstance: () => db },
-    entries: {
-        recipe: { single: 'Recipe', plural: 'Recipes', fields: [] },
-    },
-};
-`;
-}
-
 type Response = { id: number; result?: Record<string, unknown>; error?: unknown };
+
+type Waiting = { resolve: (response: Response) => void; reject: (error: Error) => void };
 
 /** A running `astromech mcp` and a JSON-RPC client over its stdio. */
 function startServer(args: string[]): {
@@ -66,10 +49,21 @@ function startServer(args: string[]): {
         stderr += chunk.toString();
     });
 
-    const waiting = new Map<number, (response: Response) => void>();
+    const waiting = new Map<number, Waiting>();
+    // Set once stdout carries a line that is not JSON-RPC; every request then fails with it.
+    let protocolError: Error | undefined;
     createInterface({ input: child.stdout }).on('line', (line) => {
-        const message = JSON.parse(line) as Response;
-        waiting.get(message.id)?.(message);
+        let message: Response;
+        try {
+            message = JSON.parse(line) as Response;
+        } catch {
+            protocolError = new Error(`stdout carried a line that is not JSON: ${line}`);
+            for (const pending of waiting.values()) pending.reject(protocolError);
+            waiting.clear();
+            return;
+        }
+        waiting.get(message.id)?.resolve(message);
+        waiting.delete(message.id);
     });
 
     const send = (message: object) => child.stdin.write(`${JSON.stringify(message)}\n`);
@@ -79,7 +73,11 @@ function startServer(args: string[]): {
         stderr: () => stderr,
         request: (id, method, params) =>
             new Promise((resolveResponse, reject) => {
-                waiting.set(id, resolveResponse);
+                if (protocolError !== undefined) {
+                    reject(protocolError);
+                    return;
+                }
+                waiting.set(id, { resolve: resolveResponse, reject });
                 child.once('exit', (code) =>
                     reject(
                         new Error(`exited ${String(code)} before answering:\n${stderr}`)
@@ -91,26 +89,34 @@ function startServer(args: string[]): {
     };
 }
 
-let dir: string;
 let configPath: string;
 let running: ChildProcessWithoutNullStreams | undefined;
 
 beforeEach(async () => {
-    dir = await mkdtemp(join(tmpdir(), 'astromech-cli-mcp-'));
-    const dbFile = join(dir, 'site.db');
-    await copyFile(inject('testDbTemplate'), dbFile);
-    configPath = join(dir, 'astromech.config.cjs');
-    await writeFile(configPath, configSource(dbFile));
+    resetRuntime();
+    const siteDir = await createTempSite();
+    const database = join(siteDir, 'site.db');
+    await copyFile(inject('testDbTemplate'), database);
+    configPath = await writeSiteConfig(siteDir, {
+        database,
+        entries: {
+            recipe: { single: 'Recipe', plural: 'Recipes', fields: [] },
+        },
+    });
 });
 
 afterEach(async () => {
-    if (running !== undefined && running.exitCode === null) {
+    // A child killed by a signal has a `signalCode` and no `exitCode`.
+    if (
+        running !== undefined &&
+        running.exitCode === null &&
+        running.signalCode === null
+    ) {
         const exited = new Promise((done) => running?.once('exit', done));
         running.kill();
         await exited;
     }
     running = undefined;
-    await rm(dir, { recursive: true, force: true });
 });
 
 describe('mcp', () => {
@@ -145,17 +151,11 @@ describe('mcp', () => {
         SPAWN_TIMEOUT_MS
     );
 
-    it(
-        'refuses an unknown --confirm mode with exit code 1',
-        async () => {
-            const server = startServer(['--config', configPath, '--confirm', 'always']);
-            running = server.child;
-
-            const code = await new Promise((done) => server.child.once('exit', done));
-
-            expect(code).toBe(1);
-            expect(server.stderr()).toContain('Unknown --confirm mode "always"');
-        },
-        SPAWN_TIMEOUT_MS
-    );
+    it('refuses an unknown --confirm mode before the server starts', async () => {
+        // The CLI's `runMain` reports this error and exits with code 1
+        // (`index.test.ts` covers that path).
+        await expect(
+            run(mcp, ['--config', configPath, '--confirm', 'always'])
+        ).rejects.toThrow('Unknown --confirm mode "always"');
+    });
 });
