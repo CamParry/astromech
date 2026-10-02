@@ -7,15 +7,15 @@ fixed.
 
 - [ ] **A table's dump differs after a fast-path `ADD COLUMN`.** SQLite stores
       the change as `… NOT NULL , \`c1\` text)`where a fresh build gives
- `… NOT NULL, \`c1\` text )`, and `normalize()`in
- `packages/schema-engine/src/oracle.ts`does not reconcile them. It
-  happens only on a table with no table-level constraint (with a foreign
-  key or composite key, SQLite inserts the column before`CONSTRAINT`and
-  the dumps match). Five core tables have none:`users`, `roles`,
-  `verifications`, `\_astromech_cron`, `\_astromech_plugins`. The first
-  generated migration that adds a nullable column to one of them fails
-  `packages/astromech/tests/database/baseline-ddl-parity.test.ts`, and a
-  site using `dumpSchema` as its drift gate, as the README suggests, hits
+`… NOT NULL, \`c1\` text )`, and `normalize()`in
+`packages/schema-engine/src/oracle.ts`does not reconcile them. It
+ happens only on a table with no table-level constraint (with a foreign
+ key or composite key, SQLite inserts the column before`CONSTRAINT`and
+ the dumps match). Five core tables have none:`users`, `roles`,
+ `verifications`, `\_astromech_cron`, `\_astromech_plugins`. The first
+ generated migration that adds a nullable column to one of them fails
+ `packages/astromech/tests/database/baseline-ddl-parity.test.ts`, and a
+ site using `dumpSchema` as its drift gate, as the README suggests, hits
       the same.
 - [ ] **An added column lands last.** `diffTable` in
       `packages/schema-engine/src/diff.ts` puts every new nullable column on
@@ -29,3 +29,17 @@ fixed.
 - [ ] **`renderLiteral` breaks on a NUL in a string.** SQLite stops reading at
       the NUL and fails with `unrecognized token`. It fails loudly, so it is
       not an injection risk.
+- [ ] **Rebuilding a referenced table fails with foreign keys on.** Core runs
+      with foreign keys on. Rebuilding a table that other tables' rows point
+      at fails at commit: `defer_foreign_keys` does not clear the violation
+      count the `DROP` adds. Dropping a referenced table together with the key
+      pointing at it also fails, because the `DROP TABLE` runs before the
+      rebuild that removes the key. Found by seeding the parity property.
+- [ ] **A moved column produces no ops.** Reordering a table's columns with no
+      other change diffs as nothing, so the migrated table keeps the old order
+      while a fresh build has the new one (the same contract as the
+      added-column case above).
+- [ ] Seeding the parity property also hit an SQLite 3.45.1 bug: on a populated
+      table, adding a `real NOT NULL DEFAULT 1.5` column and then a column with
+      a CHECK fails with "NOT NULL constraint failed". The property skips that
+      case. Check whether a newer SQLite fixes it before working round it.
