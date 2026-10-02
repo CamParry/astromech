@@ -34,6 +34,11 @@ export const isolatedTests = [
     'tests/hooks/use-bulk-delete-media.test.tsx',
     'tests/hooks/use-media-browser.test.tsx',
     'tests/hooks/use-media-versions.test.tsx',
+    'tests/components/entries/create-locale-modal.test.tsx',
+    'tests/components/entries/delete-entry-modal.test.tsx',
+    'tests/components/entries/entry-new-page.test.tsx',
+    'tests/components/layout/notification-bell.test.tsx',
+    'tests/components/ui/command-palette.test.tsx',
     'tests/forgot-password-form.test.tsx',
     'tests/login-setup-redirect.test.ts',
 ];
