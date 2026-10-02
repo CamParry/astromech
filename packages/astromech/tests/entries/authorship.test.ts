@@ -48,13 +48,17 @@ async function stamps(id: string) {
         .executeTakeFirstOrThrow();
 }
 
-/** The same two columns on the `entries` row, which trash and restore stamp. */
-async function resourceStamps(id: string) {
-    return db
+/**
+ * The `entries` row's `createdBy`, read raw because no read returns it: an
+ * entry's public `createdBy` is its content row's.
+ */
+async function resourceCreatedBy(id: string) {
+    const row = await db
         .selectFrom('entries')
-        .select(['createdBy', 'updatedBy'])
+        .select('createdBy')
         .where('id', '=', id)
         .executeTakeFirstOrThrow();
+    return row.createdBy;
 }
 
 /** The staged content row's two columns. */
@@ -179,15 +183,13 @@ describe('trash and restore', () => {
         );
 
         await runAsUser(other, () => api.trash({ type: 'post', id: entry.id }));
-        expect(await resourceStamps(entry.id)).toEqual({
-            createdBy: author.id,
-            updatedBy: other.id,
-        });
+        const trashed = await api.query({ type: 'post', trashed: true, full: true });
+        expect(trashed.data.find((e) => e.id === entry.id)?.updatedBy).toBe(other.id);
+        expect(await resourceCreatedBy(entry.id)).toBe(author.id);
 
         await runAsUser(author, () => api.restore({ type: 'post', id: entry.id }));
-        expect(await resourceStamps(entry.id)).toEqual({
-            createdBy: author.id,
-            updatedBy: author.id,
-        });
+        const restored = await api.get({ type: 'post', id: entry.id, full: true });
+        expect(restored?.updatedBy).toBe(author.id);
+        expect(await resourceCreatedBy(entry.id)).toBe(author.id);
     });
 });

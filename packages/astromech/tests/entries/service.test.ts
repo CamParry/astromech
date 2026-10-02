@@ -659,6 +659,13 @@ describe('trash / restore / delete / emptyTrash', () => {
         expect(trashed.data).toEqual([]);
         const live = await api.query({ type: 'post', full: true });
         expect(live.data.map((x) => x.id)).toEqual([b.id]);
+        // Raw: every read joins content, so none would see a bare `entries` row.
+        const rows = await getDb()
+            .selectFrom('entries')
+            .select('id')
+            .where('id', '=', a.id)
+            .execute();
+        expect(rows).toEqual([]);
     });
 });
 

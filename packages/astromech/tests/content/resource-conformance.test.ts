@@ -12,7 +12,6 @@ import { createTestDb, makeTestConfig, setupTestConfig } from '@tests/harness';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { currentServices } from '@/app-context/services';
 import { RESOURCE_CONFIG } from '@/content/resources';
-import { getDb } from '@/database/registry';
 import { mediaRepository } from '@/media/repository';
 import { RESOURCE_TYPES } from '@/types/domain';
 
@@ -26,7 +25,7 @@ type Adapter = {
     /** Save one resource holding `fields`; answers its address. */
     save(fields: JsonObject): Promise<string>;
     /** Read it back through its service's `get`. */
-    read(id: string): Promise<object | null>;
+    read(id: string): Promise<{ updatedAt: Date } | null>;
     /** Write `fields` to one locale of it. */
     update(
         id: string,
@@ -38,8 +37,6 @@ type Adapter = {
         id: string,
         version: number
     ): Promise<{ fields: JsonObject; updatedAt: Date }>;
-    /** The stored `updatedAt` of its resource row. */
-    stamped(id: string): Promise<Date>;
     /** A read of one that does not exist, where the method must throw. */
     missing(): Promise<unknown>;
     /** A list sorted by `sort`; absent for a resource with no list. */
@@ -76,7 +73,6 @@ const ADAPTERS: Record<ResourceType, Adapter> = {
         versions: (id) => entriesService.versions({ type: 'page', id }),
         restore: (id, version) =>
             entriesService.restoreVersion({ type: 'page', id, version }),
-        stamped: (id) => stampedAt('entries', 'id', id),
         missing: () => entriesService.versions({ type: 'page', id: 'nope' }),
         list: (sort) => entriesService.query({ type: 'page', sort, full: true }),
     },
@@ -94,7 +90,6 @@ const ADAPTERS: Record<ResourceType, Adapter> = {
             }),
         versions: (key) => globalsService.versions({ key }),
         restore: (key, version) => globalsService.restoreVersion({ key, version }),
-        stamped: (key) => stampedAt('globals', 'key', key),
         missing: () => globalsService.versions({ key: 'nope' }),
     },
     user: {
@@ -113,7 +108,6 @@ const ADAPTERS: Record<ResourceType, Adapter> = {
             usersService.update({ id, ...(locale ? { locale } : {}), data: { fields } }),
         versions: (id) => usersService.versions({ id }),
         restore: (id, version) => usersService.restoreVersion({ id, version }),
-        stamped: (id) => stampedAt('users', 'id', id),
         missing: () => usersService.versions({ id: 'nope' }),
         list: (sort) => usersService.query({ sort }),
     },
@@ -131,7 +125,6 @@ const ADAPTERS: Record<ResourceType, Adapter> = {
             mediaService.update({ id, ...(locale ? { locale } : {}), data: { fields } }),
         versions: (id) => mediaService.versions({ id }),
         restore: (id, version) => mediaService.restoreVersion({ id, version }),
-        stamped: (id) => stampedAt('media', 'id', id),
         missing: () => mediaService.versions({ id: 'nope' }),
         list: (sort) => mediaService.query({ sort }),
     },
@@ -157,20 +150,6 @@ beforeEach(async () => {
         media: { fields: [...FIELDS] },
     });
 });
-
-/** The stored `updatedAt` of the resource row whose `column` is `value`. */
-async function stampedAt(
-    table: 'entries' | 'globals' | 'users' | 'media',
-    column: 'id' | 'key',
-    value: string
-): Promise<Date> {
-    const row = await getDb()
-        .selectFrom(table)
-        .select('updatedAt')
-        .where(column as 'id', '=', value)
-        .executeTakeFirstOrThrow();
-    return new Date(row.updatedAt);
-}
 
 /** A media item for the others to reference. */
 async function mediaTarget(): Promise<string> {
@@ -244,7 +223,7 @@ describe.each(RESOURCE_TYPES)('%s', (kind) => {
 
             const updated = await adapter.update(id, { title: 'Two' });
 
-            expect(await adapter.stamped(id)).toEqual(later);
+            expect((await adapter.read(id))?.updatedAt).toEqual(later);
             expect(updated?.updatedAt).toEqual(later);
         });
 
@@ -256,7 +235,7 @@ describe.each(RESOURCE_TYPES)('%s', (kind) => {
 
             const restored = await adapter.restore(id, version?.version ?? 0);
 
-            expect(await adapter.stamped(id)).toEqual(later);
+            expect((await adapter.read(id))?.updatedAt).toEqual(later);
             expect(restored.updatedAt).toEqual(later);
         });
     });

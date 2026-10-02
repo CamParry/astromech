@@ -160,6 +160,10 @@ describe('the global row stamp and divergence', () => {
         vi.useRealTimers();
     });
 
+    /**
+     * The `globals` row's stored `updatedAt`, read raw: the staged-write check
+     * below is that nothing was written to it.
+     */
     async function globalUpdatedAt(): Promise<Date> {
         const row = await getDb()
             .selectFrom('globals')
@@ -201,7 +205,7 @@ describe('the global row stamp and divergence', () => {
     it('stamps the global row on a merge', async () => {
         const merged = await api.mergeStaged({ key: 'site' });
 
-        expect(await globalUpdatedAt()).toEqual(t2);
+        expect((await api.get({ key: 'site', full: true }))?.updatedAt).toEqual(t2);
         expect(merged.updatedAt).toEqual(t2);
     });
 
