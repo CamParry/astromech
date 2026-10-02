@@ -468,16 +468,34 @@ harness and eight test files and every later stage runs faster for it.
 
 ### Stage 5: missing coverage
 
-- [ ] `media.delete` removes the stored file and its variants.
-- [ ] Backups restore, download, run, delete and permissions.
-- [ ] Admin: `EntryNewPage`, `DeleteEntryModal`, `CreateLocaleModal`,
+- [x] `media.delete` removes the stored file and its variants. It found
+      [media-delete-removes-files-first](../planned/media-delete-removes-files-first.md)
+      and [media-upload-skips-field-defaults](../planned/media-upload-skips-field-defaults.md).
+- [x] Backups restore, download, run, delete and permissions.
+- [x] Admin: `EntryNewPage`, `DeleteEntryModal`, `CreateLocaleModal`,
       `CommandPalette`, `NotificationBell`, the backups page and the seo
-      overview page.
-- [ ] The 13 untested CLI commands and the assistant's chat route.
-- [ ] Inline type tests for `defineServiceMethod`, `defineHook` and
-      `defineConfig`.
-- [ ] Coverage thresholds for the plugins and `schema-engine`.
-- [ ] Property tests where they pay: `capIdentifier`, `renderLiteral`,
-      `diffSnapshots`, `readChatRequest`, slug handling.
+      overview page. A plugin renders its admin pages in its own suite through
+      `pluginVitestConfig({ adminPages: true })` and `renderPluginPage`. The admin
+      tests build an `Entry` with `as unknown as Entry` in 10 places; a typed
+      admin `Entry` builder is open. Defects found:
+      [admin-ui-defects](../planned/admin-ui-defects.md).
+- [x] The 13 untested CLI commands and the assistant's chat route. The CLI
+      tests share `packages/astromech/tests/_support/cli.ts`. Defects found:
+      [cli-defects](../planned/cli-defects.md).
+- [x] Inline type tests for `defineServiceMethod`, `defineHook` and
+      `defineConfig`. `Hook.handler` is now `HookHandlerFor<HookEvent>`, and
+      the `AnyCoreHookHandler` type export is gone.
+- [x] Coverage thresholds for the plugins and `schema-engine`, through
+      `pluginVitestConfig`'s `coverageThresholds`; the root `test:run` checks
+      them. Core's thresholds rose to what the new tests measure.
+- [x] Property tests where they pay: `capIdentifier`, `renderLiteral`,
+      `diffSnapshots`, `readChatRequest`, slug handling. Defects found:
+      [schema-engine-defects](../planned/schema-engine-defects.md) and
+      [trashed-entry-slug-collision](../planned/trashed-entry-slug-collision.md).
 - [ ] Try mutation testing (Stryker, incremental) on one core directory, and
       keep it as an occasional check only if it finds assertions that miss.
+      Tried on `src/utilities/` (Stryker 10, 12 minutes): 17 of 31 surviving
+      mutants were missing assertions, in files at 97% line coverage, and it
+      found a `deepEqual` bug. Left: fix `deepEqual`, add the missing
+      assertions, and add a script and a `testing` skill note for running it
+      one directory at a time.
