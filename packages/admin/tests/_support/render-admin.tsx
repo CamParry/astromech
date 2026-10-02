@@ -5,6 +5,7 @@
  */
 
 import type { AuthUser } from '@/admin/context/auth';
+import type { PluginUiIdentity } from '@/admin/context/plugin';
 import type { RouteComponent } from '@tanstack/react-router';
 import type { RenderHookResult, RenderResult } from '@testing-library/react';
 import type { UserEvent } from '@testing-library/user-event';
@@ -20,10 +21,12 @@ import {
 } from '@tanstack/react-router';
 import { act, render, renderHook, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
+import i18n from 'i18next';
 import { ConfirmProvider } from '@/admin/components/ui/confirm';
 import { ToastProvider } from '@/admin/components/ui/toast';
 import { AiContextProvider } from '@/admin/context/ai-context';
 import { AuthProvider, sessionQueryOptions } from '@/admin/context/auth';
+import { PluginUiProvider } from '@/admin/context/plugin';
 import { ThemeProvider } from '@/admin/context/theme';
 import { UiProvider } from '@/admin/context/ui';
 import '@/admin/rendering/cells/register-cells';
@@ -125,6 +128,35 @@ export function renderAdmin(
             });
         },
     };
+}
+
+/** What `renderPluginPage` takes. */
+export type RenderPluginPageOptions = RenderAdminOptions & {
+    /** The plugin whose surface is rendering, as the admin's plugin routes supply it. */
+    plugin: PluginUiIdentity;
+    /**
+     * The plugin's English bundle, loaded under its `permissionNamespace` as
+     * `src/i18n.ts` loads it, so the page shows the text a user reads.
+     */
+    translations?: Record<string, unknown>;
+};
+
+/**
+ * Render a plugin's admin page as `renderAdmin` renders admin UI, inside the
+ * `PluginUiProvider` the admin's plugin routes wrap it in, so
+ * `useAstromechPlugin()` works.
+ */
+export function renderPluginPage(
+    page: ReactElement,
+    { plugin, translations, ...options }: RenderPluginPageOptions
+): RenderAdminResult {
+    if (translations !== undefined) {
+        i18n.addResourceBundle('en', plugin.permissionNamespace, translations);
+    }
+    return renderAdmin(
+        <PluginUiProvider identity={plugin}>{page}</PluginUiProvider>,
+        options
+    );
 }
 
 /**

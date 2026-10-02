@@ -6,9 +6,19 @@
  * isolation, so there is no isolated list here: turning it off saves no time,
  * and the assistant, backups and forms suites mock modules or set globals,
  * which would need one.
+ *
+ * A plugin that tests its admin pages passes `{ adminPages: true }`. The
+ * `.test.tsx` files under its `tests/admin/` then run in a second project set
+ * up as the admin's own tests are: happy-dom, the admin's `@/admin` alias, its
+ * shims for the three virtual modules a site's Vite serves, and its
+ * `dom-setup.ts` (English strings, the unmocked-request guard, cleanup). They
+ * render through `renderPluginPage` in
+ * `packages/admin/tests/_support/render-admin.tsx`. Every other test file runs
+ * as it does without the option.
  */
-import type { ViteUserConfig } from 'vitest/config';
+import type { TestProjectInlineConfiguration, ViteUserConfig } from 'vitest/config';
 import { fileURLToPath } from 'node:url';
+import { defaultExclude } from 'vitest/config';
 import { coreAliases } from './vitest-aliases';
 import {
     assertNoArgumentsAfterDoubleDash,
@@ -16,21 +26,83 @@ import {
     baseTestOptions,
 } from './vitest-base-config';
 
-export function pluginVitestConfig(): ViteUserConfig {
+export type PluginVitestOptions = {
+    /** Run the `.test.tsx` files under `tests/admin/` as admin page tests. */
+    adminPages?: boolean;
+};
+
+const include = ['tests/**/*.test.ts', 'tests/**/*.test.tsx'];
+
+const adminPageTests = ['tests/admin/**/*.test.tsx'];
+
+// Worker threads, as in core and the admin: about 13% faster than child
+// processes over the six plugin suites.
+const pool = 'threads';
+
+/** A path in the admin package, which owns the shims and the DOM setup. */
+function fromAdmin(path: string): string {
+    return fileURLToPath(new URL(`../../../admin/${path}`, import.meta.url));
+}
+
+export function pluginVitestConfig(options: PluginVitestOptions = {}): ViteUserConfig {
     assertNoArgumentsAfterDoubleDash();
-    return {
+    const nodeTest = {
+        ...baseTestOptions,
+        environment: 'node',
+        pool,
+        include,
+        // Makes the run's temp directory for `harness.ts`'s test databases
+        // and removes it at the end.
+        globalSetup: [fileURLToPath(new URL('./global-setup.ts', import.meta.url))],
+    };
+    if (options.adminPages !== true) {
+        return {
+            resolve: { alias: coreAliases() },
+            test: { ...baseRootTestOptions, ...nodeTest },
+        };
+    }
+
+    const nodeProject: TestProjectInlineConfiguration = {
         resolve: { alias: coreAliases() },
         test: {
-            ...baseRootTestOptions,
-            ...baseTestOptions,
-            environment: 'node',
-            // Worker threads, as in core and the admin: about 13% faster than
-            // child processes over the six plugin suites.
-            pool: 'threads',
-            include: ['tests/**/*.test.ts', 'tests/**/*.test.tsx'],
-            // Makes the run's temp directory for `harness.ts`'s test databases
-            // and removes it at the end.
-            globalSetup: [fileURLToPath(new URL('./global-setup.ts', import.meta.url))],
+            ...nodeTest,
+            name: 'node',
+            exclude: [...defaultExclude, ...adminPageTests],
         },
+    };
+    // The aliases and setup files of `packages/admin/vitest.config.ts`, pointing
+    // at the admin's own files. Vite takes the first alias that matches, and
+    // core's `@` also matches `@/admin/...`, so `@/admin` comes first. Page
+    // tests use no database, so this project has no `globalSetup`.
+    const adminPagesProject: TestProjectInlineConfiguration = {
+        resolve: {
+            alias: {
+                'virtual:astromech/admin-config': fromAdmin(
+                    'tests/_support/admin-config-shim.ts'
+                ),
+                'virtual:astromech/admin-icons': fromAdmin(
+                    'tests/_support/admin-icons-shim.ts'
+                ),
+                'virtual:astromech/plugins/components': fromAdmin(
+                    'tests/_support/plugins-components-shim.ts'
+                ),
+                '@/admin': fromAdmin('src'),
+                ...coreAliases(),
+            },
+        },
+        test: {
+            ...baseTestOptions,
+            name: 'admin-pages',
+            environment: 'happy-dom',
+            pool,
+            include: adminPageTests,
+            setupFiles: [
+                ...baseTestOptions.setupFiles,
+                fromAdmin('tests/_support/dom-setup.ts'),
+            ],
+        },
+    };
+    return {
+        test: { ...baseRootTestOptions, projects: [nodeProject, adminPagesProject] },
     };
 }

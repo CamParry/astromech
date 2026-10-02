@@ -7,6 +7,7 @@
         "incremental": true,
         "tsBuildInfoFile": "./node_modules/.cache/tsc/tsconfig.test.tsbuildinfo",
         "paths": {
+            "@/admin/*": ["../../admin/src/*"],
             "@/*": ["../../astromech/src/*"],
             "@tests/*": ["../../astromech/tests/_support/*"],
             "astromech": ["../../astromech/src/exports/index.ts"],
