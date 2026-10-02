@@ -449,7 +449,7 @@ harness and eight test files and every later stage runs faster for it.
 - [ ] Replace the seven hand-written storage fakes with the filesystem driver,
       plus one `StorageDriver` contract test run against every driver.
 - [ ] Delete or rewrite the tests that cannot fail (`cron-table`,
-      `packages/astromech/tests/content/repository-surface.test.ts`, `packages/astromech/tests/content/shared-helpers.test.ts`, the admin
+      `repository-surface`, `packages/astromech/tests/content/shared-helpers.test.ts`, the admin
       `cell-registry` case), fix the admin field-registry leak, rewrite
       `packages/astromech/tests/cron/runner.test.ts` and `method-manifest.test.ts` as tables, and move
       `permission-match.test.ts` off the retired permission grammar. The admin
