@@ -36,8 +36,6 @@ import { createPluginTestApp } from '@tests/plugin-app';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { PermissionDeniedError } from '@/errors/permission';
 import { defineHook } from '@/plugins/define-hook';
-import { resolvePluginIdentity } from '@/plugins/runtime/plugin-identity';
-import { resolveAdminResources } from '@/plugins/runtime/plugin-resources';
 import { forms, turnstile } from '../src/index';
 import { createSubmissionsRepository } from '../src/repository';
 import { resetRateLimit } from '../src/service/rate-limit';
@@ -665,12 +663,14 @@ describe('forms submission permissions', () => {
 });
 
 describe('the Submissions admin resource', () => {
+    beforeEach(async () => {
+        await setup();
+    });
+
     it('binds a read-only list and edit screen to the submission methods', () => {
-        const definition = forms();
-        const [resource] = resolveAdminResources(
-            resolvePluginIdentity(definition),
-            definition
-        );
+        const [resource] =
+            app.adminConfig.plugins.find(({ namespace }) => namespace === 'forms')
+                ?.resources ?? [];
 
         expect(resource?.name).toBe('submissions');
         expect(resource?.methods).toEqual({

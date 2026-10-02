@@ -18,7 +18,6 @@ import { sql } from 'kysely';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { libsql } from '@/database/drivers/libsql';
 import { createRepository } from '@/database/repository/create-repository';
-import { resolvePluginIdentity } from '@/plugins/runtime/plugin-identity';
 import { filesystem } from '@/storage/drivers/filesystem';
 import { isBackupRunning, performBackup, resolveKeep, rotate } from '../src/backup';
 import { backups } from '../src/index';
@@ -490,19 +489,16 @@ describe('resolveKeep', () => {
         expect(await resolveKeep(app.context(), 7)).toBe(3);
     });
 
-    it('reads the key the plugin’s settings global actually writes', async () => {
-        const definition = backups();
-        const settingsGlobal = definition.globals?.find(
-            (global) => global.key === 'settings'
-        );
+    it('reads the key the plugin’s settings global actually writes', () => {
+        const settingsGlobal = app.adminConfig.globals['backups/settings'];
 
         // The retention field is reachable, and it lands on the key resolveKeep
         // asks for (asserted in the test above).
         expect(settingsGlobal).toBeDefined();
-        expect(resolvePluginIdentity(definition).namespace).toBe('backups');
-        expect(
-            (settingsGlobal?.fields as { name: string }[]).map((field) => field.name)
-        ).toEqual(['retention']);
+        expect(settingsGlobal?.plugin).toBe('backups');
+        expect(settingsGlobal?.fields.main.map((field) => field.name)).toEqual([
+            'retention',
+        ]);
     });
 
     it('falls back when the global is unsaved', async () => {

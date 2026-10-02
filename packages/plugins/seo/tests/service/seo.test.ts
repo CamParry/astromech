@@ -9,11 +9,8 @@ import type { PluginTestApp } from '@tests/plugin-app';
 import { makeTestConfig, setupTestConfig } from '@tests/harness';
 import { createPluginTestApp } from '@tests/plugin-app';
 import { beforeEach, describe, expect, it } from 'vitest';
-import { currentServices } from '@/app-context/services';
 import { seo } from '../../src/index';
 import { seoService } from '../../src/service/seo';
-
-const mediaService = currentServices.media;
 
 let app: PluginTestApp<'seo'>;
 
@@ -178,7 +175,7 @@ describe('seo meta', () => {
     });
 
     it('resolves the default Open Graph image from the settings global', async () => {
-        const image = await mediaService.upload({
+        const image = await app.media.upload({
             file: new File(['not really an image'], 'share.txt', { type: 'text/plain' }),
         });
         await app.globals.update({

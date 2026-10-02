@@ -1,14 +1,16 @@
 /**
  * A plugin registered for real on a fresh harness database, with typed handles
- * on its service, the content and users services and the HTTP API, so a
- * plugin's tests reach core one way.
+ * on its service, the content and users services, the admin config and the
+ * HTTP API, so a plugin's tests reach core one way.
  */
 import type { DB } from '@/database/types';
+import type { AdminConfig } from '@/types/config';
 import type {
     AstromechConfig,
     AstromechPluginServices,
     EntriesService,
     GlobalsService,
+    MediaService,
     PluginContext,
     ResolvedConfig,
     Role,
@@ -21,6 +23,7 @@ import { createAppContext, systemAppContext } from '@/app-context/app-context';
 import { createServices, currentServices } from '@/app-context/services';
 import { setMethodManifest } from '@/codegen/manifest-registry';
 import { generateMethodManifest } from '@/codegen/method-manifest';
+import { buildAdminConfig } from '@/config/admin-config';
 import { createPluginContext, getPluginIdentity } from '@/plugins/runtime/plugin-runtime';
 import { createHttpApp } from '@/transport/http/app';
 
@@ -33,6 +36,8 @@ export type PluginTestApp<K extends PluginKey> = {
     db: Kysely<DB>;
     /** The resolved config the app runs. */
     config: ResolvedConfig;
+    /** What the site serves the admin: each plugin's nav, pages and resources among it. */
+    adminConfig: AdminConfig;
     /**
      * The plugin's service on the trusted handle, the way site code calls it.
      * Read on each access, so it follows a later `setupTestConfig`.
@@ -47,6 +52,8 @@ export type PluginTestApp<K extends PluginKey> = {
     entries: EntriesService;
     /** The globals service on the trusted handle. */
     globals: GlobalsService;
+    /** The media service on the trusted handle. */
+    media: MediaService;
     /** The users service on the trusted handle. */
     users: UsersService;
     /** The `ctx` the plugin's own code receives, acting as the system. */
@@ -84,6 +91,7 @@ export async function createPluginTestApp<K extends PluginKey>(
     return {
         db,
         config: resolved,
+        adminConfig: buildAdminConfig(config, resolved),
         get service() {
             return pluginService(currentServices.plugins, key);
         },
@@ -96,6 +104,7 @@ export async function createPluginTestApp<K extends PluginKey>(
             ),
         entries: currentServices.entries,
         globals: currentServices.globals,
+        media: currentServices.media,
         users: currentServices.users,
         context: () => createPluginContext(identity, systemAppContext()),
         request: async (method, path, init = {}) => {
