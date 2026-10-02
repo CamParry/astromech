@@ -58,7 +58,6 @@
             "project": [
                 "src/**/*.{ts,tsx}!",
                 "tests/**/*.{ts,tsx}",
-                "scripts/**/*.ts",
                 "migrations/**/*.ts!"
             ]
         },

@@ -17,8 +17,9 @@ import { formatAiContextMessage } from 'astromech';
  * only after a user message. A `user` turn is one. So is a `tool` turn, which
  * the Anthropic provider converts to a user message of tool results; that is
  * the last turn after an approval. With no turns, or with an assistant turn
- * last (a request that adds no new turn), the context rides in the system
- * prompt instead.
+ * last (a request that adds no new turn), the context rides at the end of the
+ * system prompt instead, under its own heading so the model does not read it
+ * as part of the site's instructions.
  */
 export function buildRequest(
     messages: ChatMessage[],
@@ -32,7 +33,10 @@ export function buildRequest(
 
     const lastRole = turns[turns.length - 1]?.role;
     if (lastRole !== 'user' && lastRole !== 'tool') {
-        return { system: `${system}\n\n${context.content}`, messages: turns };
+        return {
+            system: `${system}\n\nCurrent admin view:\n${context.content}`,
+            messages: turns,
+        };
     }
 
     turns.push(context);

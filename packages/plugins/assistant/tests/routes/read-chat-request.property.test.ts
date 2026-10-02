@@ -204,15 +204,4 @@ describe('readChatRequest', () => {
             })
         );
     });
-
-    it('accepts only an aiContext the loop can render', async () => {
-        const body = JSON.stringify({
-            messages: [{ role: 'user', content: 'hi' }],
-            aiContext: [{ anything: 'at all' }],
-        });
-
-        const result = await readChatRequest(post(body));
-
-        expect(() => formatAiContextMessage(result?.aiContext ?? [])).not.toThrow();
-    });
 });

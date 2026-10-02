@@ -182,7 +182,7 @@ describe('POST /plugins/assistant/chat', () => {
 
         expect(res.status).toBe(400);
         await expect(res.json()).resolves.toEqual({
-            error: 'Expected { messages: [{ role, content: [{ type, … }] }], aiContext?: [], decisions?: [{ approvalId, action }] }',
+            error: 'Expected { messages: [{ role, content: [{ type, … }] }], aiContext?: [{ reference: { kind, label, type?, id? }, depth, order }], decisions?: [{ approvalId, action }] }',
         });
         expect(streamTextMock).not.toHaveBeenCalled();
     });

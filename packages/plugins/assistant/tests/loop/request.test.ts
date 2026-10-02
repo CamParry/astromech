@@ -125,11 +125,20 @@ describe('buildRequest', () => {
         expect(system).toContain(CONTEXT.content);
     });
 
+    it('puts a context that falls back under its own heading', () => {
+        const { system } = buildRequest([], items, '');
+
+        expect(system).toBe(
+            `${SYSTEM_PROMPT}\n\nCurrent admin view:\n${CONTEXT.content}`
+        );
+    });
+
     it("puts the site's instructions after the fixed prompt and before a context that falls back", () => {
         const { system } = buildRequest([], items, '  Write in British English.\n');
 
         expect(system).toBe(
-            `${SYSTEM_PROMPT}\n\nSite instructions:\nWrite in British English.\n\n${CONTEXT.content}`
+            `${SYSTEM_PROMPT}\n\nSite instructions:\nWrite in British English.\n\n` +
+                `Current admin view:\n${CONTEXT.content}`
         );
     });
 
