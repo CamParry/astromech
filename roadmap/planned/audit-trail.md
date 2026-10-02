@@ -21,19 +21,26 @@ when it resolves and holds method, target, decision, who and when.
 
 ## The work
 
-- [ ] **Log dispatch through `scopedServices`.** It is the choke point every
-      untrusted caller already shares and the place the acting identity is known.
-- [ ] **Decide what a row holds.** Method id, target ids and outcome are cheap
-      and answer most questions. Full payloads make the log a second uncontrolled
-      copy of the content, with `DECISIONS.md`'s
-      disclosure problem attached — an update carries a field's new value, and
-      that field can be `private: true`.
-- [ ] **Decide whether core's log absorbs the approval rows or references them.**
-      Two records of one decision that can disagree is the outcome to avoid.
-- [ ] **Decide where the model-call logs land.** The AI middleware writes one
-      console line per completed call, tagged `[astromech:ai]`, and
-      `roadmap/completed/ai-capability.md` leaves its relationship to this trail
-      open. Same rule: one record, not two that can disagree.
+Decided 2026-10-02: `DECISIONS.md`, "The audit trail records that a write ran,
+not what it wrote".
+
+- [x] **Decide what a row holds.** Method id, resource type, target ids, user id
+      (no foreign key), the user's email, origin, outcome, time, and the
+      version the write took. No payloads.
+- [x] **Decide whether core's log absorbs the approval rows or references them.**
+      References: the approval row points to the core row of the call it
+      allowed.
+- [x] **Decide where the model-call logs land.** Not here: they are cost and
+      timing, and belong with `request-performance-monitoring.md`.
+- [ ] **Log from `defineService`'s `bind`** (`packages/astromech/src/services/define-service.ts`),
+      the one path every trusted and scoped call takes. Only `mutates: true`
+      methods, and only the outermost call. The origin needs carrying from each
+      transport on the context.
+- [ ] **The core table**, with a migration and a hand edit to the Cloudflare
+      baseline. Decide retention when it is built (Strapi defaults to 90 days).
+- [ ] **The assistant's approval row** gains a reference to the core row.
+- [ ] **A read path** for the admin, which resolves the user's name at render
+      time and falls back to the stored email.
 
 ## Boundaries
 

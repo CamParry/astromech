@@ -40,10 +40,15 @@ able to do. Write that into the work rather than discovering it later.
 
 ## Change
 
-- [ ] Decide where the line falls, and write it down before writing the prompt.
-- [ ] Add the refusal to the system prompt, naming the alternative rather than
-      only declining.
-- [ ] Give a site an append-only way to add its own rules.
+- [x] Decide where the line falls, and write it down before writing the prompt.
+      Decided 2026-10-02 (`DECISIONS.md`, "The assistant stays on topic by its
+      system prompt"): on topic when the result would end up in, or act on,
+      this site; an unclear request gets a question, not a refusal.
+- [ ] Add the refusal to `SYSTEM_PROMPT`
+      (`packages/plugins/assistant/src/loop/request.ts`), naming the areas the
+      prompt already lists rather than only declining.
+- [ ] Add an `instructions` string to `AssistantOptions`, appended after
+      `SYSTEM_PROMPT`, with no way to replace it.
 - [ ] Verify by live run.
 
 ## Verification

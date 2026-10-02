@@ -25,7 +25,7 @@ make the other match:
 - **A trashed entry keeps its slug.** `uniqueSlug` stops skipping trashed rows,
   so the new entry gets `same-1`. Restoring never collides. The URL of a
   trashed entry stays reserved until the trash is emptied.
-- **Trashing frees the slug.** The index (or the trashed row's slug) stops
+- **Trashing frees the slug** (chosen). The index (or the trashed row's slug) stops
   counting trashed entries, and `restore`
   (`packages/astromech/src/entries/methods/restore.ts`) re-slugs an entry
   whose slug was taken while it was in the trash. WordPress does the second
@@ -35,6 +35,16 @@ make the other match:
 ## The work
 
 - [ ] Write a failing test for the reproduction above.
-- [ ] Decide which side changes, and record why in `DECISIONS.md`.
-- [ ] Make `uniqueSlug`, the index and `restore` agree, with a migration if
-      the index changes.
+- [x] Decide which side changes, and record why in `DECISIONS.md`. Decided
+      2026-10-02: trashing frees the slug, and restoring unpublishes
+      (`DECISIONS.md`, "Trashing frees an entry's slug, and restoring
+      unpublishes").
+- [ ] Add a trashed flag to `entry_content`, set and cleared for every locale
+      in the same transaction as `deletedAt`, and add it to
+      `entry_content_type_locale_slug_unique`'s `WHERE`. Needs a migration
+      and a hand edit to the Cloudflare baseline.
+- [ ] `uniqueSlug` reads the flag instead of joining `entries`.
+- [ ] `restore` takes `uniqueSlug(slug, excludeId)` for each locale whose slug
+      is now taken, and sets `unpublished` through `updateEntryBatch`, so the
+      update hooks fire and `publishedAt` follows the one rule. Check what the
+      admin's restore action shows when a slug changed.

@@ -103,10 +103,10 @@ watch work that has not started.
 - **Scalar field filtering/sorting** → `planned/field-value-query-indexing.md`.
 - **Pushing visibility predicates into SQL** → the same file. Real and pre-existing
   (`query.ts:41-45` documents the wrong `total`), not made structurally worse by this work.
-- **Profile as a first-party entry type**, and the **row-level permission** shape it needs →
-  `planned/profile-entry-type.md`. A separate feature this one unblocks rather than contains.
-- **Owning the `users` table** instead of better-auth owning it → `backlog.md`, storage-layer
-  follow-ups. The profile model removes the reason it was blocking.
+- **Profile as a first-party entry type**: dropped on 2026-10-02 (`DECISIONS.md`, "No
+  first-party author type"); users carry their own fields.
+- **Owning the `users` table** instead of better-auth owning it: done; `users/tables.ts`
+  declares it.
 - **`WITHOUT ROWID`** on the index table, and **a declared reverse field** → `backlog.md`,
   relationships follow-ups.
 

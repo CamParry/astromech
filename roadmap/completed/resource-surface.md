@@ -246,4 +246,6 @@ afterwards would be doing the work twice.
 - `custom-table-relations.md` is unaffected; a custom table stays outside this
   shape.
 - `flatten-user-and-media-operations.md` intersects the media stage.
-- `profile-entry-type.md` is untouched; `profile` stays earmarked.
+- `profile-entry-type.md` is untouched; `profile` stays earmarked. (The
+  profile type was dropped on 2026-10-02: `DECISIONS.md`, "No first-party
+  author type".)

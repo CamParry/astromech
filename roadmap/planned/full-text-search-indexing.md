@@ -1,31 +1,40 @@
 # Full-Text Search Indexing
 
-**Direction is locked:** a derived **FTS5 external-content index** over
-`entry_content`, kept in sync by triggers, with a per-field `searchable` flag, so
-it indexes one locale per row. No surveyed CMS searches its content tables at
-scale, external content stores no second copy of the text, and ranking, prefix
-matching and snippets come with FTS5. Rejected: a `search_index` text column
-queried with `LIKE` (the WordPress and Directus anti-pattern, and what today's
-`title LIKE ? OR slug LIKE ?` search is), indexing rendered output, and an
-external search engine in core. When this ships, the choice gets a
-`DECISIONS.md` entry.
+**Direction, decided 2026-10-02** (`DECISIONS.md`, "Search is a derived text
+column searched by the database's own engine"): Craft's shape. Each content row
+carries the plain text of its searchable fields, and the database's own
+full-text engine searches it: an FTS5 external-content index on SQLite and D1,
+a `tsvector` GIN index on Postgres when that driver comes. Search today is
+`title LIKE ? OR slug LIKE ?` (`entries/repository/entries-table.ts`) and reads
+no field at all.
 
-## Waiting on a decision: D1 export
+Prior art: Craft keeps a derived `searchindex` table searched by MySQL
+`FULLTEXT` or a Postgres `tsvector`; EmDash uses FTS5 per collection and has no
+search on Postgres; Drupal core, Relevanssi and SearchWP keep their own
+inverted index in plain tables; Payload's search plugin copies fields into a
+`search` collection queried with `like`. Rejected: our own inverted index,
+which keeps D1 export working but leaves ranking, snippets and phrase matching
+for us to write and maintain; FTS5 on libSQL only with `LIKE` on D1, which
+answers the same query differently per driver; and `LIKE` over a copied
+column.
 
-Cloudflare's import and export page says: "Export is not supported for virtual
-tables, including databases with virtual tables. As a workaround, delete any
-virtual tables, export, and then recreate virtual tables." Any FTS5 design
-therefore stops `wrangler d1 export` working for every D1 site, and Astromech's
-own backups are already unavailable on D1
-(`apps/docs/configuration/database.md`). Checked on 2026-09-15.
+## D1 export, tested 2026-10-02
 
-Choices:
+On a throwaway remote D1 database, with wrangler 4.125.0 and 4.147.0:
 
-- FTS5 on every driver, documenting the drop, export and recreate steps (and
-  perhaps a CLI command that does them).
-- FTS5 on libSQL only, with D1 keeping `LIKE` search behind the same public
-  contract.
-- Defer full-text search.
+- A full `wrangler d1 export` fails once an FTS5 table exists: `D1 Export
+error: cannot export databases with Virtual Tables (fts5)`. So does
+  `--no-data`. The database stays usable afterwards (workers-sdk #9519 reports
+  a lockout; it did not happen).
+- `--table=<name>`, repeated for several tables, works, and with `--no-schema`
+  exports data only. A per-table export leaves out separate indexes and
+  triggers.
+
+Migrations own the schema, so the `astromech` CLI's D1 export exports every
+table but the search ones as data only, and its restore runs the migrations on
+a fresh database, imports the data and rebuilds the index. Site owners never
+run `wrangler d1 export` by hand. D1's own backup, Time Travel, is unaffected
+by virtual tables.
 
 ## Design, from a planning pass on 2026-09-15
 
@@ -42,7 +51,7 @@ Pure external content over the existing columns does not work, for two reasons:
   into DDL that is generated from config-free `CORE_TABLES`, and would index
   TipTap's JSON keys.
 
-So the plan amends the decision with two columns on `entry_content`:
+So `entry_content` gains two columns:
 
 - `searchText`, the plain text of the searchable fields, written by the app in
   the same statement as the row (atomic on D1, which has no transactions);
@@ -57,10 +66,19 @@ named groups rather than read only the top-level keys: a named `tab` or
 `seo.title`. The flag must also decide what it means for a field below a nested
 field, where `translatable` is refused.
 
-Trash is filtered through the existing join to `entries` in the query, not by
-gating the triggers (`deletedAt` lives on `entries`, and trash never touches
-content rows), so a restore needs no reindex. Staged rows are indexed and
-filtered out by the existing `stagedFor IS NULL`.
+Trashed and staged rows are indexed and filtered out in the query, by the
+trashed flag `entry_content` gains in `trashed-entry-slug-collision.md` and by
+the existing `stagedFor IS NULL`, so a restore needs no reindex.
+
+Settled in the same pass:
+
+- **`searchable` defaults to true** for `text`, `textarea` and `richtext`;
+  `searchable: false` excludes a field.
+- **Tokenizer:** `unicode61 remove_diacritics 2` with prefix indexes, no
+  porter, since porter stems only English and one table holds every locale.
+- **The public contract** stays "entries are searchable". The SQLite-specific
+  query, rank and escaping live in one `entries/repository/search.ts`, so a
+  Postgres driver can build a `tsvector` from the same `searchText`.
 
 ## Steps
 
@@ -73,23 +91,14 @@ filtered out by the existing `stagedFor IS NULL`.
        FTS shadow tables and runs `'rebuild'`. These land together.
 3. [ ] Text extraction in `fields/`, written as `searchText` on every content
        write.
-4. [ ] The query: `search` (and `_search` as its alias) becomes a `MATCH` in
-       the shared rows and count predicate, with each token quoted and a prefix
-       `*` on the last; ranked by `bm25`, title weighted highest, when no sort
-       is given. Users and media keep `LIKE`.
+4. [ ] The query: `search` becomes a `MATCH` in the shared rows and count
+       predicate, with each token quoted and a prefix `*` on the last; ranked
+       by `bm25`, title weighted highest, when no sort is given. Users and
+       media keep `LIKE`.
 5. [ ] `astromech entries:reindex [--check]`: recompute `searchText`, run
        `'rebuild'`; `--check` runs `integrity-check` and compares `searchText`.
-6. [ ] Docs: a `DECISIONS.md` entry for the design as built, `ARCHITECTURE.md`, `apps/docs`.
+6. [ ] D1 export and restore in the `astromech` CLI, as above.
+7. [ ] Docs: a `DECISIONS.md` entry for the design as built, `ARCHITECTURE.md`, `apps/docs`.
 
 Search changes from substring to token and prefix matching: "ogr" stops
 finding "blogroll".
-
-## Open questions, with the planning pass's recommendation
-
-- **`searchable` default:** true for `text`, `textarea` and `richtext`, with
-  `searchable: false` excluding a field. This step adds the flag.
-- **Tokenizer:** `unicode61 remove_diacritics 2` with prefix indexes, no
-  porter, since porter stems only English and one table holds every locale.
-- **The public contract** stays "entries are searchable". The SQLite-specific
-  query, rank and escaping live in one `entries/repository/search.ts`, so a
-  Postgres driver can build a tsvector from the same `searchText`.

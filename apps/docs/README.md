@@ -55,6 +55,9 @@ This is a living reference; it grows as the project does.
 - [content/users.md](content/users.md) — user accounts: custom fields on a
   user, reading one from a site, translating its fields, the versions every
   field edit keeps, and the four user permissions.
+- [content/authors.md](content/authors.md) — showing who wrote an entry: the
+  three shapes a byline takes (`createdBy`, a relationship to `users`, or your
+  own `author` entry type) and when to pick each.
 - [content/relationships.md](content/relationships.md) — linking content to
   content: declaring a relation, why the value is ids rather than expanded
   records, what a relation stores on a translated site, querying the reverse

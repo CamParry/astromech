@@ -1,10 +1,10 @@
-# Request Performance Monitoring
+# Request profiler
 
 A dev-only view of what a single request spent its time on: the SQL queries it
-ran and how long each took, the plugin hooks it fired, the entry operations it
-performed. The mental model is WordPress's Query Monitor, with the same job done
-by Laravel Telescope and Symfony's Web Profiler — a per-request performance
-panel a developer opens while building a site, not a production monitor.
+ran and how long each took, the hooks it fired, the service methods it called.
+The mental model is WordPress's Query Monitor, with the same job done by
+Laravel Telescope and Symfony's Profiler: a per-request panel a developer opens
+while building a site, not a production monitor.
 
 This is deliberately separate from two things it is often confused with:
 
@@ -15,17 +15,33 @@ This is deliberately separate from two things it is often confused with:
   from the platform (Cloudflare Workers analytics) and a metrics tool like
   Sentry, not from anything Astromech renders itself.
 
+## Decided (2026-10-02)
+
+- **The name is "profiler"**, after Symfony's: the collected per-request data.
+  "Monitoring" leans production, and "debug toolbar" names a view, not the data.
+- **One span shape for every layer**, recorded into the request scope:
+  `{ kind, name, ms, detail }`, where `kind` is `query`, `hook` or `method`.
+  One renderer shows all three, and the shape is the `Server-Timing` header's
+  name, duration and description.
+- **API responses carry a `Server-Timing` header** through Hono's built-in
+  `timing` middleware, so the browser's Network tab shows an admin call's spans.
+- **Not the Astro Dev Toolbar.** It would tie the view to Astro, and the
+  integrations in `multi-runtime-and-framework-integrations.md` need it
+  detached. Where the spans render on site pages is the admin bar's question
+  (`admin-bar.md`); in the admin, a top bar slot.
+
 ## Shape
 
-- [ ] Request-scoped collector riding the existing request store (`request-context/`), off unless enabled
-- [ ] Instrument the database layer to record each query's SQL and duration into the collector
-- [ ] Record plugin-hook and entry-operation spans into the same collector
-- [ ] A dev-only admin panel that renders the collected data for the request
-- [ ] Enable/disable gate (dev-only by default; never active in production)
-
-## Open questions
-
-- Final name. "Monitoring" leans production; the dev-only prior art is called a
-  profiler (Symfony) or a debug toolbar. Settle when built.
-- Whether the collector reuses one internal timing primitive across the query,
-  hook, and entry layers, or each layer records in its own shape.
+- [ ] Request-scoped collector in the request scope
+      (`packages/astromech/src/request-scope/request-scope.ts`), off unless
+      enabled.
+- [ ] Queries: Kysely's `log` option (`query.sql`, `query.parameters`,
+      `queryDurationMillis`) on the instance each driver builds
+      (`database/drivers/libsql.ts`, `database/drivers/d1.ts`), reading the
+      current request from the scope.
+- [ ] Hooks: time each handler in `runHook` (`hooks/hooks.ts`).
+- [ ] Methods: time each call in `defineService`'s `bind`
+      (`services/define-service.ts`), the path the audit trail logs from too.
+- [ ] `Server-Timing` on API responses.
+- [ ] The admin's top bar shows the current view's spans when profiling is on.
+- [ ] Enable/disable gate: on in `astro dev` by default, never in production.
