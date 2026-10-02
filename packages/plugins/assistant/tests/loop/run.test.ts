@@ -1,10 +1,12 @@
 /**
  * Where the gate sits in the loop: a turn reaching a mutating call stops before
- * anything runs it, and still closes the stream with `done`.
+ * anything runs it, and still closes the stream with `done`. The approvals and
+ * the transcript are stored on the harness database; only `streamText`, the
+ * call out to the model, is replaced.
  */
 
 import type { ChatEvent, ChatMessage, ResolvedAssistantOptions } from '../../src/types';
-import type { FakeSessions } from '../sessions/fake-sessions';
+import type { PluginTestApp } from '@tests/plugin-app';
 import type {
     LanguageModel,
     ModelMessage,
@@ -14,19 +16,23 @@ import type {
 } from 'ai';
 import type * as AiModule from 'ai';
 import type { PluginLogger, ToolDefinition } from 'astromech';
+import { makeTestConfig } from '@tests/harness';
+import { createPluginTestApp } from '@tests/plugin-app';
 import { streamText } from 'ai';
+import { sql } from 'kysely';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { createApprovalsRepository } from '../../src/approvals/repository';
+import { assistant as assistantPlugin } from '../../src/index';
 import { runAssistantLoop } from '../../src/loop/run';
-import { fakeSessions } from '../sessions/fake-sessions';
-import { fakeApprovals } from './fake-approvals';
+import {
+    createSessionsRepository,
+    MAX_SESSION_CHARS,
+} from '../../src/sessions/repository';
 
 vi.mock('ai', async (importOriginal) => ({
     ...(await importOriginal<typeof AiModule>()),
     streamText: vi.fn(),
 }));
-
-// The loop only reaches core to format AI context, and none is sent here.
-vi.mock('astromech', () => ({ formatAiContextMessage: vi.fn(() => null) }));
 
 const streamTextMock = vi.mocked(streamText);
 
@@ -102,12 +108,11 @@ function mockStreamText(steps: FakeStep[]): void {
     })) as never);
 }
 
-/** Drain the loop into the events it yielded, against `sessions`. */
+/** Drain the loop into the events it yielded, acting as `userId`. */
 async function collect(
     tools: ToolDefinition[],
     messages: ChatMessage[] = [{ role: 'user', content: [{ type: 'text', text: 'go' }] }]
 ): Promise<ChatEvent[]> {
-    const approvals = fakeApprovals();
     const events: ChatEvent[] = [];
     for await (const event of runAssistantLoop({
         model: {} as LanguageModel,
@@ -116,9 +121,9 @@ async function collect(
         messages,
         aiContext: [],
         logger,
-        approvals: approvals.storage,
-        sessions: sessions.storage,
-        userId: 'user_1',
+        approvals: createApprovalsRepository(app.db),
+        sessions: createSessionsRepository(app.db),
+        userId,
         decisions: [],
     })) {
         events.push(event);
@@ -126,9 +131,9 @@ async function collect(
     return events;
 }
 
-/** The transcript stored for the acting user, or undefined when none is. */
-function stored(): ChatMessage[] | undefined {
-    return sessions.rows.get('user_1');
+/** The transcript stored for the acting user, or null when none is. */
+function stored(): Promise<ChatMessage[] | null> {
+    return createSessionsRepository(app.db).findByUser(userId);
 }
 
 /** The turns the last request would have gone to the model with. */
@@ -158,11 +163,19 @@ function everyCallAnswered(turns: ModelMessage[]): boolean {
 
 const ABANDONED = 'The user moved on without answering this, so it was not run.';
 
-let sessions: FakeSessions;
+let app: PluginTestApp<'assistant'>;
+let userId: string;
 
-beforeEach(() => {
+beforeEach(async () => {
     vi.clearAllMocks();
-    sessions = fakeSessions();
+    app = await createPluginTestApp('assistant', {
+        ...makeTestConfig(),
+        plugins: [assistantPlugin()],
+    });
+    const user = await app.users.create({
+        data: { email: `${crypto.randomUUID()}@test.dev`, name: 'Test User' },
+    });
+    userId = user.id;
 });
 
 describe('runAssistantLoop', () => {
@@ -236,7 +249,7 @@ describe('runAssistantLoop session storage', () => {
 
         await collect([]);
 
-        expect(stored()).toEqual([
+        expect(await stored()).toEqual([
             { role: 'user', content: [{ type: 'text', text: 'go' }] },
             { role: 'assistant', content: [{ type: 'text', text: 'hello' }] },
         ]);
@@ -253,7 +266,7 @@ describe('runAssistantLoop session storage', () => {
 
         await collect([toolFor('entries_page_update', false)]);
 
-        expect(stored()).toEqual([
+        expect(await stored()).toEqual([
             { role: 'user', content: [{ type: 'text', text: 'go' }] },
             { role: 'assistant', content: [reasoning, toolCall] },
         ]);
@@ -274,26 +287,34 @@ describe('runAssistantLoop session storage', () => {
 
         await collect([toolFor('entries_page_query', true)]);
 
-        expect(stored()?.at(-1)).toEqual({
+        expect((await stored())?.at(-1)).toEqual({
             role: 'tool',
             content: [result('toolu_1', 'entries_page_query', '{}')],
         });
     });
 
     it('carries the turn on when the transcript is past the size cap', async () => {
-        sessions.storage.upsert = vi.fn(async () => false);
         mockStreamText([{ messages: [assistant([{ type: 'text', text: 'hello' }])] }]);
 
-        const events = await collect([]);
+        const events = await collect(
+            [],
+            [
+                {
+                    role: 'user',
+                    content: [{ type: 'text', text: 'x'.repeat(MAX_SESSION_CHARS) }],
+                },
+            ]
+        );
 
         expect(events.map((event) => event.type)).toEqual(['message', 'done']);
         expect(logger.warn).toHaveBeenCalled();
     });
 
     it('carries the turn on when the write throws', async () => {
-        sessions.storage.upsert = vi.fn(async () => {
-            throw new Error('database is locked');
-        });
+        await sql`
+            CREATE TRIGGER refuse_session_write BEFORE INSERT ON plugin_assistant_sessions
+            BEGIN SELECT RAISE(ABORT, 'database is locked'); END
+        `.execute(app.db);
         mockStreamText([{ messages: [assistant([{ type: 'text', text: 'hello' }])] }]);
 
         const events = await collect([]);

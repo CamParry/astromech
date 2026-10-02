@@ -1,39 +1,20 @@
 /**
- * Session storage against a stand-in for `createRepository`: one row per user,
- * replaced, and the size cap that skips a write rather than trimming one.
+ * Session storage on the harness database: one row per user, replaced, and the
+ * size cap that skips a write rather than trimming one.
  */
 
 import type { ChatMessage } from '../../src/types';
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import type { PluginTestApp } from '@tests/plugin-app';
+import { makeTestConfig } from '@tests/harness';
+import { createPluginTestApp } from '@tests/plugin-app';
+import { createRepository } from 'astromech';
+import { beforeEach, describe, expect, it } from 'vitest';
+import { assistant } from '../../src/index';
 import {
     createSessionsRepository,
     MAX_SESSION_CHARS,
 } from '../../src/sessions/repository';
-
-type StoredRow = { userId: string; messages: ChatMessage[] };
-
-const { table } = vi.hoisted(() => ({ table: new Map<string, StoredRow>() }));
-
-vi.mock('astromech', () => ({
-    definePluginTable: (_package: string, name: string) => ({
-        name: `plugin_assistant_${name}`,
-        columns: {},
-        indexes: [],
-    }),
-    createRepository: () => ({
-        findOne: (where: { userId: string }) =>
-            Promise.resolve(table.get(where.userId) ?? null),
-        upsert: (data: StoredRow) => {
-            table.set(data.userId, data);
-            return Promise.resolve(data);
-        },
-        deleteMany: (where: { userId: string }) =>
-            Promise.resolve(table.delete(where.userId) ? 1 : 0),
-    }),
-}));
-
-/** The db handle is never touched here — `createRepository` is stood in for. */
-const db = {} as Parameters<typeof createSessionsRepository>[0];
+import { sessionsTable } from '../../src/tables/sessions';
 
 /** One turn of `size` characters of text. */
 function turnOf(size: number): ChatMessage {
@@ -45,59 +26,75 @@ const TRANSCRIPT: ChatMessage[] = [
     { role: 'assistant', content: [{ type: 'text', text: 'There are three.' }] },
 ];
 
-beforeEach(() => {
-    table.clear();
+let app: PluginTestApp<'assistant'>;
+let userId: string;
+let otherUserId: string;
+
+beforeEach(async () => {
+    app = await createPluginTestApp('assistant', {
+        ...makeTestConfig(),
+        plugins: [assistant()],
+    });
+    userId = (await createUser()).id;
+    otherUserId = (await createUser()).id;
 });
+
+/** A user the sessions table's reference can point at. */
+function createUser() {
+    return app.users.create({
+        data: { email: `${crypto.randomUUID()}@test.dev`, name: 'Test User' },
+    });
+}
 
 describe('createSessionsRepository', () => {
     it('reads back nothing for a user who has never had a conversation', async () => {
         await expect(
-            createSessionsRepository(db).findByUser('user_1')
+            createSessionsRepository(app.db).findByUser(userId)
         ).resolves.toBeNull();
     });
 
     it('round-trips a transcript through upsert and findByUser', async () => {
-        const storage = createSessionsRepository(db);
+        const storage = createSessionsRepository(app.db);
 
-        await expect(storage.upsert('user_1', TRANSCRIPT)).resolves.toBe(true);
+        await expect(storage.upsert(userId, TRANSCRIPT)).resolves.toBe(true);
 
-        await expect(storage.findByUser('user_1')).resolves.toEqual(TRANSCRIPT);
+        await expect(storage.findByUser(userId)).resolves.toEqual(TRANSCRIPT);
     });
 
     it('replaces the row rather than adding to it', async () => {
-        const storage = createSessionsRepository(db);
-        await storage.upsert('user_1', TRANSCRIPT);
+        const storage = createSessionsRepository(app.db);
+        await storage.upsert(userId, TRANSCRIPT);
 
-        await storage.upsert('user_1', [TRANSCRIPT[0] as ChatMessage]);
+        await storage.upsert(userId, [TRANSCRIPT[0] as ChatMessage]);
 
-        expect(table.size).toBe(1);
-        await expect(storage.findByUser('user_1')).resolves.toEqual([TRANSCRIPT[0]]);
+        expect(await createRepository(sessionsTable, app.db).count()).toBe(1);
+        await expect(storage.findByUser(userId)).resolves.toEqual([TRANSCRIPT[0]]);
     });
 
     it('keeps a transcript to the user it belongs to', async () => {
-        const storage = createSessionsRepository(db);
-        await storage.upsert('user_1', TRANSCRIPT);
+        const storage = createSessionsRepository(app.db);
+        await storage.upsert(userId, TRANSCRIPT);
 
-        await expect(storage.findByUser('user_2')).resolves.toBeNull();
+        await expect(storage.findByUser(otherUserId)).resolves.toBeNull();
     });
 
     it('clears the row, leaving the next turn to start a new conversation', async () => {
-        const storage = createSessionsRepository(db);
-        await storage.upsert('user_1', TRANSCRIPT);
+        const storage = createSessionsRepository(app.db);
+        await storage.upsert(userId, TRANSCRIPT);
 
-        await storage.deleteByUser('user_1');
+        await storage.deleteByUser(userId);
 
-        await expect(storage.findByUser('user_1')).resolves.toBeNull();
+        await expect(storage.findByUser(userId)).resolves.toBeNull();
     });
 
     it('skips the write past the cap, leaving the previous transcript in place', async () => {
-        const storage = createSessionsRepository(db);
-        await storage.upsert('user_1', TRANSCRIPT);
+        const storage = createSessionsRepository(app.db);
+        await storage.upsert(userId, TRANSCRIPT);
 
-        await expect(storage.upsert('user_1', [turnOf(MAX_SESSION_CHARS)])).resolves.toBe(
+        await expect(storage.upsert(userId, [turnOf(MAX_SESSION_CHARS)])).resolves.toBe(
             false
         );
 
-        await expect(storage.findByUser('user_1')).resolves.toEqual(TRANSCRIPT);
+        await expect(storage.findByUser(userId)).resolves.toEqual(TRANSCRIPT);
     });
 });

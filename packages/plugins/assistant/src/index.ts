@@ -5,7 +5,7 @@
  */
 
 import type { AssistantOptions, ResolvedAssistantOptions } from './types';
-import type { PluginDB } from 'astromech';
+import type { PluginDB, ServiceInterface } from 'astromech';
 import { definePlugin, withDefaults } from 'astromech';
 import { migrationProvider } from '../migrations/index';
 import { assistantPermissions } from './permissions/assistant';
@@ -19,6 +19,11 @@ import { ASSISTANT_PACKAGE } from './types';
 const tables = [approvalsTable, sessionsTable] as const;
 
 declare module 'astromech' {
+    // eslint-disable-next-line @typescript-eslint/consistent-type-definitions
+    interface AstromechPluginServices {
+        assistant: ServiceInterface<ReturnType<typeof createSessionsService>>;
+    }
+
     // Puts this plugin's tables on a site's `db` handle.
     // eslint-disable-next-line @typescript-eslint/no-empty-object-type, @typescript-eslint/consistent-type-definitions
     interface AstromechPluginTables extends PluginDB<typeof tables> {}
