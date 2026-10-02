@@ -16,7 +16,6 @@ import {
 } from '@tests/harness';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { currentServices } from '@/app-context/services';
-import { decodeWith } from '@/database/codec';
 import { getDb } from '@/database/registry';
 import { entriesTable } from '@/database/tables';
 import { entryRepository } from '@/entries/repository/entries-table';
@@ -616,13 +615,9 @@ describe('trash / restore / delete / emptyTrash', () => {
         });
         await api.trash({ type: 'post', id: e.id });
 
-        const trashedRows = await getDb()
-            .selectFrom('entries')
-            .selectAll()
-            .where('id', '=', e.id)
-            .execute();
-        const decoded = trashedRows.map((r) => decodeWith(entriesTable, r));
-        expect(decoded[0]?.deletedAt).toBeInstanceOf(Date);
+        const trashed = await api.query({ type: 'post', full: true, trashed: true });
+        expect(trashed.data.map((x) => x.id)).toEqual([e.id]);
+        expect(trashed.data[0]?.deletedAt).toBeInstanceOf(Date);
 
         const restored = await api.restore({ type: 'post', id: e.id });
         expect(restored.deletedAt).toBeNull();
@@ -660,8 +655,10 @@ describe('trash / restore / delete / emptyTrash', () => {
         await api.trash({ type: 'post', id: a.id });
         await api.emptyTrash({ type: 'post' });
 
-        const all = await getDb().selectFrom('entries').selectAll().execute();
-        expect(all.map((r) => r.id)).toEqual([b.id]);
+        const trashed = await api.query({ type: 'post', full: true, trashed: true });
+        expect(trashed.data).toEqual([]);
+        const live = await api.query({ type: 'post', full: true });
+        expect(live.data.map((x) => x.id)).toEqual([b.id]);
     });
 });
 
@@ -897,12 +894,11 @@ describe('duplicate', () => {
             data: { title: 'Src', fields: { related: [target.id] } },
         });
         const dup = await api.duplicate({ type: 'post', id: src.id });
-        const rels = await getDb()
-            .selectFrom('relationships')
-            .selectAll()
-            .where('sourceId', '=', dup.id)
-            .execute();
-        expect(rels.map((r) => r.targetId)).toEqual([target.id]);
+
+        const incoming = await api.usedBy({ type: 'post', id: target.id });
+        expect(incoming.map((row) => row.sourceId).sort()).toEqual(
+            [src.id, dup.id].sort()
+        );
     });
 });
 
@@ -915,18 +911,14 @@ describe('relationships', () => {
             type: 'post',
             data: { title: 'Source', fields: { related: [target.id] } },
         });
-        const rels = await getDb()
-            .selectFrom('relationships')
-            .selectAll()
-            .where('sourceId', '=', src.id)
-            .execute();
-        expect(rels).toHaveLength(1);
-        expect(rels[0]?.schemaPath).toBe('related');
-        expect(rels[0]?.instancePath).toBe('related');
-        expect(rels[0]?.sourceKind).toBe('entry');
-        expect(rels[0]?.sourceType).toBe('post');
-        expect(rels[0]?.targetId).toBe(target.id);
-        expect(rels[0]?.targetKind).toBe('entry');
+        // Read from the target's side, so the target id and kind are the address.
+        const incoming = await api.usedBy({ type: 'post', id: target.id });
+        expect(incoming).toHaveLength(1);
+        expect(incoming[0]?.sourceId).toBe(src.id);
+        expect(incoming[0]?.schemaPath).toBe('related');
+        expect(incoming[0]?.instancePath).toBe('related');
+        expect(incoming[0]?.sourceKind).toBe('entry');
+        expect(incoming[0]?.sourceType).toBe('post');
     });
 
     // The old subsystem skipped falsy values, so clearing a relation left its
@@ -939,12 +931,7 @@ describe('relationships', () => {
         });
         await api.update({ type: 'post', id: src.id, data: { fields: { related: [] } } });
 
-        const rels = await getDb()
-            .selectFrom('relationships')
-            .selectAll()
-            .where('sourceId', '=', src.id)
-            .execute();
-        expect(rels).toHaveLength(0);
+        expect(await api.usedBy({ type: 'post', id: target.id })).toEqual([]);
     });
 
     it('usedBy lists the source with its title', async () => {

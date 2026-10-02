@@ -4,6 +4,7 @@
  * Each row of the table is one such write: what it needs first, the call that
  * fails, and what must still hold afterwards. The failure is a trigger on the
  * real `relationships` table, so every write it references must name a target.
+ * Where the risk is an orphaned row no read path shows, the check counts rows.
  */
 
 import {
@@ -108,12 +109,12 @@ const WRITES: AtomicWrite[] = [
                         version: v1.version,
                     }),
                 async expectUnchanged() {
-                    const row = await getDb()
-                        .selectFrom('entryContent')
-                        .selectAll()
-                        .where('entryId', '=', entry.id)
-                        .executeTakeFirstOrThrow();
-                    expect(row.title).toBe('Changed');
+                    const read = await entriesService.get({
+                        type: 'post',
+                        id: entry.id,
+                        full: true,
+                    });
+                    expect(read?.title).toBe('Changed');
                     const versionsAfter = await entriesService.versions({
                         type: 'post',
                         id: entry.id,
