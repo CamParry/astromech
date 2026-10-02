@@ -1,20 +1,14 @@
 /**
- * The entries service as a definition: what the shared catalogue declares, what
- * one entry type's catalogue fixes, and that `bind(ctx)` runs a handler as the
- * context's user with no request store in play.
+ * The entries service as a definition, beyond what every resource's shares
+ * (`tests/content/resource-definition.test.ts`): what one entry type's
+ * catalogue fixes, and a bound update answering one entry or a list.
  */
 
 import type { EntriesService, Entry, Role } from '@/types/index';
-import {
-    createTestDb,
-    createTestUser,
-    makeTestConfig,
-    setupTestConfig,
-} from '@tests/harness';
+import { createTestDb, makeTestConfig, setupTestConfig } from '@tests/harness';
 import { inputKeys } from '@tests/strict-input';
 import { beforeEach, describe, expect, it } from 'vitest';
 import { createAppContext } from '@/app-context/app-context';
-import { getDb } from '@/database/registry';
 import { entryCatalogue } from '@/entries/catalogue';
 import { entriesDefinition } from '@/entries/service';
 
@@ -23,32 +17,6 @@ const admin: Role = {
     name: 'Admin',
     permissions: ['*'],
     isBuiltIn: true,
-};
-
-/** The capability each method needs the entry type to declare; absent means none. */
-const REQUIRES: Record<keyof EntriesService, string | undefined> = {
-    query: undefined,
-    get: undefined,
-    create: undefined,
-    update: undefined,
-    delete: undefined,
-    duplicate: undefined,
-    usedBy: undefined,
-    trash: 'trash',
-    restore: 'trash',
-    emptyTrash: 'trash',
-    versions: 'versioning',
-    getVersion: 'versioning',
-    restoreVersion: 'versioning',
-    publish: 'statuses',
-    unpublish: 'statuses',
-    schedule: 'statuses',
-    createStaged: 'staging',
-    getStaged: 'staging',
-    mergeStaged: 'staging',
-    deleteStaged: 'staging',
-    issuePreviewToken: 'staging',
-    revokePreviewToken: 'staging',
 };
 
 /** The permission one entry type's catalogue fixes each method to. */
@@ -82,24 +50,6 @@ const PERMISSIONS: Record<keyof EntriesService, string> = {
 beforeEach(async () => {
     await createTestDb();
     setupTestConfig(makeTestConfig());
-});
-
-describe('the catalogue', () => {
-    it('holds exactly the EntriesService methods, each stamped with its id', () => {
-        expect(Object.keys(entriesDefinition.catalogue).sort()).toEqual(
-            Object.keys(REQUIRES).sort()
-        );
-        for (const [key, method] of Object.entries(entriesDefinition.catalogue)) {
-            expect(method.name, key).toBe(`entries.${key}`);
-        }
-    });
-
-    it('declares the capability each method needs the type to carry', () => {
-        for (const [key, requires] of Object.entries(REQUIRES)) {
-            const method = entriesDefinition.catalogue[key as keyof EntriesService];
-            expect(method.requires, key).toBe(requires);
-        }
-    });
 });
 
 describe('entryCatalogue', () => {
@@ -143,18 +93,6 @@ describe('entryCatalogue', () => {
 });
 
 describe('bind', () => {
-    it('writes the context’s user, with no request store in play', async () => {
-        const author = await createTestUser(getDb());
-        const ctx = createAppContext({ user: { id: author.id } as never, role: admin });
-
-        const entry = await entriesDefinition
-            .bind(ctx)
-            .create({ type: 'post', data: { title: 'Bound' } });
-
-        expect(entry.createdBy).toBe(author.id);
-        expect(entry.updatedBy).toBe(author.id);
-    });
-
     it('answers one entry for one id and a list for a list', async () => {
         const ctx = createAppContext({ user: null, role: admin });
         const entries = entriesDefinition.bind(ctx);

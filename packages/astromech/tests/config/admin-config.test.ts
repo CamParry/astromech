@@ -4,8 +4,8 @@ import type {
     EntryType,
     Field,
     PluginDefinition,
-    StorageDriver,
 } from '@/types/index';
+import { noopStorage } from '@tests/fixtures';
 import { describe, expect, it } from 'vitest';
 import { z } from 'zod';
 import { buildAdminConfig, toAdminEntryType } from '@/config/admin-config';
@@ -15,25 +15,6 @@ const driver: DatabaseDriver = {
     type: 'test',
     getInstance() {
         throw new Error('not called');
-    },
-};
-
-const storageDriver: StorageDriver = {
-    name: 'noop',
-    async put() {
-        return undefined;
-    },
-    async get() {
-        return null;
-    },
-    async stat() {
-        return null;
-    },
-    async delete() {
-        return undefined;
-    },
-    async list() {
-        return { keys: [] };
     },
 };
 
@@ -48,7 +29,7 @@ const baseConfig = (
     extra: Partial<AstromechConfig> = {}
 ): AstromechConfig => ({
     db: driver,
-    storage: storageDriver,
+    storage: noopStorage,
     entries: { post: entryType('Post') },
     plugins,
     ...extra,

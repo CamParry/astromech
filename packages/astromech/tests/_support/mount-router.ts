@@ -13,6 +13,7 @@ import type { Role, User } from '@/types/index';
 import type { Context, Hono, Next } from 'hono';
 import type { Kysely } from 'kysely';
 import { OpenAPIHono } from '@hono/zod-openapi';
+import { makeUser } from '@tests/fixtures';
 import { createTestUser } from '@tests/harness';
 import { currentAppContext } from '@/app-context/app-context';
 import { runInRequestScope } from '@/request-scope/request-scope';
@@ -24,7 +25,7 @@ export type RouteEnv = { Variables: AuthVariables };
  * The identity every mounted-router test acts as unless it says otherwise. No
  * `users` row backs it until {@link seedTestUser} inserts one.
  */
-export const testUser = { id: 'u1', email: 'a@b.dev' } as unknown as User;
+export const testUser: User = makeUser({ id: 'u1', email: 'a@b.dev' });
 
 /**
  * Insert the `users` row for {@link testUser}. A route test whose route writes a

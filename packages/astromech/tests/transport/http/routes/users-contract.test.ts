@@ -10,7 +10,7 @@
 import type { DB } from '@/database/types';
 import type { Role, User, UserVersion, VersionMetadata } from '@/types/index';
 import type { Kysely } from 'kysely';
-import { adminRole, roleWith } from '@tests/fixtures';
+import { adminRole, invalid, roleWith } from '@tests/fixtures';
 import { createTestDb, makeTestConfig, setupTestConfig } from '@tests/harness';
 import { mountRouter, seedTestUser, testUser } from '@tests/mount-router';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
@@ -151,7 +151,7 @@ describe('GET /users/:id', () => {
         const read = userRepository.findOne.bind(userRepository);
         vi.spyOn(userRepository, 'findOne').mockImplementation(async (...args) => {
             const found = await read(...args);
-            return found && { ...found, role: null as unknown as string };
+            return found && { ...found, role: invalid<string>(null) };
         });
         const logged = vi.spyOn(console, 'error').mockImplementation(() => undefined);
 

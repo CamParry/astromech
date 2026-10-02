@@ -36,6 +36,18 @@ export function openTestDb(client: Client): Kysely<DB> {
 }
 
 /**
+ * A Kysely over `client` with no plugins, so a query names each column as it
+ * is stored. For a test of one migration on a database of its own; the app's
+ * shape, camel-cased, is `openTestDb` above.
+ */
+export function openPlainDb(client: Client): Kysely<unknown> {
+    // The same Client type mismatch as `openTestDb`.
+    return new Kysely<unknown>({
+        dialect: new LibsqlDialect({ client: client as never }),
+    });
+}
+
+/**
  * Apply the full migration chain a site with the first-party plugins gets:
  * `apps/demo/migrations` merged with each plugin's own chain. Running the real
  * chain (rather than a test-only schema) means every harness-based test also

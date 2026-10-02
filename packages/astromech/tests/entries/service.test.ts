@@ -5,16 +5,17 @@
  */
 
 import type { Entry, PluginDefinition } from '@/types/index';
+import { LibsqlError } from '@libsql/client';
 import { expectConsole } from '@tests/console';
 import {
     createTestDb,
+    failWritesTo,
     makeTestConfig,
     registerTestPlugins,
     setupTestConfig,
 } from '@tests/harness';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { currentServices } from '@/app-context/services';
-import { decodeWith } from '@/database/codec';
 import { getDb } from '@/database/registry';
 import { entriesTable } from '@/database/tables';
 import { entryRepository } from '@/entries/repository/entries-table';
@@ -384,189 +385,9 @@ describe('update', () => {
     });
 });
 
+// The rules every resource's history shares are in
+// `tests/content/resource-versions.test.ts`; an entry also versions its title.
 describe('versioning (on)', () => {
-    // CHARACTERIZED: the version snapshot captures the PRE-update state.
-    it('snapshots the pre-update state on a content change', async () => {
-        const e = await api.create({
-            type: 'post',
-            data: { title: 'V1', fields: { body: 'one' } },
-        });
-        await api.update({
-            type: 'post',
-            id: e.id,
-            data: { title: 'V2', fields: { body: 'two' } },
-        });
-        const versions = await api.versions({ type: 'post', id: e.id });
-        expect(versions).toHaveLength(1);
-        expect(versions[0]?.version).toBe(1);
-        expect(versions[0]?.locale).toBe('en');
-
-        const version = await api.getVersion({ type: 'post', id: e.id, version: 1 });
-        expect(version.snapshot).toEqual({
-            title: 'V1',
-            slug: 'v1',
-            fields: { body: 'one' },
-        });
-    });
-
-    it('lists metadata only, with no snapshot and no row id', async () => {
-        const e = await api.create({ type: 'post', data: { title: 'V1' } });
-        await api.update({ type: 'post', id: e.id, data: { title: 'V2' } });
-        const [item] = await api.versions({ type: 'post', id: e.id });
-        expect(Object.keys(item ?? {}).sort()).toEqual([
-            'createdAt',
-            'createdBy',
-            'locale',
-            'version',
-        ]);
-    });
-
-    it('reads one version with its snapshot and no internal key', async () => {
-        const e = await api.create({ type: 'post', data: { title: 'V1' } });
-        await api.update({ type: 'post', id: e.id, data: { title: 'V2' } });
-        const version = await api.getVersion({ type: 'post', id: e.id, version: 1 });
-        expect(Object.keys(version).sort()).toEqual([
-            'createdAt',
-            'createdBy',
-            'locale',
-            'snapshot',
-            'version',
-        ]);
-        expect(Object.keys(version.snapshot).sort()).toEqual(['fields', 'slug', 'title']);
-    });
-
-    it('refuses to read a number the locale has no version for', async () => {
-        const e = await api.create({ type: 'post', data: { title: 'V1' } });
-        await expect(
-            api.getVersion({ type: 'post', id: e.id, version: 1 })
-        ).rejects.toThrow(`Entry '${e.id}' has no version 1 in locale 'en'`);
-    });
-
-    it('keeps a separate version sequence per locale', async () => {
-        const e = await api.create({
-            type: 'post',
-            data: { title: 'EN v1', fields: { body: 'one' } },
-        });
-        await api.update({
-            type: 'post',
-            id: e.id,
-            locale: 'de',
-            data: { title: 'DE v1', fields: { body: 'eins' } },
-        });
-        await api.update({
-            type: 'post',
-            id: e.id,
-            data: { title: 'EN v2', fields: { body: 'two' } },
-        });
-        await api.update({
-            type: 'post',
-            id: e.id,
-            locale: 'de',
-            data: { title: 'DE v2', fields: { body: 'zwei' } },
-        });
-
-        const en = await api.versions({ type: 'post', id: e.id });
-        const de = await api.versions({ type: 'post', id: e.id, locale: 'de' });
-
-        // Both sequences start at 1, and each version names its own locale.
-        expect(en.map((v) => v.version)).toEqual([1]);
-        expect(de.map((v) => v.version)).toEqual([1]);
-        expect(en[0]?.locale).toBe('en');
-        expect(de[0]?.locale).toBe('de');
-
-        const enFirst = await api.getVersion({ type: 'post', id: e.id, version: 1 });
-        const deFirst = await api.getVersion({
-            type: 'post',
-            id: e.id,
-            locale: 'de',
-            version: 1,
-        });
-        expect(enFirst.snapshot.title).toBe('EN v1');
-        expect(deFirst.snapshot.title).toBe('DE v1');
-    });
-
-    it('restores a version into its own locale, leaving the other alone', async () => {
-        const e = await api.create({ type: 'post', data: { title: 'EN v1' } });
-        await api.update({
-            type: 'post',
-            id: e.id,
-            locale: 'de',
-            data: { title: 'DE v1' },
-        });
-        await api.update({
-            type: 'post',
-            id: e.id,
-            locale: 'de',
-            data: { title: 'DE v2' },
-        });
-
-        const restored = await api.restoreVersion({
-            type: 'post',
-            id: e.id,
-            version: 1,
-            locale: 'de',
-        });
-
-        expect(restored.title).toBe('DE v1');
-        expect(restored.locale).toBe('de');
-        const en = await api.get({ type: 'post', id: e.id, full: true });
-        expect(en?.title).toBe('EN v1');
-    });
-
-    it('refuses a number only another locale has a version for', async () => {
-        const e = await api.create({ type: 'post', data: { title: 'EN v1' } });
-        await api.update({ type: 'post', id: e.id, data: { title: 'EN v2' } });
-        await api.update({
-            type: 'post',
-            id: e.id,
-            locale: 'de',
-            data: { title: 'DE' },
-        });
-
-        await expect(
-            api.restoreVersion({
-                type: 'post',
-                id: e.id,
-                version: 1,
-                locale: 'de',
-            })
-        ).rejects.toBeInstanceOf(ResourceNotFoundError);
-    });
-
-    it('creates no version when nothing changes', async () => {
-        const e = await api.create({
-            type: 'post',
-            data: { title: 'Same', fields: { body: 'x' } },
-        });
-        await api.update({
-            type: 'post',
-            id: e.id,
-            data: { title: 'Same', fields: { body: 'x' } },
-        });
-        expect(await api.versions({ type: 'post', id: e.id })).toHaveLength(0);
-    });
-
-    it('lists versions newest-first', async () => {
-        const e = await api.create({
-            type: 'post',
-            data: { title: 'A', fields: { body: '1' } },
-        });
-        await api.update({
-            type: 'post',
-            id: e.id,
-            data: { title: 'B', fields: { body: '2' } },
-        });
-        await api.update({
-            type: 'post',
-            id: e.id,
-            data: { title: 'C', fields: { body: '3' } },
-        });
-        const versions = await api.versions({ type: 'post', id: e.id });
-        expect(versions.map((v) => v.version)).toEqual([2, 1]);
-        const latest = await api.getVersion({ type: 'post', id: e.id, version: 2 });
-        expect(latest.snapshot.title).toBe('B'); // pre-update of the C change
-    });
-
     // CHARACTERIZED: restoreVersion (a) snapshots the current (pre-restore)
     // state as a NEW version, then (b) writes the chosen version's content back.
     it('restoreVersion restores old content and snapshots the pre-restore state', async () => {
@@ -593,13 +414,6 @@ describe('versioning (on)', () => {
         const saved = await api.getVersion({ type: 'post', id: e.id, version: 2 });
         expect(saved.snapshot.title).toBe('Changed');
         expect(saved.snapshot.fields).toEqual({ body: 'changed' });
-    });
-
-    it('refuses to restore an unknown version number', async () => {
-        const e = await api.create({ type: 'post', data: { title: 'Orig' } });
-        await expect(
-            api.restoreVersion({ type: 'post', id: e.id, version: 3 })
-        ).rejects.toBeInstanceOf(ResourceNotFoundError);
     });
 });
 
@@ -801,13 +615,9 @@ describe('trash / restore / delete / emptyTrash', () => {
         });
         await api.trash({ type: 'post', id: e.id });
 
-        const trashedRows = await getDb()
-            .selectFrom('entries')
-            .selectAll()
-            .where('id', '=', e.id)
-            .execute();
-        const decoded = trashedRows.map((r) => decodeWith(entriesTable, r));
-        expect(decoded[0]?.deletedAt).toBeInstanceOf(Date);
+        const trashed = await api.query({ type: 'post', full: true, trashed: true });
+        expect(trashed.data.map((x) => x.id)).toEqual([e.id]);
+        expect(trashed.data[0]?.deletedAt).toBeInstanceOf(Date);
 
         const restored = await api.restore({ type: 'post', id: e.id });
         expect(restored.deletedAt).toBeNull();
@@ -845,8 +655,17 @@ describe('trash / restore / delete / emptyTrash', () => {
         await api.trash({ type: 'post', id: a.id });
         await api.emptyTrash({ type: 'post' });
 
-        const all = await getDb().selectFrom('entries').selectAll().execute();
-        expect(all.map((r) => r.id)).toEqual([b.id]);
+        const trashed = await api.query({ type: 'post', full: true, trashed: true });
+        expect(trashed.data).toEqual([]);
+        const live = await api.query({ type: 'post', full: true });
+        expect(live.data.map((x) => x.id)).toEqual([b.id]);
+        // Raw: every read joins content, so none would see a bare `entries` row.
+        const rows = await getDb()
+            .selectFrom('entries')
+            .select('id')
+            .where('id', '=', a.id)
+            .execute();
+        expect(rows).toEqual([]);
     });
 });
 
@@ -1082,12 +901,11 @@ describe('duplicate', () => {
             data: { title: 'Src', fields: { related: [target.id] } },
         });
         const dup = await api.duplicate({ type: 'post', id: src.id });
-        const rels = await getDb()
-            .selectFrom('relationships')
-            .selectAll()
-            .where('sourceId', '=', dup.id)
-            .execute();
-        expect(rels.map((r) => r.targetId)).toEqual([target.id]);
+
+        const incoming = await api.usedBy({ type: 'post', id: target.id });
+        expect(incoming.map((row) => row.sourceId).sort()).toEqual(
+            [src.id, dup.id].sort()
+        );
     });
 });
 
@@ -1100,18 +918,14 @@ describe('relationships', () => {
             type: 'post',
             data: { title: 'Source', fields: { related: [target.id] } },
         });
-        const rels = await getDb()
-            .selectFrom('relationships')
-            .selectAll()
-            .where('sourceId', '=', src.id)
-            .execute();
-        expect(rels).toHaveLength(1);
-        expect(rels[0]?.schemaPath).toBe('related');
-        expect(rels[0]?.instancePath).toBe('related');
-        expect(rels[0]?.sourceKind).toBe('entry');
-        expect(rels[0]?.sourceType).toBe('post');
-        expect(rels[0]?.targetId).toBe(target.id);
-        expect(rels[0]?.targetKind).toBe('entry');
+        // Read from the target's side, so the target id and kind are the address.
+        const incoming = await api.usedBy({ type: 'post', id: target.id });
+        expect(incoming).toHaveLength(1);
+        expect(incoming[0]?.sourceId).toBe(src.id);
+        expect(incoming[0]?.schemaPath).toBe('related');
+        expect(incoming[0]?.instancePath).toBe('related');
+        expect(incoming[0]?.sourceKind).toBe('entry');
+        expect(incoming[0]?.sourceType).toBe('post');
     });
 
     // The old subsystem skipped falsy values, so clearing a relation left its
@@ -1124,12 +938,7 @@ describe('relationships', () => {
         });
         await api.update({ type: 'post', id: src.id, data: { fields: { related: [] } } });
 
-        const rels = await getDb()
-            .selectFrom('relationships')
-            .selectAll()
-            .where('sourceId', '=', src.id)
-            .execute();
-        expect(rels).toHaveLength(0);
+        expect(await api.usedBy({ type: 'post', id: target.id })).toEqual([]);
     });
 
     it('usedBy lists the source with its title', async () => {
@@ -1206,75 +1015,77 @@ describe('bulk', () => {
 
 // A single id is a batch of one, and the `BulkOperationError` envelope the
 // write loop adds names nothing the caller does not know, so each single-id
-// verb hands back the underlying error. The failure is forced by spying on the
-// one repository method that runs inside that loop.
+// verb hands back the underlying error: here the database's own, raised by a
+// trigger on the `entries` row the verb writes.
 describe('a single id rethrows the underlying error, unwrapped', () => {
-    function rejects(): Promise<never> {
-        return Promise.reject(new ValidationError([]));
-    }
+    type Verb = {
+        verb: string;
+        operation: 'update' | 'delete';
+        /** The entry's state before the call: `published` or `trashed`, if any. */
+        before?: 'published' | 'trashed';
+        call(id: string): Promise<unknown>;
+    };
 
-    it('update', async () => {
-        const entry = await api.create({ type: 'post', data: { title: 'A' } });
-        vi.spyOn(entryRepository, 'update').mockImplementation(rejects);
-        await expect(
-            api.update({ type: 'post', id: entry.id, data: { title: 'B' } })
-        ).rejects.toBeInstanceOf(ValidationError);
-    });
+    const VERBS: Verb[] = [
+        {
+            verb: 'update',
+            operation: 'update',
+            call: (id) => api.update({ type: 'post', id, data: { title: 'B' } }),
+        },
+        {
+            verb: 'publish',
+            operation: 'update',
+            call: (id) => api.publish({ type: 'post', id }),
+        },
+        {
+            verb: 'unpublish',
+            operation: 'update',
+            before: 'published',
+            call: (id) => api.unpublish({ type: 'post', id }),
+        },
+        {
+            verb: 'schedule',
+            operation: 'update',
+            call: (id) =>
+                api.schedule({
+                    type: 'post',
+                    id,
+                    publishedAt: new Date(Date.now() + 60_000),
+                }),
+        },
+        {
+            verb: 'trash',
+            operation: 'update',
+            call: (id) => api.trash({ type: 'post', id }),
+        },
+        {
+            verb: 'restore',
+            operation: 'update',
+            before: 'trashed',
+            call: (id) => api.restore({ type: 'post', id }),
+        },
+        {
+            verb: 'delete',
+            operation: 'delete',
+            call: (id) => api.delete({ type: 'post', id }),
+        },
+    ];
 
-    it('publish', async () => {
-        const entry = await api.create({ type: 'post', data: { title: 'A' } });
-        vi.spyOn(entryRepository, 'update').mockImplementation(rejects);
-        await expect(api.publish({ type: 'post', id: entry.id })).rejects.toBeInstanceOf(
-            ValidationError
-        );
-    });
-
-    it('unpublish', async () => {
+    it.each(VERBS)('$verb', async ({ operation, before, call }) => {
         const entry = await api.create({
             type: 'post',
-            data: { title: 'A', status: 'published' },
+            data: {
+                title: 'A',
+                ...(before === 'published' ? { status: 'published' } : {}),
+            },
         });
-        vi.spyOn(entryRepository, 'update').mockImplementation(rejects);
-        await expect(
-            api.unpublish({ type: 'post', id: entry.id })
-        ).rejects.toBeInstanceOf(ValidationError);
-    });
+        if (before === 'trashed') await api.trash({ type: 'post', id: entry.id });
+        await failWritesTo(entriesTable, operation);
 
-    it('schedule', async () => {
-        const entry = await api.create({ type: 'post', data: { title: 'A' } });
-        vi.spyOn(entryRepository, 'update').mockImplementation(rejects);
-        await expect(
-            api.schedule({
-                type: 'post',
-                id: entry.id,
-                publishedAt: new Date(Date.now() + 60_000),
-            })
-        ).rejects.toBeInstanceOf(ValidationError);
-    });
+        const refused = call(entry.id);
 
-    it('trash', async () => {
-        const entry = await api.create({ type: 'post', data: { title: 'A' } });
-        vi.spyOn(entryRepository.trash, 'trash').mockImplementation(rejects);
-        await expect(api.trash({ type: 'post', id: entry.id })).rejects.toBeInstanceOf(
-            ValidationError
-        );
-    });
-
-    it('restore', async () => {
-        const entry = await api.create({ type: 'post', data: { title: 'A' } });
-        await api.trash({ type: 'post', id: entry.id });
-        vi.spyOn(entryRepository.trash, 'restore').mockImplementation(rejects);
-        await expect(api.restore({ type: 'post', id: entry.id })).rejects.toBeInstanceOf(
-            ValidationError
-        );
-    });
-
-    it('delete', async () => {
-        const entry = await api.create({ type: 'post', data: { title: 'A' } });
-        vi.spyOn(entryRepository, 'delete').mockImplementation(rejects);
-        await expect(api.delete({ type: 'post', id: entry.id })).rejects.toBeInstanceOf(
-            ValidationError
-        );
+        await expect(refused).rejects.toBeInstanceOf(LibsqlError);
+        await expect(refused).rejects.toThrow('boom');
     });
 });
 
@@ -1376,19 +1187,19 @@ describe('hooks', () => {
 
     it('hands the update hooks the public entry, without the content row id', async () => {
         const entry = await api.create({ type: 'post', data: { title: 'Before' } });
-        const seen: Record<string, unknown>[] = [];
+        const seen: Entry[] = [];
         const resolved = setupTestConfig();
         const probe: PluginDefinition = {
             package: '@test/probe',
             hooks: [
                 defineHook('entry:beforeUpdate', (ctx) => {
-                    seen.push(ctx.entry as unknown as Record<string, unknown>);
+                    seen.push(ctx.entry);
                 }),
                 defineHook('entry:afterUpdate', (ctx) => {
-                    seen.push(ctx.entry as unknown as Record<string, unknown>);
+                    seen.push(ctx.entry);
                 }),
                 defineHook('entry:beforeDelete', (ctx) => {
-                    seen.push(ctx.entry as unknown as Record<string, unknown>);
+                    seen.push(ctx.entry);
                 }),
             ],
         };
@@ -1399,7 +1210,7 @@ describe('hooks', () => {
 
         expect(seen).toHaveLength(3);
         for (const payload of seen) {
-            expect(payload['id']).toBe(entry.id);
+            expect(payload.id).toBe(entry.id);
             expect(payload).not.toHaveProperty('contentId');
         }
     });

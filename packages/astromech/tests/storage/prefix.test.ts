@@ -1,88 +1,90 @@
-import type { StorageDriver, StorageList } from '@/types/index';
-import { describe, expect, it } from 'vitest';
+/**
+ * `listAll` and `deletePrefix` follow a driver's `list` cursor across pages.
+ * The driver is the real filesystem one, listing two keys a page so a short
+ * prefix spans several.
+ */
+
+import type { StorageDriver } from '@/types/index';
+import { createTestStorage } from '@tests/harness';
+import { describe, expect, it, vi } from 'vitest';
 import { deletePrefix, listAll } from '@/storage/prefix';
 
-// Paginating fake driver — `list` never returns more than `pageSize` keys and
-// hands back a cursor while more remain.
-
-function makePagedDriver(
-    keys: string[],
-    pageSize: number
-): StorageDriver & { deleted: string[]; listCalls: { cursor?: string }[] } {
-    const store = new Set(keys);
-    const deleted: string[] = [];
-    const listCalls: { cursor?: string }[] = [];
-
+/** A filesystem driver holding `keys`, whose `list` answers two keys a page. */
+async function pagedStorage(keys: string[]): Promise<StorageDriver> {
+    const storage = createTestStorage();
+    for (const key of keys) await storage.put(key, new Uint8Array([1]));
     return {
-        name: 'paged',
-        deleted,
-        listCalls,
-        async put(): Promise<void> {
-            return undefined;
-        },
-        async get(): Promise<null> {
-            return null;
-        },
-        async stat(): Promise<null> {
-            return null;
-        },
-        async delete(key: string): Promise<void> {
-            deleted.push(key);
-            store.delete(key);
-        },
-        async list(
-            prefix: string,
-            opts?: { cursor?: string; limit?: number }
-        ): Promise<StorageList> {
-            const cursor = opts?.cursor;
-            listCalls.push(cursor !== undefined ? { cursor } : {});
-            const all = [...store].filter((k) => k.startsWith(prefix)).sort();
-            const remaining = cursor === undefined ? all : all.filter((k) => k > cursor);
-            const page = remaining.slice(0, opts?.limit ?? pageSize);
-            const last = page.at(-1);
-            if (remaining.length > page.length && last !== undefined) {
-                return { keys: page, cursor: last };
-            }
-            return { keys: page };
-        },
+        ...storage,
+        list: (prefix, opts) => storage.list(prefix, { ...opts, limit: 2 }),
     };
+}
+
+/** Every key the driver still holds. */
+async function remaining(storage: StorageDriver): Promise<string[]> {
+    return listAll(storage, '');
 }
 
 describe('listAll', () => {
     it('follows the cursor across multiple pages', async () => {
-        const driver = makePagedDriver(['v/a', 'v/b', 'v/c', 'v/d', 'v/e', 'other/x'], 2);
+        const storage = await pagedStorage([
+            'v/a',
+            'v/b',
+            'v/c',
+            'v/d',
+            'v/e',
+            'other/x',
+        ]);
+        const list = vi.spyOn(storage, 'list');
 
-        expect(await listAll(driver, 'v/')).toEqual(['v/a', 'v/b', 'v/c', 'v/d', 'v/e']);
+        expect(await listAll(storage, 'v/')).toEqual(['v/a', 'v/b', 'v/c', 'v/d', 'v/e']);
         // 3 pages: 2 + 2 + 1.
-        expect(driver.listCalls).toEqual([{}, { cursor: 'v/b' }, { cursor: 'v/d' }]);
+        expect(list.mock.calls.map(([, opts]) => opts?.cursor)).toEqual([
+            undefined,
+            'v/b',
+            'v/d',
+        ]);
     });
 
     it('returns an empty array when nothing matches', async () => {
-        const driver = makePagedDriver(['other/x'], 2);
-        expect(await listAll(driver, 'v/')).toEqual([]);
-        expect(driver.listCalls).toEqual([{}]);
+        const storage = await pagedStorage(['other/x']);
+        const list = vi.spyOn(storage, 'list');
+
+        expect(await listAll(storage, 'v/')).toEqual([]);
+        expect(list.mock.calls.map(([, opts]) => opts?.cursor)).toEqual([undefined]);
     });
 });
 
 describe('deletePrefix', () => {
     it('deletes every key under the prefix across multiple pages', async () => {
-        const driver = makePagedDriver(['v/a', 'v/b', 'v/c', 'v/d', 'v/e', 'other/x'], 2);
+        const storage = await pagedStorage([
+            'v/a',
+            'v/b',
+            'v/c',
+            'v/d',
+            'v/e',
+            'other/x',
+        ]);
+        const list = vi.spyOn(storage, 'list');
 
-        await deletePrefix(driver, 'v/');
+        await deletePrefix(storage, 'v/');
 
-        expect(driver.deleted.sort()).toEqual(['v/a', 'v/b', 'v/c', 'v/d', 'v/e']);
-        expect(driver.listCalls.length).toBeGreaterThan(1);
+        expect(await remaining(storage)).toEqual(['other/x']);
+        expect(list.mock.calls.length).toBeGreaterThan(1);
     });
 
     it('leaves keys outside the prefix alone', async () => {
-        const driver = makePagedDriver(['v/a', 'other/x'], 2);
-        await deletePrefix(driver, 'v/');
-        expect(driver.deleted).toEqual(['v/a']);
+        const storage = await pagedStorage(['v/a', 'other/x']);
+
+        await deletePrefix(storage, 'v/');
+
+        expect(await remaining(storage)).toEqual(['other/x']);
     });
 
     it('is a no-op for an empty prefix listing', async () => {
-        const driver = makePagedDriver(['other/x'], 2);
-        await deletePrefix(driver, 'v/');
-        expect(driver.deleted).toEqual([]);
+        const storage = await pagedStorage(['other/x']);
+
+        await deletePrefix(storage, 'v/');
+
+        expect(await remaining(storage)).toEqual(['other/x']);
     });
 });

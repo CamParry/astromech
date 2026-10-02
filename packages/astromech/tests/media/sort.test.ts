@@ -5,6 +5,7 @@
  */
 
 import type { SortOption } from '@/types/index';
+import { invalid } from '@tests/fixtures';
 import { createTestDb, makeTestConfig, setupTestConfig } from '@tests/harness';
 import { beforeEach, describe, expect, it } from 'vitest';
 import { currentServices } from '@/app-context/services';
@@ -67,14 +68,14 @@ describe('mediaService.query — sort', () => {
     });
 
     it('refuses a column outside the allowlist', async () => {
-        await expect(names({ id: 'asc' } as SortOption)).rejects.toMatchObject({
+        await expect(names(invalid<SortOption>({ id: 'asc' }))).rejects.toMatchObject({
             name: 'UnknownSortKeyError',
             status: 400,
         });
     });
 
     it('ignores a direction that is not asc or desc', async () => {
-        expect(await names({ filename: 'sideways' } as unknown as SortOption)).toEqual(
+        expect(await names(invalid<SortOption>({ filename: 'sideways' }))).toEqual(
             await names()
         );
     });

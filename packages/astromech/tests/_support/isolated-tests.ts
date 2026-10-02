@@ -5,15 +5,13 @@
  * once and reuses it across files, which is where most of the run time went.
  * A file listed here opts back into per-file isolation because it mocks a
  * module other files import, resets the module registry, stubs a global, or
- * writes `globalThis.__astromech` (all of which leak across files in a shared
- * graph).
+ * writes `globalThis.__astromech`, directly or through `globals()` (all of which
+ * leak across files in a shared graph).
  *
  * `tests/isolation-list.test.ts` fails if this list and the files that actually
  * do those things disagree, so it cannot drift.
  */
 export const isolatedTests = [
-    'tests/cron/runner.test.ts',
-    'tests/cron/scheduled-handler.test.ts',
     'tests/integrations/astro/middleware.test.ts',
     'tests/plugins/runtime/plugin-runtime.test.ts',
     'tests/policies/call-method.test.ts',
@@ -26,12 +24,7 @@ export const isolatedTests = [
     'tests/transport/http/client/entries-service.test.ts',
     'tests/transport/http/client/globals-service.test.ts',
     'tests/transport/http/client/methods.test.ts',
-    'tests/transport/http/routes/app-root.test.ts',
-    'tests/transport/http/routes/cron.test.ts',
-    'tests/transport/http/routes/plugins-contract.test.ts',
-    'tests/transport/http/routes/rpc-parity.test.ts',
     'tests/transport/mcp/parity.test.ts',
-    'tests/transport/policy-parity.test.ts',
     'tests/transport/tools/dispatch.test.ts',
     'tests/transport/tools/scoped-tools.test.ts',
 ];

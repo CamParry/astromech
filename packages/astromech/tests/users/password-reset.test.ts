@@ -4,7 +4,6 @@
  */
 
 import type { EmailDriver, PluginDefinition } from '@/types/index';
-import type { OpenAPIHono } from '@hono/zod-openapi';
 import type { ReactElement } from 'react';
 import { expectConsole } from '@tests/console';
 import { createTestDb, makeTestConfig, setupTestConfig } from '@tests/harness';
@@ -15,6 +14,9 @@ import { getEmailOverride } from '@/email/email-overrides';
 import { DEFAULT_ROLE_SLUG } from '@/permissions/roles';
 import { createHttpApp } from '@/transport/http/app';
 
+/** The composed HTTP app, typed as `createHttpApp` builds it. */
+type HttpApp = ReturnType<typeof createHttpApp>;
+
 const usersService = currentServices.users;
 
 type EmailMessage = Parameters<EmailDriver['send']>[0];
@@ -22,7 +24,7 @@ type EmailMessage = Parameters<EmailDriver['send']>[0];
 const EMAIL = 'invited@test.dev';
 const PASSWORD = 'new-password-123';
 
-let app: OpenAPIHono;
+let app: HttpApp;
 let basePath: string;
 let sent: EmailMessage[];
 
@@ -39,7 +41,7 @@ beforeEach(async () => {
         },
     });
     basePath = resolved.basePath;
-    app = createHttpApp(resolved) as unknown as OpenAPIHono;
+    app = createHttpApp(resolved);
 });
 
 async function postAuth(path: string, body: unknown): Promise<Response> {
@@ -119,7 +121,7 @@ describe('a plugin email override', () => {
             ...makeTestConfig(),
             plugins: [overridingPlugin],
         });
-        app = createHttpApp(resolved) as unknown as OpenAPIHono;
+        app = createHttpApp(resolved);
         expect(getEmailOverride('password-reset')).toBe(CustomResetEmail);
 
         await usersService.create({

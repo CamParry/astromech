@@ -187,7 +187,7 @@ describe('callMethod: session-scoped', () => {
         const rows = await callMethod(
             notificationsList,
             {},
-            as(role('admin:access'), { id: user.id } as User)
+            as(role('admin:access'), user)
         );
         expect(rows).toEqual([]);
     });

@@ -7,7 +7,8 @@
  */
 
 import type { ResourceType } from '@/types/domain';
-import type { Field, ResourceValidator, ValidationMode } from '@/types/fields';
+import type { ResourceValidator, ValidationMode } from '@/types/fields';
+import { field } from '@tests/fixtures';
 import { describe, expect, it, vi } from 'vitest';
 import { safeParseFields } from '@/fields/parse-fields';
 
@@ -26,10 +27,6 @@ function fakeCtx(overrides: CtxOverrides = {}) {
         user: null,
         ...overrides,
     };
-}
-
-function field(def: Partial<Field> & { name: string; type: string }): Field {
-    return def as Field;
 }
 
 const title = field({ name: 'title', type: 'text' });

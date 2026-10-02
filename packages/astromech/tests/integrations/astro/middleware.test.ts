@@ -3,11 +3,9 @@
  * secret is unset, before it creates the application.
  */
 
-import type { DB } from '@/database/types';
 import type { AstromechConfig, SchedulerDriver } from '@/types/index';
 import type { APIContext } from 'astro';
-import type { Kysely } from 'kysely';
-import { createTestDb, makeTestConfig } from '@tests/harness';
+import { createTestDb, makeBootConfig } from '@tests/harness';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { getAstromech } from '@/astromech';
 import { clearEnvSource, setEnvSource } from '@/env';
@@ -28,19 +26,9 @@ const SECRET = 'middleware-test-0123456789abcdef0123';
 /** Starts nothing, so a boot here leaves no ticker running. */
 const noScheduler: SchedulerDriver = { name: 'none', start: () => undefined };
 
-let db: Kysely<DB>;
-
 beforeEach(async () => {
-    db = await createTestDb();
-    site.config = {
-        ...makeTestConfig(),
-        db: {
-            type: 'test',
-            getInstance: () => db,
-            supportsTransactions: true,
-        },
-        scheduler: noScheduler,
-    } as AstromechConfig;
+    await createTestDb();
+    site.config = { ...makeBootConfig(), scheduler: noScheduler };
     clearEnvSource();
     // A secret in the shell running the suite would otherwise satisfy the check.
     vi.stubEnv('BETTER_AUTH_SECRET', undefined);

@@ -10,11 +10,18 @@ import type {
     MediaAccess,
     StorageDriver,
 } from '@/types/index';
-import type { OpenAPIHono } from '@hono/zod-openapi';
-import { createTestDb, makeTestConfig, setupTestConfig } from '@tests/harness';
+import {
+    createTestDb,
+    createTestStorage,
+    makeTestConfig,
+    setupTestConfig,
+} from '@tests/harness';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { currentServices } from '@/app-context/services';
 import { createHttpApp } from '@/transport/http/app';
+
+/** The composed HTTP app, typed as `createHttpApp` builds it. */
+type HttpApp = ReturnType<typeof createHttpApp>;
 
 const mediaService = currentServices.media;
 
@@ -25,43 +32,8 @@ const JPEG = new Uint8Array([
     0x01, 0x01, 0x01, 0x11, 0x00, 0xff, 0xd9,
 ]);
 
-/** An in-memory driver that honours byte ranges. */
-function makeStorage(): StorageDriver {
-    const store = new Map<string, Uint8Array>();
-    return {
-        name: 'memory',
-        async put(key, body) {
-            store.set(key, body instanceof Uint8Array ? body : new Uint8Array());
-        },
-        async get(key, opts) {
-            const bytes = store.get(key);
-            if (!bytes) return null;
-            const offset = opts?.range?.offset ?? 0;
-            const length = opts?.range?.length ?? bytes.length - offset;
-            const slice = bytes.slice(offset, offset + length);
-            const body = new ReadableStream<Uint8Array>({
-                start(controller) {
-                    controller.enqueue(slice);
-                    controller.close();
-                },
-            });
-            return { body, size: slice.length, totalSize: bytes.length };
-        },
-        async stat(key) {
-            const bytes = store.get(key);
-            return bytes ? { size: bytes.length } : null;
-        },
-        async delete(key) {
-            store.delete(key);
-        },
-        async list(prefix) {
-            return { keys: [...store.keys()].filter((k) => k.startsWith(prefix)) };
-        },
-    };
-}
-
 type Setup = {
-    app: OpenAPIHono;
+    app: HttpApp;
     api: string;
     storage: StorageDriver;
     mediaUrl: string;
@@ -75,7 +47,7 @@ async function setup(
 ): Promise<Setup> {
     await createTestDb();
     const base = makeTestConfig();
-    const storage = makeStorage();
+    const storage = createTestStorage();
     const config: AstromechConfig = {
         ...base,
         storage,
@@ -88,7 +60,7 @@ async function setup(
     });
 
     return {
-        app: createHttpApp(resolved) as unknown as OpenAPIHono,
+        app: createHttpApp(resolved),
         api: `${resolved.basePath}/api`,
         storage,
         mediaUrl: `${resolved.mediaRoute}/${media.id}.jpg`,

@@ -44,7 +44,7 @@ beforeEach(async () => {
     const db = await createTestDb();
     setupTestConfig({ ...makeTestConfig(), plugins: [probe] });
     seenByHook.length = 0;
-    user = (await createTestUser(db, { role: 'admin' })) as unknown as User;
+    user = await createTestUser(db, { role: 'admin' });
 });
 
 describe('an explicit AppContext', () => {

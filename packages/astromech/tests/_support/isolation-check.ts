@@ -4,8 +4,8 @@
  * Core's suite and the admin's both run with `isolate: false`, so a worker
  * imports the module graph once and reuses it across files. A test file that
  * mocks a module other files import, resets the module registry, stubs a global
- * or writes a `globalThis.__astromech*` global leaks into the files that run
- * after it, so it has to opt back into per-file isolation. Each package lists
+ * or writes a `globalThis.__astromech*` global (directly or through
+ * `globals()`) leaks into the files that run after it, so it has to opt back into per-file isolation. Each package lists
  * those files in its own `tests/_support/isolated-tests.ts`, and its
  * `tests/isolation-list.test.ts` compares that list with what this finds, so
  * neither list can drift.
@@ -17,6 +17,8 @@ const leaks = new RegExp(
     [
         'vi\\.(mock|doMock|stubGlobal|stubEnv|resetModules)\\(',
         'globalThis\\.__astromech',
+        // A write to a slot of the namespace `globals()` returns; a read is fine.
+        'globals\\(\\)(\\.\\w+|\\[[^\\]]+\\])\\s*=(?!=)',
     ].join('|')
 );
 

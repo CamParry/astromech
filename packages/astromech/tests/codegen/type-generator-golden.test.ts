@@ -1,4 +1,5 @@
-import type { ResolvedConfig } from '@/types/index';
+import type { Field, ResolvedConfig } from '@/types/index';
+import { resolveTestConfig } from '@tests/harness';
 import { describe, expect, it } from 'vitest';
 import { generateClientTypes } from '@/codegen/type-generator';
 import { tab, tabs } from '@/fields/builder';
@@ -12,26 +13,20 @@ import { tab, tabs } from '@/fields/builder';
  * If this snapshot changes, the codegen output changed — that is a behaviour
  * change and must be intentional, not a migration side effect.
  */
-function makeConfig(
-    mainFields: object[],
-    extra: Record<string, unknown> = {}
-): ResolvedConfig {
-    return {
-        entryTypes: {
-            posts: { fields: { main: mainFields as never, sidebar: [] } },
+function makeConfig(fields: Field[]): ResolvedConfig {
+    return resolveTestConfig({
+        entries: {
+            posts: { single: 'Post', plural: 'Posts', fields },
             categories: {
-                fields: { main: [{ name: 'name', type: 'text' }], sidebar: [] },
+                single: 'Category',
+                plural: 'Categories',
+                fields: [{ name: 'name', type: 'text' }],
             },
         },
-        globals: {},
-        pages: {},
-        locales: [],
-        defaultLocale: 'en',
-        ...extra,
-    } as unknown as ResolvedConfig;
+    });
 }
 
-const ALL_FIELDS = [
+const ALL_FIELDS: Field[] = [
     { name: 'fText', type: 'text' },
     { name: 'fTextarea', type: 'textarea' },
     { name: 'fRichtext', type: 'richtext' },

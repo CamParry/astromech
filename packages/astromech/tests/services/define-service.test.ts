@@ -5,6 +5,7 @@
  */
 
 import type { AppContext, MethodsFor } from '@/types/index';
+import { invalid } from '@tests/fixtures';
 import { describe, expect, it, vi } from 'vitest';
 import { z } from 'zod';
 import { OutputValidationError } from '@/errors/output-validation';
@@ -134,7 +135,7 @@ describe('defineService input validation', () => {
             })
         );
 
-        expect(() => service.run({ id: 42 } as unknown as { id: string })).toThrow(
+        expect(() => service.run(invalid<{ id: string }>({ id: 42 }))).toThrow(
             ValidationError
         );
         expect(handler).not.toHaveBeenCalled();
@@ -172,7 +173,7 @@ describe('defineService input validation', () => {
         );
 
         const call = () =>
-            service.run({ id: 'a', smuggled: true } as unknown as { id: string });
+            service.run(invalid<{ id: string }>({ id: 'a', smuggled: true }));
         expect(call).toThrow(ValidationError);
         expect(call).toThrow('smuggled: Unknown key');
     });

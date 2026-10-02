@@ -15,24 +15,27 @@ import type {
     Role,
     User,
 } from '@/types/index';
-import type { OpenAPIHono } from '@hono/zod-openapi';
 import { adminRole, roleWith } from '@tests/fixtures';
-import { contextAs, createTestDb, makeTestConfig, setupTestConfig } from '@tests/harness';
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import {
+    contextAs,
+    createTestDb,
+    makeTestConfig,
+    requestAs,
+    setupTestConfig,
+} from '@tests/harness';
+import { describe, expect, it } from 'vitest';
 import { z } from 'zod';
 import { currentServices } from '@/app-context/services';
-import { getSession } from '@/auth/session';
 import { setMethodManifest } from '@/codegen/manifest-registry';
 import { generateMethodManifest } from '@/codegen/method-manifest';
 import { createHttpApp } from '@/transport/http/app';
 import { buildScopedDispatch } from '@/transport/tools/dispatch';
 
+/** The composed HTTP app, typed as `createHttpApp` builds it. */
+type HttpApp = ReturnType<typeof createHttpApp>;
+
 const entriesService = currentServices.entries;
 const usersService = currentServices.users;
-
-vi.mock('@/auth/session', () => ({ getSession: vi.fn() }));
-
-const mockGetSession = vi.mocked(getSession);
 
 const testPlugin: PluginDefinition = {
     package: '@test/my-plugin',
@@ -80,25 +83,19 @@ let manifest: MethodManifest;
 let signedInUser: User;
 /** The API prefix the current app registered its routes under. */
 let api: string;
+/** Who the next request is sent as. */
+let identity: { user: User | null; role: Role | null };
 
-/** Answer `requireAuth` with `user` under `role`, or with no session at all. */
-function signIn(user: User | null, role: Role): void {
-    if (user === null) {
-        mockGetSession.mockResolvedValue(null);
-        return;
-    }
-    mockGetSession.mockResolvedValue({
-        user: user as never,
-        role,
-        session: { id: 's1', userId: user.id } as never,
-    });
+/** Send the next requests with no session. */
+function signOut(): void {
+    identity = { user: null, role: null };
 }
 
 /**
  * A fresh DB, config and boot-generated manifest, with the composed app mounted
  * over them and `role` signed in.
  */
-async function freshApp(role: Role = adminRole): Promise<OpenAPIHono> {
+async function freshApp(role: Role = adminRole): Promise<HttpApp> {
     await createTestDb();
     const resolved = setupTestConfig(testConfig());
     manifest = generateMethodManifest(resolved, [testPlugin]);
@@ -107,15 +104,15 @@ async function freshApp(role: Role = adminRole): Promise<OpenAPIHono> {
     signedInUser = await usersService.create({
         data: { email: 'rpc@test.dev', name: 'RPC' },
     });
-    signIn(signedInUser, role);
+    identity = { user: signedInUser, role };
 
     api = `${resolved.basePath}/api`;
-    return createHttpApp(resolved) as unknown as OpenAPIHono;
+    return createHttpApp(resolved);
 }
 
 /** POST one method id, percent-encoded so a qualified entry type id survives. */
-async function call(app: OpenAPIHono, id: string, args: unknown = {}): Promise<Response> {
-    return app.request(`${api}/rpc/${encodeURIComponent(id)}`, {
+async function call(app: HttpApp, id: string, args: unknown = {}): Promise<Response> {
+    return requestAs(app, identity, `${api}/rpc/${encodeURIComponent(id)}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(args),
@@ -123,10 +120,6 @@ async function call(app: OpenAPIHono, id: string, args: unknown = {}): Promise<R
 }
 
 type ErrorBody = { error: { code: string; message: string } };
-
-beforeEach(() => {
-    mockGetSession.mockReset();
-});
 
 describe('manifest ↔ RPC route parity', () => {
     it('reaches or refuses every manifest method, with no third outcome', async () => {
@@ -330,7 +323,7 @@ describe('POST /rpc/:id', () => {
 
     it('401s without a session', async () => {
         const app = await freshApp();
-        signIn(null, adminRole);
+        signOut();
         const res = await call(app, 'users.query');
         expect(res.status).toBe(401);
         const body = (await res.json()) as ErrorBody;
@@ -372,11 +365,16 @@ describe('POST /rpc/:id', () => {
         const viaRpc = await call(app, 'plugins.testMyPlugin.doSomething', {
             thing: 'x',
         });
-        const viaPlugins = await app.request(`${api}/plugins/testMyPlugin/doSomething`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ thing: 'x' }),
-        });
+        const viaPlugins = await requestAs(
+            app,
+            identity,
+            `${api}/plugins/testMyPlugin/doSomething`,
+            {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ thing: 'x' }),
+            }
+        );
 
         expect([viaRpc.status, viaPlugins.status]).toEqual([403, 403]);
         const [rpcBody, pluginBody] = (await Promise.all([
@@ -388,7 +386,7 @@ describe('POST /rpc/:id', () => {
 
     it('reaches a public plugin method with no session, and 401s a core one', async () => {
         const app = await freshApp();
-        signIn(null, adminRole);
+        signOut();
 
         const plugin = await call(app, 'plugins.testMyPlugin.ping');
         expect(plugin.status).toBe(200);

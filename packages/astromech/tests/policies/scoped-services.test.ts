@@ -16,8 +16,8 @@ import type {
     PluginDefinition,
     Role,
     ServiceMethodContract,
-    User,
 } from '@/types/index';
+import { makeUser } from '@tests/fixtures';
 import { contextAs, createTestDb, makeTestConfig, setupTestConfig } from '@tests/harness';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { z } from 'zod';
@@ -182,7 +182,7 @@ const sessionContracts = {
  * acting for `userId` when given and for nobody otherwise.
  */
 function scopeSession(service: ReturnType<typeof makeService>, userId?: string) {
-    const user = userId === undefined ? null : ({ id: userId } as User);
+    const user = userId === undefined ? null : makeUser({ id: userId });
     return scopeMethods(
         service,
         sessionContracts,

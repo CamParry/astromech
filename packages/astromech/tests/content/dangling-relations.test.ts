@@ -198,7 +198,8 @@ describe('pruneDanglingRelations (through the entry write path)', () => {
 });
 
 describe('pruneDanglingRelations (directly)', () => {
-    // The db handle explodes on use, so any existence query fails the test.
+    // The db handle explodes on use, so any existence query fails the test. It is
+    // registered by hand because "runs no query" is the behaviour under test.
     const explodingDb = {
         selectFrom(): never {
             throw new Error('existence query should not run');

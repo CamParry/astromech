@@ -1,14 +1,20 @@
 /**
- * The CLI's remote-database guard.
+ * How a CLI command loads the site's config.
  *
- * The property worth holding: a driver that reports itself remote stops the
- * command before `getInstance()` is ever called, so a stray `DATABASE_URL`
- * cannot open a production database by accident.
+ * The property worth holding in the remote-database guard: a driver that
+ * reports itself remote stops the command before `getInstance()` is ever
+ * called, so a stray `DATABASE_URL` cannot open a production database by
+ * accident.
  */
 
 import type { AstromechConfig, DatabaseDriver } from '@/types/index';
-import { afterEach, describe, expect, it, vi } from 'vitest';
-import { assertLocalDatabase, withApplication } from '@/transport/cli/config';
+import { mkdtemp, rm, writeFile } from 'node:fs/promises';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
+import { resetRuntime } from '@tests/harness';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { supportsTransactions } from '@/database/capabilities';
+import { assertLocalDatabase, loadConfig, withApplication } from '@/transport/cli/config';
 
 /** A config carrying nothing but the driver — the guard reads only `db`. */
 function configWith(db: Partial<DatabaseDriver>): AstromechConfig {
@@ -96,5 +102,32 @@ describe('withApplication', () => {
         expect(process.exitCode).toBe(1);
         expect(JSON.parse(String(error.mock.calls[0]?.[0]))).toHaveProperty('error');
         process.exitCode = 0;
+    });
+});
+
+describe('loadConfig', () => {
+    beforeEach(() => {
+        resetRuntime();
+    });
+
+    it('registers the config’s database driver, so its capabilities apply', async () => {
+        const dir = await mkdtemp(join(tmpdir(), 'astromech-cli-config-'));
+        const file = join(dir, 'astromech.config.mjs');
+        // A D1-style driver: no interactive transactions. `loadConfig` never
+        // queries the database, so the instance is an empty stand-in.
+        await writeFile(
+            file,
+            `export default {
+                db: { type: 'd1', supportsTransactions: false, getInstance: () => ({}) },
+                entries: {},
+            };`
+        );
+
+        try {
+            await loadConfig(file);
+            expect(supportsTransactions()).toBe(false);
+        } finally {
+            await rm(dir, { recursive: true, force: true });
+        }
     });
 });

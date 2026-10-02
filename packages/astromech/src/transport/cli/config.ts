@@ -10,7 +10,7 @@ import { createAstromech } from '@/astromech';
 import { loadConfigFile } from '@/config/load';
 import { setConfig } from '@/config/registry';
 import { resolveConfig } from '@/config/resolve';
-import { setDb } from '@/database/registry';
+import { registerDrivers } from '@/register-drivers';
 import { log } from '@/utilities/log';
 import { toAllowRemoteOption } from './common-args';
 import { describeCallError, printError } from './output';
@@ -50,8 +50,8 @@ export async function withApplication(
 
 /**
  * Load the config file once, guard it, resolve it, and register the config and
- * the database, without booting. For the commands the application cannot boot
- * without (`db:*`) and those that only read the config.
+ * its drivers the way boot does, without booting. For the commands the
+ * application cannot boot without (`db:*`) and those that only read the config.
  *
  * `allowRemote` is `--allow-remote`: a remote database is refused by default so a
  * command meant for a dev machine cannot hit production by inheriting whatever
@@ -64,8 +64,8 @@ export async function loadConfig(
     const config = await loadConfigFile(process.cwd(), configPath);
     assertLocalDatabase(config, options?.allowRemote === true);
 
-    // Before resolving: `resolveConfig` strips `db` from the result.
-    setDb(config.db.getInstance());
+    // Before resolving: `resolveConfig` strips the drivers from the result.
+    registerDrivers(config);
 
     const resolved = resolveConfig(config);
     setConfig(resolved);

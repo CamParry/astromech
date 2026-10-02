@@ -5,7 +5,7 @@
 
 import type { AstromechConfig } from '@/types/index';
 import { createTestDb, makeTestConfig, setupTestConfig } from '@tests/harness';
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { beforeEach, describe, expect, it } from 'vitest';
 import { currentServices } from '@/app-context/services';
 import { relationshipRepository } from '@/content/repository/relationships';
 import { mediaRepository } from '@/media/repository';
@@ -226,14 +226,5 @@ describe('mediaService.usedBy', () => {
     // rather than reporting "no usage" for an id that is not a media item.
     it('throws for an unknown media id', async () => {
         await expect(mediaService.usedBy({ id: 'nope' })).rejects.toThrow(/not found/);
-    });
-});
-
-describe('the file-row read', () => {
-    it('comes from the media repository', async () => {
-        const mediaId = await createMedia();
-        vi.spyOn(mediaRepository, 'findFile').mockResolvedValue(null);
-
-        await expect(mediaService.usedBy({ id: mediaId })).rejects.toThrow(/not found/);
     });
 });

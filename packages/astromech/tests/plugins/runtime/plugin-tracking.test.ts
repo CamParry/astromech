@@ -10,12 +10,11 @@
 import type { PluginTrackingRow } from '@/database/tables';
 import type { DB } from '@/database/types';
 import type { Kysely } from 'kysely';
-import { createTestDb } from '@tests/harness';
+import { createTestDb, failWritesTo } from '@tests/harness';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { decodeWith } from '@/database/codec';
 import { pluginsTable } from '@/database/tables';
 import { bootPlugins } from '@/plugins/runtime/plugin-runtime';
-import { pluginTrackingRepository } from '@/plugins/runtime/repository';
 
 type Db = Kysely<DB>;
 
@@ -141,9 +140,7 @@ describe('bootPlugins – removed-plugin warning', () => {
 
 describe('bootPlugins – tracking is best-effort', () => {
     it('boots and warns when the tracking write fails', async () => {
-        vi.spyOn(pluginTrackingRepository, 'upsert').mockRejectedValue(
-            new Error('no table')
-        );
+        await failWritesTo(pluginsTable, 'insert');
         const warn = vi.spyOn(console, 'error').mockImplementation(() => undefined);
         let messages: string[];
         try {

@@ -129,21 +129,21 @@ describe('traverseFields', () => {
     });
 
     it('does not descend into a field that affects no data', () => {
-        const rawNamedTab = { name: 'odd', type: 'tab', fields: [text('x')] } as Field;
+        const rawNamedTab: Field = { name: 'odd', type: 'tab', fields: [text('x')] };
         expect(dataPaths([rawNamedTab])).toEqual([]);
     });
 });
 
 describe('flattenFieldNodes', () => {
     it('drops a field whose type stores nothing', () => {
-        const rawNamedTab = { name: 'odd', type: 'tab', fields: [] } as Field;
+        const rawNamedTab: Field = { name: 'odd', type: 'tab', fields: [] };
         expect(
             flattenFieldNodes([text('title'), rawNamedTab]).map((f) => f.name)
         ).toEqual(['title']);
     });
 
     it('keeps a field of an unregistered type, which may be a plugin’s', () => {
-        const unknown = { name: 'stars', type: 'not-registered' } as Field;
+        const unknown: Field = { name: 'stars', type: 'not-registered' };
         expect(flattenFieldNodes([unknown])).toEqual([unknown]);
     });
 });

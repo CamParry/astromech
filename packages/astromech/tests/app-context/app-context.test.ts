@@ -3,7 +3,8 @@
  * store and cached on it, and the plugin layer assembled over the same object.
  */
 
-import type { AppContext, Role, User } from '@/types/index';
+import type { AppContext, Role } from '@/types/index';
+import { makeUser } from '@tests/fixtures';
 import { describe, expect, it, vi } from 'vitest';
 import {
     createAppContext,
@@ -53,7 +54,11 @@ const APP_CONTEXT_KEYS = [
 /** Run `fn` as `user`, the way a request-scoped transport would. */
 function asUser<T>(id: string, fn: () => Promise<T>): Promise<T> {
     return runInRequestScope(
-        { request: new Request('http://localhost/'), user: { id } as User, role: editor },
+        {
+            request: new Request('http://localhost/'),
+            user: makeUser({ id }),
+            role: editor,
+        },
         fn
     );
 }
@@ -174,7 +179,7 @@ describe('createPluginContext', () => {
     });
 
     it('acts as the context it was built over', () => {
-        const user = { id: 'user-1' } as User;
+        const user = makeUser({ id: 'user-1' });
         const app = createAppContext({
             user,
             role: editor,
@@ -190,7 +195,7 @@ describe('createPluginContext', () => {
 
 describe('createAppContext', () => {
     it('answers the user and role it was built for', () => {
-        const user = { id: 'user-1' } as User;
+        const user = makeUser({ id: 'user-1' });
         const app: AppContext = createAppContext({ user, role: editor });
 
         expect(app.user).toBe(user);

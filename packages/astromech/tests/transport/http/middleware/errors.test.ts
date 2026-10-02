@@ -4,7 +4,9 @@
  */
 
 import type { User } from '@/types/index';
+import type { RouteEnv } from '@tests/mount-router';
 import { OpenAPIHono } from '@hono/zod-openapi';
+import { makeUser } from '@tests/fixtures';
 import { HTTPException } from 'hono/http-exception';
 import { describe, expect, it } from 'vitest';
 import { createAppContext } from '@/app-context/app-context';
@@ -13,12 +15,12 @@ import { StagedChangeExistsError } from '@/errors/resource';
 import { onError } from '@/transport/http/middleware/errors';
 
 /** An app whose one route throws `error`, behind the real error handler. */
-function throwing(error: Error, user?: User): OpenAPIHono {
-    const app = new OpenAPIHono();
+function throwing(error: Error, user?: User): OpenAPIHono<RouteEnv> {
+    const app = new OpenAPIHono<RouteEnv>();
     app.onError(onError);
     app.get('/', (c) => {
         if (user !== undefined) {
-            c.set('ctx' as never, createAppContext({ user, role: null }) as never);
+            c.set('ctx', createAppContext({ user, role: null }));
         }
         throw error;
     });
@@ -65,7 +67,7 @@ describe('onError', () => {
     it('answers a refusal 403 with a signed-in user and 401 without one', async () => {
         const refusal = new PermissionDeniedError('users.create', 'users:create');
 
-        const signedIn = await throwing(refusal, { id: 'u1' } as User).request('/');
+        const signedIn = await throwing(refusal, makeUser({ id: 'u1' })).request('/');
         expect(signedIn.status).toBe(403);
         expect((await body(signedIn)).error.message).toContain('users:create');
 

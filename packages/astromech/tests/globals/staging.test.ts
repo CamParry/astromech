@@ -4,6 +4,7 @@
  * capability gate is exercised against `contact`.
  */
 
+import { invalid } from '@tests/fixtures';
 import { createTestDb, createTestUser, runAsUser, setupTestConfig } from '@tests/harness';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { currentServices } from '@/app-context/services';
@@ -65,10 +66,12 @@ describe('createStaged', () => {
         await saveSite();
 
         await expect(
-            api.createStaged({
-                key: 'site',
-                data: { fields: { title: 42, undeclared: 'x' } },
-            } as never)
+            api.createStaged(
+                invalid({
+                    key: 'site',
+                    data: { fields: { title: 42, undeclared: 'x' } },
+                })
+            )
         ).rejects.toThrow(ValidationError);
         expect(await api.getStaged({ key: 'site' })).toBeNull();
     });
@@ -157,6 +160,10 @@ describe('the global row stamp and divergence', () => {
         vi.useRealTimers();
     });
 
+    /**
+     * The `globals` row's stored `updatedAt`, read raw: the staged-write check
+     * below is that nothing was written to it.
+     */
     async function globalUpdatedAt(): Promise<Date> {
         const row = await getDb()
             .selectFrom('globals')
@@ -184,7 +191,7 @@ describe('the global row stamp and divergence', () => {
 
     it("reports the staged change's own last edit on a staged read", async () => {
         const editor = await createTestUser(getDb());
-        await runAsUser({ id: editor.id } as never, () =>
+        await runAsUser(editor, () =>
             api.update({ key: 'site', staged: true, data: { fields: { title: 'D' } } })
         );
 
@@ -198,7 +205,7 @@ describe('the global row stamp and divergence', () => {
     it('stamps the global row on a merge', async () => {
         const merged = await api.mergeStaged({ key: 'site' });
 
-        expect(await globalUpdatedAt()).toEqual(t2);
+        expect((await api.get({ key: 'site', full: true }))?.updatedAt).toEqual(t2);
         expect(merged.updatedAt).toEqual(t2);
     });
 

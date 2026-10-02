@@ -5,12 +5,13 @@
  * before it to prove the value survives.
  */
 
+import type { Kysely } from 'kysely';
 import { mkdtemp, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { createClient } from '@libsql/client';
-import { LibsqlDialect } from '@libsql/kysely-libsql';
-import { Kysely, sql } from 'kysely';
+import { openPlainDb } from '@tests/test-db';
+import { sql } from 'kysely';
 import { afterEach, beforeEach, expect, it } from 'vitest';
 
 type Migration = { up(db: Kysely<unknown>): Promise<void> };
@@ -29,9 +30,7 @@ async function loadMigration(file: string): Promise<Migration> {
 beforeEach(async () => {
     dir = await mkdtemp(join(tmpdir(), 'astromech-users-role-'));
     const client = createClient({ url: `file:${join(dir, 'test.db')}` });
-    db = new Kysely<unknown>({
-        dialect: new LibsqlDialect({ client: client as never }),
-    });
+    db = openPlainDb(client);
     const baseline = await loadMigration('0000_baseline.ts');
     await baseline.up(db);
 

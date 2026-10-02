@@ -6,33 +6,18 @@
  * and `getDb()` resolves to that handle.
  */
 
-import type { DB } from '@/database/types';
-import type { DatabaseDriver } from '@/types/index';
-import type { Kysely } from 'kysely';
-import { createTestDb } from '@tests/harness';
-import { afterEach, describe, expect, it } from 'vitest';
-import { setDatabaseDriver } from '@/database/driver-registry';
+import { createTestDb, makeTestConfig, setupTestConfig } from '@tests/harness';
+import { describe, expect, it } from 'vitest';
 import { getDb } from '@/database/registry';
 import { transaction } from '@/database/transaction';
 
-const noTxDriver: DatabaseDriver = {
-    type: 'no-tx-fake',
-    getInstance(): Kysely<DB> {
-        throw new Error('unused in this test — only supportsTransactions is read');
-    },
-    supportsTransactions: false,
-};
-
 describe('transaction() degradation', () => {
-    afterEach(async () => {
-        // Restore a transaction-capable driver so this doesn't leak into
-        // other tests in the same file.
-        await createTestDb();
-    });
-
     it('runs fn once against the base connection when the driver has no interactive transactions', async () => {
         const base = await createTestDb();
-        setDatabaseDriver(noTxDriver);
+        setupTestConfig({
+            ...makeTestConfig(),
+            db: { type: 'no-tx', getInstance: () => base, supportsTransactions: false },
+        });
 
         let seen: unknown;
         await transaction(async () => {

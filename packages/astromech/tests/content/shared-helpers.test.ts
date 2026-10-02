@@ -1,22 +1,21 @@
 /**
- * The edges of the helpers the resources share: what a resource config answers for a
- * target nothing declares, and the early returns of the translatable, index,
- * restore and usage helpers, and that each version snapshot
- * carries exactly the columns a version stores.
+ * The edges of the helpers the resources share, each reached on a real
+ * database: what a resource config answers for a target nothing declares, a
+ * translation with no default-locale row, the relationship index and usage
+ * helpers, a restore of a version that stored no fields, and the columns a
+ * version snapshot carries.
  */
 
-import type { ContentRowId } from '@/content/repository/types';
 import type { AstromechConfig, Field, ResolvedConfig } from '@/types/index';
 import { createTestDb, makeTestConfig, setupTestConfig } from '@tests/harness';
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { beforeEach, describe, expect, it } from 'vitest';
 import { currentServices } from '@/app-context/services';
 import { pruneDanglingRelations } from '@/content/dangling-relations';
 import { mergeContentReferences } from '@/content/relationships';
 import { relationshipRepository } from '@/content/repository/relationships';
 import { RESOURCE_CONFIG } from '@/content/resources';
-import { inheritSharedFields, propagateSharedFields } from '@/content/translatable';
 import { listUsage } from '@/content/usage';
-import { restoreVersion } from '@/content/versions';
+import { getDb } from '@/database/registry';
 import { entrySnapshotSchema } from '@/entries/schema';
 import { syncGlobalRelationships } from '@/globals/relationships';
 import { globalSnapshotSchema } from '@/globals/schema';
@@ -26,6 +25,7 @@ import { userSnapshotSchema } from '@/users/schema';
 
 const entriesService = currentServices.entries;
 const globalsService = currentServices.globals;
+const usersService = currentServices.users;
 
 /** `post` translatable with a shared field; one global; nothing on users or media. */
 function makeConfig(): AstromechConfig {
@@ -51,6 +51,14 @@ beforeEach(async () => {
     config = setupTestConfig(makeConfig());
 });
 
+/** What each resource config calls itself when no target is named. */
+const UNNAMED: Record<(typeof RESOURCE_TYPES)[number], string> = {
+    entry: "Entry type ''",
+    global: "Global ''",
+    user: 'User content',
+    media: 'Media',
+};
+
 describe('RESOURCE_CONFIG', () => {
     it.each(RESOURCE_TYPES)('%s answers for a target nothing declares', (kind) => {
         const resourceConfig = RESOURCE_CONFIG[kind];
@@ -58,19 +66,15 @@ describe('RESOURCE_CONFIG', () => {
         expect(resourceConfig.fields(config, 'nope')).toEqual([]);
         expect(resourceConfig.translatable(config, 'nope')).toBe(false);
         expect(resourceConfig.validate(config, 'nope')).toBeUndefined();
-        expect(typeof resourceConfig.name()).toBe('string');
     });
 
+    // This config declares no user or media fields, so every list is empty.
     it.each(RESOURCE_TYPES)('%s answers for a call that names no target', (kind) => {
         const resourceConfig = RESOURCE_CONFIG[kind];
-        expect(resourceConfig.fields(config)).toEqual(
-            kind === 'entry' || kind === 'global'
-                ? []
-                : resourceConfig.fields(config, 'any')
-        );
+        expect(resourceConfig.fields(config)).toEqual([]);
         expect(resourceConfig.translatable(config)).toBe(false);
         expect(resourceConfig.validate(config)).toBeUndefined();
-        expect(resourceConfig.name()).not.toContain('undefined');
+        expect(resourceConfig.name()).toBe(UNNAMED[kind]);
     });
 
     it('treats an undeclared entry type as having statuses, and a global as not', () => {
@@ -91,41 +95,25 @@ describe('RESOURCE_CONFIG', () => {
     });
 });
 
-describe('inheritSharedFields and propagateSharedFields', () => {
-    it('keeps the values when the default-locale row is missing', async () => {
-        const values = { brand: 'Mine' };
-        const inherited = await inheritSharedFields('global', config, {
-            target: 'site',
-            repository: { findOne: () => Promise.resolve(null) },
-            values,
-            id: 'g1',
+describe('a translation with no default-locale row', () => {
+    // A third locale, so a global first saved in `de` gets a translation whose
+    // default-locale row is missing. An entry refuses that write instead.
+    it('keeps the shared values it was written with', async () => {
+        setupTestConfig({ ...makeConfig(), locales: ['en', 'de', 'fr'] });
+        await globalsService.update({
+            key: 'site',
             locale: 'de',
+            data: { fields: { brand: 'Marke' } },
         });
-        expect(inherited).toBe(values);
-    });
 
-    it('propagates nothing without a propagator', async () => {
-        await expect(
-            propagateSharedFields('global', config, {
-                target: 'site',
-                translatable: undefined,
-                record: { id: 'g1', locale: 'en' },
-                fields: { brand: 'Acme' },
-                patchedFieldNames: ['brand'],
-            })
-        ).resolves.toBeUndefined();
-    });
-
-    it('propagates only the shared fields the write patched', async () => {
-        const propagateFields = vi.fn(() => Promise.resolve());
-        await propagateSharedFields('global', config, {
-            target: 'site',
-            translatable: { propagateFields },
-            record: { id: 'g1', locale: 'en' },
-            fields: { brand: 'Acme' },
-            patchedFieldNames: ['brand'],
+        await globalsService.update({
+            key: 'site',
+            locale: 'fr',
+            data: { fields: { brand: 'Marque' } },
         });
-        expect(propagateFields).toHaveBeenCalledWith('g1', 'en', { brand: 'Acme' });
+
+        const fr = await globalsService.get({ key: 'site', locale: 'fr', full: true });
+        expect(fr?.fields['brand']).toBe('Marque');
     });
 });
 
@@ -199,29 +187,28 @@ describe('version snapshots', () => {
 
 describe('restoreVersion', () => {
     it('keeps the current fields when the version stored none', async () => {
-        const contentId = 'c1' as ContentRowId;
-        const versions = {
-            findMany: () => Promise.resolve([]),
-            findOne: () =>
-                Promise.resolve({
-                    version: 1,
-                    fields: null,
-                    createdAt: new Date(),
-                    createdBy: null,
-                }),
-            create: () => Promise.resolve(),
-            latestNumber: () => Promise.resolve(0),
-        };
-        const restored = await restoreVersion({
-            resource: 'user',
-            versions,
-            current: { contentId, locale: 'en', fields: { bio: 'Now' } },
-            version: 1,
-            address: { id: 'u1' },
-            user: null,
-            write: ({ fields }) => Promise.resolve(fields),
+        setupTestConfig({
+            ...makeConfig(),
+            users: { fields: [{ name: 'bio', type: 'text', label: 'Bio' }] },
         });
-        expect(restored).toEqual({ bio: 'Now' });
+        const user = await usersService.create({
+            data: { email: 'ann@test.dev', name: 'Ann', fields: { bio: 'Then' } },
+        });
+        await usersService.update({ id: user.id, data: { fields: { bio: 'Now' } } });
+        // A version row may hold no fields at all; nothing writes one today.
+        const cleared = await getDb()
+            .updateTable('userVersions')
+            .set({ fields: null })
+            .where('version', '=', 1)
+            .where('contentId', 'in', (eb) =>
+                eb.selectFrom('userContent').select('id').where('userId', '=', user.id)
+            )
+            .executeTakeFirstOrThrow();
+        expect(cleared.numUpdatedRows).toBe(1n);
+
+        const restored = await usersService.restoreVersion({ id: user.id, version: 1 });
+
+        expect(restored.fields).toEqual({ bio: 'Now' });
     });
 });
 

@@ -4,11 +4,21 @@
  */
 
 import type { ResolvedConfig } from '@/types/index';
+import { resolveTestConfig } from '@tests/harness';
 import { describe, expect, it } from 'vitest';
 import { defaultContentLocale } from '@/config/content-locale';
 
 function config(locales?: string[], defaultLocale?: string): ResolvedConfig {
-    return { locales, defaultLocale } as unknown as ResolvedConfig;
+    const {
+        locales: _locales,
+        defaultLocale: _defaultLocale,
+        ...rest
+    } = resolveTestConfig();
+    return {
+        ...rest,
+        ...(locales !== undefined ? { locales } : {}),
+        ...(defaultLocale !== undefined ? { defaultLocale } : {}),
+    };
 }
 
 describe('defaultContentLocale', () => {

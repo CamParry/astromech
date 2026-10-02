@@ -7,8 +7,8 @@
 
 import type { DB } from '@/database/types';
 import type { AstromechConfig } from '@/types/index';
-import type { Kysely, Updateable } from 'kysely';
-import { createTestDb, makeTestConfig, resetRuntime } from '@tests/harness';
+import type { Kysely } from 'kysely';
+import { createTestDb, makeBootConfig, resetRuntime } from '@tests/harness';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { interval } from '@/cron/drivers/interval';
 import { registerCronJob } from '@/cron/registry';
@@ -23,15 +23,7 @@ let config: AstromechConfig;
 
 beforeEach(async () => {
     db = await createTestDb();
-    const raw = {
-        ...makeTestConfig(),
-        db: {
-            type: 'test',
-            getInstance: () => db,
-            supportsTransactions: true,
-        },
-    };
-    config = raw as AstromechConfig;
+    config = makeBootConfig();
 
     // An uncreated application is exactly what a Cron Trigger hits: every slot
     // boot fills is empty, including the db `createTestDb` just set.
@@ -89,7 +81,7 @@ describe('createWorkerEntry().scheduled on an uncreated application', () => {
                 encodePatchWith(cronTable, {
                     nextRun: new Date(seedTime.getTime() - 60_000),
                     lock: null,
-                }) as unknown as Updateable<DB['_astromech_cron']>
+                })
             )
             .where('name', '=', 'boot-test-job')
             .execute();

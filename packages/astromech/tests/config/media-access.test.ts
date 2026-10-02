@@ -7,8 +7,8 @@ import type {
     DatabaseDriver,
     ImageDriver,
     MediaConfig,
-    StorageDriver,
 } from '@/types/index';
+import { noopStorage } from '@tests/fixtures';
 import { describe, expect, it } from 'vitest';
 import { resolveConfig } from '@/config/resolve';
 import { cloudflareImages } from '@/media/serving/image/drivers/cloudflare';
@@ -17,25 +17,6 @@ const dbDriver: DatabaseDriver = {
     type: 'test',
     getInstance() {
         throw new Error('not called');
-    },
-};
-
-const storageDriver: StorageDriver = {
-    name: 'noop',
-    async put() {
-        return undefined;
-    },
-    async get() {
-        return null;
-    },
-    async stat() {
-        return null;
-    },
-    async delete() {
-        return undefined;
-    },
-    async list() {
-        return { keys: [] };
     },
 };
 
@@ -60,7 +41,7 @@ const configWith = (
         image === undefined ? media : { ...media, image: { driver: image } };
     return {
         db: dbDriver,
-        storage: storageDriver,
+        storage: noopStorage,
         entries: {},
         ...(resolvedMedia === undefined ? {} : { media: resolvedMedia }),
     };

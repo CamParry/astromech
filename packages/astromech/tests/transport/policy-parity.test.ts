@@ -19,13 +19,11 @@ import type {
     Role,
     User,
 } from '@/types/index';
-import type { OpenAPIHono } from '@hono/zod-openapi';
 import { adminRole, roleWith } from '@tests/fixtures';
-import { createTestDb, makeTestConfig, setupTestConfig } from '@tests/harness';
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { createTestDb, makeTestConfig, requestAs, setupTestConfig } from '@tests/harness';
+import { beforeEach, describe, expect, it } from 'vitest';
 import { createAppContext } from '@/app-context/app-context';
 import { currentServices } from '@/app-context/services';
-import { getSession } from '@/auth/session';
 import { setMethodManifest } from '@/codegen/manifest-registry';
 import { generateMethodManifest } from '@/codegen/method-manifest';
 import { ApiError } from '@/errors/api-error';
@@ -36,9 +34,8 @@ import { callMethod } from '@/policies/call-method';
 import { createHttpApp } from '@/transport/http/app';
 import { buildScopedDispatch } from '@/transport/tools/dispatch';
 
-vi.mock('@/auth/session', () => ({ getSession: vi.fn() }));
-
-const mockGetSession = vi.mocked(getSession);
+/** The composed HTTP app, typed as `createHttpApp` builds it. */
+type HttpApp = ReturnType<typeof createHttpApp>;
 
 /** A plugin with nothing of its own, so its `ctx` can be built. */
 const probe: PluginDefinition = { package: 'probe' };
@@ -61,14 +58,13 @@ function testConfig(): AstromechConfig {
 /** What a call came to: an error code, `null`, or `ok` for anything else. */
 type Outcome = string;
 
-let app: OpenAPIHono;
+let app: HttpApp;
 let api: string;
 let manifest: MethodManifest;
 /** The site's only admin, and the user every transport acts as. */
 let admin: User;
 
 beforeEach(async () => {
-    mockGetSession.mockReset();
     await createTestDb();
     const resolved = setupTestConfig(testConfig());
     manifest = generateMethodManifest(resolved, [probe]);
@@ -77,7 +73,7 @@ beforeEach(async () => {
         data: { email: 'admin@test.dev', name: 'Admin', role: 'admin' },
     });
     api = `${resolved.basePath}/api`;
-    app = createHttpApp(resolved) as unknown as OpenAPIHono;
+    app = createHttpApp(resolved);
 });
 
 /** The transports, each calling one manifest method with `args` as `role`. */
@@ -86,15 +82,6 @@ type Transport = (
     id: string,
     args: Record<string, unknown>
 ) => Promise<Outcome>;
-
-/** Answer the session lookup with the admin user under `role`. */
-function signIn(role: Role): void {
-    mockGetSession.mockResolvedValue({
-        user: admin as never,
-        role,
-        session: { id: 's1', userId: admin.id } as never,
-    });
-}
 
 /** The outcome an HTTP response carries. */
 async function fromResponse(res: Response): Promise<Outcome> {
@@ -126,12 +113,16 @@ function contextFor(role: Role): AppContext {
 }
 
 const rpc: Transport = async (role, id, args) => {
-    signIn(role);
-    const res = await app.request(`${api}/rpc/${encodeURIComponent(id)}`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(args),
-    });
+    const res = await requestAs(
+        app,
+        { user: admin, role },
+        `${api}/rpc/${encodeURIComponent(id)}`,
+        {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(args),
+        }
+    );
     return fromResponse(res);
 };
 
@@ -147,8 +138,7 @@ const trusted: Transport = (_role, id, args) =>
 /** A REST call: `path` under the API, with a JSON body for a write. */
 function rest(verb: string, path: string, body?: unknown): Transport {
     return async (role) => {
-        signIn(role);
-        const res = await app.request(`${api}${path}`, {
+        const res = await requestAs(app, { user: admin, role }, `${api}${path}`, {
             method: verb,
             headers: { 'Content-Type': 'application/json' },
             ...(body !== undefined ? { body: JSON.stringify(body) } : {}),

@@ -7,12 +7,13 @@
  * than through the harness, which always migrates to latest.
  */
 
+import type { Kysely } from 'kysely';
 import { mkdtemp, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { createClient } from '@libsql/client';
-import { LibsqlDialect } from '@libsql/kysely-libsql';
-import { Kysely, sql } from 'kysely';
+import { openPlainDb } from '@tests/test-db';
+import { sql } from 'kysely';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
 /** A 26-character ULID-shaped id, so the quoted-string rewrite is realistic. */
@@ -106,9 +107,7 @@ async function rows<T>(query: string): Promise<T[]> {
 beforeEach(async () => {
     dir = await mkdtemp(join(tmpdir(), 'astromech-entry-content-'));
     const client = createClient({ url: `file:${join(dir, 'test.db')}` });
-    db = new Kysely<unknown>({
-        dialect: new LibsqlDialect({ client: client as never }),
-    });
+    db = openPlainDb(client);
     const baseline = await loadMigration('0000_baseline.ts');
     await baseline.up(db);
 

@@ -29,6 +29,7 @@
  * records the acting user, so a route test acting as `testUser` needs that row
  * to exist — `mount-router.ts`'s `seedTestUser` inserts it via `createTestUser`.
  */
+import type { Table } from '@/database/define-table';
 import type { UserTableRow } from '@/database/tables';
 import type { DB } from '@/database/types';
 import type {
@@ -39,6 +40,7 @@ import type {
     PluginDefinition,
     ResolvedConfig,
     Role,
+    StorageDriver,
     User,
 } from '@/types/index';
 // Declares `testDbDir` and `testDbTemplate` on vitest's `ProvidedContext`,
@@ -48,6 +50,7 @@ import type { Kysely } from 'kysely';
 import * as fs from 'node:fs/promises';
 import * as path from 'node:path';
 import { noopStorage } from '@tests/fixtures';
+import { sql } from 'kysely';
 import { inject } from 'vitest';
 import { createAppContext } from '@/app-context/app-context';
 import { setConfig } from '@/config/registry';
@@ -55,12 +58,13 @@ import { resolveConfig } from '@/config/resolve';
 import { decodeWith, encodeWith } from '@/database/codec';
 import { getDatabaseDriver, setDatabaseDriver } from '@/database/driver-registry';
 import { libsql } from '@/database/drivers/libsql';
-import { setDb } from '@/database/registry';
+import { getDb, setDb } from '@/database/registry';
 import { userContentTable, usersTable } from '@/database/tables';
 import { DEFAULT_ROLE_SLUG } from '@/permissions/roles';
 import { registerPlugins } from '@/plugins/runtime/plugin-runtime';
 import { registerDrivers } from '@/register-drivers';
 import { runInRequestScope } from '@/request-scope/request-scope';
+import { filesystem } from '@/storage/drivers/filesystem';
 
 type Db = Kysely<DB>;
 
@@ -83,6 +87,18 @@ export async function createTestDb(): Promise<Db> {
     setDb(driver.getInstance());
     setDatabaseDriver(driver);
     return driver.getInstance();
+}
+
+/**
+ * The `filesystem` storage driver over a new directory in the run's temp dir,
+ * which global setup removes, serving public URLs under `urlPrefix` when given.
+ * For a test that reads a file back; one that never does keeps `noopStorage`.
+ */
+export function createTestStorage(options: { urlPrefix?: string } = {}): StorageDriver {
+    return filesystem({
+        dir: path.join(TEST_DB_DIR, `storage-${crypto.randomUUID()}`),
+        ...options,
+    });
 }
 
 /**
@@ -188,6 +204,26 @@ export function makeTestConfig(): AstromechConfig {
 }
 
 /**
+ * `makeTestConfig()` with the `libsql` driver `createTestDb()` opened as its
+ * database, for a test that feeds a raw config through the real boot rather
+ * than `setupTestConfig`. Call it before anything resets the runtime.
+ */
+export function makeBootConfig(): AstromechConfig {
+    return { ...makeTestConfig(), db: openedDb() };
+}
+
+/**
+ * Resolve `makeTestConfig()` with `overrides` laid over it, for code that takes
+ * a `ResolvedConfig` as an argument. The config is not published, but
+ * `resolveConfig` still sets the plugin field types globally.
+ */
+export function resolveTestConfig(
+    overrides: Partial<AstromechConfig> = {}
+): ResolvedConfig {
+    return resolveConfig({ ...makeTestConfig(), ...overrides });
+}
+
+/**
  * Resolve the test config, publish it and register its drivers, the way boot
  * does. The database is the one `createTestDb()` opened unless the config names
  * its own. Also resets the plugin runtime (no hooks) unless `plugins` is supplied.
@@ -229,6 +265,46 @@ export function runAsUser<T>(user: User | null, fn: () => T): T {
 }
 
 /**
+ * Send `init` to `path` on `app` as `user` under `role`. It opens the request
+ * scope with the identity already set, which the app joins, so the route skips
+ * the session resolve. The Astro middleware opens the scope with the request
+ * only and the session is resolved later; only `request-scope.test.ts` covers
+ * that path.
+ */
+export function requestAs(
+    app: { fetch(request: Request): Response | Promise<Response> },
+    identity: { user: User | null; role: Role | null },
+    path: string,
+    init?: RequestInit
+): Promise<Response> {
+    const request = new Request(new URL(path, 'http://localhost'), init);
+    return runInRequestScope({ request, ...identity }, async () => app.fetch(request));
+}
+
+/**
+ * Make every `operation` on `table` fail with the message `boom` until the
+ * returned function drops the trigger. The failure is raised inside the write's
+ * own transaction, as a constraint violation would be. A `TEMP` trigger would
+ * reach only the pooled connection that created it, so this one is not.
+ */
+export async function failWritesTo(
+    table: Table,
+    operation: 'insert' | 'update' | 'delete'
+): Promise<() => Promise<void>> {
+    const db = getDb();
+    const trigger = `fail_${table.name}_${operation}`;
+    await sql
+        .raw(
+            `CREATE TRIGGER ${trigger} BEFORE ${operation.toUpperCase()} ON ${table.name} ` +
+                `BEGIN SELECT RAISE(ABORT, 'boom'); END`
+        )
+        .execute(db);
+    return async () => {
+        await sql.raw(`DROP TRIGGER ${trigger}`).execute(db);
+    };
+}
+
+/**
  * A context acting as `role` and `user`, the way a transport builds one for a
  * caller. No user by default, so a write records no author row to reference.
  */
@@ -249,14 +325,15 @@ export function registerTestPlugins(
 
 /**
  * Insert a user row and its content row (entries reference users via nullable
- * FKs). `fields` and `locale` go on the content row; `locale` defaults to `en`
- * rather than reading the config, because a route test seeds its acting user
- * before `setupTestConfig` runs.
+ * FKs), and return the user as the users service answers it. `fields` and
+ * `locale` go on the content row; `locale` defaults to `en` rather than reading
+ * the config, because a route test seeds its acting user before
+ * `setupTestConfig` runs. Throws when either insert returns no row.
  */
 export async function createTestUser(
     db: Db,
     overrides: Partial<UserTableRow> & { fields?: JsonObject; locale?: string } = {}
-): Promise<UserTableRow> {
+): Promise<User> {
     const { fields, locale, ...account } = overrides;
     const row = await db
         .insertInto('users')
@@ -273,16 +350,33 @@ export async function createTestUser(
     if (!row) throw new Error('failed to insert test user');
     const user = decodeWith(usersTable, row);
 
-    await db
+    const contentRow = await db
         .insertInto('userContent')
         .values(
             encodeWith(userContentTable, {
                 userId: user.id,
                 locale: locale ?? 'en',
                 fields: fields ?? {},
-            }) as never
+            })
         )
-        .execute();
+        .returningAll()
+        .executeTakeFirst();
+    if (!contentRow) throw new Error('failed to insert test user content');
+    const content = decodeWith(userContentTable, contentRow);
 
-    return user;
+    return {
+        id: user.id,
+        email: user.email,
+        name: user.name,
+        emailVerified: user.emailVerified,
+        image: user.image,
+        locale: content.locale,
+        locales: [content.locale],
+        // The `fields` column decodes as `unknown`; mapped as the users
+        // repository maps it.
+        fields: (content.fields ?? {}) as JsonObject,
+        role: user.role,
+        createdAt: user.createdAt,
+        updatedAt: user.updatedAt,
+    };
 }

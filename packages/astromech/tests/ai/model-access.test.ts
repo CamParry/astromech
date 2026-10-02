@@ -10,6 +10,8 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { buildAiModels, getModel, hasModel } from '@/ai/models';
 import { setAiModels } from '@/ai/registry';
 
+// `setAiModels(await buildAiModels(...))` is the step boot takes for `ai`, and
+// the registry it fills is what `getModel` reads, so each test sets it by hand.
 beforeEach(() => {
     resetRuntime();
     vi.restoreAllMocks();

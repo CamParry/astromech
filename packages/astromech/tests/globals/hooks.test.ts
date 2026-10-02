@@ -3,7 +3,8 @@
  * stub, so the seam under test is the one production uses.
  */
 
-import type { PluginHooks } from '@/types/index';
+import type { Global, PluginHooks } from '@/types/index';
+import { invalid } from '@tests/fixtures';
 import { createTestDb, registerTestPlugins, setupTestConfig } from '@tests/harness';
 import { seedTestUser } from '@tests/mount-router';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
@@ -81,7 +82,7 @@ describe('global:beforeUpdate', () => {
         probe([defineHook('global:beforeUpdate', (ctx) => void seen.push(ctx))]);
 
         await expect(
-            api.update({ key: 'contact', data: { fields: {}, extra: true } as never })
+            api.update({ key: 'contact', data: invalid({ fields: {}, extra: true }) })
         ).rejects.toThrow(ValidationError);
         expect(seen).toEqual([]);
     });
@@ -102,10 +103,10 @@ describe('global:beforeUpdate', () => {
 
 describe('global:afterUpdate', () => {
     it('receives the saved global, without the content row id', async () => {
-        const seen: Record<string, unknown>[] = [];
+        const seen: (Global | null)[] = [];
         probe([
             defineHook('global:afterUpdate', (ctx) => {
-                seen.push(ctx.global as unknown as Record<string, unknown>);
+                seen.push(ctx.global);
             }),
         ]);
 
@@ -115,8 +116,8 @@ describe('global:afterUpdate', () => {
         });
 
         expect(seen).toHaveLength(1);
-        expect(seen[0]?.['id']).toBe(saved.id);
-        expect(seen[0]?.['fields']).toEqual({ email: 'a@b.dev' });
+        expect(seen[0]?.id).toBe(saved.id);
+        expect(seen[0]?.fields).toEqual({ email: 'a@b.dev' });
         expect(seen[0]).not.toHaveProperty('contentId');
     });
 });

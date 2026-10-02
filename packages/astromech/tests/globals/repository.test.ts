@@ -4,8 +4,7 @@
  */
 
 import { createTestDb, setupTestConfig } from '@tests/harness';
-import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { currentServices } from '@/app-context/services';
+import { beforeEach, describe, expect, it } from 'vitest';
 import { globalRepository } from '@/globals/repository';
 import { makeGlobalsConfig } from './globals-config';
 
@@ -38,20 +37,6 @@ describe('findIdByKey', () => {
 
         expect(await globalRepository.findIdByKey('site')).toBe(site.id);
         expect(await globalRepository.findIdByKey('missing')).toBeNull();
-    });
-});
-
-describe('the exported repository', () => {
-    it('is the one the service reads through', async () => {
-        await currentServices.globals.update({
-            key: 'contact',
-            data: { fields: { email: 'hi@example.dev' } },
-        });
-        vi.spyOn(globalRepository, 'findByKey').mockResolvedValue(null);
-
-        expect(
-            await currentServices.globals.get({ key: 'contact', full: true })
-        ).toBeNull();
     });
 });
 

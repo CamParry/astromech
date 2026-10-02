@@ -1,13 +1,13 @@
 /**
- * Translation: a media item's second locale is created by writing it, seeded
- * from the default-locale row, and a read of a locale with no row falls back to
- * the default. Non-translatable media refuses any locale but the default.
+ * Translation of the content columns media has and other resources do not
+ * (`title`, `alt`, `caption`): they fall back, seed a new locale and read back
+ * from query like its fields. The rules media shares with users are in
+ * `tests/content/resource-translation.test.ts`.
  */
 
-import { createTestDb, makeTestConfig, setupTestConfig } from '@tests/harness';
+import { createTestDb, setupTestConfig } from '@tests/harness';
 import { beforeEach, describe, expect, it } from 'vitest';
 import { currentServices } from '@/app-context/services';
-import { ResourceValidationError } from '@/errors/resource';
 import { mediaRepository } from '@/media/repository';
 import { makeTranslatableMediaConfig } from './media-config';
 
@@ -40,7 +40,7 @@ beforeEach(async () => {
 });
 
 describe('reading a locale with no content row', () => {
-    it('falls back to the default locale and says so', async () => {
+    it('falls back to the default locale’s content columns', async () => {
         const fr = await api.get({ id, locale: 'fr' });
         expect(fr?.locale).toBe('en');
         expect(fr?.locales).toEqual(['en']);
@@ -48,25 +48,7 @@ describe('reading a locale with no content row', () => {
         expect(fr?.fields['credit']).toBe('EN credit');
     });
 
-    it('reads the fallback locale through the repository only when asked', async () => {
-        expect(await mediaRepository.findOne(id, { locale: 'fr' })).toBeNull();
-        const fr = await mediaRepository.findOne(id, {
-            locale: 'fr',
-            fallbackLocale: 'en',
-        });
-        expect(fr?.locale).toBe('en');
-        expect(fr?.title).toBe('EN title');
-    });
-
-    it('answers null when the fallback locale is the one asked', async () => {
-        const fr = await mediaRepository.findOne(id, {
-            locale: 'fr',
-            fallbackLocale: 'fr',
-        });
-        expect(fr).toBeNull();
-    });
-
-    it('lists the item in the query too', async () => {
+    it('lists the default locale’s content columns in the query', async () => {
         const { data } = await api.query({ locale: 'fr' });
         expect(data).toHaveLength(1);
         expect(data[0]?.locale).toBe('en');
@@ -75,7 +57,7 @@ describe('reading a locale with no content row', () => {
 });
 
 describe('writing a locale with no content row', () => {
-    it('creates the row as a copy with the patch applied over it', async () => {
+    it('seeds a new locale’s content columns from the default locale', async () => {
         const fr = await api.update({ id, locale: 'fr', data: { alt: 'FR alt' } });
 
         expect(fr.locale).toBe('fr');
@@ -87,14 +69,7 @@ describe('writing a locale with no content row', () => {
         expect(fr.fields).toEqual({ credit: 'EN credit', internalRef: 'REF-1' });
     });
 
-    it('leaves the default locale alone', async () => {
-        await api.update({ id, locale: 'fr', data: { alt: 'FR alt' } });
-        const en = await api.get({ id });
-        expect(en?.alt).toBe('EN alt');
-        expect(en?.locale).toBe('en');
-    });
-
-    it('reads the translated content back from query', async () => {
+    it('reads a translated content column back from query', async () => {
         await api.update({
             id,
             locale: 'fr',
@@ -107,51 +82,5 @@ describe('writing a locale with no content row', () => {
         expect(data[0]?.fields['credit']).toBe('FR credit');
         // The file columns still come from the resource row.
         expect(data[0]?.filename).toBe('photo.png');
-    });
-});
-
-describe('shared fields', () => {
-    it('propagates a translatable: false field to the other locales', async () => {
-        await api.update({ id, locale: 'fr', data: { fields: { credit: 'FR credit' } } });
-
-        await api.update({ id, data: { fields: { internalRef: 'REF-2' } } });
-
-        const fr = await api.get({ id, locale: 'fr' });
-        expect(fr?.fields['internalRef']).toBe('REF-2');
-        expect(fr?.fields['credit']).toBe('FR credit');
-    });
-
-    it('does not propagate a per-locale field', async () => {
-        await api.update({ id, locale: 'fr', data: { fields: { credit: 'FR credit' } } });
-
-        await api.update({ id, data: { fields: { credit: 'EN credit v2' } } });
-
-        const fr = await api.get({ id, locale: 'fr' });
-        expect(fr?.fields['credit']).toBe('FR credit');
-    });
-});
-
-describe('non-translatable media', () => {
-    it('rejects a locale other than the default', async () => {
-        setupTestConfig(makeTestConfig());
-
-        await expect(api.update({ id, locale: 'de', data: {} })).rejects.toThrow(
-            ResourceValidationError
-        );
-
-        try {
-            await api.get({ id, locale: 'de' });
-            expect.unreachable('non-translatable media must refuse another locale');
-        } catch (error) {
-            expect((error as ResourceValidationError).form).toEqual([
-                "Media is not translatable, so only the 'en' locale can be written.",
-            ]);
-        }
-    });
-
-    it('accepts the default locale named explicitly', async () => {
-        setupTestConfig(makeTestConfig());
-        const saved = await api.update({ id, locale: 'en', data: { alt: 'still en' } });
-        expect(saved.locale).toBe('en');
     });
 });

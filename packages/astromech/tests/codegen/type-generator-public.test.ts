@@ -1,22 +1,15 @@
-import type { ResolvedConfig } from '@/types/index';
+import type { Field, ResolvedConfig } from '@/types/index';
+import { resolveTestConfig } from '@tests/harness';
 import { describe, expect, it } from 'vitest';
 import { generateClientTypes } from '@/codegen/type-generator';
 
-function makeConfig(mainFields: object[], sidebarFields: object[] = []): ResolvedConfig {
-    return {
-        entryTypes: {
-            posts: {
-                fields: {
-                    main: mainFields as never,
-                    sidebar: sidebarFields as never,
-                },
-            },
+/** A config whose only entry type is `posts`, with `main` and `sidebar` fields. */
+function makeConfig(main: Field[], sidebar: Field[] = []): ResolvedConfig {
+    return resolveTestConfig({
+        entries: {
+            posts: { single: 'Post', plural: 'Posts', fields: { main, sidebar } },
         },
-        globals: {},
-        pages: {},
-        locales: [],
-        defaultLocale: 'en',
-    } as unknown as ResolvedConfig;
+    });
 }
 
 describe('type-generator — FieldsPublic variant', () => {
@@ -197,29 +190,26 @@ describe('type-generator — public relations reference FieldsPublic', () => {
         // The Relations type itself references full Fields as before.
         // The public shape's relations are composed at the TypedEntriesService overload level.
         // Here we just verify the Relations type still references the full Fields.
-        const config = {
-            entryTypes: {
+        const config = resolveTestConfig({
+            entries: {
                 posts: {
-                    fields: {
-                        main: [
-                            {
-                                name: 'category',
-                                type: 'relationship',
-                                target: 'categories',
-                            },
-                        ],
-                        sidebar: [],
-                    },
+                    single: 'Post',
+                    plural: 'Posts',
+                    fields: [
+                        {
+                            name: 'category',
+                            type: 'relationship',
+                            target: 'categories',
+                        },
+                    ],
                 },
                 categories: {
-                    fields: { main: [{ name: 'name', type: 'text' }], sidebar: [] },
+                    single: 'Category',
+                    plural: 'Categories',
+                    fields: [{ name: 'name', type: 'text' }],
                 },
             },
-            globals: {},
-            pages: {},
-            locales: [],
-            defaultLocale: 'en',
-        } as unknown as ResolvedConfig;
+        });
 
         const output = generateClientTypes(config);
 

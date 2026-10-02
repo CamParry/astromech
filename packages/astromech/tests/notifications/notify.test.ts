@@ -12,8 +12,9 @@
  */
 
 import type { DB } from '@/database/types';
-import type { Notification, NotificationsService, User } from '@/types/index';
+import type { Notification, NotificationsService } from '@/types/index';
 import type { Kysely } from 'kysely';
+import { makeUser } from '@tests/fixtures';
 import { createTestDb, createTestUser, setupTestConfig } from '@tests/harness';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { createAppContext } from '@/app-context/app-context';
@@ -34,7 +35,7 @@ beforeEach(async () => {
 /** One user's inbox: the methods bound to a context acting as them. */
 function inbox(userId: string): NotificationsService {
     return notificationsDefinition.bind(
-        createAppContext({ user: { id: userId } as User, role: null })
+        createAppContext({ user: makeUser({ id: userId }), role: null })
     );
 }
 

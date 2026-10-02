@@ -1,45 +1,51 @@
 /**
  * POST /cron/run — auth-branch coverage.
  *
- * Mounts cronRouter on a minimal Hono app over the in-memory harness.
+ * Mounts cronRouter on a minimal Hono app over the test database.
  * Registers a due job whose handler flips a flag so a 200 also proves
  * onTick ran due-eval, not a no-op.
  */
 
 import type { DB } from '@/database/types';
-import type { Kysely, Updateable } from 'kysely';
+import type { RequestScope } from '@/request-scope/request-scope';
+import type { Role, User } from '@/types/index';
+import type { Kysely } from 'kysely';
 import { OpenAPIHono } from '@hono/zod-openapi';
-import { createTestDb, makeTestConfig, setupTestConfig } from '@tests/harness';
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { adminRole } from '@tests/fixtures';
+import { createTestDb, makeTestConfig, requestAs, setupTestConfig } from '@tests/harness';
+import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { systemAppContext } from '@/app-context/app-context';
-import { getSession } from '@/auth/session';
+import { currentServices } from '@/app-context/services';
 import { registerCronJob } from '@/cron/registry';
 import { encodePatchWith } from '@/database/codec';
 import { cronTable } from '@/database/tables';
 import { runInRequestScope } from '@/request-scope/request-scope';
 import { cronRouter } from '@/transport/http/routes/cron';
 
-// Mock getSession so tests control the session branch without a real
-// Better Auth stack.
-vi.mock('@/auth/session', () => ({
-    getSession: vi.fn(),
-}));
-
-const mockGetSession = vi.mocked(getSession);
-
-/** Minimal app: a request scope, then the cron router. */
+/** Minimal app: the cron router alone. */
 function makeApp(): OpenAPIHono {
     const app = new OpenAPIHono();
-    app.use('*', (c, next) => runInRequestScope({ request: c.req.raw }, () => next()));
     app.route('/cron', cronRouter);
     return app;
 }
 
-/** POST /cron/run with optional Authorization header. */
-function poke(app: OpenAPIHono, authHeader?: string): Response | Promise<Response> {
+/** A request with no session. */
+const signedOut = { user: null, role: null };
+
+/** POST /cron/run as `identity`, with an optional Authorization header. */
+function poke(
+    app: OpenAPIHono,
+    identity: { user: User | null; role: Role | null },
+    authHeader?: string
+): Promise<Response> {
+    return requestAs(app, identity, '/cron/run', pokeInit(authHeader));
+}
+
+/** The request init for a poke, with an optional Authorization header. */
+function pokeInit(authHeader?: string): RequestInit {
     const headers: Record<string, string> = { 'Content-Type': 'application/json' };
     if (authHeader) headers['Authorization'] = authHeader;
-    return app.request('/cron/run', { method: 'POST', headers });
+    return { method: 'POST', headers };
 }
 
 const SECRET = 'test-secret-abc';
@@ -48,10 +54,6 @@ const SECRET = 'test-secret-abc';
 let originalSecret: string | undefined;
 
 beforeEach(async () => {
-    // Reset session mock.
-    mockGetSession.mockReset();
-    mockGetSession.mockResolvedValue(null);
-
     // Reset env secret.
     originalSecret = process.env.ASTROMECH_CRON_SECRET;
     delete process.env.ASTROMECH_CRON_SECRET;
@@ -100,7 +102,7 @@ async function seedDueJob(): Promise<{ ran: boolean }> {
             encodePatchWith(cronTable, {
                 nextRun: new Date('2023-01-01T00:00:00.000Z'),
                 lock: null,
-            }) as unknown as Updateable<DB['_astromech_cron']>
+            })
         )
         .where('name', '=', 'probe')
         .execute();
@@ -120,7 +122,7 @@ describe('POST /cron/run — auth branches', () => {
         });
 
         const app = makeApp();
-        const res = await poke(app);
+        const res = await poke(app, signedOut);
 
         expect(res.status).toBe(401);
         expect(ran).toBe(false);
@@ -132,7 +134,7 @@ describe('POST /cron/run — auth branches', () => {
         const ref = await seedDueJob();
 
         const app = makeApp();
-        const res = await poke(app, `Bearer ${SECRET}`);
+        const res = await poke(app, signedOut, `Bearer ${SECRET}`);
 
         expect(res.status).toBe(200);
         const body = (await res.json()) as { success: boolean };
@@ -153,40 +155,44 @@ describe('POST /cron/run — auth branches', () => {
         });
 
         const app = makeApp();
-        const res = await poke(app, 'Bearer wrong-secret');
+        const res = await poke(app, signedOut, 'Bearer wrong-secret');
 
         expect(res.status).toBe(401);
         expect(ran).toBe(false);
     });
 
     it('200 with admin session (no bearer) — due handler RUNS', async () => {
-        mockGetSession.mockResolvedValue({
-            user: { id: 'u1', email: 'admin@test.dev' } as never,
-            role: { slug: 'admin', name: 'Admin', permissions: [], isBuiltIn: true },
-            session: { id: 's1', userId: 'u1' } as never,
+        const admin = await currentServices.users.create({
+            data: { email: 'admin@test.dev', name: 'Admin', role: 'admin' },
         });
 
         const ref = await seedDueJob();
 
         const app = makeApp();
-        const res = await poke(app); // no auth header → falls through to session check
+        // No auth header, so the route falls through to the session check.
+        const res = await poke(app, { user: admin, role: adminRole });
 
         expect(res.status).toBe(200);
         expect(ref.ran).toBe(true);
     });
 
-    it('bearer path succeeds even when getSession returns null', async () => {
+    it('bearer path succeeds without resolving a session', async () => {
         process.env.ASTROMECH_CRON_SECRET = SECRET;
-        // getSession is already mocked to return null in beforeEach.
 
         const ref = await seedDueJob();
 
+        // A scope with no identity: resolving the session would fill `user`.
+        const request = new Request(
+            'http://localhost/cron/run',
+            pokeInit(`Bearer ${SECRET}`)
+        );
+        const scope: RequestScope = { request };
         const app = makeApp();
-        const res = await poke(app, `Bearer ${SECRET}`);
+        const res = await runInRequestScope(scope, async () => app.fetch(request));
 
         expect(res.status).toBe(200);
         expect(ref.ran).toBe(true);
-        // Bearer path must NOT have called getSession.
-        expect(mockGetSession).not.toHaveBeenCalled();
+        // Bearer path must NOT have resolved a session.
+        expect(scope.user).toBeUndefined();
     });
 });

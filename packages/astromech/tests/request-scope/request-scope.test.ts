@@ -7,7 +7,7 @@
  */
 
 import type { User } from '@/types/index';
-import { adminRole } from '@tests/fixtures';
+import { adminRole, makeUser } from '@tests/fixtures';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { getSession } from '@/auth/session';
 import {
@@ -17,25 +17,11 @@ import {
     runInRequestScope,
 } from '@/request-scope/request-scope';
 
+// The one session mock in the suite: whether a session resolve happens, and
+// how often, is the behaviour under test. Elsewhere `requestAs` seeds identity.
 vi.mock('@/auth/session', () => ({ getSession: vi.fn() }));
 
 const mockGetSession = vi.mocked(getSession);
-
-function makeUser(id: string): User {
-    return {
-        id,
-        email: `${id}@test.dev`,
-        name: id,
-        emailVerified: true,
-        image: null,
-        locale: 'en',
-        locales: ['en'],
-        fields: {},
-        role: 'admin',
-        createdAt: new Date(0),
-        updatedAt: new Date(0),
-    };
-}
 
 /** A promise plus its resolver, so tests can order the interleaving by hand. */
 function deferred(): { promise: Promise<void>; resolve: () => void } {
@@ -81,7 +67,7 @@ describe('request context', () => {
     });
 
     it('resolves identity on the first ask and reuses it for the rest', async () => {
-        const user = makeUser('a');
+        const user = makeUser({ id: 'a' });
         signIn(user);
 
         await runInRequestScope({ request: request() }, async () => {
@@ -105,7 +91,7 @@ describe('request context', () => {
     });
 
     it('takes a seeded user without resolving one', async () => {
-        const user = makeUser('a');
+        const user = makeUser({ id: 'a' });
 
         const seen = await runInRequestScope(
             { request: request(), user, role: adminRole },
@@ -120,8 +106,8 @@ describe('request context', () => {
     });
 
     it("keeps concurrent requests from seeing each other's user", async () => {
-        const userA = makeUser('a');
-        const userB = makeUser('b');
+        const userA = makeUser({ id: 'a' });
+        const userB = makeUser({ id: 'b' });
 
         // Hand-ordered interleaving: A suspends, B establishes ITS identity
         // while A is suspended, then A resumes and reads again. Under the old
@@ -159,8 +145,8 @@ describe('request context', () => {
     });
 
     it('restores the outer context after a nested one returns', async () => {
-        const outer = makeUser('outer');
-        const inner = makeUser('inner');
+        const outer = makeUser({ id: 'outer' });
+        const inner = makeUser({ id: 'inner' });
 
         await runInRequestScope(
             { request: request(), user: outer, role: null },

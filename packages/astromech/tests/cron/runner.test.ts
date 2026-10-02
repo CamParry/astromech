@@ -1,35 +1,67 @@
 /**
- * Tests for the cron due-evaluator: onTick / runDue.
- *
- * Timestamp note: `_astromech_cron` timestamps are ISO-TEXT (decoded to `Date`).
- * Croner returns whole-minute boundaries, so for nextRun comparisons we compare
- * at second resolution (truncate ms) to be safe.
+ * The cron due-evaluator, `onTick` and `runDue`, on a real `_astromech_cron`
+ * table. A test puts a job's row in the state it needs with `setCronRow` and
+ * reads it back with `cronRow`; the table has no read path of its own.
  */
+
 import type { CronRow } from '@/database/tables';
-import type { DB } from '@/database/types';
-import type { Kysely, Updateable } from 'kysely';
-import { createTestDb, makeTestConfig, setupTestConfig } from '@tests/harness';
-import { Cron } from 'croner';
+import {
+    createTestDb,
+    makeTestConfig,
+    resetRuntime,
+    setupTestConfig,
+} from '@tests/harness';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { systemAppContext } from '@/app-context/app-context';
 import { registerCronJob } from '@/cron/registry';
-import { cronRepository } from '@/cron/repository';
 import { onTick, runDue } from '@/cron/runner';
 import { decodeWith, encodePatchWith } from '@/database/codec';
+import { getDb } from '@/database/registry';
 import { cronTable } from '@/database/tables';
-import { globals } from '@/registry';
 
-// Truncate to second resolution to match DB storage.
-function toSecond(d: Date): number {
-    return Math.floor(d.getTime() / 1000);
+/** The instant every tick below runs at, unless a test names another. */
+const NOW = new Date('2024-06-01T12:00:00.000Z');
+/** A tick an hour earlier, which seeds a job's row without making it due. */
+const SEED = new Date('2024-06-01T11:00:00.000Z');
+const MINUTE_AGO = new Date('2024-06-01T11:59:00.000Z');
+const MINUTE_ON = new Date('2024-06-01T12:01:00.000Z');
+
+/** Register `name` on `schedule`, and answer how many times it has run. */
+function countedJob(name: string, schedule = '* * * * *'): { runs: number } {
+    const counter = { runs: 0 };
+    registerCronJob({
+        name,
+        schedule,
+        handler: async () => {
+            counter.runs += 1;
+        },
+    });
+    return counter;
 }
 
-/** Assert rows has exactly one element and return it (decoded). */
-function singleRow(rows: CronRow[]): CronRow {
-    expect(rows).toHaveLength(1);
-    const row = rows[0];
-    expect(row).toBeDefined();
-    return row as CronRow;
+/** Write `patch` over the stored row of the job `name`. */
+async function setCronRow(name: string, patch: Partial<CronRow>): Promise<void> {
+    await getDb()
+        .updateTable('_astromech_cron')
+        .set(encodePatchWith(cronTable, patch))
+        .where('name', '=', name)
+        .execute();
+}
+
+/** The stored row of the job `name`, or undefined when it has none. */
+async function cronRow(name: string): Promise<CronRow | undefined> {
+    const row = await getDb()
+        .selectFrom('_astromech_cron')
+        .selectAll()
+        .where('name', '=', name)
+        .executeTakeFirst();
+    return row === undefined ? undefined : decodeWith(cronTable, row);
+}
+
+/** Every stored job name. */
+async function cronNames(): Promise<string[]> {
+    const rows = await getDb().selectFrom('_astromech_cron').select('name').execute();
+    return rows.map((row) => row.name);
 }
 
 beforeEach(async () => {
@@ -37,294 +69,167 @@ beforeEach(async () => {
     setupTestConfig(makeTestConfig());
 });
 
-describe('onTick / runDue', () => {
-    it('1. lazy seed: inserts one row, does not duplicate on second tick, does not overwrite admin-edited schedule', async () => {
-        const now = new Date('2024-06-01T00:00:00.000Z');
+describe('seeding', () => {
+    it('stores a registered job once, enabled, due at its next minute', async () => {
+        countedJob('test-job');
 
-        registerCronJob({
-            name: 'test-job',
+        await onTick(new Date('2024-06-01T00:00:00.000Z'), systemAppContext());
+        await onTick(new Date('2024-06-01T00:00:30.000Z'), systemAppContext());
+
+        expect(await cronNames()).toEqual(['test-job']);
+        expect(await cronRow('test-job')).toMatchObject({
+            enabled: true,
             schedule: '* * * * *',
-            handler: async () => undefined,
+            nextRun: new Date('2024-06-01T00:01:00.000Z'),
         });
-
-        await onTick(now, systemAppContext());
-
-        const db = (await import('@/database/registry')).getDb() as Kysely<DB>;
-        const rawRows = await db.selectFrom('_astromech_cron').selectAll().execute();
-        const row = singleRow(rawRows.map((r) => decodeWith(cronTable, r)));
-        expect(row.name).toBe('test-job');
-        expect(row.enabled).toBe(true);
-        expect(row.schedule).toBe('* * * * *');
-        expect(row.nextRun).toBeInstanceOf(Date);
-        expect(row.nextRun?.getTime()).toBeGreaterThan(now.getTime());
-
-        // Admin edits the schedule between ticks.
-        await db
-            .updateTable('_astromech_cron')
-            .set(
-                encodePatchWith(cronTable, {
-                    schedule: '0 12 * * *',
-                }) as unknown as Updateable<DB['_astromech_cron']>
-            )
-            .where('name', '=', 'test-job')
-            .execute();
-
-        const now2 = new Date('2024-06-01T00:02:00.000Z');
-        await onTick(now2, systemAppContext());
-
-        const rawRows2 = await db.selectFrom('_astromech_cron').selectAll().execute();
-        const row2 = singleRow(rawRows2.map((r) => decodeWith(cronTable, r)));
-        // Admin-edited schedule must survive.
-        expect(row2.schedule).toBe('0 12 * * *');
     });
 
-    it('2. due-eval honors STORED schedule: past nextRun runs handler; future nextRun skips it', async () => {
-        const now = new Date('2024-06-01T12:00:00.000Z');
-        let callCount = 0;
+    it('keeps a schedule edited after seeding', async () => {
+        countedJob('test-job');
+        await onTick(new Date('2024-06-01T00:00:00.000Z'), systemAppContext());
+        await setCronRow('test-job', { schedule: '0 12 * * *' });
 
-        registerCronJob({
-            name: 'test-job',
-            schedule: '* * * * *',
-            handler: async () => {
-                callCount++;
-            },
-        });
+        await onTick(new Date('2024-06-01T00:02:00.000Z'), systemAppContext());
 
-        // Seed the row first.
-        await onTick(new Date('2024-06-01T11:00:00.000Z'), systemAppContext());
-        callCount = 0; // reset after seed tick (it may have run)
+        expect((await cronRow('test-job'))?.schedule).toBe('0 12 * * *');
+    });
+});
 
-        const db = (await import('@/database/registry')).getDb() as Kysely<DB>;
+describe('due evaluation', () => {
+    it.each<{ name: string; patch: Partial<CronRow>; runs: number }>([
+        { name: 'runs a job whose nextRun has passed', patch: {}, runs: 1 },
+        {
+            name: 'skips a job whose nextRun is to come',
+            patch: { nextRun: MINUTE_ON },
+            runs: 0,
+        },
+        { name: 'skips a disabled job', patch: { enabled: false }, runs: 0 },
+        {
+            name: 'reclaims a job whose claim has expired',
+            patch: { lock: MINUTE_AGO },
+            runs: 1,
+        },
+    ])('$name', async ({ patch, runs }) => {
+        const job = countedJob('test-job');
+        await onTick(SEED, systemAppContext());
+        await setCronRow('test-job', { nextRun: MINUTE_AGO, lock: null, ...patch });
 
-        // Set nextRun in the past → should run.
-        const past = new Date(now.getTime() - 60_000);
-        await db
-            .updateTable('_astromech_cron')
-            .set(
-                encodePatchWith(cronTable, {
-                    nextRun: past,
-                    lock: null,
-                }) as unknown as Updateable<DB['_astromech_cron']>
-            )
-            .where('name', '=', 'test-job')
-            .execute();
+        await onTick(NOW, systemAppContext());
 
-        await onTick(now, systemAppContext());
-        expect(callCount).toBe(1);
-
-        // Set nextRun in the future → should NOT run.
-        callCount = 0;
-        const future = new Date(now.getTime() + 60_000);
-        await db
-            .updateTable('_astromech_cron')
-            .set(
-                encodePatchWith(cronTable, {
-                    nextRun: future,
-                    lock: null,
-                }) as unknown as Updateable<DB['_astromech_cron']>
-            )
-            .where('name', '=', 'test-job')
-            .execute();
-
-        await onTick(now, systemAppContext());
-        expect(callCount).toBe(0);
+        expect(job.runs).toBe(runs);
     });
 
-    it('3. disabled jobs are skipped', async () => {
-        const now = new Date('2024-06-01T12:00:00.000Z');
-        let callCount = 0;
-
-        registerCronJob({
-            name: 'test-job',
-            schedule: '* * * * *',
-            handler: async () => {
-                callCount++;
-            },
+    it('runs a missed job once, with no backfill, and moves its nextRun on', async () => {
+        const job = countedJob('test-job');
+        await onTick(SEED, systemAppContext());
+        await setCronRow('test-job', {
+            nextRun: new Date('2024-01-01T00:00:00.000Z'),
+            lock: null,
         });
 
-        // Seed the row.
-        await onTick(new Date('2024-06-01T11:00:00.000Z'), systemAppContext());
+        await onTick(NOW, systemAppContext());
+        await onTick(NOW, systemAppContext());
 
-        const db = (await import('@/database/registry')).getDb() as Kysely<DB>;
-
-        // Make it due but disabled.
-        const past = new Date(now.getTime() - 60_000);
-        await db
-            .updateTable('_astromech_cron')
-            .set(
-                encodePatchWith(cronTable, {
-                    nextRun: past,
-                    enabled: false,
-                    lock: null,
-                }) as unknown as Updateable<DB['_astromech_cron']>
-            )
-            .where('name', '=', 'test-job')
-            .execute();
-
-        callCount = 0;
-        await onTick(now, systemAppContext());
-        expect(callCount).toBe(0);
+        expect(job.runs).toBe(1);
+        expect((await cronRow('test-job'))?.nextRun).toEqual(MINUTE_ON);
     });
 
-    it('4. edited schedule takes effect on next tick recompute', async () => {
-        const now = new Date('2024-06-01T12:00:00.000Z');
-
-        registerCronJob({
-            name: 'test-job',
-            schedule: '* * * * *',
-            handler: async () => undefined,
+    it('recomputes nextRun from a schedule edited since the last run', async () => {
+        countedJob('test-job');
+        await onTick(NOW, systemAppContext());
+        await setCronRow('test-job', {
+            schedule: '0 0 * * *',
+            nextRun: MINUTE_AGO,
+            lock: null,
         });
 
-        // First tick: seed + run (nextRun is computed from '* * * * *').
-        await onTick(now, systemAppContext());
+        await onTick(NOW, systemAppContext());
 
-        const db = (await import('@/database/registry')).getDb() as Kysely<DB>;
-
-        // Admin changes schedule to daily midnight, and forces it due.
-        const past = new Date(now.getTime() - 60_000);
-        await db
-            .updateTable('_astromech_cron')
-            .set(
-                encodePatchWith(cronTable, {
-                    schedule: '0 0 * * *',
-                    nextRun: past,
-                    lock: null,
-                }) as unknown as Updateable<DB['_astromech_cron']>
-            )
-            .where('name', '=', 'test-job')
-            .execute();
-
-        await onTick(now, systemAppContext());
-
-        const rawRows = await db.selectFrom('_astromech_cron').selectAll().execute();
-        const row = singleRow(rawRows.map((r) => decodeWith(cronTable, r)));
-
-        // nextRun must have been recomputed using the new '0 0 * * *' schedule.
-        const expectedNext = new Cron('0 0 * * *', { timezone: 'UTC' }).nextRun(now);
-        expect(expectedNext).not.toBeNull();
-        expect(toSecond(row.nextRun as Date)).toBe(toSecond(expectedNext as Date));
+        expect((await cronRow('test-job'))?.nextRun).toEqual(
+            new Date('2024-06-02T00:00:00.000Z')
+        );
     });
 
-    it('5. DB lock prevents double-fire (concurrent runDue)', async () => {
-        const now = new Date('2024-06-01T12:00:00.000Z');
-        let callCount = 0;
+    it('reads its schedule in the configured timezone', async () => {
+        setupTestConfig({ ...makeTestConfig(), timezone: 'America/New_York' });
+        countedJob('test-job', '0 0 * * *');
 
-        registerCronJob({
-            name: 'test-job',
-            schedule: '* * * * *',
-            handler: async () => {
-                callCount++;
-            },
-        });
+        await onTick(NOW, systemAppContext());
 
-        // Seed + make it due.
-        await runDue(new Date('2024-06-01T11:00:00.000Z'), systemAppContext());
-        callCount = 0;
+        // Midnight in New York (UTC-4 in June), not midnight UTC.
+        expect((await cronRow('test-job'))?.nextRun).toEqual(
+            new Date('2024-06-02T04:00:00.000Z')
+        );
+    });
+});
 
-        const db = (await import('@/database/registry')).getDb() as Kysely<DB>;
-        const past = new Date(now.getTime() - 60_000);
-        await db
-            .updateTable('_astromech_cron')
-            .set(
-                encodePatchWith(cronTable, {
-                    nextRun: past,
-                    lock: null,
-                }) as unknown as Updateable<DB['_astromech_cron']>
-            )
-            .where('name', '=', 'test-job')
-            .execute();
+describe('claims', () => {
+    it('fires a due job once across two concurrent passes', async () => {
+        const job = countedJob('test-job');
+        await runDue(SEED, systemAppContext());
+        await setCronRow('test-job', { nextRun: MINUTE_AGO, lock: null });
 
-        // Two concurrent passes — only one should win the CAS claim.
         await Promise.all([
-            runDue(now, systemAppContext()),
-            runDue(now, systemAppContext()),
+            runDue(NOW, systemAppContext()),
+            runDue(NOW, systemAppContext()),
         ]);
 
-        expect(callCount).toBe(1);
+        expect(job.runs).toBe(1);
     });
 
-    it('6. overlap guard: second onTick skips when first is still running', async () => {
-        let callCount = 0;
+    it('records nothing for a job whose claim another tick holds', async () => {
+        const job = countedJob('test-job');
+        await runDue(SEED, systemAppContext());
+        await setCronRow('test-job', { nextRun: MINUTE_AGO, lock: MINUTE_ON });
 
+        await runDue(NOW, systemAppContext());
+
+        expect(job.runs).toBe(0);
+        expect(await cronRow('test-job')).toMatchObject({
+            nextRun: MINUTE_AGO,
+            lock: MINUTE_ON,
+            lastRun: null,
+        });
+    });
+
+    it('skips a whole tick while an earlier one is still running', async () => {
+        let release = (): void => undefined;
+        const released = new Promise<void>((resolve) => {
+            release = resolve;
+        });
+        let started = (): void => undefined;
+        const running = new Promise<void>((resolve) => {
+            started = resolve;
+        });
         registerCronJob({
-            name: 'test-job',
+            name: 'slow-job',
             schedule: '* * * * *',
             handler: async () => {
-                callCount++;
+                started();
+                await released;
             },
         });
+        await onTick(SEED, systemAppContext());
+        await setCronRow('slow-job', { nextRun: MINUTE_AGO, lock: null });
 
-        const now = new Date('2024-06-01T12:00:00.000Z');
+        const first = onTick(NOW, systemAppContext());
+        await running;
+        // A job the second tick would seed, were it not skipped.
+        countedJob('late-job');
+        await onTick(NOW, systemAppContext());
+        const seededWhileRunning = await cronRow('late-job');
+        release();
+        await first;
 
-        // Simulate a tick already running.
-        globals().cronTickRunning = true;
-
-        await onTick(now, systemAppContext());
-        expect(callCount).toBe(0);
-
-        // Clean up.
-        globals().cronTickRunning = false;
+        expect(seededWhileRunning).toBeUndefined();
     });
+});
 
-    it('7. fresh lock blocks; expired lock reclaims', async () => {
-        const now = new Date('2024-06-01T12:00:00.000Z');
-        let callCount = 0;
-
-        registerCronJob({
-            name: 'test-job',
-            schedule: '* * * * *',
-            handler: async () => {
-                callCount++;
-            },
-        });
-
-        // Seed.
-        await runDue(new Date('2024-06-01T11:00:00.000Z'), systemAppContext());
-        callCount = 0;
-
-        const db = (await import('@/database/registry')).getDb() as Kysely<DB>;
-        const past = new Date(now.getTime() - 60_000);
-
-        // Set lock to FUTURE expiry (claim active) → should NOT run.
-        const futureLock = new Date(now.getTime() + 60_000);
-        await db
-            .updateTable('_astromech_cron')
-            .set(
-                encodePatchWith(cronTable, {
-                    nextRun: past,
-                    lock: futureLock,
-                }) as unknown as Updateable<DB['_astromech_cron']>
-            )
-            .where('name', '=', 'test-job')
-            .execute();
-
-        await onTick(now, systemAppContext());
-        expect(callCount).toBe(0);
-
-        // Set lock to PAST expiry (stale claim) → should reclaim and run.
-        const pastLock = new Date(now.getTime() - 60_000);
-        await db
-            .updateTable('_astromech_cron')
-            .set(
-                encodePatchWith(cronTable, {
-                    nextRun: past,
-                    lock: pastLock,
-                }) as unknown as Updateable<DB['_astromech_cron']>
-            )
-            .where('name', '=', 'test-job')
-            .execute();
-
-        await onTick(now, systemAppContext());
-        expect(callCount).toBe(1);
-    });
-
-    it('8. handler throw: onTick resolves, console.error called, nextRun advanced, lock cleared', async () => {
-        const now = new Date('2024-06-01T12:00:00.000Z');
-
+describe('a failing job', () => {
+    it('logs the failure, and still releases its claim and moves nextRun on', async () => {
         const consoleError = vi
             .spyOn(console, 'error')
             .mockImplementation(() => undefined);
-
         registerCronJob({
             name: 'test-job',
             schedule: '* * * * *',
@@ -332,159 +237,31 @@ describe('onTick / runDue', () => {
                 throw new Error('boom');
             },
         });
+        await runDue(SEED, systemAppContext());
+        await setCronRow('test-job', { nextRun: MINUTE_AGO, lock: null });
 
-        // Seed + make due.
-        await runDue(new Date('2024-06-01T11:00:00.000Z'), systemAppContext());
-        const db = (await import('@/database/registry')).getDb() as Kysely<DB>;
-        const past = new Date(now.getTime() - 60_000);
-        await db
-            .updateTable('_astromech_cron')
-            .set(
-                encodePatchWith(cronTable, {
-                    nextRun: past,
-                    lock: null,
-                }) as unknown as Updateable<DB['_astromech_cron']>
-            )
-            .where('name', '=', 'test-job')
-            .execute();
+        await expect(onTick(NOW, systemAppContext())).resolves.toBeUndefined();
 
-        // Must not throw.
-        await expect(onTick(now, systemAppContext())).resolves.toBeUndefined();
-
-        // console.error was called with the job name.
         expect(consoleError).toHaveBeenCalledWith(
             expect.stringContaining('test-job'),
             expect.any(Error)
         );
-
-        // Row: lock cleared, nextRun advanced.
-        const rawRows = await db.selectFrom('_astromech_cron').selectAll().execute();
-        const row = singleRow(rawRows.map((r) => decodeWith(cronTable, r)));
-        expect(row.lock).toBeNull();
-        expect(row.nextRun).toBeInstanceOf(Date);
-        expect(row.nextRun?.getTime()).toBeGreaterThan(now.getTime());
-
-        consoleError.mockRestore();
-    });
-
-    // The runner reads the resolved config from the config registry, filled at
-    // boot — `await import('virtual:astromech/config')` crashes in the plain-Node
-    // scheduler tick (ERR_UNSUPPORTED_ESM_URL_SCHEME — protocol 'virtual:').
-    describe('config source (no virtual: import)', () => {
-        it('10. throws a clear error when the config registry is unset', async () => {
-            // Clear the registry that setupTestConfig populated in beforeEach.
-            delete globalThis.__astromech?.config;
-
-            registerCronJob({
-                name: 'test-job',
-                schedule: '* * * * *',
-                handler: async () => undefined,
-            });
-
-            await expect(
-                runDue(new Date('2024-06-01T00:00:00.000Z'), systemAppContext())
-            ).rejects.toThrow(/'config' is not configured\. Ensure createAstromech/);
-        });
-
-        it('11. honours the timezone from the runtime config registry', async () => {
-            // Daily-midnight schedule: midnight in a non-UTC zone resolves to a
-            // different absolute instant than midnight UTC, so the seeded nextRun
-            // proves the runner read `timezone` from the registry config.
-            setupTestConfig({ ...makeTestConfig(), timezone: 'America/New_York' });
-
-            const now = new Date('2024-06-01T12:00:00.000Z');
-            registerCronJob({
-                name: 'test-job',
-                schedule: '0 0 * * *',
-                handler: async () => undefined,
-            });
-
-            await onTick(now, systemAppContext());
-
-            const db = (await import('@/database/registry')).getDb() as Kysely<DB>;
-            const rawRows = await db.selectFrom('_astromech_cron').selectAll().execute();
-            const row = singleRow(rawRows.map((r) => decodeWith(cronTable, r)));
-
-            const expectedNext = new Cron('0 0 * * *', {
-                timezone: 'America/New_York',
-            }).nextRun(now);
-            const utcNext = new Cron('0 0 * * *', { timezone: 'UTC' }).nextRun(now);
-
-            expect(expectedNext).not.toBeNull();
-            expect(toSecond(row.nextRun as Date)).toBe(toSecond(expectedNext as Date));
-            // Sanity: the two zones genuinely differ, so this asserts something.
-            expect(toSecond(expectedNext as Date)).not.toBe(toSecond(utcNext as Date));
+        expect(await cronRow('test-job')).toMatchObject({
+            lock: null,
+            nextRun: MINUTE_ON,
         });
     });
+});
 
-    it('9. missed run fires once, no backfill; second tick skips', async () => {
-        const now = new Date('2024-06-01T12:00:00.000Z');
-        let callCount = 0;
+// The runner reads the resolved config from the config registry boot fills,
+// never from `virtual:astromech/config`, which a plain-Node tick cannot import.
+describe('the config source', () => {
+    it('throws a clear error when the config registry is unset', async () => {
+        resetRuntime();
+        countedJob('test-job');
 
-        registerCronJob({
-            name: 'test-job',
-            schedule: '* * * * *',
-            handler: async () => {
-                callCount++;
-            },
-        });
-
-        // Seed + set nextRun far in the past.
-        await runDue(new Date('2024-06-01T11:00:00.000Z'), systemAppContext());
-        callCount = 0;
-
-        const db = (await import('@/database/registry')).getDb() as Kysely<DB>;
-        const veryPast = new Date('2024-01-01T00:00:00.000Z');
-        await db
-            .updateTable('_astromech_cron')
-            .set(
-                encodePatchWith(cronTable, {
-                    nextRun: veryPast,
-                    lock: null,
-                }) as unknown as Updateable<DB['_astromech_cron']>
-            )
-            .where('name', '=', 'test-job')
-            .execute();
-
-        await onTick(now, systemAppContext());
-        expect(callCount).toBe(1);
-
-        // nextRun should have advanced to a future time.
-        const rawRows = await db.selectFrom('_astromech_cron').selectAll().execute();
-        const row = singleRow(rawRows.map((r) => decodeWith(cronTable, r)));
-        expect(row.nextRun?.getTime()).toBeGreaterThan(now.getTime());
-
-        // Second immediate tick — should NOT run again.
-        await onTick(now, systemAppContext());
-        expect(callCount).toBe(1);
-    });
-
-    it('12. a lost claim runs nothing and records nothing', async () => {
-        let callCount = 0;
-        registerCronJob({
-            name: 'test-job',
-            schedule: '* * * * *',
-            handler: async () => {
-                callCount++;
-            },
-        });
-        // Seed the row, then report it due and its claim held elsewhere.
-        await runDue(new Date('2024-06-01T11:00:00.000Z'), systemAppContext());
-        callCount = 0;
-
-        const { due } = cronRepository;
-        const recorded: string[] = [];
-        vi.spyOn(cronRepository, 'due').mockImplementation(() =>
-            due(new Date('2100-01-01T00:00:00.000Z'))
-        );
-        vi.spyOn(cronRepository, 'claim').mockResolvedValue(false);
-        vi.spyOn(cronRepository, 'recordRunAndRelease').mockImplementation((name) => {
-            recorded.push(name);
-            return Promise.resolve();
-        });
-        await runDue(new Date('2024-06-01T12:00:00.000Z'), systemAppContext());
-
-        expect(callCount).toBe(0);
-        expect(recorded).toEqual([]);
+        await expect(
+            runDue(new Date('2024-06-01T00:00:00.000Z'), systemAppContext())
+        ).rejects.toThrow(/'config' is not configured\. Ensure createAstromech/);
     });
 });

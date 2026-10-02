@@ -4,8 +4,8 @@ import type {
     EntryType,
     Field,
     PluginDefinition,
-    StorageDriver,
 } from '@/types/index';
+import { noopStorage } from '@tests/fixtures';
 import { describe, expect, it } from 'vitest';
 import { resolveConfig } from '@/config/resolve';
 import { block, blocks, group, repeater, tab, tabs, text, tree } from '@/fields/builder';
@@ -17,25 +17,6 @@ const driver: DatabaseDriver = {
     },
 };
 
-const storageDriver: StorageDriver = {
-    name: 'noop',
-    async put() {
-        return undefined;
-    },
-    async get() {
-        return null;
-    },
-    async stat() {
-        return null;
-    },
-    async delete() {
-        return undefined;
-    },
-    async list() {
-        return { keys: [] };
-    },
-};
-
 const entryType = (single: string): EntryType => ({
     single,
     plural: `${single}s`,
@@ -44,7 +25,7 @@ const entryType = (single: string): EntryType => ({
 
 const baseConfig = (plugins: PluginDefinition[]): AstromechConfig => ({
     db: driver,
-    storage: storageDriver,
+    storage: noopStorage,
     entries: { post: entryType('Post') },
     plugins,
 });
@@ -116,7 +97,7 @@ describe('resolveConfig plugin entry types', () => {
 describe('resolveConfig flat fields', () => {
     const flatConfig = (): AstromechConfig => ({
         db: driver,
-        storage: storageDriver,
+        storage: noopStorage,
         entries: {
             post: {
                 single: 'Post',
@@ -150,7 +131,7 @@ describe('resolveConfig { main, sidebar } fields shape', () => {
     it('resolves a { main, sidebar } shape through unchanged', () => {
         const resolved = resolveConfig({
             db: driver,
-            storage: storageDriver,
+            storage: noopStorage,
             entries: {
                 post: {
                     single: 'Post',
@@ -172,7 +153,7 @@ describe('resolveConfig { main, sidebar } fields shape', () => {
     it('sidebar defaults to [] when omitted from { main } shape', () => {
         const resolved = resolveConfig({
             db: driver,
-            storage: storageDriver,
+            storage: noopStorage,
             entries: {
                 post: {
                     single: 'Post',
@@ -190,7 +171,7 @@ describe('resolveConfig undefined fields', () => {
     it('resolves to empty { main: [], sidebar: [] } when fields is absent', () => {
         const resolved = resolveConfig({
             db: driver,
-            storage: storageDriver,
+            storage: noopStorage,
             entries: {
                 post: { single: 'Post', plural: 'Posts' },
             },
@@ -204,7 +185,7 @@ describe('resolveConfig structural validation', () => {
     const resolvePost = (fields: Field[]) =>
         resolveConfig({
             db: driver,
-            storage: storageDriver,
+            storage: noopStorage,
             entries: { post: { single: 'Post', plural: 'Posts', fields } },
             plugins: [],
         });
@@ -213,7 +194,7 @@ describe('resolveConfig structural validation', () => {
         expect(() =>
             resolveConfig({
                 db: driver,
-                storage: storageDriver,
+                storage: noopStorage,
                 entries: {
                     post: {
                         single: 'Post',
@@ -230,7 +211,7 @@ describe('resolveConfig structural validation', () => {
         expect(() =>
             resolveConfig({
                 db: driver,
-                storage: storageDriver,
+                storage: noopStorage,
                 entries: {
                     post: {
                         single: 'Post',
@@ -252,7 +233,7 @@ describe('resolveConfig structural validation', () => {
         expect(() =>
             resolveConfig({
                 db: driver,
-                storage: storageDriver,
+                storage: noopStorage,
                 entries: {
                     post: {
                         single: 'Post',
@@ -272,7 +253,7 @@ describe('resolveConfig structural validation', () => {
         expect(() =>
             resolveConfig({
                 db: driver,
-                storage: storageDriver,
+                storage: noopStorage,
                 entries: {
                     post: {
                         single: 'Post',
@@ -303,7 +284,7 @@ describe('resolveConfig structural validation', () => {
         expect(() =>
             resolveConfig({
                 db: driver,
-                storage: storageDriver,
+                storage: noopStorage,
                 entries: {
                     post: {
                         single: 'Post',
@@ -323,7 +304,7 @@ describe('resolveConfig structural validation', () => {
         expect(() =>
             resolveConfig({
                 db: driver,
-                storage: storageDriver,
+                storage: noopStorage,
                 entries: {
                     post: {
                         single: 'Post',
@@ -500,7 +481,7 @@ describe('resolveConfig structural validation', () => {
         expect(() =>
             resolveConfig({
                 db: driver,
-                storage: storageDriver,
+                storage: noopStorage,
                 entries: {
                     post: {
                         single: 'Post',

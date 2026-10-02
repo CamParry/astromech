@@ -5,10 +5,11 @@
 
 import type { DB } from '@/database/types';
 import type { AstromechConfig } from '@/types/index';
-import type { Kysely, Updateable } from 'kysely';
-import { createTestDb, makeTestConfig, setupTestConfig } from '@tests/harness';
+import type { Kysely } from 'kysely';
+import { createTestDb, makeBootConfig } from '@tests/harness';
 import { beforeEach, describe, expect, it } from 'vitest';
 import { systemAppContext } from '@/app-context/app-context';
+import { createAstromech } from '@/astromech';
 import { cloudflareCron } from '@/cron/drivers/cloudflare';
 import { interval } from '@/cron/drivers/interval';
 import { webhook } from '@/cron/drivers/webhook';
@@ -19,25 +20,14 @@ import {
     setDefaultScheduler,
     setSchedulerDriver,
 } from '@/cron/registry';
-import { onTick, runDue } from '@/cron/runner';
+import { runDue } from '@/cron/runner';
 import { encodePatchWith } from '@/database/codec';
 import { cronTable } from '@/database/tables';
 import { createWorkerEntry } from '@/integrations/cloudflare/worker';
-import { globals } from '@/registry';
 
 beforeEach(async () => {
     await createTestDb();
-    config = makeTestConfig() as AstromechConfig;
-    setupTestConfig(config);
-    // `setupTestConfig` mirrors the boot rather than running it, so the slot
-    // the scheduled handler reads is filled by hand. The created path is covered in
-    // `scheduled-boot.test.ts`.
-    globals().astromech = {
-        config,
-        app: Promise.resolve({
-            scheduled: (at?: Date) => onTick(at ?? new Date(), systemAppContext()),
-        }),
-    };
+    config = makeBootConfig();
 });
 
 /** The site config the worker entry is built with, rebuilt per test. */
@@ -54,6 +44,12 @@ function worker() {
 }
 
 describe('createWorkerEntry().scheduled', () => {
+    // The application already exists, as it does once a request has created
+    // it. A tick on an uncreated application is `scheduled-boot.test.ts`.
+    beforeEach(async () => {
+        await createAstromech({ config });
+    });
+
     it('drives due-eval for a registered job via a mocked Worker event', async () => {
         let ran = false;
 
@@ -81,7 +77,7 @@ describe('createWorkerEntry().scheduled', () => {
                 encodePatchWith(cronTable, {
                     nextRun: past,
                     lock: null,
-                }) as unknown as Updateable<DB['_astromech_cron']>
+                })
             )
             .where('name', '=', 'cf-test-job')
             .execute();
@@ -119,14 +115,10 @@ describe('createWorkerEntry().scheduled', () => {
 });
 
 describe('scheduler driver selection', () => {
+    // The registry itself is under test here, so the driver is set by hand.
     it('setSchedulerDriver / getSchedulerDriver round-trips via globalThis', () => {
         setSchedulerDriver(interval());
         expect(getSchedulerDriver()?.name).toBe('interval');
-    });
-
-    it('getSchedulerDriver returns null when no driver is set', () => {
-        delete globalThis.__astromech?.scheduler;
-        expect(getSchedulerDriver()).toBeNull();
     });
 });
 

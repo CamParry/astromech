@@ -9,8 +9,9 @@
  */
 
 import type { DB } from '@/database/types';
-import type { CoreManifestMethod, Role, User } from '@/types/index';
+import type { CoreManifestMethod, Role } from '@/types/index';
 import type { Kysely } from 'kysely';
+import { makeUser } from '@tests/fixtures';
 import {
     contextAs,
     createTestDb,
@@ -114,7 +115,7 @@ describe('the trusted transports', () => {
 describe('the scoped handle', () => {
     /** The tool an editor signed in as `userId` gets for one notifications method. */
     function tool(name: string, userId?: string) {
-        const user = userId === undefined ? null : ({ id: userId } as User);
+        const user = userId === undefined ? null : makeUser({ id: userId });
         const result = buildScopedDispatch(methodNamed(name), contextAs(editor, user));
         if (!result.ok) throw new Error(`expected a tool: ${result.reason}`);
         return result.tool;
