@@ -112,6 +112,40 @@ describe('renderCreateTable', () => {
         );
     });
 
+    // SQLite has no NaN or infinity and the JSON snapshot cannot store them;
+    // SQLite reads a NUL as the end of the statement.
+    it.each([
+        [
+            'NaN',
+            'the default of `posts`.`ratio`',
+            col.real('ratio', { default: Number.NaN }),
+        ],
+        [
+            'Infinity',
+            'the default of `posts`.`ratio`',
+            col.real('ratio', { default: Infinity }),
+        ],
+        [
+            '-Infinity',
+            'the default of `posts`.`ratio`',
+            col.real('ratio', { default: -Infinity }),
+        ],
+        [
+            '"a\\u0000b"',
+            'the default of `posts`.`note`',
+            col.text('note', { default: 'a\0b' }),
+        ],
+        [
+            '"b\\u0000c"',
+            'an enum value of `posts`.`status`',
+            col.enum('status', ['a', 'b\0c']),
+        ],
+    ])('refuses %s as %s, naming it in the error', (value, subject, column) => {
+        expect(() => renderCreateTable(table('posts', [col.id(), column]))).toThrow(
+            `[schema-engine] cannot render ${subject} as SQL: ${value} `
+        );
+    });
+
     it('names FK constraints after `constraintsFor` when given — the rebuild path', () => {
         const rendered = renderCreateTable({ ...child, name: '__new_child' }, 'child');
 

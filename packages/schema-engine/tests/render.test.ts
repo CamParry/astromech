@@ -96,6 +96,27 @@ describe('renderOpStatements', () => {
         ]);
     });
 
+    it('names the real table when refusing a default, on addColumn and on a rebuild', () => {
+        const ratio: SnapshotTable['columns'][number] = {
+            name: 'ratio',
+            type: 'real',
+            notNull: false,
+            primaryKey: false,
+            default: Number.NaN,
+        };
+        const addColumn: TableOp = { kind: 'addColumn', table: 'widgets', column: ratio };
+        const rebuild: TableOp = {
+            kind: 'rebuildTable',
+            table: { ...widgets, columns: [...widgets.columns, ratio] },
+            copy: [{ column: 'id' }],
+        };
+        for (const op of [addColumn, rebuild]) {
+            expect(() => renderOpStatements(op, 'sqlite')).toThrow(
+                'cannot render the default of `widgets`.`ratio` as SQL: NaN '
+            );
+        }
+    });
+
     it('createTable renders the CREATE TABLE then its indexes', () => {
         const op: TableOp = { kind: 'createTable', table: widgets };
         const statements = renderOpStatements(op, 'sqlite');

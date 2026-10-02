@@ -32,10 +32,10 @@ export function renderOpStatements(op: TableOp, dialect: SqlDialect): string[] {
             return [`DROP INDEX \`${op.name}\``];
         case 'createIndex':
             return [renderCreateIndex(op.table, op.index)];
-        case 'addColumn':
-            return [
-                `ALTER TABLE \`${op.table}\` ADD COLUMN ${renderColumnClause(op.column)}`,
-            ];
+        case 'addColumn': {
+            const clause = renderColumnClause(op.column, { table: op.table });
+            return [`ALTER TABLE \`${op.table}\` ADD COLUMN ${clause}`];
+        }
         case 'rebuildTable': {
             const tmpName = `__new_${op.table.name}`;
             const statements: string[] = [
@@ -49,11 +49,11 @@ export function renderOpStatements(op: TableOp, dialect: SqlDialect): string[] {
             if (op.copy.length > 0) {
                 const columns = op.copy.map((c) => `\`${c.column}\``).join(', ');
                 const selects = op.copy
-                    .map((c) =>
-                        c.coalesceDefault !== undefined
-                            ? `COALESCE(\`${c.column}\`, ${renderLiteral(c.coalesceDefault)})`
-                            : `\`${c.column}\``
-                    )
+                    .map((c) => {
+                        if (c.coalesceDefault === undefined) return `\`${c.column}\``;
+                        const subject = `the default of \`${op.table.name}\`.\`${c.column}\``;
+                        return `COALESCE(\`${c.column}\`, ${renderLiteral(c.coalesceDefault, subject)})`;
+                    })
                     .join(', ');
                 statements.push(
                     `INSERT INTO \`${tmpName}\` (${columns}) SELECT ${selects} FROM \`${op.table.name}\``
