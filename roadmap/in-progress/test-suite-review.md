@@ -402,16 +402,23 @@ harness and eight test files and every later stage runs faster for it.
 
 - [ ] Replace the session mock in five files with a `requestAs()` helper over
       the real request scope; keep it only in `request-scope.test.ts`.
-- [ ] Move the admin's own-hook mocks to the client edge, and add one shared
+- [x] Move the admin's own-hook mocks to the client edge, and add one shared
       admin render helper for the provider stack, router and real English
-      strings.
-- [ ] Assistant: one contract suite run against both the fake approvals and
-      the real repository, and stop mocking core and its own repositories.
-- [ ] Backups: build the table from the migration and the context from the
+      strings. `renderAdmin` and its siblings in
+      `packages/admin/tests/_support/render-admin.tsx`; tests assert the real
+      English strings. One wrap remains: `entry-edit-locale-switch.test.tsx`
+      watches `useEntryForm` for a transient partial `seo` group no output
+      shows. Controls are found by `name`, because field labels name no
+      control: [field-labels-name-no-control](../planned/field-labels-name-no-control.md).
+- [x] Assistant: one contract suite run against both the fake approvals and
+      the real repository, and stop mocking core and its own repositories. It now mocks only `ai`'s
+      `streamText`. Its admin tests (`packages/plugins/assistant/tests/admin/`)
+      still mock `astromech/ui` and their own `use-chat`.
+- [x] Backups: build the table from the migration and the context from the
       plugin helper, and fix the `rotate` timestamps. Left after stage 2b: the
       libsql dump and restore tests still use a hand-written runs table, and
       `resolveKeep` replaces `ctx.globals` with a fake.
-- [ ] Assistant onto `createPluginTestApp`: `packages/plugins/assistant/tests/service/sessions.test.ts`,
+- [x] Assistant onto `createPluginTestApp`: `packages/plugins/assistant/tests/service/sessions.test.ts`,
       `loop/run`, `loop/request` and `sessions/repository` mock `astromech`,
       and `deleted-user` builds its own Kysely (needs the assistant's
       migrations in the harness chain).
@@ -423,12 +430,14 @@ harness and eight test files and every later stage runs faster for it.
       `astromech.test`, `scheduled-boot` and `middleware`, and
       `src/transport/cli/config.ts`, which calls `setDb` itself. Keep each one
       that is the behaviour under test; move the rest onto the config.
-- [ ] Plugin structure tests import core internals (`resolvePluginIdentity`,
+- [x] Plugin structure tests import core internals (`resolvePluginIdentity`,
       `resolveAdminResources`, `derivePluginNav`); assert through the
       manifest or the admin output instead.
 - [ ] Fold the copied suites into conformance tables (versions, translation,
       relationships, field validation, definition, atomicity), and the plugin
-      contract tests into one `it.each` over every plugin.
+      contract tests into one `it.each` over every plugin. The plugin half is done:
+      `packages/astromech/tests/_support/plugin-contract.ts`, called from each
+      plugin's `tests/contract.test.ts`.
 - [ ] Inject atomicity failures with a SQLite trigger instead of repository
       spies, and delete the three tests that only check which repository a
       service calls.
@@ -443,7 +452,8 @@ harness and eight test files and every later stage runs faster for it.
       `packages/astromech/tests/content/repository-surface.test.ts`, `packages/astromech/tests/content/shared-helpers.test.ts`, the admin
       `cell-registry` case), fix the admin field-registry leak, rewrite
       `packages/astromech/tests/cron/runner.test.ts` and `method-manifest.test.ts` as tables, and move
-      `permission-match.test.ts` off the retired permission grammar.
+      `permission-match.test.ts` off the retired permission grammar. The admin
+      `cell-registry` case and the field-registry leak are done.
 
 ### Stage 5: missing coverage
 
