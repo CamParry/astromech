@@ -15,8 +15,17 @@
  * render through `renderPluginPage` in
  * `packages/admin/tests/_support/render-admin.tsx`. Every other test file runs
  * as it does without the option.
+ *
+ * `vitest run --coverage` (the plugin's `test:coverage`) measures `src/` and
+ * fails below the `coverageThresholds` the plugin passes: one entry per
+ * top-level directory of its `src/`, plus the files at its root, as core's
+ * config has.
  */
-import type { TestProjectInlineConfiguration, ViteUserConfig } from 'vitest/config';
+import type {
+    TestProjectInlineConfiguration,
+    TestUserConfig,
+    ViteUserConfig,
+} from 'vitest/config';
 import { fileURLToPath } from 'node:url';
 import { defaultExclude } from 'vitest/config';
 import { adminTestAliases } from '../../../admin/tests/_support/vitest-aliases';
@@ -30,6 +39,11 @@ import {
 export type PluginVitestOptions = {
     /** Run the `.test.tsx` files under `tests/admin/` as admin page tests. */
     adminPages?: boolean;
+    /**
+     * Each entry set one point below what it measured. Raise an entry as
+     * coverage rises; never lower one to pass.
+     */
+    coverageThresholds?: NonNullable<TestUserConfig['coverage']>['thresholds'];
 };
 
 const include = ['tests/**/*.test.ts', 'tests/**/*.test.tsx'];
@@ -47,6 +61,18 @@ function fromAdmin(path: string): string {
 
 export function pluginVitestConfig(options: PluginVitestOptions = {}): ViteUserConfig {
     assertNoArgumentsAfterDoubleDash();
+    // Vitest reads `coverage` only from the root config, so both returns below
+    // set it there.
+    // Reports go to `coverage/`, which git ignores.
+    const coverage = {
+        provider: 'v8',
+        include: ['src/**/*.{ts,tsx}'],
+        exclude: ['src/**/*.d.ts'],
+        reporter: ['text-summary', 'json-summary'],
+        ...(options.coverageThresholds === undefined
+            ? {}
+            : { thresholds: options.coverageThresholds }),
+    } satisfies TestUserConfig['coverage'];
     const nodeTest = {
         ...baseTestOptions,
         environment: 'node',
@@ -59,7 +85,7 @@ export function pluginVitestConfig(options: PluginVitestOptions = {}): ViteUserC
     if (options.adminPages !== true) {
         return {
             resolve: { alias: coreAliases() },
-            test: { ...baseRootTestOptions, ...nodeTest },
+            test: { ...baseRootTestOptions, coverage, ...nodeTest },
         };
     }
 
@@ -89,6 +115,10 @@ export function pluginVitestConfig(options: PluginVitestOptions = {}): ViteUserC
         },
     };
     return {
-        test: { ...baseRootTestOptions, projects: [nodeProject, adminPagesProject] },
+        test: {
+            ...baseRootTestOptions,
+            coverage,
+            projects: [nodeProject, adminPagesProject],
+        },
     };
 }

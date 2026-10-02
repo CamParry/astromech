@@ -28,5 +28,61 @@ export default defineConfig({
         hookTimeout: 10_000,
         restoreMocks: true,
         sequence: { shuffle: true },
+        // Reports go to `coverage/`, which git ignores.
+        coverage: {
+            provider: 'v8',
+            include: ['src/**/*.ts'],
+            exclude: ['src/**/*.d.ts'],
+            reporter: ['text-summary', 'json-summary'],
+            // src/ has no directories, so one entry per file, each set one
+            // point below what it measured. Raise an entry as coverage rises;
+            // never lower one to pass.
+            thresholds: {
+                'src/apply.ts': {
+                    lines: 99,
+                    functions: 99,
+                    branches: 84,
+                    statements: 99,
+                },
+                'src/ddl.ts': { lines: 99, functions: 99, branches: 99, statements: 99 },
+                'src/diff.ts': { lines: 99, functions: 99, branches: 96, statements: 97 },
+                'src/generate.ts': {
+                    lines: 95,
+                    functions: 99,
+                    branches: 83,
+                    statements: 93,
+                },
+                'src/identifiers.ts': {
+                    lines: 99,
+                    functions: 99,
+                    branches: 99,
+                    statements: 99,
+                },
+                'src/index.ts': {
+                    lines: 99,
+                    functions: 99,
+                    branches: 99,
+                    statements: 99,
+                },
+                'src/model.ts': {
+                    lines: 99,
+                    functions: 99,
+                    branches: 99,
+                    statements: 99,
+                },
+                'src/oracle.ts': {
+                    lines: 99,
+                    functions: 99,
+                    branches: 99,
+                    statements: 99,
+                },
+                'src/render.ts': {
+                    lines: 99,
+                    functions: 99,
+                    branches: 99,
+                    statements: 99,
+                },
+            },
+        },
     },
 });
