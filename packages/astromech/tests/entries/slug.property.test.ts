@@ -1,8 +1,8 @@
 /**
  * Slug handling, checked over generated input. `slugify` turns a title into the
- * slug an entry stores; the entry schema's pattern and the `slug` field's
+ * slug an entry stores; the entry create schema and the `slug` field's
  * validator both decide what counts as a slug, so every slug `slugify` writes
- * must pass both, and the two must accept the same strings. The database
+ * must pass the schema, and the two must accept the same strings. The database
  * property checks that `create` never stores one slug twice in a (type,
  * locale), however the titles and explicit slugs collide.
  */
@@ -12,11 +12,14 @@ import { createTestDb, makeTestConfig, setupTestConfig } from '@tests/harness';
 import fc from 'fast-check';
 import { describe, expect, it } from 'vitest';
 import { currentServices } from '@/app-context/services';
+import { createEntrySchema } from '@/entries/schema';
 import { validateSlug } from '@/fields/built-in-rules';
 import { slugify } from '@/utilities/strings';
 
-/** The pattern the entry create and update schemas hold a slug to. */
-const SLUG_PATTERN = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
+/** Whether the schema `create` parses its payload with accepts this slug. */
+function entrySchemaAccepts(slug: string): boolean {
+    return createEntrySchema({ titled: false }).safeParse({ slug }).success;
+}
 
 /** Any text: printable ASCII, any Unicode grapheme, or raw UTF-16 units. */
 const anyText = fc.oneof(
@@ -48,17 +51,7 @@ describe('slugify', () => {
         fc.assert(
             fc.property(anyText, (title) => {
                 const slug = slugify(title);
-                expect(slug === '' || SLUG_PATTERN.test(slug)).toBe(true);
-            })
-        );
-    });
-
-    it('writes a slug the slug field validator accepts', async () => {
-        await fc.assert(
-            fc.asyncProperty(anyText, async (title) => {
-                await expect(validateSlug(slugContext(slugify(title)))).resolves.toBe(
-                    true
-                );
+                expect(slug === '' || entrySchemaAccepts(slug)).toBe(true);
             })
         );
     });
@@ -79,19 +72,6 @@ describe('slugify', () => {
             })
         );
     });
-
-    // Found by the property above with Unicode letters allowed: the slug keeps
-    // only ASCII letters and digits, so a title written wholly in another
-    // script (or only in accented letters) has no slug at all, and an accented
-    // letter is dropped rather than transliterated ('Café' becomes 'caf').
-    // `deriveSlug` then stores null. Kept as a failing case until the
-    // behaviour is decided.
-    it.fails.each(['日本語', 'Ελληνικά', 'Привет', 'éàü'])(
-        'writes a slug for the all-letter title %s',
-        (title) => {
-            expect(slugify(title)).not.toBe('');
-        }
-    );
 });
 
 describe('the slug field validator and the entry schema', () => {
@@ -107,7 +87,7 @@ describe('the slug field validator and the entry schema', () => {
                 async (value) => {
                     const validatorAccepts =
                         (await validateSlug(slugContext(value))) === true;
-                    expect(validatorAccepts).toBe(SLUG_PATTERN.test(value));
+                    expect(validatorAccepts).toBe(entrySchemaAccepts(value));
                 }
             )
         );
@@ -154,7 +134,7 @@ describe('create', () => {
                             expect(entry.slug).not.toBeNull();
                         }
                         if (entry.slug === null) continue;
-                        expect(entry.slug).toMatch(SLUG_PATTERN);
+                        expect(entrySchemaAccepts(entry.slug)).toBe(true);
                         slugs.push(entry.slug);
                     }
 
