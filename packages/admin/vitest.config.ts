@@ -1,33 +1,16 @@
-import { fileURLToPath } from 'node:url';
 import { defaultExclude, defineConfig } from 'vitest/config';
-import { coreAliases } from '../astromech/tests/_support/vitest-aliases';
 import {
     assertNoArgumentsAfterDoubleDash,
     baseRootTestOptions,
     baseTestOptions,
 } from '../astromech/tests/_support/vitest-base-config';
 import { isolatedTests } from './tests/_support/isolated-tests';
+import { adminTestAliases } from './tests/_support/vitest-aliases';
 
 assertNoArgumentsAfterDoubleDash();
 
-function fromHere(path: string): string {
-    return fileURLToPath(new URL(path, import.meta.url));
-}
-
-// Core's aliases resolve core, the schema engine and the admin's published
-// subpaths to source, and map `@tests` to core's shared test support. The admin
-// adds its own `src` as `@/admin`, and shims for the three virtual modules a
-// site's Vite serves it. Vite tries aliases in order and takes the first match,
-// and core's `@` also matches `@/admin/...`, so `@/admin` comes first.
-const alias = {
-    'virtual:astromech/admin-config': fromHere('./tests/_support/admin-config-shim.ts'),
-    'virtual:astromech/admin-icons': fromHere('./tests/_support/admin-icons-shim.ts'),
-    'virtual:astromech/plugins/components': fromHere(
-        './tests/_support/plugins-components-shim.ts'
-    ),
-    '@/admin': fromHere('./src'),
-    ...coreAliases(),
-};
+// Core's aliases plus the admin's `@/admin` and its virtual-module shims.
+const alias = adminTestAliases();
 
 const include = ['tests/**/*.test.ts', 'tests/**/*.test.tsx'];
 

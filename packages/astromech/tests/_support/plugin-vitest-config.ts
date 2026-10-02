@@ -19,6 +19,7 @@
 import type { TestProjectInlineConfiguration, ViteUserConfig } from 'vitest/config';
 import { fileURLToPath } from 'node:url';
 import { defaultExclude } from 'vitest/config';
+import { adminTestAliases } from '../../../admin/tests/_support/vitest-aliases';
 import { coreAliases } from './vitest-aliases';
 import {
     assertNoArgumentsAfterDoubleDash,
@@ -39,7 +40,7 @@ const adminPageTests = ['tests/admin/**/*.test.tsx'];
 // processes over the six plugin suites.
 const pool = 'threads';
 
-/** A path in the admin package, which owns the shims and the DOM setup. */
+/** A path in the admin package, which owns the DOM setup. */
 function fromAdmin(path: string): string {
     return fileURLToPath(new URL(`../../../admin/${path}`, import.meta.url));
 }
@@ -70,26 +71,11 @@ export function pluginVitestConfig(options: PluginVitestOptions = {}): ViteUserC
             exclude: [...defaultExclude, ...adminPageTests],
         },
     };
-    // The aliases and setup files of `packages/admin/vitest.config.ts`, pointing
-    // at the admin's own files. Vite takes the first alias that matches, and
-    // core's `@` also matches `@/admin/...`, so `@/admin` comes first. Page
-    // tests use no database, so this project has no `globalSetup`.
+    // Set up as `packages/admin/vitest.config.ts` is: the same aliases, and
+    // the admin's DOM setup. Page tests use no database, so this project has
+    // no `globalSetup`.
     const adminPagesProject: TestProjectInlineConfiguration = {
-        resolve: {
-            alias: {
-                'virtual:astromech/admin-config': fromAdmin(
-                    'tests/_support/admin-config-shim.ts'
-                ),
-                'virtual:astromech/admin-icons': fromAdmin(
-                    'tests/_support/admin-icons-shim.ts'
-                ),
-                'virtual:astromech/plugins/components': fromAdmin(
-                    'tests/_support/plugins-components-shim.ts'
-                ),
-                '@/admin': fromAdmin('src'),
-                ...coreAliases(),
-            },
-        },
+        resolve: { alias: adminTestAliases() },
         test: {
             ...baseTestOptions,
             name: 'admin-pages',
