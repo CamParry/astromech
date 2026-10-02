@@ -109,6 +109,19 @@ describe('mediaService.delete', () => {
         expect((await mediaService.get({ id: image.id }))?.id).toBe(image.id);
     });
 
+    // The precondition for the open defect below: the injected failure reaches
+    // the row delete, which rolls back, so the failing case fails for the
+    // right reason.
+    it('keeps the row when the row delete fails', async () => {
+        const image = await uploadImageWithVariants();
+        const stopFailing = await failWritesTo(mediaTable, 'delete');
+
+        await expect(mediaService.delete({ id: image.id })).rejects.toThrow('boom');
+        await stopFailing();
+
+        expect((await mediaService.get({ id: image.id }))?.id).toBe(image.id);
+    });
+
     // Defect: `delete` removes the files before the row's transaction runs, so
     // when the row delete fails the item survives with its original gone, and
     // every read of it serves a missing file. Deleting the files after the row
