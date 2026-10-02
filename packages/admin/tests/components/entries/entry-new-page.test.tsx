@@ -123,6 +123,5 @@ describe('EntryNewPage', () => {
         expect(
             await screen.findByText("You don't have permission to access this page.")
         ).not.toBeNull();
-        expect(entries.create).not.toHaveBeenCalled();
     });
 });

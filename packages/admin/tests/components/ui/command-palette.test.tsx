@@ -35,12 +35,19 @@ vi.mock('astromech/fetch', async (importOriginal) => {
     };
 });
 
-// The shim's config plus a plugin with two nav pages, one behind a permission.
+// The shim's config plus a second site entry type and a plugin with two nav
+// pages, one behind a permission.
 vi.mock('virtual:astromech/admin-config', async (importOriginal) => {
-    const real = await importOriginal<{ default: object }>();
+    const real = await importOriginal<{
+        default: { entryTypes: Record<string, object> };
+    }>();
     return {
         default: {
             ...real.default,
+            entryTypes: {
+                ...real.default.entryTypes,
+                page: { single: 'Page', plural: 'Pages' },
+            },
             plugins: [
                 {
                     namespace: 'seo',
@@ -123,6 +130,7 @@ describe('the command palette', () => {
             'Media',
             'Users',
             'Posts',
+            'Pages',
             'SEO: Settings',
             'SEO: Sitemap',
         ]);
