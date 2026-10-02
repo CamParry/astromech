@@ -198,9 +198,11 @@ describe('readChatRequest', () => {
         );
         await fc.assert(
             fc.asyncProperty(chatRequest, unknownKeys, async (request, extra) => {
+                // The request travels as JSON, which turns a generated -0 into 0.
+                const sent: unknown = JSON.parse(JSON.stringify(request));
                 await expect(
                     readChatRequest(post(JSON.stringify({ ...extra, ...request })))
-                ).resolves.toEqual(request);
+                ).resolves.toEqual(sent);
             })
         );
     });
