@@ -42,7 +42,7 @@ export function Sidebar() {
                 </nav>
                 <div className="am-sidebar-nav-divider"></div>
                 {nav.entryTypes.length > 0 && (
-                    <nav className="am-sidebar-nav" aria-label="Entry types">
+                    <nav className="am-sidebar-nav" aria-label={t('nav.entryTypes')}>
                         <SidebarNavList links={nav.entryTypes} />
                     </nav>
                 )}

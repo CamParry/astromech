@@ -14,7 +14,7 @@ import React from 'react';
 import './overview-page.css';
 
 const STATUS_VARIANTS: Record<LengthStatus, BadgeVariant> = {
-    empty: 'neutral',
+    empty: 'default',
     short: 'warning',
     good: 'success',
     long: 'danger',

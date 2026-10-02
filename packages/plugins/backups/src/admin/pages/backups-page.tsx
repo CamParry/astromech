@@ -57,7 +57,7 @@ function rawFetch(plugin: string, path: string, init?: RequestInit): Promise<Res
 }
 
 const STATUS_VARIANTS: Record<BackupRun['status'], BadgeVariant> = {
-    running: 'neutral',
+    running: 'default',
     success: 'success',
     failed: 'danger',
 };

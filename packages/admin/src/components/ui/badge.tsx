@@ -2,7 +2,6 @@ import React from 'react';
 
 type BadgeVariant =
     | 'default'
-    | 'neutral'
     | 'primary'
     | 'success'
     | 'warning'

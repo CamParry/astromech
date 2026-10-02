@@ -55,6 +55,7 @@
         "collapseSection": "Collapse {{section}}",
         "expandSection": "Expand {{section}}",
         "primary": "Primary",
+        "entryTypes": "Content",
         "system": "System",
         "plugins": "Plugins",
         "globals": "Globals",
