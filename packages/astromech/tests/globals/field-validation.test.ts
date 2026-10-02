@@ -1,7 +1,7 @@
 /**
- * A global write runs the same field pipeline an entry write does: the field
- * definitions decide completeness, and the global's own `validate` runs after
- * every field.
+ * A global's completeness follows its publication, as an entry's does, and the
+ * global's own `validate` runs after every field. The rules every resource
+ * shares are in `tests/content/resource-field-validation.test.ts`.
  */
 
 import type { AstromechConfig } from '@/types/index';
@@ -25,15 +25,6 @@ function config(): AstromechConfig {
                 ],
                 validate: async ({ values }) =>
                     values['phone'] === '000' ? 'That phone number is reserved.' : null,
-            },
-            {
-                key: 'banner',
-                label: 'Banner',
-                // statuses off ⇒ every row is live, so every write is complete.
-                statuses: false,
-                fields: [
-                    { name: 'message', type: 'text', label: 'Message', required: true },
-                ],
             },
         ],
     };
@@ -80,12 +71,6 @@ describe('field validation', () => {
                 publishedAt: new Date(Date.now() + 60_000),
             })
         ).rejects.toThrow(ValidationError);
-    });
-
-    it('always requires it on a global with statuses off', async () => {
-        await expect(api.update({ key: 'banner', data: { fields: {} } })).rejects.toThrow(
-            ValidationError
-        );
     });
 });
 

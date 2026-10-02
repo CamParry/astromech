@@ -1,7 +1,7 @@
 /**
- * The media service as a definition: what its catalogue declares, and that
- * `bind(ctx)` records the context's user as the author and the last editor with
- * no request store in play.
+ * The media service as a definition, beyond what every resource's shares
+ * (`tests/content/resource-definition.test.ts`): two methods take binary input,
+ * a sibling call acts as the same user, and an edit records its editor.
  */
 
 import type { Role } from '@/types/index';
@@ -23,20 +23,6 @@ const admin: Role = {
     isBuiltIn: true,
 };
 
-/** The permission each method demands. */
-const ACCESS = {
-    query: 'media:read',
-    get: 'media:read',
-    upload: 'media:upload',
-    update: 'media:update',
-    delete: 'media:delete',
-    replace: 'media:upload',
-    usedBy: 'media:read',
-    versions: 'media:read',
-    getVersion: 'media:read',
-    restoreVersion: 'media:update',
-} as const;
-
 /** The two methods whose input carries a `File`, which JSON cannot express. */
 const BINARY = ['upload', 'replace'];
 
@@ -46,24 +32,10 @@ beforeEach(async () => {
 });
 
 describe('the catalogue', () => {
-    it('holds exactly the MediaService methods, each stamped with its id', () => {
-        expect(Object.keys(mediaDefinition.catalogue).sort()).toEqual(
-            Object.keys(ACCESS).sort()
-        );
-        for (const [key, method] of Object.entries(mediaDefinition.catalogue)) {
-            expect(method.name, key).toBe(`media.${key}`);
-        }
-    });
-
-    it('declares the permission each method demands', () => {
-        for (const [key, access] of Object.entries(ACCESS)) {
-            const method = mediaDefinition.catalogue[key as keyof typeof ACCESS];
-            expect(method.access, key).toBe(access);
-        }
-    });
-
     it('flags the two methods a JSON transport cannot call, and no others', () => {
-        for (const key of Object.keys(ACCESS) as (keyof typeof ACCESS)[]) {
+        for (const key of Object.keys(
+            mediaDefinition.catalogue
+        ) as (keyof typeof mediaDefinition.catalogue)[]) {
             const expected = BINARY.includes(key) ? true : undefined;
             expect(mediaDefinition.catalogue[key].binaryInput, key).toBe(expected);
         }
@@ -71,18 +43,6 @@ describe('the catalogue', () => {
 });
 
 describe('bind', () => {
-    it('records the context’s user as the author, with no request store in play', async () => {
-        const author = await createTestUser(getDb(), { name: 'Author' });
-        const ctx = createAppContext({ user: author, role: admin });
-
-        const uploaded = await mediaDefinition
-            .bind(ctx)
-            .upload({ file: new File(['x'], 'a.txt', { type: 'text/plain' }) });
-
-        expect(uploaded.createdBy).toBe(author.id);
-        expect(uploaded.updatedBy).toBe(author.id);
-    });
-
     it('hands a sibling reached through ctx.media the same user', async () => {
         const author = await createTestUser(getDb(), { name: 'Author' });
         const ctx = createAppContext({ user: author, role: admin });

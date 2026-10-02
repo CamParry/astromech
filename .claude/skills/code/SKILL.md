@@ -147,7 +147,8 @@ off `RESOURCE_CONFIG` in `content/resources.ts`.
 - **A "mirrors …" comment is a defect**, not documentation: share the code, or
   say in one line why this resource differs.
 - **A new resource-wide rule gets a case in
-  `tests/content/resource-conformance.test.ts`**, which runs every check over
+  `tests/content/resource-conformance.test.ts`**, or in the `resource-*.test.ts`
+  table beside it for its topic, each of which runs its checks over
   `RESOURCE_TYPES`.
 
 ## File ordering

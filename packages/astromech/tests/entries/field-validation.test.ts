@@ -1,7 +1,8 @@
 /**
- * Integration tests for the field-processing pipeline wired into the entries
- * service (create + update). Validates coercion, defaults, required, email,
- * and version-snapshot guard.
+ * The field pipeline as entries add to it: completeness follows the status the
+ * row will hold, an email field is checked, and a refused update writes no
+ * version. The rules every resource shares are in
+ * `tests/content/resource-field-validation.test.ts`.
  */
 
 import type { AstromechConfig } from '@/types/index';
@@ -45,16 +46,6 @@ function makeValidationConfig(): AstromechConfig {
                     // Slug field (coerces to slugified string)
                     { name: 'page_slug', type: 'slug', label: 'Page Slug' },
                 ],
-            },
-            // `statuses: false` — no draft concept, so every write is a publish.
-            snippet: {
-                ...base.entries['snippet'],
-                single: 'Snippet',
-                plural: 'Snippets',
-                titleField: false,
-                statuses: false,
-                slug: false,
-                fields: [{ name: 'key', type: 'text', label: 'Key', required: true }],
             },
         },
     };
@@ -239,77 +230,6 @@ describe('validation stage — a status change', () => {
         });
         const un = await api.unpublish({ type: 'post', id: entry.id });
         expect(un.status).toBe('unpublished');
-    });
-});
-
-describe('validation stage — statuses: false', () => {
-    it('rejects a missing required field on create', async () => {
-        await expect(
-            api.create({ type: 'snippet', data: { fields: {} } })
-        ).rejects.toMatchObject({
-            name: 'ValidationError',
-            fields: { key: ['This field is required'] },
-        });
-    });
-
-    it('rejects a missing required field on update', async () => {
-        const entry = await api.create({
-            type: 'snippet',
-            data: { fields: { key: 'k' } },
-        });
-        await expect(
-            api.update({ type: 'snippet', id: entry.id, data: { fields: { key: '' } } })
-        ).rejects.toMatchObject({
-            name: 'ValidationError',
-            fields: { key: ['This field is required'] },
-        });
-    });
-});
-
-describe('create — defaultValue', () => {
-    it('applies defaultValue when field is absent', async () => {
-        const entry = await api.create({
-            type: 'post',
-            data: { title: 'T', fields: { title_text: 'Hello' } },
-        });
-        expect(entry.fields.status_label).toBe('pending');
-    });
-
-    it('does not override an explicit value with the default', async () => {
-        const entry = await api.create({
-            type: 'post',
-            data: { title: 'T', fields: { title_text: 'Hello', status_label: 'active' } },
-        });
-        expect(entry.fields.status_label).toBe('active');
-    });
-});
-
-describe('create — slug validation', () => {
-    it('rejects a slug value that is not already normalized', async () => {
-        await expect(
-            api.create({
-                type: 'post',
-                data: {
-                    title: 'T',
-                    fields: { title_text: 'Hello', page_slug: 'My Title' },
-                },
-            })
-        ).rejects.toMatchObject({
-            name: 'ValidationError',
-            fields: {
-                page_slug: [
-                    "Must be lowercase letters, numbers and hyphens: try 'my-title'",
-                ],
-            },
-        });
-    });
-
-    it('accepts an already-normalized slug', async () => {
-        const entry = await api.create({
-            type: 'post',
-            data: { title: 'T', fields: { title_text: 'Hello', page_slug: 'my-title' } },
-        });
-        expect(entry.fields.page_slug).toBe('my-title');
     });
 });
 

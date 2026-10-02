@@ -1,7 +1,7 @@
 /**
- * The users service as a definition: what its catalogue declares, and that
- * `bind(ctx)` writes the context's user as the author with no request store in
- * play.
+ * The users service as a definition, beyond what every resource's shares
+ * (`tests/content/resource-definition.test.ts`): no method takes binary input or
+ * a session scope, and a sibling call through `ctx.users` acts as the same user.
  */
 
 import type { Role, UsersService } from '@/types/index';
@@ -20,18 +20,6 @@ const admin: Role = {
     isBuiltIn: true,
 };
 
-/** The permission each method demands. */
-const ACCESS: Record<keyof UsersService, string> = {
-    query: 'users:read',
-    get: 'users:read',
-    create: 'users:create',
-    update: 'users:update',
-    delete: 'users:delete',
-    versions: 'users:read',
-    getVersion: 'users:read',
-    restoreVersion: 'users:update',
-};
-
 /** The authorship stamped on one user's content row — `User` does not carry it. */
 async function authorship(
     userId: string
@@ -47,24 +35,10 @@ beforeEach(async () => {
 });
 
 describe('the catalogue', () => {
-    it('holds exactly the UsersService methods, each stamped with its id', () => {
-        expect(Object.keys(usersDefinition.catalogue).sort()).toEqual(
-            Object.keys(ACCESS).sort()
-        );
-        for (const [key, method] of Object.entries(usersDefinition.catalogue)) {
-            expect(method.name, key).toBe(`users.${key}`);
-        }
-    });
-
-    it('declares the permission each method demands', () => {
-        for (const [key, access] of Object.entries(ACCESS)) {
-            const method = usersDefinition.catalogue[key as keyof UsersService];
-            expect(method.access, key).toBe(access);
-        }
-    });
-
     it('declares no binary input and no session scope', () => {
-        for (const key of Object.keys(ACCESS) as (keyof UsersService)[]) {
+        for (const key of Object.keys(
+            usersDefinition.catalogue
+        ) as (keyof UsersService)[]) {
             expect(usersDefinition.catalogue[key].binaryInput, key).toBeUndefined();
             expect(usersDefinition.catalogue[key].sessionScoped, key).toBeUndefined();
         }
@@ -72,20 +46,6 @@ describe('the catalogue', () => {
 });
 
 describe('bind', () => {
-    it('records the context’s user as the author, with no request store in play', async () => {
-        const author = await createTestUser(getDb(), { name: 'Author' });
-        const ctx = createAppContext({ user: author, role: admin });
-
-        const created = await usersDefinition
-            .bind(ctx)
-            .create({ data: { email: 'new@test.dev', name: 'New' } });
-
-        expect(await authorship(created.id)).toEqual({
-            createdBy: author.id,
-            updatedBy: author.id,
-        });
-    });
-
     it('hands a sibling reached through ctx.users the same user', async () => {
         const author = await createTestUser(getDb(), { name: 'Author' });
         const ctx = createAppContext({ user: author, role: admin });
