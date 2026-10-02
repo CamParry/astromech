@@ -3,8 +3,9 @@
  *
  * The Cmd+K palette: Ctrl+K opens it, typing filters the static shortcuts and
  * runs a live search, the arrow keys move the selection, Enter goes to the
- * selected item and Escape closes it. Plugin pages and the live search are
- * limited to what the signed-in user may read.
+ * selected item and Escape closes it. The shortcuts are the pages the sidebar
+ * lists, and they and the live search are limited to what the signed-in user
+ * may read.
  */
 
 import type { Entry, QueryResult } from '@/types/index';
@@ -35,11 +36,12 @@ vi.mock('astromech/fetch', async (importOriginal) => {
     };
 });
 
-// The shim's config plus a second site entry type and a plugin with two nav
-// pages, one behind a permission.
+// The shim's config plus a second site entry type, a global in the nav, an
+// app page behind a permission and a plugin with two nav pages, one behind a
+// permission.
 vi.mock('virtual:astromech/admin-config', async (importOriginal) => {
     const real = await importOriginal<{
-        default: { entryTypes: Record<string, object> };
+        default: { entryTypes: Record<string, object>; globals: Record<string, object> };
     }>();
     return {
         default: {
@@ -48,6 +50,20 @@ vi.mock('virtual:astromech/admin-config', async (importOriginal) => {
                 ...real.default.entryTypes,
                 page: { single: 'Page', plural: 'Pages' },
             },
+            globals: {
+                ...real.default.globals,
+                footer: { label: 'Footer', nav: true },
+            },
+            pages: [
+                {
+                    key: 'reports',
+                    path: 'reports',
+                    label: 'Reports',
+                    componentKey: 'reports',
+                    permission: 'app:reports',
+                    nav: true,
+                },
+            ],
             plugins: [
                 {
                     namespace: 'seo',
@@ -131,6 +147,8 @@ describe('the command palette', () => {
             'Users',
             'Posts',
             'Pages',
+            'Footer',
+            'Reports',
             'SEO: Settings',
             'SEO: Sitemap',
         ]);
@@ -245,14 +263,33 @@ describe('the command palette', () => {
         expect(optionLabels()).not.toContain('Settings');
     });
 
-    // Defect: the sidebar hides Media and Users from a user without
-    // `media:read` or `users:read`, but the palette lists both to everyone, so
-    // the user can pick a page that will refuse them.
-    it.fails('hides Media and Users from a user who cannot read them', async () => {
+    it('hides Media and Users from a user who cannot read them', async () => {
         const view = mountPalette(['entry:post:read']);
         await openPalette(view);
 
         expect(optionLabels()).not.toContain('Media');
         expect(optionLabels()).not.toContain('Users');
+    });
+
+    it('lists the globals and app pages the user may open', async () => {
+        const view = mountPalette(['global:footer:read', 'app:reports']);
+        await openPalette(view);
+
+        expect(optionLabels()).toEqual([
+            'Dashboard',
+            'Posts',
+            'Pages',
+            'Footer',
+            'Reports',
+            'Sitemap',
+        ]);
+    });
+
+    it('drops a global and an app page the user cannot open', async () => {
+        const view = mountPalette(['entry:post:read']);
+        await openPalette(view);
+
+        expect(optionLabels()).not.toContain('Footer');
+        expect(optionLabels()).not.toContain('Reports');
     });
 });

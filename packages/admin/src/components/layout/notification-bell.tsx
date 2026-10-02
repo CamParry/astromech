@@ -135,7 +135,11 @@ export function NotificationBell() {
             <Menu.Trigger
                 render={<button type="button" />}
                 className="am-topbar-action-btn am-notif-bell-trigger"
-                aria-label={t('topbar.notificationsLabel')}
+                aria-label={
+                    count > 0
+                        ? t('topbar.notificationsUnreadLabel', { count })
+                        : t('topbar.notificationsLabel')
+                }
             >
                 <Bell size={17} />
                 {badgeCount !== null && (

@@ -1,4 +1,4 @@
-/** Map an entry status to its Badge variant. Shared by badge-cell and the grid EntryCard. */
+/** Map a badge column's value to a Badge variant, coloured like a status when it is one. */
 export function statusVariant(
     status: string
 ): 'unpublished' | 'published' | 'scheduled' | 'default' {

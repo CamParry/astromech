@@ -124,6 +124,20 @@ describe('DataList', () => {
         await waitFor(() => expect(view.pathname()).toBe('/redirects/r2'));
     });
 
+    it('leaves a row closed when a click ends a text selection in it', async () => {
+        const view = mountList('/redirects');
+        const text = await screen.findByText('/here');
+
+        window.getSelection()?.selectAllChildren(text);
+        fireEvent.click(text);
+        window.getSelection()?.removeAllRanges();
+        // A later sort lands on the list only if the click did not leave it.
+        await userEvent.click(screen.getByRole('button', { name: /From/ }));
+
+        await waitFor(() => expect(view.search()).toEqual({ sort: 'from:asc' }));
+        expect(view.pathname()).toBe('/redirects');
+    });
+
     it('confirms a destructive bulk action, then runs it with the selected ids', async () => {
         const remove = vi.fn(() => Promise.resolve());
         mountList('/redirects', {

@@ -1,6 +1,7 @@
 /**
- * The publication status of one content row, as a badge. Shared by the entry
- * and global edit pages, which read the same `EntryStatus` vocabulary.
+ * The publication status of one content row, as a badge with its English (or
+ * translated) label. Every place the admin or a plugin shows an entry's or a
+ * global's status renders this.
  */
 
 import type { EntryStatus } from 'astromech';
@@ -8,21 +9,16 @@ import React from 'react';
 import { useTranslation } from 'react-i18next';
 import { Badge } from './badge';
 
+const LABEL_KEYS: Record<EntryStatus, string> = {
+    unpublished: 'entries.unpublished',
+    published: 'entries.published',
+    scheduled: 'entries.scheduled',
+};
+
 export type StatusBadgeProps = { status: EntryStatus };
 
+/** One status as a badge, styled by its own badge variant. */
 export function StatusBadge({ status }: StatusBadgeProps): React.ReactElement {
     const { t } = useTranslation();
-    const variant =
-        status === 'published'
-            ? 'success'
-            : status === 'scheduled'
-              ? 'warning'
-              : 'neutral';
-    const label =
-        status === 'published'
-            ? t('entries.published')
-            : status === 'scheduled'
-              ? t('entries.scheduled')
-              : t('entries.unpublished');
-    return <Badge variant={variant}>{label}</Badge>;
+    return <Badge variant={status}>{t(LABEL_KEYS[status])}</Badge>;
 }

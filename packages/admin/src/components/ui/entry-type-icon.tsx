@@ -1,5 +1,5 @@
 import { Database } from 'lucide-react';
-import adminIcons from 'virtual:astromech/admin-icons';
+import { resolveIcon } from '../../utilities/admin-icon';
 
 /**
  * Render an entry type's configured Lucide icon by name, falling back to a
@@ -13,6 +13,6 @@ export function EntryTypeIcon({
     name?: string | undefined;
     size?: number;
 }) {
-    const Icon = name !== undefined ? (adminIcons[name] ?? Database) : Database;
+    const Icon = resolveIcon(name, Database);
     return <Icon size={size} />;
 }

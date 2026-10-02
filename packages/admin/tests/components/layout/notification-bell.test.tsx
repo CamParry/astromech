@@ -59,16 +59,26 @@ afterEach(() => {
     dismissAll.mockReset();
 });
 
+/** The bell, whose name carries the unread count when there is one. */
 function bell(): HTMLElement {
-    return screen.getByRole('button', { name: 'Notifications' });
+    return screen.getByRole('button', { name: /^Notifications/ });
 }
 
 async function openPanel(view: ReturnType<typeof renderAdmin>): Promise<HTMLElement> {
-    await view.user.click(await screen.findByRole('button', { name: 'Notifications' }));
+    await view.user.click(await screen.findByRole('button', { name: /^Notifications/ }));
     return screen.findByRole('menu');
 }
 
 describe('the notification bell', () => {
+    it('names the unread count for a screen reader', async () => {
+        count.mockResolvedValue(12);
+        renderAdmin(<NotificationBell />);
+
+        expect(
+            await screen.findByRole('button', { name: 'Notifications, 12 unread' })
+        ).toBeDefined();
+    });
+
     it('shows the unread count from the server', async () => {
         count.mockResolvedValue(3);
         renderAdmin(<NotificationBell />);
@@ -165,6 +175,7 @@ describe('the notification bell', () => {
         await waitFor(() => {
             expect(bell().textContent).toBe('');
         });
+        expect(screen.getByRole('button', { name: 'Notifications' })).toBe(bell());
         expect(await within(panel).findByText('No notifications')).toBeDefined();
     });
 

@@ -8,7 +8,7 @@ import type { SeoOverview } from '../../types';
 import type { LengthStatus } from '../../utilities/length';
 import type { BadgeVariant } from 'astromech/ui';
 import { useQuery } from '@tanstack/react-query';
-import { Badge, EmptyState, Spinner, Table } from 'astromech/ui';
+import { Badge, EmptyState, Spinner, StatusBadge, Table } from 'astromech/ui';
 import { useAstromechPlugin } from 'astromech/ui/app';
 import React from 'react';
 import './overview-page.css';
@@ -28,7 +28,7 @@ function HealthBadge({ status }: { status: LengthStatus }): React.ReactElement {
 }
 
 export default function SeoOverviewPage(): React.ReactElement {
-    const { plugin, service, t, navigate } = useAstromechPlugin();
+    const { plugin, service, t } = useAstromechPlugin();
     const seoService = service as { getOverview: () => Promise<SeoOverview> };
 
     const { data, isLoading, isError } = useQuery({
@@ -101,25 +101,13 @@ export default function SeoOverviewPage(): React.ReactElement {
                         <Table.Row
                             key={item.id}
                             href={`/entries/${item.type}/${item.id}`}
-                            onClick={() =>
-                                void navigate({
-                                    to: '/entries/$type/$id',
-                                    params: { type: item.type, id: item.id },
-                                })
-                            }
                         >
-                            <Table.Td>{item.title}</Table.Td>
+                            <Table.Td>
+                                <Table.RowLink>{item.title}</Table.RowLink>
+                            </Table.Td>
                             <Table.Td>{item.type}</Table.Td>
                             <Table.Td>
-                                <Badge
-                                    variant={
-                                        item.entryStatus === 'published'
-                                            ? 'published'
-                                            : 'unpublished'
-                                    }
-                                >
-                                    {item.entryStatus}
-                                </Badge>
+                                <StatusBadge status={item.entryStatus} />
                             </Table.Td>
                             <Table.Td>
                                 <HealthBadge status={item.metaTitle.status} />

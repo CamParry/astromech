@@ -96,7 +96,7 @@ describe('resolveTable', () => {
             requires: 'title',
         });
         expect(byKey.status).toMatchObject({
-            kind: 'badge',
+            kind: 'status',
             sortable: false,
             system: true,
             requires: 'statuses',

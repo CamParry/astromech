@@ -58,6 +58,7 @@ const POST: AdminEntryType = {
 afterEach(() => {
     query.mockReset();
     adminConfig.entryTypes = {};
+    adminConfig.locales = ['en'];
 });
 
 function makeEntry(id: string, title: string): Entry {
@@ -74,7 +75,7 @@ function makeEntry(id: string, title: string): Entry {
     } as unknown as Entry;
 }
 
-/** Mount the page at `url` under a real router. */
+/** Mount the page at `url` under a real router, beside the edit page its rows link to. */
 function mountList(url: string, type = 'post') {
     const queryClient = createTestQueryClient();
     queryClient.setQueryData<QueryResult<User>>(queryKeys.users.list({ limit: 'all' }), {
@@ -88,6 +89,7 @@ function mountList(url: string, type = 'post') {
                 validateSearch: validateEntriesListSearch,
                 component: () => <EntriesListPage type={type} />,
             },
+            { path: '/entries/$type/$id', component: () => <p>Entry page</p> },
         ],
         { url, queryClient }
     );
@@ -114,6 +116,18 @@ describe('the entries list', () => {
         );
     });
 
+    it('shows each row’s status in words', async () => {
+        adminConfig.entryTypes = { post: POST };
+        query.mockResolvedValue({
+            data: [makeEntry('e1', 'Hello')],
+            pagination: { page: 1, pages: 1, total: 1, limit: 20 },
+        });
+
+        mountList('/entries/post');
+
+        expect(await screen.findByRole('cell', { name: 'Published' })).toBeTruthy();
+    });
+
     it('writes a sort to the URL and returns to the first page', async () => {
         adminConfig.entryTypes = { post: POST };
         query.mockResolvedValue({
@@ -126,6 +140,32 @@ describe('the entries list', () => {
         await userEvent.click(screen.getByRole('button', { name: /Title/ }));
 
         await waitFor(() => expect(view.search()).toEqual({ sort: 'title:asc' }));
+    });
+
+    it('links each title to its row, in the row’s locale, for a keyboard user', async () => {
+        adminConfig.entryTypes = {
+            post: {
+                ...POST,
+                translatable: true,
+                capabilities: { ...POST.capabilities, translatable: true },
+            },
+        };
+        adminConfig.locales = ['en', 'fr'];
+        query.mockResolvedValue({
+            data: [
+                { ...makeEntry('e1', 'Bonjour'), locale: 'fr', locales: ['en', 'fr'] },
+            ],
+            pagination: { page: 1, pages: 1, total: 1, limit: 20 },
+        });
+        const view = mountList('/entries/post?locale=fr');
+        const link = await screen.findByRole('link', { name: 'Bonjour' });
+
+        expect(link.getAttribute('href')).toBe('/entries/post/e1?locale=fr');
+        link.focus();
+        await userEvent.keyboard('{Enter}');
+
+        await waitFor(() => expect(view.pathname()).toBe('/entries/post/e1'));
+        expect(view.search()).toEqual({ locale: 'fr' });
     });
 
     it('renders the not-found page for a type the config does not declare', async () => {

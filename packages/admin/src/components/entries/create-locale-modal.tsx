@@ -50,7 +50,11 @@ export function CreateLocaleModal({
         limit: 'all',
     });
 
-    const sourceEntries = sourceList?.data ?? [];
+    // An entry that already has the locale is left out: either choice would
+    // write over that locale's row instead of adding one.
+    const sourceEntries = (sourceList?.data ?? []).filter(
+        (entry) => !entry.locales.includes(locale)
+    );
 
     function handleProceed(): void {
         if (mode === 'standalone') {

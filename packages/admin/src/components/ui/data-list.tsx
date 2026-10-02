@@ -7,11 +7,9 @@
 import type { DropdownItem } from './dropdown';
 import type { SortDirection } from './table';
 import type { ListSort } from './use-list-state';
-import { useNavigate } from '@tanstack/react-router';
 import { MoreHorizontalIcon } from 'lucide-react';
 import React from 'react';
 import { useTranslation } from 'react-i18next';
-import { Link } from '../../rendering/cells/link';
 import { Checkbox } from './checkbox';
 import { useConfirm } from './confirm';
 import { useContextMenu } from './context-menu';
@@ -301,22 +299,13 @@ function DataListRow<Row extends { id: string }>({
     onToggle,
 }: DataListRowProps<Row>): React.ReactElement {
     const { t } = useTranslation();
-    const navigate = useNavigate();
     const { onContextMenu, contextMenuNode } = useContextMenu(actions ?? []);
-
-    function handleClick(e: React.MouseEvent<HTMLTableRowElement>): void {
-        if (href === undefined) return;
-        // A link inside the row navigates by itself.
-        if (e.target instanceof Element && e.target.closest('a') !== null) return;
-        void navigate({ to: href });
-    }
 
     return (
         <>
             <Table.Row
                 href={href}
                 selected={selected}
-                onClick={handleClick}
                 {...(actions !== undefined ? { onContextMenu } : {})}
             >
                 {selectable && (
@@ -331,10 +320,8 @@ function DataListRow<Row extends { id: string }>({
                 )}
                 {columns.map((column) => (
                     <Table.Td key={column.key} className={column.className}>
-                        {column.link === true && href !== undefined ? (
-                            <Link to={href} className="am-link">
-                                {column.render(row)}
-                            </Link>
+                        {column.link === true ? (
+                            <Table.RowLink>{column.render(row)}</Table.RowLink>
                         ) : (
                             column.render(row)
                         )}

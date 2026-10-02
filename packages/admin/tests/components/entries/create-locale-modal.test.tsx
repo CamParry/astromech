@@ -110,14 +110,9 @@ async function chooseSource(
     await page.user.click(await screen.findByRole('option', { name: title }));
 }
 
-/**
- * The modal's proceed button. Its label key, `common.continue`, is missing from
- * `en.json`, so it renders the raw key today; the `it.fails` case below holds
- * the English label, and this helper accepts either so the request cases
- * survive the fix.
- */
+/** The modal's proceed button. */
 function continueButton(modal: HTMLElement): HTMLElement {
-    return within(modal).getByRole('button', { name: /^(Continue|common\.continue)$/ });
+    return within(modal).getByRole('button', { name: 'Continue' });
 }
 
 /** The source entries the picker offers, by label. */
@@ -145,10 +140,9 @@ describe('the create-in-locale modal', () => {
         });
     });
 
-    // Offering an entry that already has the locale lets "Translate" send an
-    // empty `update` over that locale's existing row. The picker should leave
-    // such entries out; today it lists every default-locale entry.
-    it.fails('leaves out entries that already have the requested locale', async () => {
+    // Choosing an entry that already has the locale would send `update` over
+    // that locale's existing row instead of adding one.
+    it('leaves out entries that already have the requested locale', async () => {
         const { page, modal } = await mountInFrench([
             makeEntry('e1', 'Hello', ['en']),
             makeEntry('e2', 'Already French', ['en', 'fr']),
@@ -157,9 +151,7 @@ describe('the create-in-locale modal', () => {
         expect(await pickerOptions(page, modal)).toEqual(['Hello']);
     });
 
-    // `common.continue` has no English string, so the button reads
-    // "common.continue". Passes once the key is added to `en.json`.
-    it.fails('labels the proceed button "Continue"', async () => {
+    it('labels the proceed button "Continue"', async () => {
         const { modal } = await mountInFrench([makeEntry('e1', 'Hello', ['en'])]);
 
         expect(within(modal).getByRole('button', { name: 'Continue' })).not.toBeNull();

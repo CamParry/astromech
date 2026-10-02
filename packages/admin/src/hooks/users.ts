@@ -61,7 +61,7 @@ export function userMutations() {
             mutationFn: (data: UserCreateData) => users.create({ data }),
             meta: {
                 invalidates,
-                successMessage: 'users.updated',
+                successMessage: 'users.created',
                 errorMessage: 'users.saveFailed',
             },
         }),

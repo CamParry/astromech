@@ -78,7 +78,7 @@ describe('SeoOverviewPage', () => {
                     id: 'entry_2',
                     title: 'About us',
                     type: 'pages',
-                    entryStatus: 'draft',
+                    entryStatus: 'unpublished',
                     metaTitle: { length: 0, status: 'empty' },
                     metaDescription: { length: 20, status: 'short' },
                 }),
@@ -96,21 +96,21 @@ describe('SeoOverviewPage', () => {
         expect(cellsOf(await findRow('Hello world'))).toEqual([
             'Hello world',
             'posts',
-            'published',
+            'Published',
             'Good',
             'Good',
         ]);
         expect(cellsOf(await findRow('About us'))).toEqual([
             'About us',
             'pages',
-            'draft',
+            'Unpublished',
             'Missing',
             'Short',
         ]);
         expect(cellsOf(await findRow('Launch notes'))).toEqual([
             'Launch notes',
             'posts',
-            'published',
+            'Published',
             'Too long',
             'Good',
         ]);
@@ -152,6 +152,23 @@ describe('SeoOverviewPage', () => {
         const { user, pathname } = renderPage();
 
         await user.click(await findRow('Hello world'));
+
+        await waitFor(() => {
+            expect(pathname()).toBe('/entries/posts/entry_1');
+        });
+    });
+
+    it('opens an entry from the keyboard through its title link', async () => {
+        seo.getOverview.mockResolvedValue({
+            totals: { entries: 1, complete: 1, needsAttention: 0 },
+            items: [overviewItem({ id: 'entry_1', title: 'Hello world' })],
+        } satisfies SeoOverview);
+        const { user, pathname } = renderPage();
+        const link = await screen.findByRole('link', { name: 'Hello world' });
+
+        await user.tab();
+        expect(document.activeElement).toBe(link);
+        await user.keyboard('{Enter}');
 
         await waitFor(() => {
             expect(pathname()).toBe('/entries/posts/entry_1');

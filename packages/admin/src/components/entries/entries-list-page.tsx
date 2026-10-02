@@ -235,6 +235,7 @@ function EntriesListBody({
         key: column.key,
         label: columnLabel(column),
         sortable: column.sortable,
+        link: column.kind === 'title',
         render: (entry) =>
             getCellRenderer(column.kind)({
                 row: entry,
