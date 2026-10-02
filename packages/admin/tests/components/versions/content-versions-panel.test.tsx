@@ -7,12 +7,9 @@
 import type { VersionListItem } from '@/admin/components/versions/content-versions-panel';
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import i18n from 'i18next';
-import { initReactI18next } from 'react-i18next';
-import { beforeAll, describe, expect, it, vi } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import { ConfirmProvider } from '@/admin/components/ui/confirm';
 import { ContentVersionsPanel } from '@/admin/components/versions/content-versions-panel';
-import en from '@/admin/locales/en.json';
 
 function makeVersion(version: number): VersionListItem {
     return {
@@ -20,14 +17,6 @@ function makeVersion(version: number): VersionListItem {
         createdAt: new Date(`2026-01-0${version}T00:00:00Z`),
     };
 }
-
-beforeAll(async () => {
-    await i18n.use(initReactI18next).init({
-        lng: 'en',
-        resources: { en: { translation: en } },
-        interpolation: { escapeValue: false },
-    });
-});
 
 function renderPanel(
     versions: VersionListItem[],

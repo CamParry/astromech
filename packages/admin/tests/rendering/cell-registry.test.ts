@@ -1,35 +1,22 @@
-import type { CellRenderer } from '@/types/index';
+/**
+ * The cell registry as the admin fills it. The registry is shared by every file
+ * in the worker, so this reads the real registrations rather than writing its own.
+ */
+
+import type { CellKind } from '@/types/index';
 import { describe, expect, it } from 'vitest';
-import { getCellRenderer, registerCell } from '@/admin/rendering/cell-registry';
+import { getCellRenderer } from '@/admin/rendering/cell-registry';
+import { BadgeCell } from '@/admin/rendering/cells/badge-cell';
+import { TextCell } from '@/admin/rendering/cells/text-cell';
+import '@/admin/rendering/cells/register-cells';
 
 describe('cell-registry', () => {
     it('returns a registered renderer', () => {
-        const renderer: CellRenderer = () => 'badge';
-        registerCell('badge', renderer);
-        expect(getCellRenderer('badge')).toBe(renderer);
+        expect(getCellRenderer('badge')).toBe(BadgeCell);
     });
 
     it('falls back to the text renderer for unknown kinds', () => {
-        const text: CellRenderer = () => 'text';
-        registerCell('text', text);
-        expect(getCellRenderer('relationship')).toBe(text);
-    });
-
-    it('returns a no-op renderer when nothing is registered', () => {
-        const renderer = getCellRenderer('number');
-        expect(typeof renderer).toBe('function');
-        expect(() =>
-            renderer({
-                row: {} as never,
-                column: {} as never,
-                value: undefined,
-                ctx: {
-                    basePath: '',
-                    configuredLocales: [],
-                    isTrash: false,
-                    authorNames: new Map(),
-                },
-            })
-        ).not.toThrow();
+        // A kind from a stale config, outside the union the type allows.
+        expect(getCellRenderer('sparkline' as CellKind)).toBe(TextCell);
     });
 });

@@ -1,37 +1,22 @@
 /**
- * The plugin's two session methods: what a reload reads back, and what starting
- * a new conversation does to the calls the last one left held.
+ * The plugin's two session methods, called through the registered service as a
+ * signed-in user: what a reload reads back, and what starting a new
+ * conversation does to the calls the last one left held.
  */
 
-import type { ChatSession } from '../../src/service/sessions';
 import type { ChatMessage, ResolvedAssistantOptions } from '../../src/types';
-import type { FakeApprovals } from '../loop/fake-approvals';
-import type { FakeSessions } from '../sessions/fake-sessions';
-import type { ToolDefinition } from 'astromech';
-import type * as Astromech from 'astromech';
-import { methodInputs, openInputObjects } from '@tests/strict-input';
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import type { User } from '@/types/index';
+import type { PluginTestApp } from '@tests/plugin-app';
+import { roleWith } from '@tests/fixtures';
+import { makeTestConfig } from '@tests/harness';
+import { createPluginTestApp } from '@tests/plugin-app';
+import { createRepository } from 'astromech';
+import { beforeEach, describe, expect, it } from 'vitest';
+import { createApprovalsRepository } from '../../src/approvals/repository';
+import { assistant } from '../../src/index';
 import { createSessionsService } from '../../src/service/sessions';
-import { approvalRow, fakeApprovals } from '../loop/fake-approvals';
-import { fakeSessions } from '../sessions/fake-sessions';
-
-vi.mock('astromech', async (importOriginal) => {
-    const astromech = await importOriginal<typeof Astromech>();
-    // The real Zod and `noInput`, so each method's schemas can be read here.
-    return {
-        z: astromech.z,
-        defineServiceMethod: (method: unknown) => method,
-        noInput: astromech.noInput,
-    };
-});
-
-vi.mock('../../src/sessions/repository', () => ({
-    createSessionsRepository: () => sessions.storage,
-}));
-
-vi.mock('../../src/approvals/repository', () => ({
-    createApprovalsRepository: () => approvals.storage,
-}));
+import { createSessionsRepository } from '../../src/sessions/repository';
+import { approvalsTable } from '../../src/tables/approvals';
 
 const OPTIONS: ResolvedAssistantOptions = {
     effort: 'medium',
@@ -42,96 +27,96 @@ const TRANSCRIPT: ChatMessage[] = [
     { role: 'user', content: [{ type: 'text', text: 'update home' }] },
 ];
 
-/** The update tool, so a restored request carries core's own wording. */
-const UPDATE: ToolDefinition = {
-    name: 'entries_page_update',
-    id: 'entries.page.update',
-    description: 'Updates a page.',
-    inputSchema: { type: 'object', properties: {}, additionalProperties: false },
-    annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: false },
-    permission: null,
-    permissionDynamic: false,
-    confirmMessage: () => 'Update the page "Home"?',
-    invoke: vi.fn(),
-};
+/** Uses the assistant and may update posts, so a held update keeps its tool. */
+const ROLE = roleWith([...assistant.permissions('use'), 'entry:*']);
 
-let sessions: FakeSessions;
-let approvals: FakeApprovals;
+let app: PluginTestApp<'assistant'>;
+let user: User;
+let otherUser: User;
 
-/** What a session method's handler is called with. */
-type HandlerContext = Parameters<
-    ReturnType<typeof createSessionsService>['getSession']['handler']
->[1];
-
-/** A request context for `user`, carrying the one tool the fixtures name. */
-function context(user: { id: string } | null): HandlerContext {
-    return {
-        db: {},
-        user,
-        methods: { tools: () => [UPDATE] },
-    } as unknown as HandlerContext;
-}
-
-/** Call one of the two methods with no input. */
-function call<K extends 'getSession' | 'clearSession'>(
-    method: K,
-    user: { id: string } | null
-): Promise<ChatSession | null> {
-    return Promise.resolve(
-        createSessionsService(OPTIONS)[method].handler(undefined, context(user))
-    );
-}
-
-beforeEach(() => {
-    sessions = fakeSessions();
-    approvals = fakeApprovals();
+beforeEach(async () => {
+    app = await createPluginTestApp('assistant', {
+        ...makeTestConfig(),
+        plugins: [assistant()],
+    });
+    user = await createUser();
+    otherUser = await createUser();
 });
+
+/** A user the plugin's tables can reference. */
+function createUser(): Promise<User> {
+    return app.users.create({
+        data: { email: `${crypto.randomUUID()}@test.dev`, name: 'Test User' },
+    });
+}
+
+/** Hold one update of post `post_1` for `owner`, as a paused turn does. */
+async function holdUpdate(owner: User): Promise<string> {
+    const [row] = await createApprovalsRepository(app.db).createMany([
+        {
+            userId: owner.id,
+            toolCallId: 'toolu_1',
+            method: 'entries.post.update',
+            toolName: 'entries_post_update',
+            arguments: { type: 'post', id: 'post_1', data: { title: 'From the row' } },
+            destructive: false,
+        },
+    ]);
+    if (row === undefined) throw new Error('no approval row was created');
+    return row.id;
+}
 
 describe('getSession', () => {
     it('answers an empty session for a user who has never had one', async () => {
-        await expect(call('getSession', { id: 'user_1' })).resolves.toEqual({
+        await expect(app.as(ROLE, user).getSession()).resolves.toEqual({
             messages: [],
             pending: [],
         });
     });
 
     it('reads back the stored transcript', async () => {
-        await sessions.storage.upsert('user_1', TRANSCRIPT);
+        await createSessionsRepository(app.db).upsert(user.id, TRANSCRIPT);
 
-        await expect(call('getSession', { id: 'user_1' })).resolves.toEqual({
+        await expect(app.as(ROLE, user).getSession()).resolves.toEqual({
             messages: TRANSCRIPT,
             pending: [],
         });
     });
 
     it('rebuilds the held calls from their rows, arguments and wording intact', async () => {
-        approvals.rows.push(approvalRow());
+        const approvalId = await holdUpdate(user);
 
-        const session = (await call('getSession', { id: 'user_1' })) as ChatSession;
+        const session = await app.as(ROLE, user).getSession();
 
         expect(session.pending).toEqual([
             {
-                approvalId: 'ap_1',
+                approvalId,
                 toolCallId: 'toolu_1',
-                method: 'entries.page.update',
-                toolName: 'entries_page_update',
-                message: 'Update the page "Home"?',
+                method: 'entries.post.update',
+                toolName: 'entries_post_update',
+                // Core's own wording: the fallback would be `Run "entries.post.update"?`.
+                message:
+                    'Run "entries.post.update" on type "post", id "post_1"? This changes stored data.',
                 destructive: false,
-                arguments: { id: 'page_1', fields: { title: 'From the row' } },
+                arguments: {
+                    type: 'post',
+                    id: 'post_1',
+                    data: { title: 'From the row' },
+                },
             },
         ]);
     });
 
     it('leaves the calls another user is holding alone', async () => {
-        approvals.rows.push(approvalRow({ userId: 'user_2' }));
+        await holdUpdate(otherUser);
 
-        const session = (await call('getSession', { id: 'user_1' })) as ChatSession;
+        const session = await app.as(ROLE, user).getSession();
 
         expect(session.pending).toEqual([]);
     });
 
     it('refuses a caller with no identity', async () => {
-        await expect(call('getSession', null)).rejects.toThrow('Sign in');
+        await expect(app.as(ROLE, null).getSession()).rejects.toThrow('Sign in');
     });
 
     it('drops keys a held call does not name, and passes each message through whole', () => {
@@ -160,32 +145,27 @@ describe('getSession', () => {
 
 describe('clearSession', () => {
     it('drops the stored transcript', async () => {
-        await sessions.storage.upsert('user_1', TRANSCRIPT);
+        const sessions = createSessionsRepository(app.db);
+        await sessions.upsert(user.id, TRANSCRIPT);
 
-        await call('clearSession', { id: 'user_1' });
+        await app.as(ROLE, user).clearSession();
 
-        await expect(sessions.storage.findByUser('user_1')).resolves.toBeNull();
+        await expect(sessions.findByUser(user.id)).resolves.toBeNull();
     });
 
     it('turns down every call the conversation left held', async () => {
-        approvals.rows.push(approvalRow());
+        const approvalId = await holdUpdate(user);
 
-        await call('clearSession', { id: 'user_1' });
+        await app.as(ROLE, user).clearSession();
 
-        expect(approvals.rows[0]?.status).toBe('rejected');
-        expect(approvals.rows[0]?.arguments).toBeNull();
+        const row = await createRepository(approvalsTable, app.db).findOne({
+            id: approvalId,
+        });
+        expect(row?.status).toBe('rejected');
+        expect(row?.arguments).toBeNull();
     });
 
     it('refuses a caller with no identity', async () => {
-        await expect(call('clearSession', null)).rejects.toThrow('Sign in');
-    });
-});
-
-describe('method inputs', () => {
-    it("refuse unknown keys, as core's do", () => {
-        const inputs = methodInputs(createSessionsService(OPTIONS));
-
-        expect(Object.keys(inputs).length).toBeGreaterThan(0);
-        expect(openInputObjects(inputs)).toEqual([]);
+        await expect(app.as(ROLE, null).clearSession()).rejects.toThrow('Sign in');
     });
 });

@@ -8,23 +8,12 @@
  */
 
 import type { DataListBulkAction, DataListColumn } from '@/admin/components/ui/data-list';
-import {
-    createMemoryHistory,
-    createRootRoute,
-    createRoute,
-    createRouter,
-    Outlet,
-    RouterProvider,
-} from '@tanstack/react-router';
-import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
+import { fireEvent, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import i18n from 'i18next';
-import { initReactI18next } from 'react-i18next';
-import { beforeAll, describe, expect, it, vi } from 'vitest';
-import { ConfirmProvider } from '@/admin/components/ui/confirm';
+import { describe, expect, it, vi } from 'vitest';
 import { DataList } from '@/admin/components/ui/data-list';
 import { useListState, validateListSearch } from '@/admin/components/ui/use-list-state';
-import en from '@/admin/locales/en.json';
+import { renderAdmin } from '../../_support/render-admin';
 
 type Redirect = { id: string; from: string; to: string; statusCode: number };
 
@@ -38,14 +27,6 @@ const COLUMNS: DataListColumn<Redirect>[] = [
     { key: 'to', label: 'To', render: (row) => row.to },
     { key: 'statusCode', label: 'Status', render: (row) => String(row.statusCode) },
 ];
-
-beforeAll(async () => {
-    await i18n.use(initReactI18next).init({
-        lng: 'en',
-        resources: { en: { translation: en } },
-        interpolation: { escapeValue: false },
-    });
-});
 
 type ListOptions = {
     rows?: Redirect[];
@@ -85,30 +66,19 @@ function RedirectsList({
     );
 }
 
-/** Mount the list at `url` under a real router, and return the router. */
+/** Mount the list at `url` beside a redirect page its rows link to. */
 function mountList(url: string, options: ListOptions = {}) {
-    const rootRoute = createRootRoute({ component: () => <Outlet /> });
-    const listRoute = createRoute({
-        getParentRoute: () => rootRoute,
-        path: '/redirects',
-        validateSearch: validateListSearch,
-        component: () => <RedirectsList {...options} />,
-    });
-    const editRoute = createRoute({
-        getParentRoute: () => rootRoute,
-        path: '/redirects/$id',
-        component: () => <p>Redirect page</p>,
-    });
-    const router = createRouter({
-        routeTree: rootRoute.addChildren([listRoute, editRoute]),
-        history: createMemoryHistory({ initialEntries: [url] }),
-    });
-    render(
-        <ConfirmProvider>
-            <RouterProvider router={router} />
-        </ConfirmProvider>
+    return renderAdmin(
+        [
+            {
+                path: '/redirects',
+                validateSearch: validateListSearch,
+                component: () => <RedirectsList {...options} />,
+            },
+            { path: '/redirects/$id', component: () => <p>Redirect page</p> },
+        ],
+        { url }
     );
-    return router;
 }
 
 describe('DataList', () => {
@@ -123,29 +93,27 @@ describe('DataList', () => {
     });
 
     it('writes a sort to the URL and returns to the first page', async () => {
-        const router = mountList('/redirects?page=2');
+        const view = mountList('/redirects?page=2');
         await screen.findByText('/old');
 
         await userEvent.click(screen.getByRole('button', { name: /From/ }));
 
-        await waitFor(() =>
-            expect(router.state.location.search).toEqual({ sort: 'from:asc' })
-        );
+        await waitFor(() => expect(view.search()).toEqual({ sort: 'from:asc' }));
     });
 
     it('writes a search to the URL and returns to the first page', async () => {
-        const router = mountList('/redirects?page=2&sort=from:desc');
+        const view = mountList('/redirects?page=2&sort=from:desc');
         await screen.findByText('/old');
 
         fireEvent.change(screen.getByRole('searchbox'), { target: { value: 'old' } });
 
         await waitFor(() =>
-            expect(router.state.location.search).toEqual({ q: 'old', sort: 'from:desc' })
+            expect(view.search()).toEqual({ q: 'old', sort: 'from:desc' })
         );
     });
 
     it('links the row, and opens it on a click anywhere in the row', async () => {
-        const router = mountList('/redirects');
+        const view = mountList('/redirects');
         await screen.findByText('/old');
 
         expect(screen.getByRole('link', { name: '/old' }).getAttribute('href')).toBe(
@@ -153,7 +121,7 @@ describe('DataList', () => {
         );
         await userEvent.click(screen.getByText('/here'));
 
-        await waitFor(() => expect(router.state.location.pathname).toBe('/redirects/r2'));
+        await waitFor(() => expect(view.pathname()).toBe('/redirects/r2'));
     });
 
     it('confirms a destructive bulk action, then runs it with the selected ids', async () => {

@@ -5,32 +5,17 @@
  * the cache invalidation, so the library kept showing files that were gone.
  */
 
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { act, renderHook, screen, waitFor } from '@testing-library/react';
-import i18n from 'i18next';
-import React from 'react';
-import { initReactI18next } from 'react-i18next';
-import { afterEach, beforeAll, describe, expect, it, vi } from 'vitest';
-import { ToastProvider } from '@/admin/components/ui/toast';
+import { act, screen, waitFor } from '@testing-library/react';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import { useBulkDeleteMedia } from '@/admin/hooks/media';
 import { queryKeys } from '@/admin/hooks/use-query-keys';
-import en from '@/admin/locales/en.json';
+import { createTestQueryClient, renderAdminHook } from '../_support/render-admin';
 
 const { deleteMedia } = vi.hoisted(() => ({ deleteMedia: vi.fn() }));
 
 vi.mock('astromech/fetch', () => ({
     astromechUntypedClient: { media: { delete: deleteMedia } },
 }));
-
-beforeAll(async () => {
-    // Toasts are asserted by their rendered text, so real strings are needed;
-    // the SPA's own i18n module pulls in virtual modules, so stand up a bare one.
-    await i18n.use(initReactI18next).init({
-        lng: 'en',
-        resources: { en: { translation: en } },
-        interpolation: { escapeValue: false },
-    });
-});
 
 afterEach(() => {
     deleteMedia.mockReset();
@@ -46,18 +31,12 @@ type Mounted = {
 
 /** Mount the hook over a retry-free client, watching the cache invalidation. */
 function mountHook(): Mounted {
-    const queryClient = new QueryClient({
-        defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
-    });
+    const queryClient = createTestQueryClient();
     const invalidate = vi.spyOn(queryClient, 'invalidateQueries');
     const onSuccess = vi.fn();
 
-    const { result } = renderHook(() => useBulkDeleteMedia({ onSuccess }), {
-        wrapper: ({ children }: { children: React.ReactNode }) => (
-            <QueryClientProvider client={queryClient}>
-                <ToastProvider>{children}</ToastProvider>
-            </QueryClientProvider>
-        ),
+    const { result } = renderAdminHook(() => useBulkDeleteMedia({ onSuccess }), {
+        queryClient,
     });
 
     return {

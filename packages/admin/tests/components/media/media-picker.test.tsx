@@ -6,31 +6,27 @@
  */
 
 import type { Media } from '@/types/index';
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { render, screen } from '@testing-library/react';
-import userEvent from '@testing-library/user-event';
-import i18n from 'i18next';
-import { initReactI18next } from 'react-i18next';
-import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
+import type { UserEvent } from '@testing-library/user-event';
+import { screen } from '@testing-library/react';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import { MediaPicker } from '@/admin/components/media/media-picker';
-import { ToastProvider } from '@/admin/components/ui/toast';
-import en from '@/admin/locales/en.json';
+import { renderWithProviders } from '../../_support/render-admin';
 
-const { mediaQuery, uploadMedia, canUploadMedia } = vi.hoisted(() => ({
+const { mediaQuery, uploadMedia } = vi.hoisted(() => ({
     mediaQuery: vi.fn(),
     uploadMedia: vi.fn(),
-    canUploadMedia: vi.fn(),
 }));
 
-vi.mock('astromech/fetch', () => ({
-    astromechUntypedClient: { media: { query: mediaQuery, upload: uploadMedia } },
-}));
-
-// The picker reads one flag; the barrel re-exports `hasPermission` from here.
-vi.mock('@/admin/hooks/use-permissions', () => ({
-    usePermissions: () => ({ canUploadMedia }),
-    hasPermission: () => false,
-}));
+vi.mock('astromech/fetch', async (importOriginal) => {
+    const real = await importOriginal<{ astromechUntypedClient: object }>();
+    return {
+        ...real,
+        astromechUntypedClient: {
+            ...real.astromechUntypedClient,
+            media: { query: mediaQuery, upload: uploadMedia },
+        },
+    };
+});
 
 function mediaItem(id: string, filename: string): Media {
     return {
@@ -63,24 +59,9 @@ const ITEMS = [
 
 const UPLOAD_ZONE_LABEL = 'Drop files here or click to upload';
 
-beforeAll(async () => {
-    // Controls are found by their labels, so real strings are needed; the SPA's
-    // own i18n module pulls in virtual modules, so stand up a bare one.
-    await i18n.use(initReactI18next).init({
-        lng: 'en',
-        resources: { en: { translation: en } },
-        interpolation: { escapeValue: false },
-    });
-});
-
-beforeEach(() => {
-    canUploadMedia.mockReturnValue(true);
-});
-
 afterEach(() => {
     mediaQuery.mockReset();
     uploadMedia.mockReset();
-    canUploadMedia.mockReset();
 });
 
 type PickerOptions = {
@@ -94,33 +75,25 @@ function renderPicker({
     items = ITEMS,
     canUpload = true,
     selectedIds = [],
-}: PickerOptions = {}): { onPick: ReturnType<typeof vi.fn> } {
-    canUploadMedia.mockReturnValue(canUpload);
+}: PickerOptions = {}): { onPick: ReturnType<typeof vi.fn>; user: UserEvent } {
     mediaQuery.mockResolvedValue({
         data: items,
         pagination: { total: items.length, pages: 1 },
     });
-
-    const queryClient = new QueryClient({
-        defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
-    });
     const onPick = vi.fn();
 
-    render(
-        <QueryClientProvider client={queryClient}>
-            <ToastProvider>
-                <MediaPicker
-                    query={{ q: '', type: 'all', page: 1 }}
-                    onQueryChange={vi.fn()}
-                    selectedIds={selectedIds}
-                    onPick={onPick}
-                    multiple={false}
-                />
-            </ToastProvider>
-        </QueryClientProvider>
+    const { user } = renderWithProviders(
+        <MediaPicker
+            query={{ q: '', type: 'all', page: 1 }}
+            onQueryChange={vi.fn()}
+            selectedIds={selectedIds}
+            onPick={onPick}
+            multiple={false}
+        />,
+        { permissions: canUpload ? ['media:read', 'media:upload'] : ['media:read'] }
     );
 
-    return { onPick };
+    return { onPick, user };
 }
 
 /** Wait out the loading state by finding the first tile. */
@@ -160,8 +133,7 @@ describe('MediaPicker grid', () => {
     });
 
     it('should call onPick with the clicked item', async () => {
-        const user = userEvent.setup();
-        const { onPick } = renderPicker();
+        const { onPick, user } = renderPicker();
         await findTile('dog.png');
 
         await user.click(screen.getByRole('button', { name: 'dog.png' }));

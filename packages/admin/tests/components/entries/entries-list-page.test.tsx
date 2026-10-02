@@ -7,31 +7,14 @@
  * the not-found page.
  */
 
-import type { AuthUser } from '@/admin/context/auth';
 import type { AdminEntryType, Entry, QueryResult, User } from '@/types/index';
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import {
-    createMemoryHistory,
-    createRootRoute,
-    createRoute,
-    createRouter,
-    Outlet,
-    RouterProvider,
-} from '@tanstack/react-router';
-import { render, screen, waitFor } from '@testing-library/react';
+import { screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import i18n from 'i18next';
-import { initReactI18next } from 'react-i18next';
-import { afterEach, beforeAll, describe, expect, it, vi } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import { EntriesListPage } from '@/admin/components/entries/entries-list-page';
-import { ConfirmProvider } from '@/admin/components/ui/confirm';
-import { ToastProvider } from '@/admin/components/ui/toast';
-import { AiContextProvider } from '@/admin/context/ai-context';
-import { AuthProvider, sessionQueryOptions } from '@/admin/context/auth';
 import { queryKeys } from '@/admin/hooks/use-query-keys';
-import en from '@/admin/locales/en.json';
 import { validateEntriesListSearch } from '@/admin/utilities/entry-admin-path';
-import '@/admin/rendering/cells/register-cells';
+import { createTestQueryClient, renderAdmin } from '../../_support/render-admin';
 
 const { query, adminConfig } = vi.hoisted(() => ({
     query: vi.fn(),
@@ -72,14 +55,6 @@ const POST: AdminEntryType = {
     titleField: 'title',
 };
 
-beforeAll(async () => {
-    await i18n.use(initReactI18next).init({
-        lng: 'en',
-        resources: { en: { translation: en } },
-        interpolation: { escapeValue: false },
-    });
-});
-
 afterEach(() => {
     query.mockReset();
     adminConfig.entryTypes = {};
@@ -99,50 +74,23 @@ function makeEntry(id: string, title: string): Entry {
     } as unknown as Entry;
 }
 
-/** Mount the page at `url` under a real router, and return the router. */
+/** Mount the page at `url` under a real router. */
 function mountList(url: string, type = 'post') {
-    const queryClient = new QueryClient({
-        defaultOptions: { queries: { staleTime: 30_000, retry: false } },
-    });
-    queryClient.setQueryData<AuthUser>(sessionQueryOptions.queryKey, {
-        id: 'u1',
-        name: 'Admin',
-        email: 'admin@astromech.dev',
-        image: null,
-        role: 'admin',
-        permissions: ['*'],
-    });
+    const queryClient = createTestQueryClient();
     queryClient.setQueryData<QueryResult<User>>(queryKeys.users.list({ limit: 'all' }), {
         data: [],
         pagination: null,
     });
-
-    const rootRoute = createRootRoute({ component: () => <Outlet /> });
-    const listRoute = createRoute({
-        getParentRoute: () => rootRoute,
-        path: '/entries/$type',
-        validateSearch: validateEntriesListSearch,
-        component: () => <EntriesListPage type={type} />,
-    });
-    const router = createRouter({
-        routeTree: rootRoute.addChildren([listRoute]),
-        history: createMemoryHistory({ initialEntries: [url] }),
-    });
-
-    render(
-        <QueryClientProvider client={queryClient}>
-            <ToastProvider>
-                <AuthProvider>
-                    <ConfirmProvider>
-                        <AiContextProvider>
-                            <RouterProvider router={router} />
-                        </AiContextProvider>
-                    </ConfirmProvider>
-                </AuthProvider>
-            </ToastProvider>
-        </QueryClientProvider>
+    return renderAdmin(
+        [
+            {
+                path: '/entries/$type',
+                validateSearch: validateEntriesListSearch,
+                component: () => <EntriesListPage type={type} />,
+            },
+        ],
+        { url, queryClient }
     );
-    return router;
 }
 
 describe('the entries list', () => {
@@ -172,14 +120,12 @@ describe('the entries list', () => {
             data: [makeEntry('e1', 'Hello')],
             pagination: { page: 2, pages: 3, total: 41, limit: 20 },
         });
-        const router = mountList('/entries/post?page=2');
+        const view = mountList('/entries/post?page=2');
         await screen.findByText('Hello');
 
         await userEvent.click(screen.getByRole('button', { name: /Title/ }));
 
-        await waitFor(() =>
-            expect(router.state.location.search).toEqual({ sort: 'title:asc' })
-        );
+        await waitFor(() => expect(view.search()).toEqual({ sort: 'title:asc' }));
     });
 
     it('renders the not-found page for a type the config does not declare', async () => {

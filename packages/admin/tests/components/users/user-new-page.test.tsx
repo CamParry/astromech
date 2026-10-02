@@ -6,30 +6,15 @@
  * or in the banner, and the page stays put.
  */
 
-import type { AuthUser } from '@/admin/context/auth';
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import {
-    createMemoryHistory,
-    createRootRoute,
-    createRoute,
-    createRouter,
-    Outlet,
-    RouterProvider,
-} from '@tanstack/react-router';
-import { render, screen, waitFor } from '@testing-library/react';
-import userEvent from '@testing-library/user-event';
-import i18n from 'i18next';
-import { initReactI18next } from 'react-i18next';
-import { afterEach, beforeAll, describe, expect, it, vi } from 'vitest';
-import '@/admin/rendering/register-fields';
-import { ToastProvider } from '@/admin/components/ui/toast';
+import type { RenderAdminResult } from '../../_support/render-admin';
+import { screen, waitFor } from '@testing-library/react';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import { UserNewPage } from '@/admin/components/users/user-new-page';
-import { AuthProvider, sessionQueryOptions } from '@/admin/context/auth';
-import en from '@/admin/locales/en.json';
 import { AstromechApiError } from '@/transport/http/client';
+import { renderAdmin } from '../../_support/render-admin';
 
-const { createUser, adminConfig } = vi.hoisted(() => ({
-    createUser: vi.fn<(data: unknown) => Promise<unknown>>(),
+const { users, adminConfig } = vi.hoisted(() => ({
+    users: { create: vi.fn<(params: unknown) => Promise<unknown>>() },
     adminConfig: {
         defaultLocale: 'en',
         locales: ['en'],
@@ -43,73 +28,22 @@ const { createUser, adminConfig } = vi.hoisted(() => ({
 
 vi.mock('virtual:astromech/admin-config', () => ({ default: adminConfig }));
 
-/** `userMutations().create` runs `createUser`; every other row does nothing. */
-vi.mock('@/admin/hooks/use-admin-mutation', () => ({
-    useAdminMutation: (options: { mutationKey: readonly string[] }) => ({
-        mutate: vi.fn(),
-        mutateAsync: (variables: unknown) =>
-            options.mutationKey[1] === 'create'
-                ? createUser(variables)
-                : Promise.resolve(undefined),
-        isPending: false,
-    }),
-}));
-
-beforeAll(async () => {
-    await i18n.use(initReactI18next).init({
-        lng: 'en',
-        resources: { en: { translation: en } },
-        interpolation: { escapeValue: false },
-    });
+// The page creates the user through the client; everything else is real.
+vi.mock('astromech/fetch', async (importOriginal) => {
+    const real = await importOriginal<{ astromechUntypedClient: object }>();
+    return {
+        ...real,
+        astromechUntypedClient: { ...real.astromechUntypedClient, users },
+    };
 });
 
 afterEach(() => {
-    createUser.mockReset();
+    users.create.mockReset();
 });
 
-function makeClient(): QueryClient {
-    const queryClient = new QueryClient({
-        defaultOptions: { queries: { staleTime: 30_000, retry: false } },
-    });
-    queryClient.setQueryData<AuthUser>(sessionQueryOptions.queryKey, {
-        id: 'admin',
-        name: 'Admin',
-        email: 'admin@example.com',
-        image: null,
-        role: 'admin',
-        permissions: ['*'],
-    });
-    return queryClient;
-}
-
-/** Mount the page at `/users/new`, beside a list route it can return to. */
-function mountPage(): { path: () => string } {
-    const rootRoute = createRootRoute({ component: () => <Outlet /> });
-    const newRoute = createRoute({
-        getParentRoute: () => rootRoute,
-        path: '/users/new',
-        component: UserNewPage,
-    });
-    const listRoute = createRoute({
-        getParentRoute: () => rootRoute,
-        path: '/users',
-        component: () => <p>users list</p>,
-    });
-    const router = createRouter({
-        routeTree: rootRoute.addChildren([newRoute, listRoute]),
-        history: createMemoryHistory({ initialEntries: ['/users/new'] }),
-    });
-
-    render(
-        <QueryClientProvider client={makeClient()}>
-            <ToastProvider>
-                <AuthProvider>
-                    <RouterProvider router={router} />
-                </AuthProvider>
-            </ToastProvider>
-        </QueryClientProvider>
-    );
-    return { path: () => router.state.location.pathname };
+/** Mount the page at `/users/new`. */
+function mountPage(): RenderAdminResult {
+    return renderAdmin(<UserNewPage />, { url: '/users/new' });
 }
 
 function inputNamed(name: string): HTMLInputElement {
@@ -118,12 +52,11 @@ function inputNamed(name: string): HTMLInputElement {
     return input;
 }
 
-async function fillAndCreate(): Promise<void> {
-    const eventUser = userEvent.setup();
-    await eventUser.type(await screen.findByLabelText('Name'), 'Ada Lovelace');
-    await eventUser.type(screen.getByLabelText('Email'), 'ada@example.com');
-    await eventUser.type(inputNamed('bio'), 'Wrote the first program');
-    await eventUser.click(screen.getByRole('button', { name: 'Create' }));
+async function fillAndCreate(page: RenderAdminResult): Promise<void> {
+    await page.user.type(await screen.findByLabelText('Name'), 'Ada Lovelace');
+    await page.user.type(screen.getByLabelText('Email'), 'ada@example.com');
+    await page.user.type(inputNamed('bio'), 'Wrote the first program');
+    await page.user.click(screen.getByRole('button', { name: 'Create' }));
 }
 
 function unprocessable(details: Record<string, unknown>): AstromechApiError {
@@ -138,41 +71,43 @@ function unprocessable(details: Record<string, unknown>): AstromechApiError {
 
 describe('UserNewPage', () => {
     it('creates the user with its profile fields, then returns to the list', async () => {
-        createUser.mockResolvedValue({ id: 'u1' });
+        users.create.mockResolvedValue({ id: 'u1' });
         const page = mountPage();
 
-        await fillAndCreate();
+        await fillAndCreate(page);
 
-        await waitFor(() => expect(page.path()).toBe('/users'));
-        expect(createUser).toHaveBeenCalledWith({
-            name: 'Ada Lovelace',
-            email: 'ada@example.com',
-            role: 'editor',
-            fields: { bio: 'Wrote the first program' },
+        await waitFor(() => expect(page.location()).toBe('/users'));
+        expect(users.create).toHaveBeenCalledWith({
+            data: {
+                name: 'Ada Lovelace',
+                email: 'ada@example.com',
+                role: 'editor',
+                fields: { bio: 'Wrote the first program' },
+            },
         });
     });
 
     it('puts a 422 field error on the profile field it names', async () => {
-        createUser.mockRejectedValue(unprocessable({ fields: { bio: ['Too long'] } }));
+        users.create.mockRejectedValue(unprocessable({ fields: { bio: ['Too long'] } }));
         const page = mountPage();
 
-        await fillAndCreate();
+        await fillAndCreate(page);
 
         expect(await screen.findByText('Too long')).not.toBeNull();
         expect(inputNamed('bio').getAttribute('aria-invalid')).toBe('true');
-        expect(page.path()).toBe('/users/new');
+        expect(page.location()).toBe('/users/new');
     });
 
     it('puts a 422 form error in the banner', async () => {
-        createUser.mockRejectedValue(
+        users.create.mockRejectedValue(
             unprocessable({ form: ['A user with this email exists'] })
         );
         const page = mountPage();
 
-        await fillAndCreate();
+        await fillAndCreate(page);
 
         const banner = await screen.findByRole('alert');
         expect(banner.textContent).toBe('A user with this email exists');
-        expect(page.path()).toBe('/users/new');
+        expect(page.location()).toBe('/users/new');
     });
 });

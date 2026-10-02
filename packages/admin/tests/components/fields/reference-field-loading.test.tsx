@@ -12,16 +12,12 @@
  */
 
 import type { DataField } from '@/types/index';
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { act, render, screen } from '@testing-library/react';
-import userEvent from '@testing-library/user-event';
-import i18n from 'i18next';
+import type { UserEvent } from '@testing-library/user-event';
+import { act, screen } from '@testing-library/react';
 import React from 'react';
-import { initReactI18next } from 'react-i18next';
-import { beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
-import { ToastProvider } from '@/admin/components/ui/toast';
-import '@/admin/rendering/register-fields';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { FormField } from '@/admin/components/fields/form-field';
+import { renderWithProviders } from '../../_support/render-admin';
 
 const { mediaGet, entriesQuery } = vi.hoisted(() => ({
     mediaGet: vi.fn(),
@@ -43,19 +39,13 @@ vi.mock('virtual:astromech/admin-config', () => ({
     },
 }));
 
-beforeAll(async () => {
-    await i18n.use(initReactI18next).init({
-        lng: 'en',
-        resources: { en: { translation: {} } },
-    });
-});
-
 beforeEach(() => {
     mediaGet.mockReset();
     entriesQuery.mockReset();
 });
 
 type Mounted = {
+    user: UserEvent;
     /** Every `onChange` the field has fired, oldest first. */
     commits: { name: string; value: unknown }[];
     /** Push a new value down, as the default-value copy landing would. */
@@ -81,15 +71,10 @@ function mountField(field: DataField, value: unknown): Mounted {
         );
     }
 
-    render(
-        <QueryClientProvider client={new QueryClient()}>
-            <ToastProvider>
-                <Holder />
-            </ToastProvider>
-        </QueryClientProvider>
-    );
+    const { user } = renderWithProviders(<Holder />);
 
     return {
+        user,
         commits,
         rerender: (next) => act(() => push(next)),
         last: () => commits.at(-1)?.value,
@@ -148,31 +133,25 @@ describe('media on a fetched entry', () => {
     });
 
     it('commits null when the author clears the selection', async () => {
-        const user = userEvent.setup();
         mediaGet.mockImplementation(async ({ id }: { id: string }) =>
             item(id, `${id}.png`)
         );
         const f = mountField(cover, undefined);
         f.rerender('m1');
 
-        await user.click(await screen.findByLabelText('fields.mediaRemoveLabel'));
+        await f.user.click(await screen.findByRole('button', { name: 'Remove media' }));
 
         expect(f.commits.at(-1)).toEqual({ name: 'cover', value: null });
     });
 
     it('keeps the untouched ids when one of many is removed', async () => {
-        const user = userEvent.setup();
         mediaGet.mockImplementation(async ({ id }: { id: string }) =>
             item(id, `${id}.png`)
         );
         const f = mountField(gallery, undefined);
         f.rerender(['m1', 'm2', 'm3']);
 
-        const removeFirst = (
-            await screen.findAllByLabelText('fields.mediaRemoveItemLabel')
-        )[0];
-        if (removeFirst === undefined) throw new Error('no remove button rendered');
-        await user.click(removeFirst);
+        await f.user.click(await screen.findByRole('button', { name: 'Remove m1.png' }));
 
         expect(f.last()).toEqual(['m2', 'm3']);
     });
@@ -185,7 +164,7 @@ describe('media on a fetched entry', () => {
 
         f.rerender('m1');
 
-        expect(await screen.findByText('fields.mediaLoadFailed')).toBeDefined();
+        expect(await screen.findByText('Failed to load media')).toBeDefined();
         expect(f.commits).toEqual([]);
     });
 });
@@ -200,11 +179,7 @@ describe('relationship on a fetched entry', () => {
 
     /** A single-target relationship shows its selection in the combobox input. */
     function selectionLabel(): string {
-        const el = document.querySelector<HTMLInputElement>(
-            '.am-multiselect-single-input'
-        );
-        if (el === null) throw new Error('no combobox input rendered');
-        return el.value;
+        return screen.getByRole<HTMLInputElement>('combobox').value;
     }
 
     it('labels the stored id once the option list lands', async () => {
@@ -227,17 +202,12 @@ describe('relationship on a fetched entry', () => {
     });
 
     it('commits the id of the entry the author picks', async () => {
-        const user = userEvent.setup();
         entriesQuery.mockResolvedValue({ data: OPTIONS });
         const f = mountField(author, undefined);
         await waitForOptions();
 
-        await user.click(document.querySelector('[role="combobox"]') as HTMLElement);
-        const option = [...document.querySelectorAll('[role="option"]')].find((el) =>
-            (el.textContent ?? '').includes('Grace Hopper')
-        );
-        if (option === undefined) throw new Error('the listbox has no "Grace Hopper"');
-        await user.click(option);
+        await f.user.click(screen.getByRole('combobox'));
+        await f.user.click(await screen.findByRole('option', { name: /Grace Hopper/ }));
 
         expect(f.commits.at(-1)).toEqual({ name: 'author', value: 'a2' });
     });

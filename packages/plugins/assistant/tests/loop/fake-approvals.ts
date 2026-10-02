@@ -1,8 +1,8 @@
 /**
  * An in-memory stand-in for the approvals table. `claim` answers a row in the
  * same act as taking it, and applies the same ownership / pending /
- * not-expired filter the SQL does — that filter is what the resume path's
- * refusals are made of, and taking a row is what stops it running twice.
+ * not-expired filter the SQL does, which `tests/approvals/repository.test.ts`
+ * checks against the real repository.
  */
 
 import type {

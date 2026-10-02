@@ -14,7 +14,12 @@ import { LibsqlDialect } from '@libsql/kysely-libsql';
 import { CamelCasePlugin, Kysely } from 'kysely';
 
 /** Plugins whose generated baselines the test database's chain includes. */
-export const FIRST_PARTY_PLUGIN_MIGRATIONS = ['redirects', 'backups', 'forms'] as const;
+export const FIRST_PARTY_PLUGIN_MIGRATIONS = [
+    'redirects',
+    'backups',
+    'forms',
+    'assistant',
+] as const;
 
 /**
  * A Kysely instance over `client`, set up the way the libsql driver sets up a

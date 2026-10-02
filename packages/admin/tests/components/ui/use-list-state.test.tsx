@@ -7,17 +7,10 @@
  */
 
 import type { ListState } from '@/admin/components/ui/use-list-state';
-import {
-    createMemoryHistory,
-    createRootRoute,
-    createRoute,
-    createRouter,
-    Outlet,
-    RouterProvider,
-} from '@tanstack/react-router';
-import { act, render, screen, waitFor } from '@testing-library/react';
+import { act, screen, waitFor } from '@testing-library/react';
 import { describe, expect, it } from 'vitest';
 import { useListState, validateListSearch } from '@/admin/components/ui/use-list-state';
+import { renderAdmin } from '../../_support/render-admin';
 
 /** Mount a route that holds the hook's result in `state`, at `url`. */
 function mountState(url: string) {
@@ -26,27 +19,27 @@ function mountState(url: string) {
         holder.state = useListState({ pageSize: 10 });
         return <p>ready</p>;
     }
-    const rootRoute = createRootRoute({ component: () => <Outlet /> });
-    const listRoute = createRoute({
-        getParentRoute: () => rootRoute,
-        path: '/list',
-        // A route's own param beside the list's, as the entries list has `status`.
-        validateSearch: (search: Record<string, unknown>) => ({
-            ...validateListSearch(search),
-            ...(typeof search['status'] === 'string' ? { status: search['status'] } : {}),
-        }),
-        component: Probe,
-    });
-    const router = createRouter({
-        routeTree: rootRoute.addChildren([listRoute]),
-        history: createMemoryHistory({ initialEntries: [url] }),
-    });
-    render(<RouterProvider router={router} />);
+    const view = renderAdmin(
+        [
+            {
+                path: '/list',
+                // A route's own param beside the list's, as the entries list has `status`.
+                validateSearch: (search: Record<string, unknown>) => ({
+                    ...validateListSearch(search),
+                    ...(typeof search['status'] === 'string'
+                        ? { status: search['status'] }
+                        : {}),
+                }),
+                component: Probe,
+            },
+        ],
+        { url }
+    );
     const state = (): ListState => {
         if (holder.state === null) throw new Error('the probe has not rendered');
         return holder.state;
     };
-    return { router, state };
+    return { view, state };
 }
 
 describe('useListState', () => {
@@ -71,13 +64,13 @@ describe('useListState', () => {
     });
 
     it('keeps a route param and drops the page when the search changes', async () => {
-        const { router, state } = mountState('/list?status=published&page=2');
+        const { view, state } = mountState('/list?status=published&page=2');
         await screen.findByText('ready');
 
         act(() => state().setQuery('abc'));
 
         await waitFor(() =>
-            expect(router.state.location.search).toEqual({
+            expect(view.search()).toEqual({
                 status: 'published',
                 q: 'abc',
             })
@@ -85,36 +78,36 @@ describe('useListState', () => {
     });
 
     it('clears the sort and returns to the first page', async () => {
-        const { router, state } = mountState('/list?sort=title:asc&page=4');
+        const { view, state } = mountState('/list?sort=title:asc&page=4');
         await screen.findByText('ready');
 
         act(() => state().setSort('title', null));
 
-        await waitFor(() => expect(router.state.location.search).toEqual({}));
+        await waitFor(() => expect(view.search()).toEqual({}));
     });
 
     it('writes a filter, clears one set to undefined, and drops the page', async () => {
-        const { router, state } = mountState('/list?status=published&q=a&page=2');
+        const { view, state } = mountState('/list?status=published&q=a&page=2');
         await screen.findByText('ready');
 
         act(() => state().setFilters({ status: undefined }));
-        await waitFor(() => expect(router.state.location.search).toEqual({ q: 'a' }));
+        await waitFor(() => expect(view.search()).toEqual({ q: 'a' }));
 
         act(() => state().setFilters({ status: 'scheduled' }));
         await waitFor(() =>
-            expect(router.state.location.search).toEqual({ q: 'a', status: 'scheduled' })
+            expect(view.search()).toEqual({ q: 'a', status: 'scheduled' })
         );
     });
 
     it('leaves the first page out of the URL', async () => {
-        const { router, state } = mountState('/list?page=3');
+        const { view, state } = mountState('/list?page=3');
         await screen.findByText('ready');
 
         act(() => state().setPage(2));
-        await waitFor(() => expect(router.state.location.search).toEqual({ page: 2 }));
+        await waitFor(() => expect(view.search()).toEqual({ page: 2 }));
 
         act(() => state().setPage(1));
-        await waitFor(() => expect(router.state.location.search).toEqual({}));
+        await waitFor(() => expect(view.search()).toEqual({}));
     });
 });
 

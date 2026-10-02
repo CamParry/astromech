@@ -5,29 +5,11 @@
  * made the entry, and drops the author when the id resolves to no known user.
  */
 
-import type { AuthUser } from '@/admin/context/auth';
 import type { AdminEntryType, EntriesService, Entry, EntryStatus } from '@/types/index';
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import {
-    createMemoryHistory,
-    createRootRoute,
-    createRoute,
-    createRouter,
-    Outlet,
-    RouterProvider,
-    useParams,
-} from '@tanstack/react-router';
-import { render, waitFor } from '@testing-library/react';
-import i18n from 'i18next';
-import { initReactI18next } from 'react-i18next';
-import { afterEach, beforeAll, describe, expect, it, vi } from 'vitest';
+import { waitFor } from '@testing-library/react';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import { EntryEditPage } from '@/admin/components/entries/entry-edit-page';
-import { ConfirmProvider } from '@/admin/components/ui/confirm';
-import { ToastProvider } from '@/admin/components/ui/toast';
-import { AiContextProvider } from '@/admin/context/ai-context';
-import { AuthProvider, sessionQueryOptions } from '@/admin/context/auth';
-import en from '@/admin/locales/en.json';
-import '@/admin/rendering/register-fields';
+import { renderAdmin } from '../../_support/render-admin';
 
 const { adminConfig } = vi.hoisted(() => ({
     adminConfig: {
@@ -57,14 +39,6 @@ vi.mock('astromech/fetch', () => ({
 
 afterEach(() => {
     queryUsers.mockReset();
-});
-
-beforeAll(async () => {
-    await i18n.use(initReactI18next).init({
-        lng: 'en',
-        resources: { en: { translation: en } },
-        interpolation: { escapeValue: false },
-    });
 });
 
 const TYPE = 'caseStudy';
@@ -116,45 +90,9 @@ function mountPage(entry: Entry): void {
     client.entries = api;
     adminConfig.entryTypes[TYPE] = ENTRY_TYPE_CONFIG;
 
-    const rootRoute = createRootRoute({ component: () => <Outlet /> });
-    const editRoute = createRoute({
-        getParentRoute: () => rootRoute,
-        path: '/entries/$type/$id',
-        component: function EditRoute() {
-            const params = useParams({ strict: false }) as { id: string };
-            return <EntryEditPage type={TYPE} id={params.id} locale="en" />;
-        },
+    renderAdmin(<EntryEditPage type={TYPE} id={ID} locale="en" />, {
+        url: `/entries/${TYPE}/${ID}`,
     });
-    const router = createRouter({
-        routeTree: rootRoute.addChildren([editRoute]),
-        history: createMemoryHistory({ initialEntries: [`/entries/${TYPE}/${ID}`] }),
-    });
-
-    const queryClient = new QueryClient({
-        defaultOptions: { queries: { retry: false } },
-    });
-    queryClient.setQueryData<AuthUser>(sessionQueryOptions.queryKey, {
-        id: 'u1',
-        name: 'Admin',
-        email: 'admin@astromech.dev',
-        image: null,
-        role: 'admin',
-        permissions: ['*'],
-    });
-
-    render(
-        <QueryClientProvider client={queryClient}>
-            <ToastProvider>
-                <AuthProvider>
-                    <ConfirmProvider>
-                        <AiContextProvider>
-                            <RouterProvider router={router} />
-                        </AiContextProvider>
-                    </ConfirmProvider>
-                </AuthProvider>
-            </ToastProvider>
-        </QueryClientProvider>
-    );
 }
 
 /** The rendered metadata line, once the entry and the users have loaded. */

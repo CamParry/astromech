@@ -1,26 +1,13 @@
 /**
- * Test suite for @astromech/backups
- *
- * The libsql dump and restore cases run on a database file of their own with
- * the runs table written by hand. Every other case runs the registered plugin
- * on the harness database, whose runs table comes from the plugin's migration,
- * with its `ctx` from `createPluginTestApp` and the site's storage on the
- * filesystem driver in a tmpdir.
- *
- * Cases:
- *  1. libsql dump → restore round-trip (file: URL works, non-file: throws)
- *  2. restore preserves listed tables
- *  3. performBackup success — artifact in storage + success run row
- *  4. performBackup failure — no dump capability → failed run row
- *  5. rotate keep-N — oldest artifacts deleted, rows marked artifactDeletedAt
- *  6. in-process guard — isBackupRunning reflects an in-flight performBackup
- *  7. resolveKeep — the retention global overrides the configured keep
+ * Every case runs the registered plugin on the harness database, whose runs
+ * table comes from the plugin's migration, with its `ctx` from
+ * `createPluginTestApp` and the site's storage on the filesystem driver in a
+ * tmpdir. Runs are read back through the plugin's `list` method.
  */
 
-import type { DB } from '@/database/types';
+import type { BackupRunRow } from '../src/tables/runs';
 import type { JsonObject, PluginContext, PluginStorage } from '@/types/index';
 import type { PluginTestApp } from '@tests/plugin-app';
-import type { Kysely } from 'kysely';
 import { randomUUID } from 'node:crypto';
 import { mkdir, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
@@ -28,13 +15,13 @@ import { join } from 'node:path';
 import { makeTestConfig } from '@tests/harness';
 import { createPluginTestApp } from '@tests/plugin-app';
 import { sql } from 'kysely';
-import { afterEach, beforeEach, describe, expect, it } from 'vitest';
-import { decodeWith } from '@/database/codec';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { libsql } from '@/database/drivers/libsql';
-import { resolvePluginIdentity } from '@/plugins/runtime/plugin-identity';
+import { createRepository } from '@/database/repository/create-repository';
 import { filesystem } from '@/storage/drivers/filesystem';
 import { isBackupRunning, performBackup, resolveKeep, rotate } from '../src/backup';
 import { backups } from '../src/index';
+import { createBackupRunsRepository } from '../src/repository';
 import { createBackupsService } from '../src/service/backups';
 import { backupRunsTable } from '../src/tables/index';
 
@@ -42,55 +29,11 @@ declare global {
     var __astromechBackupRunning: boolean | undefined;
 }
 
-/** Absolute path for tmp files created in this test run. */
-function makeTmpDir(): string {
-    return join(tmpdir(), `astromech-backups-test-${randomUUID()}`);
-}
-
-/**
- * Create a real file-based libsql DB with the plugin_backups_runs table.
- * Returns both the Kysely handle AND the driver (which has dump/restore).
- */
-async function makeFileDb(dbPath: string): Promise<{
-    db: Kysely<DB>;
-    driver: ReturnType<typeof libsql>;
-}> {
-    const url = `file:${dbPath}`;
-    const driver = libsql({ url });
-    const db = driver.getInstance() as Kysely<DB>;
-
-    // Create the backups table directly — no full migrations needed for these
-    // tests. Timestamps are TEXT: the table is a `definePlugin` table, so its
-    // columns are ISO-8601 strings, not unix seconds.
-    await sql
-        .raw(
-            `
-            CREATE TABLE IF NOT EXISTS plugin_backups_runs (
-                id TEXT PRIMARY KEY,
-                key TEXT,
-                status TEXT NOT NULL,
-                trigger TEXT NOT NULL,
-                size_bytes INTEGER,
-                error TEXT,
-                started_at TEXT NOT NULL,
-                finished_at TEXT,
-                artifact_deleted_at TEXT
-            )
-        `
-        )
-        .execute(db);
-
-    return { db, driver };
-}
-
 let tmpBase: string;
-let dbPath: string;
 let app: PluginTestApp<'backups'>;
 
 beforeEach(async () => {
-    tmpBase = makeTmpDir();
-    await mkdir(tmpBase, { recursive: true });
-    dbPath = join(tmpBase, 'test.db');
+    tmpBase = join(tmpdir(), `astromech-backups-test-${randomUUID()}`);
     const storageDir = join(tmpBase, 'storage');
     await mkdir(storageDir, { recursive: true });
     app = await createPluginTestApp('backups', {
@@ -107,6 +50,43 @@ afterEach(async () => {
     globalThis.__astromechBackupRunning = false;
     await rm(tmpBase, { recursive: true, force: true });
 });
+
+/** The test database's driver capabilities, as the plugin's `ctx` sees them. */
+function databaseCapabilities(): {
+    dump: NonNullable<PluginContext['database']['dump']>;
+    restore: NonNullable<PluginContext['database']['restore']>;
+} {
+    const { dump, restore } = app.context().database;
+    if (dump === undefined || restore === undefined) {
+        throw new Error('the test database cannot dump and restore');
+    }
+    return { dump, restore };
+}
+
+/**
+ * Store an artifact and write a successful run for it with a known trigger and
+ * `startedAt`, which the plugin's own repository always sets to now.
+ */
+async function seedRun(
+    storage: PluginStorage,
+    run: { id: string; trigger: BackupRunRow['trigger']; startedAt: string }
+): Promise<void> {
+    const key = `${run.id}.sqlite.gz`;
+    await storage.put(key, new Uint8Array([0, 1, 2]));
+    await createRepository(backupRunsTable, app.db).create({
+        id: run.id,
+        key,
+        status: 'success',
+        trigger: run.trigger,
+        startedAt: new Date(run.startedAt),
+    });
+}
+
+/** Each run's id and whether rotation has removed its artifact, newest first. */
+async function listedRuns(): Promise<[string, boolean][]> {
+    const { runs } = await app.service.list();
+    return runs.map((run) => [run.id, run.artifactDeletedAt !== null]);
+}
 
 describe('backups.list — output', () => {
     it('drops keys the schema does not name', () => {
@@ -133,14 +113,14 @@ describe('backups.list — output', () => {
 });
 
 describe('libsql.dump / restore', () => {
-    it('should round-trip a table full of rows', async () => {
-        const { db, driver } = await makeFileDb(dbPath);
+    it('round-trips a table full of rows', async () => {
+        const { db } = app;
+        const { dump, restore } = databaseCapabilities();
 
-        // Create a simple test table and seed it.
         await sql.raw(`CREATE TABLE items (id TEXT PRIMARY KEY, name TEXT)`).execute(db);
         await sql.raw(`INSERT INTO items VALUES ('1','alpha'), ('2','beta')`).execute(db);
 
-        const dump = await driver.dump();
+        const backup = await dump();
         // Mutate after dump.
         await sql.raw(`DELETE FROM items`).execute(db);
         await sql.raw(`INSERT INTO items VALUES ('3','gamma')`).execute(db);
@@ -148,34 +128,33 @@ describe('libsql.dump / restore', () => {
         const { rows: rowsBefore } = await sql.raw(`SELECT * FROM items`).execute(db);
         expect(rowsBefore).toHaveLength(1);
 
-        await driver.restore(dump.stream, { preserve: [] });
-        await dump.cleanup();
+        await restore(backup.stream, { preserve: [] });
+        await backup.cleanup();
 
-        const { rows: rowsAfter } = await sql.raw(`SELECT * FROM items`).execute(db);
+        const { rows: rowsAfter } = await sql
+            .raw(`SELECT name FROM items ORDER BY name`)
+            .execute(db);
         expect(rowsAfter).toHaveLength(2);
-        expect(
-            (rowsAfter as Record<string, unknown>[]).map((r) => r['name']).sort()
-        ).toEqual(['alpha', 'beta']);
+        expect(rowsAfter).toEqual([{ name: 'alpha' }, { name: 'beta' }]);
     });
 
-    it('should roll back every table when one table fails to copy', async () => {
-        const { db, driver } = await makeFileDb(dbPath);
+    it('rolls back every table when one table fails to copy', async () => {
+        const { db } = app;
+        const { dump, restore } = databaseCapabilities();
 
         await sql.raw(`CREATE TABLE items (id TEXT PRIMARY KEY, name TEXT)`).execute(db);
         await sql.raw(`CREATE TABLE things (id TEXT PRIMARY KEY, val TEXT)`).execute(db);
         await sql.raw(`INSERT INTO items VALUES ('1','alpha')`).execute(db);
         await sql.raw(`INSERT INTO things VALUES ('t1','original-thing')`).execute(db);
-        const dump = await driver.dump();
+        const backup = await dump();
 
         // `items` copies back cleanly, then `things` fails: the backup has two
         // columns and the live table now has three.
         await sql.raw(`UPDATE items SET name = 'post-dump'`).execute(db);
         await sql.raw(`ALTER TABLE things ADD COLUMN extra TEXT`).execute(db);
 
-        await expect(driver.restore(dump.stream, { preserve: [] })).rejects.toThrow(
-            'columns'
-        );
-        await dump.cleanup();
+        await expect(restore(backup.stream, { preserve: [] })).rejects.toThrow('columns');
+        await backup.cleanup();
 
         // The copy runs in one transaction, so `items` is not left restored and
         // `things` is not left empty.
@@ -185,13 +164,14 @@ describe('libsql.dump / restore', () => {
         expect(things).toEqual([{ val: 'original-thing' }]);
     });
 
-    it('should leave foreign keys on and nothing attached on the driver client', async () => {
-        const { db, driver } = await makeFileDb(dbPath);
+    it('leaves foreign keys on and nothing attached on the driver client', async () => {
+        const { db } = app;
+        const { dump, restore } = databaseCapabilities();
         await sql.raw(`CREATE TABLE items (id TEXT PRIMARY KEY, name TEXT)`).execute(db);
 
-        const dump = await driver.dump();
-        await driver.restore(dump.stream, { preserve: [] });
-        await dump.cleanup();
+        const backup = await dump();
+        await restore(backup.stream, { preserve: [] });
+        await backup.cleanup();
 
         const { rows: foreignKeys } = await sql.raw(`PRAGMA foreign_keys`).execute(db);
         expect(foreignKeys.map((row) => Object.values(row as object)[0])).toEqual([1]);
@@ -201,12 +181,12 @@ describe('libsql.dump / restore', () => {
         ]);
     });
 
-    it('should throw a clear error for a non-file: URL on dump', async () => {
+    it('throws a clear error for a non-file: URL on dump', async () => {
         const remoteDriver = libsql({ url: 'libsql://example.turso.io' });
         await expect(remoteDriver.dump()).rejects.toThrow('file:');
     });
 
-    it('should throw a clear error for a non-file: URL on restore', async () => {
+    it('throws a clear error for a non-file: URL on restore', async () => {
         const remoteDriver = libsql({ url: 'libsql://example.turso.io' });
         const emptyStream = new ReadableStream<Uint8Array>({
             start(c) {
@@ -218,7 +198,7 @@ describe('libsql.dump / restore', () => {
         );
     });
 
-    it('should refuse an in-memory database on dump and restore', async () => {
+    it('refuses an in-memory database on dump and restore', async () => {
         for (const url of ['file::memory:', 'file::memory:?cache=shared']) {
             const memoryDriver = libsql({ url });
             const emptyStream = new ReadableStream<Uint8Array>({
@@ -235,51 +215,40 @@ describe('libsql.dump / restore', () => {
 });
 
 describe('libsql.restore — preserve', () => {
-    it('should NOT revert preserved tables while reverting non-preserved tables', async () => {
-        const { db, driver } = await makeFileDb(dbPath);
+    it('keeps preserved tables while reverting the rest', async () => {
+        const { db } = app;
+        const { dump, restore } = databaseCapabilities();
+        const runs = createBackupRunsRepository(db);
 
-        // `makeFileDb` already creates plugin_backups_runs. Add a second table.
         await sql.raw(`CREATE TABLE things (id TEXT PRIMARY KEY, val TEXT)`).execute(db);
-
         await sql.raw(`INSERT INTO things VALUES ('t1','original-thing')`).execute(db);
-        await sql
-            .raw(
-                `INSERT INTO plugin_backups_runs VALUES ('r1',NULL,'success','manual',NULL,NULL,1,NULL,NULL)`
-            )
-            .execute(db);
+        const before = await runs.create('manual');
 
-        const dump = await driver.dump();
+        const backup = await dump();
 
         // Mutate both tables after the dump.
         await sql.raw(`DELETE FROM things`).execute(db);
         await sql.raw(`INSERT INTO things VALUES ('t2','post-dump-thing')`).execute(db);
-        await sql.raw(`DELETE FROM plugin_backups_runs`).execute(db);
-        await sql
-            .raw(
-                `INSERT INTO plugin_backups_runs VALUES ('r2',NULL,'failed','scheduled',NULL,'boom',2,NULL,NULL)`
-            )
-            .execute(db);
+        await runs.delete(before.id);
+        const after = await runs.create('scheduled');
 
-        // Restore, preserving plugin_backups_runs.
-        await driver.restore(dump.stream, { preserve: ['plugin_backups_runs'] });
-        await dump.cleanup();
+        await restore(backup.stream, { preserve: ['plugin_backups_runs'] });
+        await backup.cleanup();
 
-        // `things` should be reverted to the original state.
+        // `things` is reverted to the original state.
         const { rows: things } = await sql.raw(`SELECT * FROM things`).execute(db);
         expect(things).toHaveLength(1);
         expect((things as Record<string, unknown>[])[0]?.['val']).toBe('original-thing');
 
-        // `plugin_backups_runs` should keep the post-dump state.
-        const { rows: runs } = await sql
-            .raw(`SELECT * FROM plugin_backups_runs`)
-            .execute(db);
-        expect(runs).toHaveLength(1);
-        expect((runs as Record<string, unknown>[])[0]?.['id']).toBe('r2');
+        // `plugin_backups_runs` keeps the post-dump state.
+        const { runs: listed } = await app.service.list();
+        expect(listed).toHaveLength(1);
+        expect(listed[0]?.id).toBe(after.id);
     });
 });
 
 describe('performBackup — success', () => {
-    it('should create a gzip artifact in storage and a success run row', async () => {
+    it('creates a gzip artifact in storage and a success run row', async () => {
         const ctx = app.context();
         const { storage } = ctx;
 
@@ -298,10 +267,8 @@ describe('performBackup — success', () => {
     });
 });
 
-// 4. performBackup — failure path (no dump capability)
-
 describe('performBackup — failure', () => {
-    it('should mark the run as failed when dump is not supported', async () => {
+    it('marks the run as failed when dump is not supported', async () => {
         // Deliberately omit dump from the database capability.
         const ctx: PluginContext = {
             ...app.context(),
@@ -322,69 +289,54 @@ describe('performBackup — failure', () => {
 });
 
 describe('rotate', () => {
-    it('should delete the oldest artifacts when runs exceed keep', async () => {
-        const { db } = app;
+    it('deletes the oldest artifacts when runs exceed keep', async () => {
         const ctx = app.context();
         const { storage } = ctx;
 
-        // Create 5 successful runs. To guarantee distinct startedAt seconds we
-        // insert the run rows with explicit timestamps rather than relying on
-        // wall-clock sleeps (the column stores Unix seconds, not milliseconds).
-        const runIds: string[] = [];
-        const baseTs = Math.floor(Date.now() / 1000) - 100; // 100 s ago
-
-        for (let i = 0; i < 5; i++) {
-            const id = randomUUID();
-            runIds.push(id);
-            // Write artifact to storage so rotation can delete it.
-            const key = `${baseTs + i}-${id.slice(0, 8)}.sqlite.gz`;
-            await storage.put(key, new Uint8Array([0, 1, 2]));
-            // Insert a success row with a known, distinct startedAt.
-            await sql
-                .raw(
-                    `INSERT INTO plugin_backups_runs (id, key, status, trigger, started_at)
-                     VALUES ('${id}', '${key}', 'success', 'manual', ${baseTs + i})`
-                )
-                .execute(db);
-        }
-
-        // Verify 5 artifacts exist before rotation.
-        const beforeKeys = await storage.list('');
-        expect(beforeKeys).toHaveLength(5);
+        // Five successful runs a day apart, stored as the ISO text the
+        // table's timestamp columns hold.
+        await seedRun(storage, {
+            id: 'run-1',
+            trigger: 'manual',
+            startedAt: '2026-01-01T03:00:00.000Z',
+        });
+        await seedRun(storage, {
+            id: 'run-2',
+            trigger: 'manual',
+            startedAt: '2026-01-02T03:00:00.000Z',
+        });
+        await seedRun(storage, {
+            id: 'run-3',
+            trigger: 'manual',
+            startedAt: '2026-01-03T03:00:00.000Z',
+        });
+        await seedRun(storage, {
+            id: 'run-4',
+            trigger: 'manual',
+            startedAt: '2026-01-04T03:00:00.000Z',
+        });
+        await seedRun(storage, {
+            id: 'run-5',
+            trigger: 'manual',
+            startedAt: '2026-01-05T03:00:00.000Z',
+        });
+        expect(await storage.list('')).toHaveLength(5);
 
         // Rotate to keep only the 3 newest.
         await rotate(ctx, 3);
 
-        // Check DB rows.
-        const { rows: rawRows } = await sql
-            .raw(`SELECT * FROM plugin_backups_runs`)
-            .execute(db);
-        const allRows = (rawRows as Record<string, unknown>[]).map((r) =>
-            decodeWith(backupRunsTable, r)
-        );
-        const deleted = allRows.filter((r) => r['artifactDeletedAt'] !== null);
-        const kept = allRows.filter((r) => r['artifactDeletedAt'] === null);
-
-        expect(deleted).toHaveLength(2);
-        expect(kept).toHaveLength(3);
-
-        // The oldest 2 rows (lowest startedAt) must be marked deleted.
-        const sortedByStart = [...allRows].sort(
-            (a, b) =>
-                ((a['startedAt'] as Date | null)?.getTime() ?? 0) -
-                ((b['startedAt'] as Date | null)?.getTime() ?? 0)
-        );
-        expect(sortedByStart[0]?.['artifactDeletedAt']).toBeInstanceOf(Date);
-        expect(sortedByStart[1]?.['artifactDeletedAt']).toBeInstanceOf(Date);
-        expect(sortedByStart[2]?.['artifactDeletedAt']).toBeNull();
-
-        // Verify storage only has 3 artifacts remaining.
-        const afterKeys = await storage.list('');
-        expect(afterKeys).toHaveLength(3);
+        // The oldest two runs are marked deleted; their rows stay.
+        expect(await listedRuns()).toEqual([
+            ['run-5', false],
+            ['run-4', false],
+            ['run-3', false],
+            ['run-2', true],
+            ['run-1', true],
+        ]);
+        expect(await storage.list('')).toHaveLength(3);
     });
 
-    it('should be a no-op when runs are within keep limit', async () => {
-        const { db } = app;
+    it('is a no-op when runs are within keep limit', async () => {
         const ctx = app.context();
         const { storage } = ctx;
 
@@ -393,73 +345,41 @@ describe('rotate', () => {
 
         await rotate(ctx, 5);
 
-        const { rows: rawRows } = await sql
-            .raw(`SELECT * FROM plugin_backups_runs`)
-            .execute(db);
-        const allRows = (rawRows as Record<string, unknown>[]).map((r) =>
-            decodeWith(backupRunsTable, r)
-        );
-        expect(allRows.every((r) => r['artifactDeletedAt'] === null)).toBe(true);
-
-        const afterKeys = await storage.list('');
-        expect(afterKeys).toHaveLength(2);
+        const { runs } = await app.service.list();
+        expect(runs).toHaveLength(2);
+        expect(runs.every((run) => run.artifactDeletedAt === null)).toBe(true);
+        expect(await storage.list('')).toHaveLength(2);
     });
 });
 
 describe('rotate — pre-restore snapshots', () => {
-    /** Insert a success row with an explicit trigger, id and ISO startedAt. */
-    async function seedRun(
-        db: Kysely<DB>,
-        storage: PluginStorage,
-        run: { id: string; trigger: string; startedAt: string }
-    ): Promise<void> {
-        const key = `${run.id}.sqlite.gz`;
-        await storage.put(key, new Uint8Array([0, 1, 2]));
-        await sql
-            .raw(
-                `INSERT INTO plugin_backups_runs (id, key, status, trigger, started_at)
-                 VALUES ('${run.id}', '${key}', 'success', '${run.trigger}', '${run.startedAt}')`
-            )
-            .execute(db);
-    }
-
-    async function liveKeys(db: Kysely<DB>): Promise<string[]> {
-        const { rows } = await sql
-            .raw(
-                `SELECT id FROM plugin_backups_runs WHERE artifact_deleted_at IS NULL ORDER BY id`
-            )
-            .execute(db);
-        return (rows as Record<string, unknown>[]).map((r) => r['id'] as string);
-    }
-
-    it('should neither rotate a pre-restore snapshot nor count it against keep', async () => {
-        const { db } = app;
+    it('neither rotates a pre-restore snapshot nor counts it against keep', async () => {
         const ctx = app.context();
         const { storage } = ctx;
 
         // Two pre-restore snapshots interleaved with three scheduled runs. With
         // pre-restore counted, keep=3 would delete two scheduled backups.
-        await seedRun(db, storage, {
+        await seedRun(storage, {
             id: 'a-scheduled-1',
             trigger: 'scheduled',
             startedAt: '2026-01-01T03:00:00.000Z',
         });
-        await seedRun(db, storage, {
+        await seedRun(storage, {
             id: 'b-pre-restore-1',
             trigger: 'pre-restore',
             startedAt: '2026-01-02T09:00:00.000Z',
         });
-        await seedRun(db, storage, {
+        await seedRun(storage, {
             id: 'c-scheduled-2',
             trigger: 'scheduled',
             startedAt: '2026-01-03T03:00:00.000Z',
         });
-        await seedRun(db, storage, {
+        await seedRun(storage, {
             id: 'd-pre-restore-2',
             trigger: 'pre-restore',
             startedAt: '2026-01-04T09:00:00.000Z',
         });
-        await seedRun(db, storage, {
+        await seedRun(storage, {
             id: 'e-scheduled-3',
             trigger: 'scheduled',
             startedAt: '2026-01-05T03:00:00.000Z',
@@ -467,42 +387,38 @@ describe('rotate — pre-restore snapshots', () => {
 
         await rotate(ctx, 3);
 
-        expect(await liveKeys(db)).toEqual([
-            'a-scheduled-1',
-            'b-pre-restore-1',
-            'c-scheduled-2',
-            'd-pre-restore-2',
-            'e-scheduled-3',
+        expect(await listedRuns()).toEqual([
+            ['e-scheduled-3', false],
+            ['d-pre-restore-2', false],
+            ['c-scheduled-2', false],
+            ['b-pre-restore-1', false],
+            ['a-scheduled-1', false],
         ]);
         expect(await storage.list('')).toHaveLength(5);
 
         // Tightening to keep=2 drops the oldest scheduled run only.
         await rotate(ctx, 2);
 
-        expect(await liveKeys(db)).toEqual([
-            'b-pre-restore-1',
-            'c-scheduled-2',
-            'd-pre-restore-2',
-            'e-scheduled-3',
+        expect(await listedRuns()).toEqual([
+            ['e-scheduled-3', false],
+            ['d-pre-restore-2', false],
+            ['c-scheduled-2', false],
+            ['b-pre-restore-1', false],
+            ['a-scheduled-1', true],
         ]);
         expect(await storage.list('')).toHaveLength(4);
     });
 
-    it('should break a startedAt tie on id, so ordering is total', async () => {
-        const { db } = app;
+    it('breaks a startedAt tie on id, so ordering is total', async () => {
         const ctx = app.context();
         const { storage } = ctx;
 
         // Same millisecond for all three — only the (ULID) id can order them.
         const sameInstant = '2026-01-01T03:00:00.000Z';
         for (const id of ['01JC000000000000000000000A', '01JC000000000000000000000B']) {
-            await seedRun(db, storage, {
-                id,
-                trigger: 'scheduled',
-                startedAt: sameInstant,
-            });
+            await seedRun(storage, { id, trigger: 'scheduled', startedAt: sameInstant });
         }
-        await seedRun(db, storage, {
+        await seedRun(storage, {
             id: '01JC000000000000000000000C',
             trigger: 'scheduled',
             startedAt: sameInstant,
@@ -510,20 +426,22 @@ describe('rotate — pre-restore snapshots', () => {
 
         await rotate(ctx, 1);
 
-        expect(await liveKeys(db)).toEqual(['01JC000000000000000000000C']);
+        const { runs } = await app.service.list();
+        expect(
+            runs.filter((run) => run.artifactDeletedAt === null).map((run) => run.id)
+        ).toEqual(['01JC000000000000000000000C']);
     });
 });
 
 describe('isBackupRunning / in-process guard', () => {
-    it('should return false when no backup is running', () => {
+    it('returns false when no backup is running', () => {
         globalThis.__astromechBackupRunning = false;
         expect(isBackupRunning()).toBe(false);
     });
 
-    it('should return true while a backup is in flight', async () => {
+    it('returns true while a backup is in flight', async () => {
         const base = app.context();
-        const { dump } = base.database;
-        if (dump === undefined) throw new Error('the test database cannot dump');
+        const { dump } = databaseCapabilities();
 
         // Intercept dump to check the flag mid-flight.
         let flagDuringDump = false;
@@ -542,13 +460,13 @@ describe('isBackupRunning / in-process guard', () => {
         expect(flagDuringDump).toBe(true);
     });
 
-    it('should return false again after the backup completes', async () => {
+    it('returns false again after the backup completes', async () => {
         await performBackup(app.context(), 'manual', { keep: 10 });
 
         expect(isBackupRunning()).toBe(false);
     });
 
-    it('should return false after a failed backup', async () => {
+    it('returns false after a failed backup', async () => {
         const ctx: PluginContext = {
             ...app.context(),
             database: { dialect: 'test-no-dump' },
@@ -560,76 +478,65 @@ describe('isBackupRunning / in-process guard', () => {
 });
 
 describe('resolveKeep', () => {
-    /**
-     * A ctx whose globals service answers with one global, and records the key
-     * it was asked for.
-     */
-    async function ctxWithGlobal(
-        fields: JsonObject | null
-    ): Promise<{ ctx: PluginContext; keys: string[] }> {
-        const keys: string[] = [];
-        const ctx: PluginContext = {
-            ...app.context(),
-            globals: {
-                get: async (params: { key: string }) => {
-                    keys.push(params.key);
-                    return fields === null ? null : { fields };
-                },
-            } as unknown as PluginContext['globals'],
-        };
-        return { ctx, keys };
+    /** Save the plugin's settings global through the real globals service. */
+    async function saveSettings(fields: JsonObject): Promise<void> {
+        await app.globals.update({ key: 'backups/settings', data: { fields } });
     }
 
-    it('should read retention out of the settings global', async () => {
-        const { ctx, keys } = await ctxWithGlobal({ retention: 3 });
-        expect(await resolveKeep(ctx, 7)).toBe(3);
-        expect(keys).toEqual(['backups/settings']);
+    it('reads retention out of the settings global', async () => {
+        await saveSettings({ retention: 3 });
+
+        expect(await resolveKeep(app.context(), 7)).toBe(3);
     });
 
-    it('should read the key the plugin’s settings global actually writes', async () => {
-        const definition = backups();
-        const settingsGlobal = definition.globals?.find(
-            (global) => global.key === 'settings'
-        );
+    it('reads the key the plugin’s settings global actually writes', () => {
+        const settingsGlobal = app.adminConfig.globals['backups/settings'];
 
         // The retention field is reachable, and it lands on the key resolveKeep
         // asks for (asserted in the test above).
         expect(settingsGlobal).toBeDefined();
-        expect(resolvePluginIdentity(definition).namespace).toBe('backups');
-        expect(
-            (settingsGlobal?.fields as { name: string }[]).map((field) => field.name)
-        ).toEqual(['retention']);
+        expect(settingsGlobal?.plugin).toBe('backups');
+        expect(settingsGlobal?.fields.main.map((field) => field.name)).toEqual([
+            'retention',
+        ]);
     });
 
-    it('should fall back when the global is absent, empty or not positive', async () => {
-        const rows: (JsonObject | null)[] = [
-            null,
-            {},
-            { retention: null },
-            { retention: 0 },
-            { retention: -1 },
-            { retention: 'lots' },
-        ];
-        for (const fields of rows) {
-            const { ctx } = await ctxWithGlobal(fields);
-            expect(await resolveKeep(ctx, 7)).toBe(7);
-        }
+    it('falls back when the global is unsaved', async () => {
+        expect(await resolveKeep(app.context(), 7)).toBe(7);
     });
 
-    it('should floor a fractional retention value', async () => {
-        const { ctx } = await ctxWithGlobal({ retention: 4.8 });
-        expect(await resolveKeep(ctx, 7)).toBe(4);
+    it.each<[string, JsonObject]>([
+        ['nothing', {}],
+        ['a null retention', { retention: null }],
+        ['a zero retention', { retention: 0 }],
+        ['a negative retention', { retention: -1 }],
+    ])('falls back when the global holds %s', async (_name, fields) => {
+        await saveSettings(fields);
+
+        expect(await resolveKeep(app.context(), 7)).toBe(7);
     });
 
-    it('should fall back when the globals service throws', async () => {
-        const ctx: PluginContext = {
-            ...app.context(),
-            globals: {
-                get: async () => {
-                    throw new Error('no globals here');
-                },
-            } as unknown as PluginContext['globals'],
-        };
+    it('falls back when the stored retention is not a number', async () => {
+        // The number field refuses a string, so put one in the table the way a
+        // value saved under an older field definition would sit there.
+        await saveSettings({ retention: 3 });
+        await sql`UPDATE global_content SET fields = json_set(fields, '$.retention', 'lots')`.execute(
+            app.db
+        );
+
+        expect(await resolveKeep(app.context(), 7)).toBe(7);
+    });
+
+    it('floors a fractional retention value', async () => {
+        await saveSettings({ retention: 4.8 });
+
+        expect(await resolveKeep(app.context(), 7)).toBe(4);
+    });
+
+    it('falls back when the globals service throws', async () => {
+        const ctx = app.context();
+        vi.spyOn(ctx.globals, 'get').mockRejectedValue(new Error('no globals here'));
+
         expect(await resolveKeep(ctx, 7)).toBe(7);
     });
 });

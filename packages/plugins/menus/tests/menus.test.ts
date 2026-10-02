@@ -15,9 +15,6 @@ import type { PluginTestApp } from '@tests/plugin-app';
 import { makeTestConfig } from '@tests/harness';
 import { createPluginTestApp } from '@tests/plugin-app';
 import { beforeEach, describe, expect, it } from 'vitest';
-import { resolveConfig } from '@/config/resolve';
-import { derivePluginNav } from '@/plugins/runtime/plugin-admin';
-import { resolvePluginIdentity } from '@/plugins/runtime/plugin-identity';
 import { menus } from '../src/index';
 import { createMenusService } from '../src/service/menus';
 
@@ -76,18 +73,23 @@ describe('menus — plugin structure', () => {
         expect(globals[1]?.key).toBe('menu-footer');
     });
 
-    it('nav groups under a single Menus parent, gated per global', () => {
-        const plugin = menus({
-            menus: [
-                { key: 'main', label: 'Main Nav' },
-                { key: 'footer', label: 'Footer' },
+    it('nav groups under a single Menus parent, gated per global', async () => {
+        const { adminConfig } = await createPluginTestApp('menus', {
+            ...makeTestConfig(),
+            plugins: [
+                menus({
+                    menus: [
+                        { key: 'main', label: 'Main Nav' },
+                        { key: 'footer', label: 'Footer' },
+                    ],
+                }),
             ],
         });
-        const identity = resolvePluginIdentity(plugin);
-        const resolved = resolveConfig({ ...makeTestConfig(), plugins: [plugin] });
-        const nav = derivePluginNav(identity, plugin, resolved);
+        const nav = adminConfig.plugins.find(
+            ({ namespace }) => namespace === 'menus'
+        )?.nav;
         expect(nav).toHaveLength(1);
-        const group = nav[0];
+        const group = nav?.[0];
         expect(group?.label).toBe('Menus');
         expect(group?.children).toHaveLength(2);
         expect(group?.children?.[0]?.label).toBe('Main Nav');

@@ -4,9 +4,9 @@
  * In every file it turns off i18next's sponsor notice. In a happy-dom file it
  * also does four things:
  *
- * - It starts i18next with no strings, so a component's `useTranslation` renders
- *   each key rather than warning, whichever file ran before. A file that needs
- *   strings starts it again with its own.
+ * - It starts i18next with the admin's English strings, set up as `src/i18n.ts`
+ *   sets them up, so a test reads and asserts the text a user sees. A plugin's
+ *   key renders as the key, as it does before the plugin's bundle loads.
  * - It turns on React's act environment (`IS_REACT_ACT_ENVIRONMENT`), which
  *   React checks before it warns about `act(...)`.
  * - It unmounts whatever Testing Library rendered after each test. Vitest's
@@ -45,11 +45,14 @@ if (typeof window !== 'undefined') {
     const { cleanup } = await import('@testing-library/react');
     const { default: i18n } = await import('i18next');
     const { initReactI18next } = await import('react-i18next');
+    const { default: en } = await import('../../src/locales/en.json');
     installDomGuards(cleanup);
     beforeAll(async () => {
         await i18n.use(initReactI18next).init({
             lng: 'en',
-            resources: { en: { translation: {} } },
+            fallbackLng: 'en',
+            resources: { en: { translation: en } },
+            interpolation: { escapeValue: false },
         });
     });
 }

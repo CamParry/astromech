@@ -8,23 +8,12 @@
  * it over (which is what the global edit page does).
  */
 
+import type { RenderAdminResult } from '../../_support/render-admin';
 import type { EntriesService, Entry } from '@/types/index';
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import {
-    createMemoryHistory,
-    createRootRoute,
-    createRoute,
-    createRouter,
-    Outlet,
-    RouterProvider,
-} from '@tanstack/react-router';
-import { render, waitFor } from '@testing-library/react';
-import userEvent from '@testing-library/user-event';
-import i18n from 'i18next';
-import { initReactI18next } from 'react-i18next';
-import { beforeAll, describe, expect, it, vi } from 'vitest';
+import { screen, waitFor } from '@testing-library/react';
+import { describe, expect, it, vi } from 'vitest';
 import { LocaleSwitcher } from '@/admin/components/translations/locale-switcher';
-import { ToastProvider } from '@/admin/components/ui/toast';
+import { renderAdmin } from '../../_support/render-admin';
 
 // The page calls entries through the client; each test sets the stub.
 const client = vi.hoisted(() => ({ entries: undefined as unknown }));
@@ -45,13 +34,6 @@ vi.mock('astromech/fetch', async (importOriginal) => {
 const TYPE = 'caseStudy';
 const ID = 'cs1';
 const BASE_PATH = `/entries/${TYPE}`;
-
-beforeAll(async () => {
-    await i18n.use(initReactI18next).init({
-        lng: 'en',
-        resources: { en: { translation: {} } },
-    });
-});
 
 function frEntry(): Entry {
     return {
@@ -74,78 +56,40 @@ function mountSwitcher(options: {
     onSelectMissing?: (locale: string) => void;
 }) {
     client.entries = options.api;
-    const rootRoute = createRootRoute({ component: () => <Outlet /> });
-    const switcherRoute = createRoute({
-        getParentRoute: () => rootRoute,
-        path: '/',
-        component: () => (
-            <LocaleSwitcher
-                id={ID}
-                currentLocale="en"
-                locales={options.locales}
-                allLocales={['en', 'fr']}
-                defaultLocale="en"
-                basePath={BASE_PATH}
-                type={TYPE}
-                {...(options.onSelectMissing !== undefined
-                    ? { onSelectMissing: options.onSelectMissing }
-                    : {})}
-                compact
-            />
-        ),
-    });
-    const router = createRouter({
-        routeTree: rootRoute.addChildren([switcherRoute]),
-        history: createMemoryHistory({ initialEntries: ['/'] }),
-        // The switcher navigates to the edit page, which this tree leaves out.
-        defaultNotFoundComponent: () => null,
-    });
 
-    render(
-        <QueryClientProvider client={new QueryClient()}>
-            <ToastProvider>
-                <RouterProvider router={router} />
-            </ToastProvider>
-        </QueryClientProvider>
+    return renderAdmin(
+        <LocaleSwitcher
+            id={ID}
+            currentLocale="en"
+            locales={options.locales}
+            allLocales={['en', 'fr']}
+            defaultLocale="en"
+            basePath={BASE_PATH}
+            type={TYPE}
+            {...(options.onSelectMissing !== undefined
+                ? { onSelectMissing: options.onSelectMissing }
+                : {})}
+            compact
+        />
     );
-
-    return router as unknown as { state: { location: { href: string } } };
 }
 
 /** Open the switcher's listbox and pick the option with this label. */
-async function pick(label: string): Promise<void> {
-    const user = userEvent.setup();
+async function pick(view: RenderAdminResult, label: string): Promise<void> {
     // The router resolves its first match asynchronously.
-    const trigger = await waitFor(() => {
-        const found = document.querySelector('[role="combobox"]');
-        if (found === null) throw new Error('the switcher rendered no trigger');
-        return found;
-    });
-    await user.click(trigger);
-    const option = [...document.querySelectorAll('[role="option"]')].find(
-        (item) => item.textContent === label
-    );
-    if (option === undefined) {
-        throw new Error(
-            `no "${label}" option; rendered: ${[
-                ...document.querySelectorAll('[role="option"]'),
-            ]
-                .map((item) => item.textContent)
-                .join(', ')}`
-        );
-    }
-    await user.click(option);
+    await view.user.click(await screen.findByRole('combobox'));
+    await view.user.click(await screen.findByRole('option', { name: label }));
 }
 
 describe('the locale switcher', () => {
     it('keeps the id and changes the locale search param for an existing locale', async () => {
         const api = { update: vi.fn() } as unknown as EntriesService;
-        const router = mountSwitcher({ locales: ['en', 'fr'], api });
+        const view = mountSwitcher({ locales: ['en', 'fr'], api });
 
-        await pick('FR');
+        await pick(view, 'FR');
 
         await waitFor(() => {
-            expect(router.state.location.href).toBe(`${BASE_PATH}/${ID}?locale=fr`);
+            expect(view.location()).toBe(`${BASE_PATH}/${ID}?locale=fr`);
         });
         // The row already exists, so nothing is written to reach it.
         expect(api.update).not.toHaveBeenCalled();
@@ -156,9 +100,9 @@ describe('the locale switcher', () => {
             async () => frEntry()
         );
         const api = { update } as unknown as EntriesService;
-        const router = mountSwitcher({ locales: ['en'], api });
+        const view = mountSwitcher({ locales: ['en'], api });
 
-        await pick('Add FR');
+        await pick(view, 'Add FR');
 
         await waitFor(() => {
             expect(update).toHaveBeenCalledTimes(1);
@@ -171,7 +115,7 @@ describe('the locale switcher', () => {
             data: {},
         });
         await waitFor(() => {
-            expect(router.state.location.href).toBe(`${BASE_PATH}/${ID}?locale=fr`);
+            expect(view.location()).toBe(`${BASE_PATH}/${ID}?locale=fr`);
         });
     });
 
@@ -179,9 +123,9 @@ describe('the locale switcher', () => {
         const update = vi.fn();
         const onSelectMissing = vi.fn();
         const api = { update } as unknown as EntriesService;
-        mountSwitcher({ locales: ['en'], api, onSelectMissing });
+        const view = mountSwitcher({ locales: ['en'], api, onSelectMissing });
 
-        await pick('Add FR');
+        await pick(view, 'Add FR');
 
         await waitFor(() => {
             expect(onSelectMissing).toHaveBeenCalledWith('fr');

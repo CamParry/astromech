@@ -8,36 +8,12 @@
  * A group's object value is atomic — a sub-key dropped anywhere along the way
  * is a sub-key dropped in the saved entry.
  *
- * This mounts the REAL `EntryEditPage` behind a memory router (the shape
- * `entry-edit-cache-invalidation.test.tsx` established) and subscribes to the
- * page's own `form.store`, so a partial group is caught at the transition that
- * writes it rather than only at submit.
+ * This mounts the REAL `EntryEditPage` through `renderAdmin` and subscribes to
+ * the page's own `form.store`, so a partial group is caught at the transition
+ * that writes it rather than only at submit. That subscription is the one mock
+ * of an admin hook left: no rendered output shows a transient partial group.
  */
 
-import type { AuthUser } from '@/admin/context/auth';
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import {
-    createMemoryHistory,
-    createRootRoute,
-    createRoute,
-    createRouter,
-    Outlet,
-    RouterProvider,
-    useParams,
-    useSearch,
-} from '@tanstack/react-router';
-import { act, render, screen, waitFor } from '@testing-library/react';
-import userEvent from '@testing-library/user-event';
-import i18n from 'i18next';
-import { initReactI18next } from 'react-i18next';
-import { beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
-import { EntryEditPage } from '@/admin/components/entries/entry-edit-page';
-import { ConfirmProvider } from '@/admin/components/ui/confirm';
-import { ToastProvider } from '@/admin/components/ui/toast';
-import { AiContextProvider } from '@/admin/context/ai-context';
-import { AuthProvider, sessionQueryOptions } from '@/admin/context/auth';
-import { queryKeys } from '@/admin/hooks/use-query-keys';
-import '@/admin/rendering/register-fields';
 import type * as UseEntryForm from '@/admin/hooks/use-entry-form';
 import type {
     AdminEntryType,
@@ -47,6 +23,13 @@ import type {
     QueryResult,
     User,
 } from '@/types/index';
+import type { QueryClient } from '@tanstack/react-query';
+import { useSearch } from '@tanstack/react-router';
+import { screen, waitFor } from '@testing-library/react';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { EntryEditPage } from '@/admin/components/entries/entry-edit-page';
+import { queryKeys } from '@/admin/hooks/use-query-keys';
+import { createTestQueryClient, renderAdmin } from '../../_support/render-admin';
 
 // The page calls entries through the client; each test sets the stub.
 const client = vi.hoisted(() => ({ entries: undefined as unknown }));
@@ -105,15 +88,6 @@ vi.mock('@/admin/hooks/use-entry-form', async (importOriginal) => {
 
 beforeEach(() => {
     transitions.length = 0;
-});
-
-beforeAll(async () => {
-    // The page reads labels through `useTranslation`; the SPA's own i18n module
-    // pulls in virtual modules, so stand up a bare instance instead.
-    await i18n.use(initReactI18next).init({
-        lng: 'en',
-        resources: { en: { translation: {} } },
-    });
 });
 
 const TYPE = 'caseStudy';
@@ -206,47 +180,20 @@ function makeApi() {
     return { api, update };
 }
 
+/** The page as its route renders it: the `locale` search param mapped to a prop. */
+function EditRoute() {
+    const search = useSearch({ strict: false }) as { locale?: string };
+    return <EntryEditPage type={TYPE} id={ID} locale={search.locale} />;
+}
+
 function mountApp(queryClient: QueryClient, api: EntriesService) {
     client.entries = api;
     adminConfig.entryTypes[TYPE] = ENTRY_TYPE_CONFIG;
 
-    const rootRoute = createRootRoute({ component: () => <Outlet /> });
-    const editRoute = createRoute({
-        getParentRoute: () => rootRoute,
-        path: '/entries/$type/$id',
-        validateSearch: (search: Record<string, unknown>) => ({
-            locale: search['locale'] as string | undefined,
-        }),
-        component: function EditRoute() {
-            const params = useParams({ strict: false }) as { id: string };
-            const search = useSearch({ strict: false }) as { locale?: string };
-            return <EntryEditPage type={TYPE} id={params.id} locale={search.locale} />;
-        },
+    return renderAdmin(<EditRoute />, {
+        url: `/entries/${TYPE}/${ID}?locale=en`,
+        queryClient,
     });
-    const router = createRouter({
-        routeTree: rootRoute.addChildren([editRoute]),
-        history: createMemoryHistory({
-            initialEntries: [`/entries/${TYPE}/${ID}?locale=en`],
-        }),
-    });
-
-    render(
-        <QueryClientProvider client={queryClient}>
-            <ToastProvider>
-                <AuthProvider>
-                    <ConfirmProvider>
-                        <AiContextProvider>
-                            <RouterProvider router={router} />
-                        </AiContextProvider>
-                    </ConfirmProvider>
-                </AuthProvider>
-            </ToastProvider>
-        </QueryClientProvider>
-    );
-
-    // `to` is typed against the admin app's generated route tree, which this
-    // hand-built tree is not part of; address it by plain string instead.
-    return router as unknown as { navigate: (opts: { to: string }) => Promise<void> };
 }
 
 function control(selector: string): HTMLInputElement {
@@ -267,18 +214,7 @@ async function findControl(selector: string): Promise<HTMLInputElement> {
 }
 
 function makeClient(): QueryClient {
-    // The admin app's real staleTime (admin/main.tsx).
-    const queryClient = new QueryClient({
-        defaultOptions: { queries: { staleTime: 30_000, retry: false } },
-    });
-    queryClient.setQueryData<AuthUser>(sessionQueryOptions.queryKey, {
-        id: 'u1',
-        name: 'Admin',
-        email: 'admin@astromech.dev',
-        image: null,
-        role: 'admin',
-        permissions: ['*'],
-    });
+    const queryClient = createTestQueryClient();
     // No known users, so the page's author names need no request either.
     queryClient.setQueryData<QueryResult<User>>(queryKeys.users.list({ limit: 'all' }), {
         data: [],
@@ -302,10 +238,10 @@ function assertNoPartialGroup(): void {
 
 describe('the entry edit page across a locale switch', () => {
     it('keeps the whole group when one sub-key is edited either side of the switch', async () => {
-        const user = userEvent.setup({ delay: null });
         const queryClient = makeClient();
         const { api, update } = makeApi();
-        const router = mountApp(queryClient, api);
+        const page = mountApp(queryClient, api);
+        const { user } = page;
 
         // Edit the meta title alone, leaving the sibling untouched.
         const title = await findControl('input[name="seo.title"]');
@@ -314,9 +250,7 @@ describe('the entry edit page across a locale switch', () => {
 
         // Switch locale — what `LocaleSwitcher.handleValueChange` does for a
         // locale the entry already has: same id, different `locale` param.
-        await act(async () => {
-            await router.navigate({ to: `/entries/${TYPE}/${ID}?locale=fr` });
-        });
+        await page.navigate(`/entries/${TYPE}/${ID}?locale=fr`);
         await waitFor(() => {
             expect(control('input[name="seo.title"]').value).toBe('FR title');
         });
@@ -326,9 +260,7 @@ describe('the entry edit page across a locale switch', () => {
         const other = await findControl('input[name="seo.title"]');
         await user.clear(other);
         await user.type(other, 'FR edited');
-        await act(async () => {
-            await router.navigate({ to: `/entries/${TYPE}/${ID}?locale=en` });
-        });
+        await page.navigate(`/entries/${TYPE}/${ID}?locale=en`);
         await waitFor(() => {
             expect(control('input[name="seo.title"]').value).toBe('EN title');
         });
@@ -337,9 +269,9 @@ describe('the entry edit page across a locale switch', () => {
         const back = await findControl('input[name="seo.title"]');
         await user.clear(back);
         await user.type(back, 'EN edited again');
-        await user.click(await screen.findByRole('button', { name: 'common.update' }));
+        await user.click(await screen.findByRole('button', { name: 'Update' }));
         // The success toast comes from `onSuccess`, after `form.reset` has run.
-        await screen.findByText('entries.updated');
+        await screen.findByText('Case Study updated.');
 
         assertNoPartialGroup();
         expect(update).toHaveBeenCalledTimes(1);
@@ -362,15 +294,13 @@ describe('the entry edit page across a locale switch', () => {
     it('loads the sibling locale’s own values when the form is untouched', async () => {
         const queryClient = makeClient();
         const { api } = makeApi();
-        const router = mountApp(queryClient, api);
+        const page = mountApp(queryClient, api);
 
         await waitFor(() => {
             expect(control('input[name="seo.title"]').value).toBe('EN title');
         });
 
-        await act(async () => {
-            await router.navigate({ to: `/entries/${TYPE}/${ID}?locale=fr` });
-        });
+        await page.navigate(`/entries/${TYPE}/${ID}?locale=fr`);
 
         // The route component is not remounted; the page keys its body on the
         // locale, so the new row arrives through a fresh form.
@@ -381,10 +311,10 @@ describe('the entry edit page across a locale switch', () => {
     });
 
     it('loads the sibling locale’s own values when the form has been edited', async () => {
-        const user = userEvent.setup({ delay: null });
         const queryClient = makeClient();
         const { api, update } = makeApi();
-        const router = mountApp(queryClient, api);
+        const page = mountApp(queryClient, api);
+        const { user } = page;
 
         // Touch the form. From here TanStack Form stops copying `defaultValues`
         // in, so only the remount can show the other locale's row.
@@ -395,9 +325,7 @@ describe('the entry edit page across a locale switch', () => {
             expect(control('input[name="seo.title"]').value).toBe('EN edited');
         });
 
-        await act(async () => {
-            await router.navigate({ to: `/entries/${TYPE}/${ID}?locale=fr` });
-        });
+        await page.navigate(`/entries/${TYPE}/${ID}?locale=fr`);
 
         await waitFor(() => {
             expect(control('input[name="seo.title"]').value).toBe('FR title');
@@ -406,9 +334,7 @@ describe('the entry edit page across a locale switch', () => {
         });
 
         // Back to the first locale: its stored values, not the unsaved edit.
-        await act(async () => {
-            await router.navigate({ to: `/entries/${TYPE}/${ID}?locale=en` });
-        });
+        await page.navigate(`/entries/${TYPE}/${ID}?locale=en`);
 
         await waitFor(() => {
             expect(control('input[name="seo.title"]').value).toBe('EN title');

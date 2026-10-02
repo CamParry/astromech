@@ -4,13 +4,21 @@
  */
 
 import type { Field } from 'astromech';
+import { makeTestConfig } from '@tests/harness';
+import { createPluginTestApp } from '@tests/plugin-app';
 import { describe, expect, it } from 'vitest';
-import { resolvePluginIdentity } from '@/plugins/runtime/plugin-identity';
 import { seo } from '../../src/index';
 
 describe('seo.section', () => {
-    it('prefixes every label with the namespace the runtime assigns the plugin', () => {
-        const { namespace } = resolvePluginIdentity(seo());
+    it('prefixes every label with the namespace the runtime assigns the plugin', async () => {
+        const { adminConfig } = await createPluginTestApp('seo', {
+            ...makeTestConfig(),
+            plugins: [seo()],
+        });
+        const namespace = adminConfig.plugins.find(
+            ({ serviceKey }) => serviceKey === 'seo'
+        )?.namespace;
+        expect(namespace).toBe('seo');
         const labels = labelKeys([seo.section()]);
 
         expect(labels.length).toBeGreaterThan(0);

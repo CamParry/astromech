@@ -1,23 +1,29 @@
 /**
  * A plugin registered for real on a fresh harness database, with typed handles
- * on its service, the content services and the HTTP API, so a plugin's tests
- * reach core one way.
+ * on its service, the content and users services, the admin config and the
+ * HTTP API, so a plugin's tests reach core one way.
  */
 import type { DB } from '@/database/types';
+import type { AdminConfig } from '@/types/config';
 import type {
     AstromechConfig,
     AstromechPluginServices,
     EntriesService,
     GlobalsService,
+    MediaService,
     PluginContext,
     ResolvedConfig,
     Role,
     User,
+    UsersService,
 } from '@/types/index';
 import type { Kysely } from 'kysely';
 import { createTestDb, setupTestConfig } from '@tests/harness';
 import { createAppContext, systemAppContext } from '@/app-context/app-context';
 import { createServices, currentServices } from '@/app-context/services';
+import { setMethodManifest } from '@/codegen/manifest-registry';
+import { generateMethodManifest } from '@/codegen/method-manifest';
+import { buildAdminConfig } from '@/config/admin-config';
 import { createPluginContext, getPluginIdentity } from '@/plugins/runtime/plugin-runtime';
 import { createHttpApp } from '@/transport/http/app';
 
@@ -30,6 +36,8 @@ export type PluginTestApp<K extends PluginKey> = {
     db: Kysely<DB>;
     /** The resolved config the app runs. */
     config: ResolvedConfig;
+    /** What the site serves the admin: each plugin's nav, pages and resources among it. */
+    adminConfig: AdminConfig;
     /**
      * The plugin's service on the trusted handle, the way site code calls it.
      * Read on each access, so it follows a later `setupTestConfig`.
@@ -44,6 +52,10 @@ export type PluginTestApp<K extends PluginKey> = {
     entries: EntriesService;
     /** The globals service on the trusted handle. */
     globals: GlobalsService;
+    /** The media service on the trusted handle. */
+    media: MediaService;
+    /** The users service on the trusted handle. */
+    users: UsersService;
     /** The `ctx` the plugin's own code receives, acting as the system. */
     context(): PluginContext;
     /** Send a request to the app's API. `path` is relative to `{basePath}/api`. */
@@ -58,8 +70,9 @@ export type TestRequestInit = {
 
 /**
  * Open a fresh test database, publish `config` and register its plugins the
- * way `setupTestConfig` does, and return handles on the plugin whose service
- * key is `key`. Throws when `config` installs no such plugin.
+ * way `setupTestConfig` does, publish the method manifest the way boot does,
+ * and return handles on the plugin whose service key is `key`. Throws when
+ * `config` installs no such plugin.
  */
 export async function createPluginTestApp<K extends PluginKey>(
     key: K,
@@ -67,6 +80,8 @@ export async function createPluginTestApp<K extends PluginKey>(
 ): Promise<PluginTestApp<K>> {
     const db = await createTestDb();
     const resolved = setupTestConfig(config);
+    // `ctx.methods.tools` builds a plugin's tool surface from the manifest.
+    setMethodManifest(generateMethodManifest(resolved, config.plugins ?? []));
     const identity = getPluginIdentity(key);
     if (identity === undefined) {
         throw new Error(`the config installs no plugin with the service key '${key}'`);
@@ -76,6 +91,7 @@ export async function createPluginTestApp<K extends PluginKey>(
     return {
         db,
         config: resolved,
+        adminConfig: buildAdminConfig(config, resolved),
         get service() {
             return pluginService(currentServices.plugins, key);
         },
@@ -88,6 +104,8 @@ export async function createPluginTestApp<K extends PluginKey>(
             ),
         entries: currentServices.entries,
         globals: currentServices.globals,
+        media: currentServices.media,
+        users: currentServices.users,
         context: () => createPluginContext(identity, systemAppContext()),
         request: async (method, path, init = {}) => {
             http ??= createHttpApp(resolved);

@@ -6,37 +6,25 @@
  */
 
 import type { VersionMetadata } from '@/types/index';
-import { render, screen } from '@testing-library/react';
-import userEvent from '@testing-library/user-event';
-import i18n from 'i18next';
-import { initReactI18next } from 'react-i18next';
-import { afterEach, beforeAll, describe, expect, it, vi } from 'vitest';
+import type { UserEvent } from '@testing-library/user-event';
+import { screen, waitFor, within } from '@testing-library/react';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import { MediaVersionsPanel } from '@/admin/components/media/media-versions-panel';
-import { ConfirmProvider } from '@/admin/components/ui/confirm';
-import en from '@/admin/locales/en.json';
+import { queryKeys } from '@/admin/hooks/use-query-keys';
+import { createTestQueryClient, renderWithProviders } from '../../_support/render-admin';
 
-const { restoreMutate, mutations } = vi.hoisted(() => {
-    const restoreMutate = vi.fn();
+const { media } = vi.hoisted(() => ({
+    media: { versions: vi.fn(), restoreVersion: vi.fn() },
+}));
+
+// The panel restores through the client; everything else is real.
+vi.mock('astromech/fetch', async (importOriginal) => {
+    const real = await importOriginal<{ astromechUntypedClient: object }>();
     return {
-        restoreMutate,
-        mutations: { restoreVersion: restoreMutate } as Record<string, () => void>,
+        ...real,
+        astromechUntypedClient: { ...real.astromechUntypedClient, media },
     };
 });
-
-let versions: VersionMetadata[] = [];
-
-vi.mock('@/admin/hooks/media', async (importOriginal) => ({
-    ...(await importOriginal<object>()),
-    useMediaVersions: () => ({ data: versions, isLoading: false }),
-}));
-
-/** Each `mediaMutations()` row, answered by the spy named after it. */
-vi.mock('@/admin/hooks/use-admin-mutation', () => ({
-    useAdminMutation: (options: { mutationKey: readonly string[] }) => ({
-        mutate: mutations[options.mutationKey[1] ?? ''] ?? vi.fn(),
-        isPending: false,
-    }),
-}));
 
 function makeVersion(version: number): VersionMetadata {
     return {
@@ -47,65 +35,60 @@ function makeVersion(version: number): VersionMetadata {
     };
 }
 
-beforeAll(async () => {
-    await i18n.use(initReactI18next).init({
-        lng: 'en',
-        resources: { en: { translation: en } },
-        interpolation: { escapeValue: false },
-    });
-});
-
 afterEach(() => {
-    restoreMutate.mockReset();
-    versions = [];
+    for (const fn of Object.values(media)) fn.mockReset();
 });
 
-function renderPanel(canUpdate = true): void {
-    render(
-        <ConfirmProvider>
-            <MediaVersionsPanel mediaId="m1" locale="en" canUpdate={canUpdate} />
-        </ConfirmProvider>
+/** Render the panel over `versions`, seeded as the locale's version list. */
+function renderPanel(versions: VersionMetadata[], canUpdate = true): UserEvent {
+    media.versions.mockResolvedValue(versions);
+    media.restoreVersion.mockResolvedValue(null);
+    const queryClient = createTestQueryClient();
+    queryClient.setQueryData(queryKeys.media.versions('m1', 'en'), versions);
+    const { user } = renderWithProviders(
+        <MediaVersionsPanel mediaId="m1" locale="en" canUpdate={canUpdate} />,
+        { queryClient }
     );
+    return user;
 }
 
 describe('MediaVersionsPanel', () => {
     it('says so when the locale has no versions', () => {
-        renderPanel();
+        renderPanel([]);
 
         expect(screen.getByText('No versions recorded yet.')).not.toBeNull();
     });
 
     it('lists the versions newest first whatever order they arrive in', () => {
-        versions = [makeVersion(1), makeVersion(3), makeVersion(2)];
-        renderPanel();
+        renderPanel([makeVersion(1), makeVersion(3), makeVersion(2)]);
 
-        expect(
-            [...document.querySelectorAll('.am-content-versions-number')].map(
-                (el) => el.textContent
-            )
-        ).toEqual(['v3', 'v2', 'v1']);
+        expect(screen.getAllByText(/^v\d+$/).map((el) => el.textContent)).toEqual([
+            'v3',
+            'v2',
+            'v1',
+        ]);
     });
 
     it('restores the version whose row was clicked, once confirmed', async () => {
-        const user = userEvent.setup();
-        versions = [makeVersion(1), makeVersion(2)];
-        renderPanel();
+        const user = renderPanel([makeVersion(1), makeVersion(2)]);
 
         const buttons = screen.getAllByRole('button', { name: 'Restore this version' });
         // The list is newest first, so the second row is version 1.
         await user.click(buttons[1] as HTMLElement);
-        await user.click(screen.getByRole('button', { name: 'Restore' }));
+        const dialog = await screen.findByRole('alertdialog');
+        await user.click(within(dialog).getByRole('button', { name: 'Restore' }));
 
-        expect(restoreMutate).toHaveBeenCalledWith({
-            id: 'm1',
-            locale: 'en',
-            version: 1,
+        await waitFor(() => {
+            expect(media.restoreVersion).toHaveBeenCalledWith({
+                id: 'm1',
+                locale: 'en',
+                version: 1,
+            });
         });
     });
 
     it('renders no restore action without update permission', () => {
-        versions = [makeVersion(1)];
-        renderPanel(false);
+        renderPanel([makeVersion(1)], false);
 
         expect(screen.queryByRole('button', { name: 'Restore this version' })).toBeNull();
     });

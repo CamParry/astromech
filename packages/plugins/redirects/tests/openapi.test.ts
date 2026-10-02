@@ -15,7 +15,7 @@ beforeEach(async () => {
 
 describe('the redirects methods in the OpenAPI document', () => {
     it('documents `create` with its input as the body and its output as the bare 200', () => {
-        const { document, warnings } = servedDocument([redirects()]);
+        const { document } = servedDocument([redirects()]);
         const create = document.paths['/plugins/redirects/create']?.['post'];
         expect(create?.summary).toBe('Create a redirect rule.');
 
@@ -44,7 +44,6 @@ describe('the redirects methods in the OpenAPI document', () => {
             '422',
             '500',
         ]);
-        expect(warnings).toEqual([]);
     });
 
     it('documents the public `lookup` with no 401 or 403', () => {

@@ -7,20 +7,23 @@
  */
 
 import type { Media, Usage } from '@/types/index';
-import { render, screen } from '@testing-library/react';
-import userEvent from '@testing-library/user-event';
-import i18n from 'i18next';
-import { initReactI18next } from 'react-i18next';
-import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
+import type { UserEvent } from '@testing-library/user-event';
+import { screen, waitFor } from '@testing-library/react';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { MediaDetailModal } from '@/admin/components/media/media-detail-modal';
-import { ConfirmProvider } from '@/admin/components/ui/confirm';
-import en from '@/admin/locales/en.json';
+import { queryKeys } from '@/admin/hooks/use-query-keys';
+import { createTestQueryClient, renderWithProviders } from '../../_support/render-admin';
 
-const { replaceMutate, mutations } = vi.hoisted(() => {
-    const replaceMutate = vi.fn();
+const { media } = vi.hoisted(() => ({
+    media: { get: vi.fn(), versions: vi.fn(), replace: vi.fn() },
+}));
+
+// The modal reads and writes the item through the client; everything else is real.
+vi.mock('astromech/fetch', async (importOriginal) => {
+    const real = await importOriginal<{ astromechUntypedClient: object }>();
     return {
-        replaceMutate,
-        mutations: { replace: replaceMutate } as Record<string, () => void>,
+        ...real,
+        astromechUntypedClient: { ...real.astromechUntypedClient, media },
     };
 });
 
@@ -73,49 +76,36 @@ const USAGE = [
     },
 ] as Usage[];
 
-vi.mock('@/admin/hooks/media', async (importOriginal) => ({
-    ...(await importOriginal<object>()),
-    useMediaItem: () => ({ data: ITEM, isLoading: false, isError: false }),
-    useMediaUsage: () => ({ data: usage, isLoading: false }),
-    useMediaVersions: () => ({ data: [], isLoading: false }),
-}));
-
-/** Each `mediaMutations()` row, answered by the spy named after it. */
-vi.mock('@/admin/hooks/use-admin-mutation', () => ({
-    useAdminMutation: (options: { mutationKey: readonly string[] }) => ({
-        mutate: mutations[options.mutationKey[1] ?? ''] ?? vi.fn(),
-        isPending: false,
-    }),
-}));
-
-beforeAll(async () => {
-    await i18n.use(initReactI18next).init({
-        lng: 'en',
-        resources: { en: { translation: en } },
-        interpolation: { escapeValue: false },
-    });
-});
-
 beforeEach(() => {
     usage = USAGE;
 });
 
 afterEach(() => {
-    replaceMutate.mockReset();
+    for (const fn of Object.values(media)) fn.mockReset();
 });
 
-/** Open the modal on the fixed item with the permission flags under test. */
-function openModal(permissions?: { canUpload?: boolean }): void {
-    render(
-        <ConfirmProvider>
-            <MediaDetailModal
-                mediaId={ITEM.id}
-                onClose={vi.fn()}
-                onDeleted={vi.fn()}
-                {...permissions}
-            />
-        </ConfirmProvider>
+/**
+ * Open the modal on the fixed item with the permission flags under test, once
+ * the item has loaded. Its usage is seeded, so the confirm's count is known
+ * from the first render.
+ */
+async function openModal(permissions?: { canUpload?: boolean }): Promise<UserEvent> {
+    media.get.mockResolvedValue(ITEM);
+    media.versions.mockResolvedValue([]);
+    media.replace.mockResolvedValue(ITEM);
+    const queryClient = createTestQueryClient();
+    queryClient.setQueryData(queryKeys.media.usedBy(ITEM.id), usage);
+    const { user } = renderWithProviders(
+        <MediaDetailModal
+            mediaId={ITEM.id}
+            onClose={vi.fn()}
+            onDeleted={vi.fn()}
+            {...permissions}
+        />,
+        { queryClient }
     );
+    await screen.findByText('cat.png');
+    return user;
 }
 
 /** The picker behind the Replace button — hidden, so it is not queryable by role. */
@@ -128,34 +118,33 @@ function fileInput(): HTMLInputElement {
 const NEW_FILE = new File(['bytes'], 'kitten.jpg', { type: 'image/jpeg' });
 
 describe('MediaDetailModal replace', () => {
-    it('renders no Replace button without upload permission', () => {
-        openModal({ canUpload: false });
+    it('renders no Replace button without upload permission', async () => {
+        await openModal({ canUpload: false });
 
         expect(screen.queryByRole('button', { name: 'Replace file' })).toBeNull();
         expect(document.querySelector('input[type="file"]')).toBeNull();
     });
 
-    it('renders the Replace button by default', () => {
-        openModal();
+    it('renders the Replace button by default', async () => {
+        await openModal();
 
         expect(screen.queryByRole('button', { name: 'Replace file' })).not.toBeNull();
     });
 
-    it('accepts any file of the item’s own media family', () => {
-        openModal();
+    it('accepts any file of the item’s own media family', async () => {
+        await openModal();
 
         expect(fileInput().accept).toBe('image/*');
     });
 
-    it('raises no confirm until a file has been chosen', () => {
-        openModal();
+    it('raises no confirm until a file has been chosen', async () => {
+        await openModal();
 
         expect(screen.queryByText('Replace this file?')).toBeNull();
     });
 
     it('names the chosen file and the reference count in the confirm', async () => {
-        const user = userEvent.setup();
-        openModal();
+        const user = await openModal();
 
         await user.upload(fileInput(), NEW_FILE);
 
@@ -169,8 +158,7 @@ describe('MediaDetailModal replace', () => {
     // unreferenced file reads "0 references to this file".
     it('says no references when nothing points at the file', async () => {
         usage = [];
-        const user = userEvent.setup();
-        openModal();
+        const user = await openModal();
 
         await user.upload(fileInput(), NEW_FILE);
 
@@ -180,21 +168,21 @@ describe('MediaDetailModal replace', () => {
     });
 
     it('replaces with the chosen file once confirmed', async () => {
-        const user = userEvent.setup();
-        openModal();
+        const user = await openModal();
 
         await user.upload(fileInput(), NEW_FILE);
         await user.click(screen.getByRole('button', { name: 'Replace' }));
 
-        expect(replaceMutate).toHaveBeenCalledWith({ id: 'm1', file: NEW_FILE });
+        await waitFor(() => {
+            expect(media.replace).toHaveBeenCalledWith({ id: 'm1', file: NEW_FILE });
+        });
     });
 
     it('does not replace while the confirm is still open', async () => {
-        const user = userEvent.setup();
-        openModal();
+        const user = await openModal();
 
         await user.upload(fileInput(), NEW_FILE);
 
-        expect(replaceMutate).not.toHaveBeenCalled();
+        expect(media.replace).not.toHaveBeenCalled();
     });
 });

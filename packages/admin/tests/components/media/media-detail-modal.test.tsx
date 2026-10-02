@@ -6,19 +6,20 @@
  */
 
 import type { Media } from '@/types/index';
-import { render, screen } from '@testing-library/react';
-import userEvent from '@testing-library/user-event';
-import i18n from 'i18next';
-import { initReactI18next } from 'react-i18next';
-import { afterEach, beforeAll, describe, expect, it, vi } from 'vitest';
+import type { UserEvent } from '@testing-library/user-event';
+import { screen, waitFor } from '@testing-library/react';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import { MediaDetailModal } from '@/admin/components/media/media-detail-modal';
-import { ConfirmProvider } from '@/admin/components/ui/confirm';
-import en from '@/admin/locales/en.json';
+import { renderWithProviders } from '../../_support/render-admin';
 
-const { updateMutate, deleteMutate, mutations, adminConfig } = vi.hoisted(() => ({
-    updateMutate: vi.fn(),
-    deleteMutate: vi.fn(),
-    mutations: {} as Record<string, () => void>,
+const { media, adminConfig } = vi.hoisted(() => ({
+    media: {
+        get: vi.fn(),
+        usedBy: vi.fn(),
+        versions: vi.fn(),
+        update: vi.fn(),
+        delete: vi.fn(),
+    },
     adminConfig: {
         defaultLocale: 'en',
         locales: ['en', 'fr'],
@@ -53,57 +54,47 @@ const ITEM: Media = {
     updatedBy: null,
 };
 
-// The usage panel queries too, so the whole hooks module is stood in for.
-vi.mock('@/admin/hooks/media', async (importOriginal) => ({
-    ...(await importOriginal<object>()),
-    useMediaItem: (_id: string, _enabled: boolean, locale?: string) => {
-        requestedLocale.current = locale;
-        // The item has an `en` row alone, so every read falls back to it.
-        return { data: ITEM, isLoading: false, isError: false };
-    },
-    useMediaUsage: () => ({ data: [], isLoading: false }),
-    useMediaVersions: () => ({ data: [], isLoading: false }),
-}));
-mutations['update'] = updateMutate;
-mutations['delete'] = deleteMutate;
-
-/** Each `mediaMutations()` row, answered by the spy named after it. */
-vi.mock('@/admin/hooks/use-admin-mutation', () => ({
-    useAdminMutation: (options: { mutationKey: readonly string[] }) => ({
-        mutate: mutations[options.mutationKey[1] ?? ''] ?? vi.fn(),
-        isPending: false,
-    }),
-}));
-
-beforeAll(async () => {
-    // Buttons and inputs are found by their labels, so real strings are needed;
-    // the SPA's own i18n module pulls in virtual modules, so stand up a bare one.
-    await i18n.use(initReactI18next).init({
-        lng: 'en',
-        resources: { en: { translation: en } },
-        interpolation: { escapeValue: false },
-    });
+// The modal reads and writes the item through the client; everything else is real.
+vi.mock('astromech/fetch', async (importOriginal) => {
+    const real = await importOriginal<{ astromechUntypedClient: object }>();
+    return {
+        ...real,
+        astromechUntypedClient: { ...real.astromechUntypedClient, media },
+    };
 });
 
 afterEach(() => {
-    updateMutate.mockReset();
-    deleteMutate.mockReset();
+    for (const fn of Object.values(media)) fn.mockReset();
     requestedLocale.current = undefined;
     adminConfig.media.translatable = false;
 });
 
-/** Open the modal on the fixed item with the permission flags under test. */
-function openModal(permissions?: { canUpdate?: boolean; canDelete?: boolean }): void {
-    render(
-        <ConfirmProvider>
-            <MediaDetailModal
-                mediaId={ITEM.id}
-                onClose={vi.fn()}
-                onDeleted={vi.fn()}
-                {...permissions}
-            />
-        </ConfirmProvider>
+/**
+ * Open the modal on the fixed item with the permission flags under test, once
+ * the item has loaded.
+ */
+async function openModal(permissions?: {
+    canUpdate?: boolean;
+    canDelete?: boolean;
+}): Promise<UserEvent> {
+    media.get.mockImplementation(async (params: { locale?: string }) => {
+        requestedLocale.current = params.locale;
+        // The item has an `en` row alone, so every read falls back to it.
+        return ITEM;
+    });
+    media.usedBy.mockResolvedValue([]);
+    media.versions.mockResolvedValue([]);
+    media.update.mockResolvedValue(ITEM);
+    const { user } = renderWithProviders(
+        <MediaDetailModal
+            mediaId={ITEM.id}
+            onClose={vi.fn()}
+            onDeleted={vi.fn()}
+            {...permissions}
+        />
     );
+    await screen.findByText('cat.png');
+    return user;
 }
 
 /** The Save button, which only exists when the viewer may update. */
@@ -112,15 +103,14 @@ function saveButton(): HTMLButtonElement {
 }
 
 describe('MediaDetailModal save gate', () => {
-    it('starts disabled while the form is untouched', () => {
-        openModal();
+    it('starts disabled while the form is untouched', async () => {
+        await openModal();
 
         expect(saveButton().disabled).toBe(true);
     });
 
     it('enables once a field changes', async () => {
-        const user = userEvent.setup();
-        openModal();
+        const user = await openModal();
 
         await user.type(screen.getByLabelText('Alt text'), 'A cat');
 
@@ -128,37 +118,38 @@ describe('MediaDetailModal save gate', () => {
     });
 
     it('submits alt, title and caption together', async () => {
-        const user = userEvent.setup();
-        openModal();
+        const user = await openModal();
 
         await user.type(screen.getByLabelText('Alt text'), 'A cat');
         await user.type(screen.getByLabelText('Title'), 'Cat photo');
         await user.type(screen.getByLabelText('Caption'), 'Sitting on a mat');
         await user.click(saveButton());
 
-        expect(updateMutate).toHaveBeenCalledWith({
-            id: 'm1',
-            locale: undefined,
-            data: { alt: 'A cat', title: 'Cat photo', caption: 'Sitting on a mat' },
+        await waitFor(() => {
+            expect(media.update).toHaveBeenCalledWith({
+                id: 'm1',
+                locale: undefined,
+                data: { alt: 'A cat', title: 'Cat photo', caption: 'Sitting on a mat' },
+            });
         });
     });
 });
 
 describe('MediaDetailModal permissions', () => {
-    it('renders no Save button without update permission', () => {
-        openModal({ canUpdate: false });
+    it('renders no Save button without update permission', async () => {
+        await openModal({ canUpdate: false });
 
         expect(screen.queryByRole('button', { name: 'Update' })).toBeNull();
     });
 
-    it('still renders Delete without update permission', () => {
-        openModal({ canUpdate: false, canDelete: true });
+    it('still renders Delete without update permission', async () => {
+        await openModal({ canUpdate: false, canDelete: true });
 
         expect(screen.queryByRole('button', { name: 'Delete' })).not.toBeNull();
     });
 
-    it('renders no Delete button without delete permission', () => {
-        openModal({ canDelete: false });
+    it('renders no Delete button without delete permission', async () => {
+        await openModal({ canDelete: false });
 
         expect(screen.queryByRole('button', { name: 'Delete' })).toBeNull();
         expect(screen.queryByRole('button', { name: 'Update' })).not.toBeNull();
@@ -166,69 +157,55 @@ describe('MediaDetailModal permissions', () => {
 });
 
 /** Open the modal's locale listbox and pick the option with this label. */
-async function pickLocale(label: string): Promise<void> {
-    const user = userEvent.setup();
-    const trigger = screen.getByRole('combobox');
-    await user.click(trigger);
-    const option = [...document.querySelectorAll('[role="option"]')].find(
-        (item) => item.textContent === label
-    );
-    if (option === undefined) {
-        throw new Error(
-            `no "${label}" option; rendered: ${[
-                ...document.querySelectorAll('[role="option"]'),
-            ]
-                .map((item) => item.textContent)
-                .join(', ')}`
-        );
-    }
-    await user.click(option);
+async function pickLocale(user: UserEvent, label: string): Promise<void> {
+    await user.click(screen.getByRole('combobox'));
+    await user.click(await screen.findByRole('option', { name: label }));
 }
 
 describe('MediaDetailModal locales', () => {
-    it('renders no locale select when media is not translatable', () => {
-        openModal();
+    it('renders no locale select when media is not translatable', async () => {
+        await openModal();
 
         expect(screen.queryByRole('combobox')).toBeNull();
     });
 
     it('offers every configured locale when media is translatable', async () => {
         adminConfig.media.translatable = true;
-        const user = userEvent.setup();
-        openModal();
+        const user = await openModal();
 
         await user.click(screen.getByRole('combobox'));
 
         expect(
-            [...document.querySelectorAll('[role="option"]')].map((o) => o.textContent)
+            (await screen.findAllByRole('option')).map((option) => option.textContent)
         ).toEqual(['EN', 'Add FR']);
     });
 
     it('reads the chosen locale and says the shown content is the fallback', async () => {
         adminConfig.media.translatable = true;
-        openModal();
+        const user = await openModal();
 
-        await pickLocale('Add FR');
+        await pickLocale(user, 'Add FR');
 
-        expect(requestedLocale.current).toBe('fr');
         expect(
-            screen.getByText('Showing the EN content until this locale is saved.')
+            await screen.findByText('Showing the EN content until this locale is saved.')
         ).not.toBeNull();
+        expect(requestedLocale.current).toBe('fr');
     });
 
     it('saves into the chosen locale', async () => {
         adminConfig.media.translatable = true;
-        const user = userEvent.setup();
-        openModal();
+        const user = await openModal();
 
-        await pickLocale('Add FR');
-        await user.type(screen.getByLabelText('Alt text'), 'Un chat');
+        await pickLocale(user, 'Add FR');
+        await user.type(await screen.findByLabelText('Alt text'), 'Un chat');
         await user.click(saveButton());
 
-        expect(updateMutate).toHaveBeenCalledWith({
-            id: 'm1',
-            locale: 'fr',
-            data: { alt: 'Un chat', title: '', caption: '' },
+        await waitFor(() => {
+            expect(media.update).toHaveBeenCalledWith({
+                id: 'm1',
+                locale: 'fr',
+                data: { alt: 'Un chat', title: '', caption: '' },
+            });
         });
     });
 });

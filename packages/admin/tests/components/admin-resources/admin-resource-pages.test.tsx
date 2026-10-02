@@ -8,32 +8,17 @@
  * read-only without an update method or its permission, and shows not found.
  */
 
-import type { AuthUser } from '@/admin/context/auth';
 import type { AdminResourceRow, QueryResult } from '@/types/index';
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import {
-    createMemoryHistory,
-    createRootRoute,
-    createRoute,
-    createRouter,
-    Outlet,
-    RouterProvider,
-} from '@tanstack/react-router';
-import { render, screen, waitFor, within } from '@testing-library/react';
+import { useParams } from '@tanstack/react-router';
+import { screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import i18n from 'i18next';
-import { initReactI18next } from 'react-i18next';
-import { afterEach, beforeAll, describe, expect, it, vi } from 'vitest';
-import '@/admin/rendering/register-fields';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import { AdminResourceEditPage } from '@/admin/components/admin-resources/admin-resource-edit-page';
 import { AdminResourceListPage } from '@/admin/components/admin-resources/admin-resource-list-page';
 import { AdminResourceNewPage } from '@/admin/components/admin-resources/admin-resource-new-page';
-import { ConfirmProvider } from '@/admin/components/ui/confirm';
-import { ToastProvider } from '@/admin/components/ui/toast';
 import { validateListSearch } from '@/admin/components/ui/use-list-state';
-import { AuthProvider, sessionQueryOptions } from '@/admin/context/auth';
-import en from '@/admin/locales/en.json';
 import { AstromechApiError } from '@/transport/http/client';
+import { renderAdmin } from '../../_support/render-admin';
 
 const { rpc } = vi.hoisted(() => ({
     rpc: {
@@ -71,75 +56,43 @@ function page(rows: AdminResourceRow[]): QueryResult<AdminResourceRow> {
     };
 }
 
-beforeAll(async () => {
-    await i18n.use(initReactI18next).init({
-        lng: 'en',
-        resources: { en: { translation: en } },
-        interpolation: { escapeValue: false },
-    });
-});
-
 afterEach(() => {
     for (const fn of Object.values(rpc)) fn.mockReset();
 });
 
+/** The params the three routes below match. */
+type ResourceParams = { name: string; resource: string; id: string };
+
+function ListRoute() {
+    const { name, resource } = useParams({ strict: false }) as ResourceParams;
+    return <AdminResourceListPage plugin={name} name={resource} />;
+}
+
+function NewRoute() {
+    const { name, resource } = useParams({ strict: false }) as ResourceParams;
+    return <AdminResourceNewPage plugin={name} name={resource} />;
+}
+
+function EditRoute() {
+    const { name, resource, id } = useParams({ strict: false }) as ResourceParams;
+    return <AdminResourceEditPage plugin={name} name={resource} id={id} />;
+}
+
 /** Mount the three pages under a real router at `url`, as a user holding `permissions`. */
 function mount(url: string, permissions: string[] = [READ, WRITE]) {
-    const queryClient = new QueryClient({
-        defaultOptions: { queries: { staleTime: 30_000, retry: false } },
-    });
-    queryClient.setQueryData<AuthUser>(sessionQueryOptions.queryKey, {
-        id: 'admin',
-        name: 'Admin',
-        email: 'admin@example.com',
-        image: null,
-        role: 'editor',
-        permissions,
-    });
-
-    const rootRoute = createRootRoute({ component: () => <Outlet /> });
-    const listRoute = createRoute({
-        getParentRoute: () => rootRoute,
-        path: '/plugin/$name/resources/$resource',
-        validateSearch: validateListSearch,
-        component: function ListRoute() {
-            const { name, resource } = listRoute.useParams();
-            return <AdminResourceListPage plugin={name} name={resource} />;
-        },
-    });
-    const newRoute = createRoute({
-        getParentRoute: () => rootRoute,
-        path: '/plugin/$name/resources/$resource/new',
-        component: function NewRoute() {
-            const { name, resource } = newRoute.useParams();
-            return <AdminResourceNewPage plugin={name} name={resource} />;
-        },
-    });
-    const editRoute = createRoute({
-        getParentRoute: () => rootRoute,
-        path: '/plugin/$name/resources/$resource/$id',
-        component: function EditRoute() {
-            const { name, resource, id } = editRoute.useParams();
-            return <AdminResourceEditPage plugin={name} name={resource} id={id} />;
-        },
-    });
-    const router = createRouter({
-        routeTree: rootRoute.addChildren([listRoute, newRoute, editRoute]),
-        history: createMemoryHistory({ initialEntries: [url] }),
-    });
-
-    render(
-        <QueryClientProvider client={queryClient}>
-            <ToastProvider>
-                <AuthProvider>
-                    <ConfirmProvider>
-                        <RouterProvider router={router} />
-                    </ConfirmProvider>
-                </AuthProvider>
-            </ToastProvider>
-        </QueryClientProvider>
+    const view = renderAdmin(
+        [
+            {
+                path: '/plugin/$name/resources/$resource',
+                validateSearch: validateListSearch,
+                component: ListRoute,
+            },
+            { path: '/plugin/$name/resources/$resource/new', component: NewRoute },
+            { path: '/plugin/$name/resources/$resource/$id', component: EditRoute },
+        ],
+        { url, permissions }
     );
-    return { path: () => router.state.location.pathname };
+    return { path: view.pathname };
 }
 
 function inputNamed(name: string): HTMLInputElement {

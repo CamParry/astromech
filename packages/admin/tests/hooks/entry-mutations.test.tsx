@@ -6,18 +6,13 @@
  * @vitest-environment happy-dom
  */
 
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { renderHook, screen, waitFor } from '@testing-library/react';
+import { screen, waitFor } from '@testing-library/react';
 import { AstromechApiError } from 'astromech/fetch';
-import i18n from 'i18next';
-import React from 'react';
-import { initReactI18next } from 'react-i18next';
-import { afterEach, beforeAll, describe, expect, it, vi } from 'vitest';
-import { ToastProvider } from '@/admin/components/ui/toast';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import { entryMutations } from '@/admin/hooks/entries';
 import { useAdminMutation } from '@/admin/hooks/use-admin-mutation';
 import { queryKeys } from '@/admin/hooks/use-query-keys';
-import en from '@/admin/locales/en.json';
+import { createTestQueryClient, renderAdminHook } from '../_support/render-admin';
 
 const { restore, publish, createStaged } = vi.hoisted(() => ({
     restore: vi.fn(),
@@ -30,14 +25,6 @@ vi.mock('astromech/fetch', async (importOriginal) => ({
     astromechUntypedClient: { entries: { restore, publish, createStaged } },
 }));
 
-beforeAll(async () => {
-    await i18n.use(initReactI18next).init({
-        lng: 'en',
-        resources: { en: { translation: en } },
-        interpolation: { escapeValue: false },
-    });
-});
-
 afterEach(() => {
     restore.mockReset();
     publish.mockReset();
@@ -46,17 +33,9 @@ afterEach(() => {
 
 /** A retry-free client and the providers the hook needs. */
 function mount<T>(hook: () => T) {
-    const queryClient = new QueryClient({
-        defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
-    });
+    const queryClient = createTestQueryClient();
     const invalidate = vi.spyOn(queryClient, 'invalidateQueries');
-    const { result } = renderHook(hook, {
-        wrapper: ({ children }: { children: React.ReactNode }) => (
-            <QueryClientProvider client={queryClient}>
-                <ToastProvider>{children}</ToastProvider>
-            </QueryClientProvider>
-        ),
-    });
+    const { result } = renderAdminHook(hook, { queryClient });
     return { result, invalidate };
 }
 
