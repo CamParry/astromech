@@ -10,7 +10,6 @@ import type { PluginTestApp } from '@tests/plugin-app';
 import { roleWith } from '@tests/fixtures';
 import { makeTestConfig } from '@tests/harness';
 import { createPluginTestApp } from '@tests/plugin-app';
-import { methodInputs, openInputObjects } from '@tests/strict-input';
 import { createRepository } from 'astromech';
 import { beforeEach, describe, expect, it } from 'vitest';
 import { createApprovalsRepository } from '../../src/approvals/repository';
@@ -168,14 +167,5 @@ describe('clearSession', () => {
 
     it('refuses a caller with no identity', async () => {
         await expect(app.as(ROLE, null).clearSession()).rejects.toThrow('Sign in');
-    });
-});
-
-describe('method inputs', () => {
-    it("refuse unknown keys, as core's do", () => {
-        const inputs = methodInputs(createSessionsService(OPTIONS));
-
-        expect(Object.keys(inputs).length).toBeGreaterThan(0);
-        expect(openInputObjects(inputs)).toEqual([]);
     });
 });

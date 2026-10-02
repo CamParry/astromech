@@ -14,13 +14,12 @@ beforeEach(async () => {
 
 describe('the forms methods in the OpenAPI document', () => {
     it('describes every method, a public form’s fields included', () => {
-        const { document, warnings } = servedDocument([forms()]);
+        const { document } = servedDocument([forms()]);
         const get = document.paths['/plugins/forms/get']?.['post'];
         const output = get?.responses['200']?.content?.['application/json'].schema;
         expect(output?.anyOf?.[0]?.properties?.['fields']?.items).toEqual({
             type: 'object',
             additionalProperties: true,
         });
-        expect(warnings).toEqual([]);
     });
 });

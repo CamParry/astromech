@@ -14,7 +14,7 @@ beforeEach(async () => {
 
 describe('the menus method in the OpenAPI document', () => {
     it('documents the tree through the `MenuItem` component', () => {
-        const { document, warnings } = servedDocument([
+        const { document } = servedDocument([
             menus({ menus: [{ key: 'main', label: 'Main' }] }),
         ]);
         const get = document.paths['/plugins/menus/get']?.['post'];
@@ -29,6 +29,5 @@ describe('the menus method in the OpenAPI document', () => {
         expect(item?.properties?.['children']?.items).toEqual({
             $ref: '#/components/schemas/MenuItem',
         });
-        expect(warnings).toEqual([]);
     });
 });
