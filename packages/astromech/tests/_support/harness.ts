@@ -229,6 +229,21 @@ export function runAsUser<T>(user: User | null, fn: () => T): T {
 }
 
 /**
+ * Send `init` to `path` on `app` as `user` under `role`, the way the Astro
+ * middleware hands a request to the API: inside a request scope that already
+ * holds the identity, which the app joins, so no session is resolved.
+ */
+export function requestAs(
+    app: { fetch(request: Request): Response | Promise<Response> },
+    identity: { user: User | null; role: Role | null },
+    path: string,
+    init?: RequestInit
+): Promise<Response> {
+    const request = new Request(new URL(path, 'http://localhost'), init);
+    return runInRequestScope({ request, ...identity }, async () => app.fetch(request));
+}
+
+/**
  * A context acting as `role` and `user`, the way a transport builds one for a
  * caller. No user by default, so a write records no author row to reference.
  */

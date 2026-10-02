@@ -17,6 +17,8 @@ import {
     runInRequestScope,
 } from '@/request-scope/request-scope';
 
+// The one session mock in the suite: whether a session resolve happens, and
+// how often, is the behaviour under test. Elsewhere `requestAs` seeds identity.
 vi.mock('@/auth/session', () => ({ getSession: vi.fn() }));
 
 const mockGetSession = vi.mocked(getSession);

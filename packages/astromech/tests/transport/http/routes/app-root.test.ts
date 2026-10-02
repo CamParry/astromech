@@ -10,30 +10,12 @@
 import type { Role, User } from '@/types/index';
 import type { OpenAPIHono } from '@hono/zod-openapi';
 import { adminRole } from '@tests/fixtures';
-import { createTestDb, makeTestConfig, setupTestConfig } from '@tests/harness';
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { createTestDb, makeTestConfig, requestAs, setupTestConfig } from '@tests/harness';
+import { describe, expect, it } from 'vitest';
 import { currentServices } from '@/app-context/services';
-import { getSession } from '@/auth/session';
 import { createHttpApp } from '@/transport/http/app';
 
 const usersService = currentServices.users;
-
-vi.mock('@/auth/session', () => ({ getSession: vi.fn() }));
-
-const mockGetSession = vi.mocked(getSession);
-
-/** Answer `requireAuth` with a session, or with none. */
-function signIn(user: User | null): void {
-    if (user === null) {
-        mockGetSession.mockResolvedValue(null);
-        return;
-    }
-    mockGetSession.mockResolvedValue({
-        user: user as never,
-        role: adminRole,
-        session: { id: 's1', userId: user.id } as never,
-    });
-}
 
 /** The API prefix the current app registered its routes under. */
 let api: string;
@@ -44,11 +26,6 @@ async function freshApp(): Promise<OpenAPIHono> {
     api = `${resolved.basePath}/api`;
     return createHttpApp(resolved) as unknown as OpenAPIHono;
 }
-
-beforeEach(() => {
-    mockGetSession.mockReset();
-    signIn(null);
-});
 
 describe('GET /setup/check', () => {
     it('reports needsSetup: true on an empty install, with no session', async () => {
@@ -85,9 +62,7 @@ describe('GET /me', () => {
                 name: 'Me',
             },
         });
-        signIn(user);
-
-        const res = await app.request(`${api}/me`);
+        const res = await requestAs(app, { user, role: adminRole }, `${api}/me`);
         expect(res.status).toBe(200);
         const body = (await res.json()) as { data: { user: User; role: Role } };
         expect(Object.keys(body.data).sort()).toEqual(['role', 'user']);
@@ -100,13 +75,14 @@ describe('GET /me', () => {
         const user = await usersService.create({
             data: { email: 'me@test.dev', name: 'Me' },
         });
-        mockGetSession.mockResolvedValue({
-            user: { ...user, internal: 'x' } as never,
-            role: { ...adminRole, internal: 'x' } as never,
-            session: { id: 's1', userId: user.id } as never,
-        });
+        const userWithExtra = { ...user, internal: 'x' };
+        const roleWithExtra = { ...adminRole, internal: 'x' };
 
-        const res = await app.request(`${api}/me`);
+        const res = await requestAs(
+            app,
+            { user: userWithExtra, role: roleWithExtra },
+            `${api}/me`
+        );
         const body = (await res.json()) as {
             data: { user: Record<string, unknown>; role: Record<string, unknown> };
         };
@@ -132,9 +108,11 @@ describe('GET /openapi.json', () => {
         const user = await usersService.create({
             data: { email: 'me@test.dev', name: 'Me' },
         });
-        signIn(user);
-
-        const res = await app.request(`${api}/openapi.json`);
+        const res = await requestAs(
+            app,
+            { user, role: adminRole },
+            `${api}/openapi.json`
+        );
         expect(res.status).toBe(200);
         const body = (await res.json()) as {
             openapi: string;
@@ -256,9 +234,7 @@ describe('requireAuth covers every mounted domain router', () => {
         const user = await usersService.create({
             data: { email: 'x@test.dev', name: 'X' },
         });
-        signIn(user);
-
-        const res = await app.request(`${api}/nope`);
+        const res = await requestAs(app, { user, role: adminRole }, `${api}/nope`);
         expect(res.status).toBe(404);
         const body = (await res.json()) as { error: { code: string; message: string } };
         expect(body.error.code).toBe('NOT_FOUND');

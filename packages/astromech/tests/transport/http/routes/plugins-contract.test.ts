@@ -12,18 +12,13 @@
 
 import type { AstromechConfig, PluginDefinition, Role, User } from '@/types/index';
 import { OpenAPIHono } from '@hono/zod-openapi';
-import { createTestDb, makeTestConfig, setupTestConfig } from '@tests/harness';
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { roleWith } from '@tests/fixtures';
+import { createTestDb, makeTestConfig, requestAs, setupTestConfig } from '@tests/harness';
+import { describe, expect, it } from 'vitest';
 import { z } from 'zod';
-import { getSession } from '@/auth/session';
-import { runInRequestScope } from '@/request-scope/request-scope';
 import { noInput } from '@/services/define-service-method';
 import { onError } from '@/transport/http/middleware/errors';
 import { createPluginsRouter } from '@/transport/http/routes/plugins';
-
-vi.mock('@/auth/session', () => ({ getSession: vi.fn() }));
-
-const mockGetSession = vi.mocked(getSession);
 
 const probePlugin: PluginDefinition = {
     package: 'probe',
@@ -88,48 +83,30 @@ function configWithProbe(): AstromechConfig {
 
 const signedInUser = { id: 'u1', email: 'a@b.dev' } as unknown as User;
 
-function roleWith(permissions: string[]): Role {
-    return {
-        slug: 'test',
-        name: 'Test',
-        permissions: permissions as Role['permissions'],
-        isBuiltIn: false,
-    };
-}
-
 /** Register the probe plugin, then build the router over it. */
 async function freshApp(): Promise<OpenAPIHono> {
     await createTestDb();
     setupTestConfig(configWithProbe());
     const app = new OpenAPIHono();
     app.onError(onError);
-    app.use('*', (c, next) => runInRequestScope({ request: c.req.raw }, () => next()));
     app.route('/plugins', createPluginsRouter());
     return app;
 }
 
-/** Answer `optionalAuth` with a session holding `permissions`, or with none. */
-function signIn(permissions: string[] | null): void {
-    if (permissions === null) {
-        mockGetSession.mockResolvedValue(null);
-        return;
-    }
-    mockGetSession.mockResolvedValue({
-        user: signedInUser as never,
-        role: roleWith(permissions),
-        session: { id: 's1', userId: 'u1' } as never,
-    });
-}
+/** A request with no session. */
+const signedOut = { user: null, role: null };
 
-beforeEach(() => {
-    mockGetSession.mockReset();
-    signIn(null);
-});
+/** A request from {@link signedInUser} under a role holding `permissions`. */
+function signedInWith(permissions: string[]): { user: User; role: Role } {
+    return { user: signedInUser, role: roleWith(permissions) };
+}
 
 describe('POST /plugins/:name/:method — access branches', () => {
     it('runs a public method with no session and returns the raw result', async () => {
         const app = await freshApp();
-        const res = await app.request('/plugins/probe/ping', { method: 'POST' });
+        const res = await requestAs(app, signedOut, '/plugins/probe/ping', {
+            method: 'POST',
+        });
         expect(res.status).toBe(200);
         expect(res.headers.get('content-type')).toContain('application/json');
         expect(await res.json()).toBe('pong');
@@ -137,14 +114,18 @@ describe('POST /plugins/:name/:method — access branches', () => {
 
     it('serialises an undefined result as null', async () => {
         const app = await freshApp();
-        const res = await app.request('/plugins/probe/nothing', { method: 'POST' });
+        const res = await requestAs(app, signedOut, '/plugins/probe/nothing', {
+            method: 'POST',
+        });
         expect(res.status).toBe(200);
         expect(await res.json()).toBeNull();
     });
 
     it('401s an authenticated method with no session', async () => {
         const app = await freshApp();
-        const res = await app.request('/plugins/probe/whoami', { method: 'POST' });
+        const res = await requestAs(app, signedOut, '/plugins/probe/whoami', {
+            method: 'POST',
+        });
         expect(res.status).toBe(401);
         expect(((await res.json()) as { error: { code: string } }).error.code).toBe(
             'UNAUTHORIZED'
@@ -152,17 +133,19 @@ describe('POST /plugins/:name/:method — access branches', () => {
     });
 
     it('runs an authenticated method with a session, and the context carries the user', async () => {
-        signIn([]);
         const app = await freshApp();
-        const res = await app.request('/plugins/probe/whoami', { method: 'POST' });
+        const res = await requestAs(app, signedInWith([]), '/plugins/probe/whoami', {
+            method: 'POST',
+        });
         expect(res.status).toBe(200);
         expect(await res.json()).toEqual({ user: 'u1' });
     });
 
     it('403s a permission-gated method when the role lacks plugin:probe:read', async () => {
-        signIn([]);
         const app = await freshApp();
-        const res = await app.request('/plugins/probe/echo', { method: 'POST' });
+        const res = await requestAs(app, signedInWith([]), '/plugins/probe/echo', {
+            method: 'POST',
+        });
         expect(res.status).toBe(403);
         expect(((await res.json()) as { error: { code: string } }).error.code).toBe(
             'FORBIDDEN'
@@ -170,28 +153,36 @@ describe('POST /plugins/:name/:method — access branches', () => {
     });
 
     it('runs a permission-gated method and passes the JSON body through as input', async () => {
-        signIn(['plugin:probe:read']);
         const app = await freshApp();
-        const res = await app.request('/plugins/probe/echo', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ hello: 'world' }),
-        });
+        const res = await requestAs(
+            app,
+            signedInWith(['plugin:probe:read']),
+            '/plugins/probe/echo',
+            {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ hello: 'world' }),
+            }
+        );
         expect(res.status).toBe(200);
         expect(await res.json()).toEqual({ echoed: { hello: 'world' } });
     });
 
     it('treats an unparseable body as the empty argument object', async () => {
-        signIn(['plugin:probe:read']);
         const app = await freshApp();
-        const res = await app.request('/plugins/probe/echo', { method: 'POST' });
+        const res = await requestAs(
+            app,
+            signedInWith(['plugin:probe:read']),
+            '/plugins/probe/echo',
+            { method: 'POST' }
+        );
         expect(res.status).toBe(200);
         expect(await res.json()).toEqual({ echoed: {} });
     });
 
     it('422s a body the method’s own input schema rejects', async () => {
         const app = await freshApp();
-        const res = await app.request('/plugins/probe/strict', {
+        const res = await requestAs(app, signedOut, '/plugins/probe/strict', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ n: 'not a number' }),
@@ -208,7 +199,9 @@ describe('POST /plugins/:name/:method — access branches', () => {
 describe('POST /plugins/:name/:method — resolution failures', () => {
     it('404s an unknown plugin', async () => {
         const app = await freshApp();
-        const res = await app.request('/plugins/nope/ping', { method: 'POST' });
+        const res = await requestAs(app, signedOut, '/plugins/nope/ping', {
+            method: 'POST',
+        });
         expect(res.status).toBe(404);
         const body = (await res.json()) as { error: { code: string; message: string } };
         expect(body.error.code).toBe('NOT_FOUND');
@@ -217,7 +210,9 @@ describe('POST /plugins/:name/:method — resolution failures', () => {
 
     it('404s an unknown method on a known plugin', async () => {
         const app = await freshApp();
-        const res = await app.request('/plugins/probe/nosuch', { method: 'POST' });
+        const res = await requestAs(app, signedOut, '/plugins/probe/nosuch', {
+            method: 'POST',
+        });
         expect(res.status).toBe(404);
         const body = (await res.json()) as { error: { message: string } };
         expect(body.error.message).toBe('Plugin method "probe.nosuch" not found');
@@ -230,37 +225,49 @@ describe('raw routes', () => {
         // plugin registers, as it is in the serving process. A router that read
         // the raw routes at import time would find none and answer 404 here.
         const app = await freshApp();
-        const res = await app.request('/plugins/probe/raw-public');
+        const res = await requestAs(app, signedOut, '/plugins/probe/raw-public');
         expect(res.status).toBe(200);
         expect(await res.text()).toBe('raw ok');
     });
 
     it('enforces a raw route’s declared permission', async () => {
-        signIn([]);
         const app = await freshApp();
-        const denied = await app.request('/plugins/probe/raw-guarded', {
-            method: 'POST',
-            body: 'payload',
-        });
+        const denied = await requestAs(
+            app,
+            signedInWith([]),
+            '/plugins/probe/raw-guarded',
+            {
+                method: 'POST',
+                body: 'payload',
+            }
+        );
         expect(denied.status).toBe(403);
 
-        signIn(['plugin:probe:read']);
-        const allowed = await (
-            await freshApp()
-        ).request('/plugins/probe/raw-guarded', { method: 'POST', body: 'payload' });
+        const allowed = await requestAs(
+            await freshApp(),
+            signedInWith(['plugin:probe:read']),
+            '/plugins/probe/raw-guarded',
+            { method: 'POST', body: 'payload' }
+        );
         expect(allowed.status).toBe(201);
         expect(await allowed.text()).toBe('payload');
     });
 
     it('hands the handler the path’s params, decoded', async () => {
         const app = await freshApp();
-        const res = await app.request('/plugins/probe/raw-items/a%20b/notes');
+        const res = await requestAs(
+            app,
+            signedOut,
+            '/plugins/probe/raw-items/a%20b/notes'
+        );
         expect(await res.json()).toEqual({ id: 'a b', part: 'notes' });
     });
 
     it('does not answer a raw route on the wrong verb', async () => {
         const app = await freshApp();
-        const res = await app.request('/plugins/probe/raw-public', { method: 'POST' });
+        const res = await requestAs(app, signedOut, '/plugins/probe/raw-public', {
+            method: 'POST',
+        });
         // Falls through to the RPC catch-all, which finds no such method.
         expect(res.status).toBe(404);
     });
