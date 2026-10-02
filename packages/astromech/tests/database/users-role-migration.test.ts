@@ -10,7 +10,7 @@ import { mkdtemp, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { createClient } from '@libsql/client';
-import { openPlainDb } from '@tests/harness';
+import { openPlainDb } from '@tests/test-db';
 import { sql } from 'kysely';
 import { afterEach, beforeEach, expect, it } from 'vitest';
 

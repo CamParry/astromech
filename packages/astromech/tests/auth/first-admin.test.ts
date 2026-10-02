@@ -35,21 +35,19 @@ type SignUpEmail = ReturnType<typeof getAuth>['api']['signUpEmail'];
 type SignUpArgs = NonNullable<Parameters<SignUpEmail>[0]>;
 type Refusal = { statusCode?: number; body?: { code?: string } } | null;
 
-/**
- * Sign up through Better Auth. `extra` reaches the body as an untyped HTTP
- * caller's fields would, which is why the body is cast: its type has no `role`.
- */
-function signUp(email: string, extra: Record<string, unknown> = {}): Promise<unknown> {
-    const body = { email, password: 'password123', name: 'Signup', ...extra };
-    return getAuth().api.signUpEmail(invalid<SignUpArgs>({ body }));
+/** A sign-up through Better Auth for `email`, with the other fields filled in. */
+function signUpArgs(email: string): SignUpArgs {
+    return { body: { email, password: 'password123', name: 'Signup' } };
 }
 
-/** The error a sign-up rejects with, or null if it succeeds. */
-function refusal(email: string, extra: Record<string, unknown> = {}): Promise<Refusal> {
-    return signUp(email, extra).then(
-        () => null,
-        (error: unknown) => error as Refusal
-    );
+/** The error a Better Auth sign-up rejects with, or null if it succeeds. */
+function refusal(args: SignUpArgs): Promise<Refusal> {
+    return getAuth()
+        .api.signUpEmail(args)
+        .then(
+            () => null,
+            (error: unknown) => error as Refusal
+        );
 }
 
 async function roleOf(email: string): Promise<string | undefined> {
@@ -140,7 +138,7 @@ describe('first-run setup', () => {
     });
 
     it('refuses a Better Auth sign-up on an empty install', async () => {
-        const error = await refusal('signup@test.dev');
+        const error = await refusal(signUpArgs('signup@test.dev'));
 
         expect(error?.statusCode).toBe(403);
         expect(error?.body?.code).toBe('SIGN_UP_CLOSED');
@@ -151,7 +149,12 @@ describe('first-run setup', () => {
     it('refuses a Better Auth sign-up once a user exists', async () => {
         await createFirstAdmin(ADMIN);
 
-        const error = await refusal('escalate@test.dev', { role: 'admin' });
+        // `role` reaches the body as an untyped HTTP caller's field would; the
+        // body's type has no `role`.
+        const { body } = signUpArgs('escalate@test.dev');
+        const error = await refusal(
+            invalid<SignUpArgs>({ body: { ...body, role: 'admin' } })
+        );
 
         expect(error?.statusCode).toBe(403);
         expect(error?.body?.code).toBe('SIGN_UP_CLOSED');

@@ -68,7 +68,7 @@ describe('mediaService.query — sort', () => {
     });
 
     it('refuses a column outside the allowlist', async () => {
-        await expect(names({ id: 'asc' } as SortOption)).rejects.toMatchObject({
+        await expect(names(invalid<SortOption>({ id: 'asc' }))).rejects.toMatchObject({
             name: 'UnknownSortKeyError',
             status: 400,
         });

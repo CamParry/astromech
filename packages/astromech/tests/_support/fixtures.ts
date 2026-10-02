@@ -75,7 +75,9 @@ export function field(definition: DataField): DataField {
 
 /**
  * Hand `value` to code typed as `T` although the type forbids it, for a test of
- * the runtime check behind the type. The one place a test overrides a type.
+ * the runtime check behind the type. The one place for deliberately invalid
+ * input. Other casts remain for handles the builders don't cover: driver and
+ * Kysely handles, Astro hook parameters and OpenAPI documents.
  */
 export function invalid<T>(value: unknown): T {
     return value as T;

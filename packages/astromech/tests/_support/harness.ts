@@ -46,12 +46,11 @@ import type {
 // Declares `testDbDir` and `testDbTemplate` on vitest's `ProvidedContext`,
 // for `inject` below.
 import type {} from './global-setup';
-import type { Client } from '@libsql/client';
+import type { Kysely } from 'kysely';
 import * as fs from 'node:fs/promises';
 import * as path from 'node:path';
-import { LibsqlDialect } from '@libsql/kysely-libsql';
 import { noopStorage } from '@tests/fixtures';
-import { Kysely, sql } from 'kysely';
+import { sql } from 'kysely';
 import { inject } from 'vitest';
 import { createAppContext } from '@/app-context/app-context';
 import { setConfig } from '@/config/registry';
@@ -74,19 +73,6 @@ type Db = Kysely<DB>;
 // each test database is copied from.
 const TEST_DB_DIR = inject('testDbDir');
 const TEST_DB_TEMPLATE = inject('testDbTemplate');
-
-/**
- * A Kysely over `client` with no plugins, so a query names each column as it
- * is stored. For a test of one migration on a database of its own; the app's
- * shape, camel-cased, is `openTestDb` in `test-db.ts`.
- */
-export function openPlainDb(client: Client): Kysely<unknown> {
-    // `@libsql/kysely-libsql` pins an older `@libsql/core` Client type; the
-    // runtime client is compatible (see the libsql driver).
-    return new Kysely<unknown>({
-        dialect: new LibsqlDialect({ client: client as never }),
-    });
-}
 
 /**
  * Reset the runtime with `resetRuntime()`, then copy the migrated template to
@@ -227,8 +213,9 @@ export function makeBootConfig(): AstromechConfig {
 }
 
 /**
- * Resolve `makeTestConfig()` with `overrides` laid over it, without publishing
- * it, for code that takes a `ResolvedConfig` as an argument.
+ * Resolve `makeTestConfig()` with `overrides` laid over it, for code that takes
+ * a `ResolvedConfig` as an argument. The config is not published, but
+ * `resolveConfig` still sets the plugin field types globally.
  */
 export function resolveTestConfig(
     overrides: Partial<AstromechConfig> = {}
@@ -278,9 +265,11 @@ export function runAsUser<T>(user: User | null, fn: () => T): T {
 }
 
 /**
- * Send `init` to `path` on `app` as `user` under `role`, the way the Astro
- * middleware hands a request to the API: inside a request scope that already
- * holds the identity, which the app joins, so no session is resolved.
+ * Send `init` to `path` on `app` as `user` under `role`. It opens the request
+ * scope with the identity already set, which the app joins, so the route skips
+ * the session resolve. The Astro middleware opens the scope with the request
+ * only and the session is resolved later; only `request-scope.test.ts` covers
+ * that path.
  */
 export function requestAs(
     app: { fetch(request: Request): Response | Promise<Response> },
@@ -383,7 +372,9 @@ export async function createTestUser(
         image: user.image,
         locale: content.locale,
         locales: [content.locale],
-        fields: fields ?? {},
+        // The `fields` column decodes as `unknown`; mapped as the users
+        // repository maps it.
+        fields: (content.fields ?? {}) as JsonObject,
         role: user.role,
         createdAt: user.createdAt,
         updatedAt: user.updatedAt,
