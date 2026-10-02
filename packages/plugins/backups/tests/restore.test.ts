@@ -8,7 +8,7 @@ import type { PluginTestApp } from '@tests/plugin-app';
 import { roleWith } from '@tests/fixtures';
 import { beforeEach, describe, expect, it } from 'vitest';
 import { backups } from '../src/index';
-import { createBackupsApp, requestAsRole } from './_support/backups-app';
+import { createBackupsApp, requestAsRole, takeBackup } from './_support/backups-app';
 
 let app: PluginTestApp<'backups'>;
 
@@ -17,13 +17,6 @@ const restorer = roleWith(backups.permissions('restore'));
 beforeEach(async () => {
     app = await createBackupsApp();
 });
-
-/** Take a backup through the service and return its run id. */
-async function takeBackup(): Promise<string> {
-    const result = await app.service.run();
-    if (!result.ok) throw new Error(`the backup did not run: ${result.reason}`);
-    return result.run.id;
-}
 
 function restore(id: string): Promise<Response> {
     return requestAsRole(app, restorer, 'POST', `/plugins/backups/runs/${id}/restore`);
@@ -35,7 +28,7 @@ describe('POST /plugins/backups/runs/:id/restore', () => {
             type: 'note',
             data: { title: 'Original' },
         });
-        const backupId = await takeBackup();
+        const backupId = (await takeBackup(app)).id;
         await app.entries.update({
             type: 'note',
             id: note.id,
@@ -59,8 +52,8 @@ describe('POST /plugins/backups/runs/:id/restore', () => {
     });
 
     it('keeps the run history and records a pre-restore snapshot', async () => {
-        const backupId = await takeBackup();
-        const laterId = await takeBackup();
+        const backupId = (await takeBackup(app)).id;
+        const laterId = (await takeBackup(app)).id;
 
         await restore(backupId);
 
@@ -77,6 +70,7 @@ describe('POST /plugins/backups/runs/:id/restore', () => {
         const res = await restore('no-such-run');
 
         expect(res.status).toBe(404);
+        expect(await res.json()).toEqual({ error: 'Backup run not found' });
         expect((await app.service.list()).runs).toEqual([]);
     });
 
@@ -85,7 +79,7 @@ describe('POST /plugins/backups/runs/:id/restore', () => {
             type: 'note',
             data: { title: 'Original' },
         });
-        const backupId = await takeBackup();
+        const backupId = (await takeBackup(app)).id;
         await app.entries.update({
             type: 'note',
             id: note.id,

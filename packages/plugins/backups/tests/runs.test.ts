@@ -9,7 +9,12 @@ import { gunzipSync } from 'node:zlib';
 import { roleWith } from '@tests/fixtures';
 import { beforeEach, describe, expect, it } from 'vitest';
 import { backups } from '../src/index';
-import { artifactKey, createBackupsApp, requestAsRole } from './_support/backups-app';
+import {
+    artifactKey,
+    createBackupsApp,
+    requestAsRole,
+    takeBackup,
+} from './_support/backups-app';
 
 let app: PluginTestApp<'backups'>;
 
@@ -17,16 +22,9 @@ beforeEach(async () => {
     app = await createBackupsApp();
 });
 
-/** Take a backup through the service and return its run, failing the test if none was taken. */
-async function takeBackup() {
-    const result = await app.service.run();
-    if (!result.ok) throw new Error(`the backup did not run: ${result.reason}`);
-    return result.run;
-}
-
 describe('backups.run', () => {
     it('stores a backup and records a successful manual run', async () => {
-        const run = await takeBackup();
+        const run = await takeBackup(app);
 
         expect(run).toMatchObject({ status: 'success', trigger: 'manual', error: null });
         const stored = await app.context().storage.get(artifactKey(run));
@@ -47,7 +45,7 @@ describe('GET /plugins/backups/runs/:id/download', () => {
     const downloader = roleWith(backups.permissions('download'));
 
     it('returns the stored backup as a gzip attachment', async () => {
-        const run = await takeBackup();
+        const run = await takeBackup(app);
         const key = artifactKey(run);
 
         const res = await requestAsRole(
@@ -82,10 +80,11 @@ describe('GET /plugins/backups/runs/:id/download', () => {
         );
 
         expect(res.status).toBe(404);
+        expect(await res.json()).toEqual({ error: 'Backup run not found' });
     });
 
     it('answers 410 once the artifact is gone from storage', async () => {
-        const run = await takeBackup();
+        const run = await takeBackup(app);
         await app.context().storage.delete(artifactKey(run));
 
         const res = await requestAsRole(
@@ -101,7 +100,7 @@ describe('GET /plugins/backups/runs/:id/download', () => {
 
 describe('backups.delete', () => {
     it('removes the stored backup and its run', async () => {
-        const run = await takeBackup();
+        const run = await takeBackup(app);
         const key = artifactKey(run);
 
         expect(await app.service.delete({ id: run.id })).toEqual({
@@ -114,8 +113,8 @@ describe('backups.delete', () => {
     });
 
     it('leaves other backups in place', async () => {
-        const kept = await takeBackup();
-        const deleted = await takeBackup();
+        const kept = await takeBackup(app);
+        const deleted = await takeBackup(app);
 
         await app.service.delete({ id: deleted.id });
 

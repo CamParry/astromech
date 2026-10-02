@@ -10,7 +10,12 @@ import type { PluginTestApp } from '@tests/plugin-app';
 import { roleWith } from '@tests/fixtures';
 import { beforeEach, describe, expect, it } from 'vitest';
 import { backups } from '../src/index';
-import { artifactKey, createBackupsApp, requestAsRole } from './_support/backups-app';
+import {
+    artifactKey,
+    createBackupsApp,
+    requestAsRole,
+    takeBackup,
+} from './_support/backups-app';
 
 type BackupsPermission = 'read' | 'run' | 'download' | 'restore' | 'delete';
 
@@ -26,13 +31,6 @@ let app: PluginTestApp<'backups'>;
 beforeEach(async () => {
     app = await createBackupsApp();
 });
-
-/** Take a backup through the trusted service and return its run. */
-async function takeBackup() {
-    const result = await app.service.run();
-    if (!result.ok) throw new Error(`the backup did not run: ${result.reason}`);
-    return result.run;
-}
 
 describe('backups service permissions', () => {
     it('refuses list without read', async () => {
@@ -52,7 +50,7 @@ describe('backups service permissions', () => {
     });
 
     it('refuses delete without delete, and keeps the backup', async () => {
-        const run = await takeBackup();
+        const run = await takeBackup(app);
 
         await expect(
             app.as(roleWithout('delete')).delete({ id: run.id })
@@ -95,7 +93,7 @@ describe('backups raw route permissions', () => {
     ] as const)(
         'refuses %s without its permission',
         async (permission, method, action) => {
-            const run = await takeBackup();
+            const run = await takeBackup(app);
 
             const res = await requestAsRole(
                 app,
@@ -116,7 +114,7 @@ describe('backups raw route permissions', () => {
         ['download', 'GET'],
         ['restore', 'POST'],
     ] as const)('refuses %s to a caller who is not signed in', async (action, method) => {
-        const run = await takeBackup();
+        const run = await takeBackup(app);
 
         const res = await requestAsRole(
             app,

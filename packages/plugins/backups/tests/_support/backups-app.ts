@@ -46,6 +46,13 @@ export function requestAsRole(
     );
 }
 
+/** Take a backup through the trusted service and return its run, failing the test if none was taken. */
+export async function takeBackup(app: PluginTestApp<'backups'>) {
+    const result = await app.service.run();
+    if (!result.ok) throw new Error(`the backup did not run: ${result.reason}`);
+    return result.run;
+}
+
 /** The run's artifact key, or a thrown error when the run stored none. */
 export function artifactKey(run: { key: string | null }): string {
     if (run.key === null) throw new Error('the run stored no artifact');
