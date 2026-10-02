@@ -84,15 +84,29 @@ INSERT INTO `__new_x` (…) SELECT … FROM `x`      -- COALESCE-backfilling nul
 DROP TABLE `x`
 ALTER TABLE `__new_x` RENAME TO `x`
 CREATE INDEX …                                    -- every index recreated
+…                                                 -- the migration's other ops
+PRAGMA foreign_key_check                          -- any row: throw, naming the rows
+PRAGMA defer_foreign_keys = false
 ```
 
-No self-managed `BEGIN`/`COMMIT`. `defer_foreign_keys` lasts only until the
-end of a transaction, and Kysely's `Migrator` opens none on SQLite (its
-`SqliteAdapter` reports no transactional DDL), so under `migrateToLatest` each
-statement runs on its own and the pragma has no effect. Rebuilding a table that
-other rows point at therefore fails at its `DROP TABLE` while foreign keys are
-on. A dropped table goes after the tables that point at it: after their own
-drop, or after the rebuild that removes their key.
+A migration with a rebuild ends with the last two steps, once, after its other
+ops. The `DROP TABLE` counts every row that points at `x` as a foreign key
+violation, and the `RENAME` does not take the count back, so the commit would
+fail; turning `defer_foreign_keys` off clears the count, after
+`foreign_key_check` has confirmed that no row points at nothing.
+
+No self-managed `BEGIN`/`COMMIT`. All of this needs the migration to run inside
+a transaction, because `defer_foreign_keys` lasts only until the transaction
+ends, and Kysely's `Migrator` opens one only when the dialect's adapter reports
+transactional DDL. `SqliteAdapter` does not, so `migrateToLatest` on a plain
+SQLite dialect runs each statement on its own, and rebuilding a table that rows
+point at fails at its `DROP TABLE`. Astromech's libsql driver reports
+transactional DDL, so a run there is one transaction, rolled back whole on a
+failure. Its D1 driver cannot: D1 has no interactive transactions, so rebuilding
+a referenced table on D1 still fails.
+
+A dropped table goes after the tables that point at it: after their own drop,
+or after the rebuild that removes their key.
 
 Purely additive changes (a nullable column, or a NOT NULL column with a literal
 default, that is not a primary key) fast-path to native `ALTER TABLE ADD COLUMN`

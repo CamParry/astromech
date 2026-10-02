@@ -7,20 +7,24 @@
  * the README promises: build `a` in SQLite, apply the ops `diffSnapshots(a, b)`
  * returns, and the schema and the rows seeded into `a` match `b` built fresh
  * with the same rows. Column order is not part of that contract
- * (`DECISIONS.md`), so the schemas are compared without it. A defect it found
- * is kept as a failing case at the end.
+ * (`DECISIONS.md`), so the schemas are compared without it. The defects it
+ * found are kept as cases at the end, the open one as an expected failure.
  */
 import type { TableOp } from '../src/diff';
 import type { Snapshot, SnapshotColumn, SnapshotTable } from '../src/model';
+import { mkdtemp, rm, writeFile } from 'node:fs/promises';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
+import { pathToFileURL } from 'node:url';
 import { createClient } from '@libsql/client';
 import { LibsqlDialect } from '@libsql/kysely-libsql';
 import fc from 'fast-check';
 import { Kysely, sql } from 'kysely';
-import { describe, expect, it } from 'vitest';
+import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { renderTableStatements } from '../src/ddl';
 import { diffSnapshots } from '../src/diff';
 import { dumpSchema } from '../src/oracle';
-import { renderOpStatements } from '../src/render';
+import { renderMigrationFile } from '../src/render';
 import { col, fk, index, snap, table } from './_support/tables';
 
 const TABLE_NAMES = ['alpha', 'beta', 'gamma'] as const;
@@ -165,9 +169,31 @@ async function emit(db: Kysely<unknown>, snapshot: Snapshot): Promise<void> {
     await run(db, Object.values(snapshot.tables).flatMap(renderTableStatements));
 }
 
-/** Build `a`, seed it, apply `diffSnapshots(a, b)` to it in one transaction
- *  (which `defer_foreign_keys` relies on, though Kysely's `Migrator` opens none
- *  on SQLite: see `roadmap/planned/schema-engine-defects.md`), build `b` fresh
+let migrationsDir: string;
+let migrationCount = 0;
+
+beforeAll(async () => {
+    migrationsDir = await mkdtemp(join(tmpdir(), 'schema-engine-parity-'));
+});
+
+afterAll(async () => {
+    await rm(migrationsDir, { recursive: true, force: true });
+});
+
+/** Render `ops` as the generated migration file a site gets, and import it. */
+async function importMigration(
+    ops: TableOp[]
+): Promise<{ up: (db: Kysely<unknown>) => Promise<void> }> {
+    migrationCount += 1;
+    const file = join(migrationsDir, `${migrationCount}.ts`);
+    await writeFile(file, renderMigrationFile(ops, 'sqlite'));
+    return (await import(pathToFileURL(file).href)) as {
+        up: (db: Kysely<unknown>) => Promise<void>;
+    };
+}
+
+/** Build `a`, seed it, run the migration generated from `diffSnapshots(a, b)`
+ *  on it in one transaction, as core's libsql migrator does, build `b` fresh
  *  beside it, and hand both databases to `check`. */
 async function migrateAndEmit(
     a: Snapshot,
@@ -181,10 +207,8 @@ async function migrateAndEmit(
         await emit(migrated, a);
         await emit(fresh, b);
         await seed?.(migrated, fresh);
-        const statements = diffSnapshots(a, b).ops.flatMap((op) =>
-            renderOpStatements(op, 'sqlite')
-        );
-        await migrated.transaction().execute((trx) => run(trx, statements));
+        const migration = await importMigration(diffSnapshots(a, b).ops);
+        await migrated.transaction().execute((trx) => migration.up(trx));
         await check(migrated, fresh);
     } finally {
         await migrated.destroy();
@@ -223,8 +247,8 @@ function seedRows(t: SnapshotTable): Row[] {
  * reason that lies in the data rather than the migration. A table is left
  * empty when:
  *
- * - it points at a table the ops rebuild, which fails at commit once a row
- *   points there (see the failing case below);
+ * - its key has a delete action and points at a table the ops rebuild, whose
+ *   `DROP TABLE` fires that action on the rows (see the failing case below);
  * - `b` gives it a key with no `alpha` in `a`, so the key would point at an
  *   empty new table;
  * - `b` gives a key column a default the rows take (a new column, or NULL
@@ -242,7 +266,10 @@ function canSeed(
     const rebuilt = new Set(
         ops.flatMap((op) => (op.kind === 'rebuildTable' ? [op.table.name] : []))
     );
-    if (prev.fks.some((f) => rebuilt.has(f.targetTable))) return false;
+    const firesAction = prev.fks.some(
+        (f) => f.onDelete !== 'no action' && rebuilt.has(f.targetTable)
+    );
+    if (firesAction) return false;
     const added = ops.flatMap((op) =>
         op.kind === 'addColumn' && op.table === prev.name ? [op.column] : []
     );
@@ -562,13 +589,55 @@ describe('diffSnapshots properties', () => {
         }
     );
 
-    // Still open (`roadmap/planned/schema-engine-defects.md`). The rebuild's
-    // `RENAME` brings the rows' target back under the old name, but nothing
-    // takes the `DROP TABLE`'s violations off the count, so the commit fails.
-    it.fails(
-        'keeps the rows when it rebuilds a table another table points at and a row points there',
-        async () => {
-            const { a, b } = rebuildsReferenced;
+    // The rebuild's `RENAME` brings the rows' target back under the old name
+    // but leaves the `DROP TABLE`'s violations on the count. The migration's
+    // closing check turns `defer_foreign_keys` off, which clears it.
+    it('keeps the rows when it rebuilds a table another table points at and a row points there', async () => {
+        const { a, b } = rebuildsReferenced;
+        await migrateAndEmit(
+            a,
+            b,
+            async (migrated) => {
+                expect(await rows(migrated, 'SELECT id, c1 FROM beta')).toEqual([
+                    { id: 'b', c1: 'a' },
+                ]);
+            },
+            seedReference
+        );
+    });
+
+    // Found by seeding the parity property. The differ refuses a rebuild of a
+    // table whose children keep an `ON DELETE` action in `b`, but not when the
+    // child is rebuilt too: the parent's rebuild comes first, so its `DROP
+    // TABLE` fires the action on the old child rows before the child's rebuild
+    // removes the key (`roadmap/planned/schema-engine-defects.md`).
+    const actionDropped = (onDelete: string) => ({
+        onDelete,
+        a: snap(
+            alpha,
+            table('beta', [col.id(), col.text('c1')], {
+                fks: [fk('c1', 'alpha', onDelete)],
+            })
+        ),
+        b: snap(table('alpha', [col.id()]), table('beta', [col.id(), col.text('c1')])),
+    });
+    const actionsDropped = [actionDropped('cascade'), actionDropped('set null')];
+
+    it.each(actionsDropped)(
+        'migrates when it rebuilds a parent and drops a child key ON DELETE $onDelete, with no rows',
+        async ({ a, b }) => {
+            expect(diffSnapshots(a, b).errors).toEqual([]);
+            await migrateAndEmit(a, b, async (migrated, fresh) => {
+                expect(await describeSchema(migrated)).toEqual(
+                    await describeSchema(fresh)
+                );
+            });
+        }
+    );
+
+    it.fails.each(actionsDropped)(
+        'keeps the child rows when it rebuilds a parent and drops a child key ON DELETE $onDelete',
+        async ({ a, b }) => {
             await migrateAndEmit(
                 a,
                 b,
@@ -581,4 +650,34 @@ describe('diffSnapshots properties', () => {
             );
         }
     );
+
+    it('rolls back a rebuild that leaves a row pointing at nothing', async () => {
+        const a = snap(alpha, table('beta', [col.id(), col.text('c1')]));
+        const migrated = makeDb();
+        try {
+            await emit(migrated, a);
+            await insert(migrated, 'beta', { id: 'b', c1: 'missing' });
+            const migration = await importMigration(
+                diffSnapshots(a, snap(alpha, child)).ops
+            );
+
+            await expect(
+                migrated.transaction().execute((trx) => migration.up(trx))
+            ).rejects.toThrow('foreign key check failed: [{"table":"beta"');
+            expect(
+                await rows(
+                    migrated,
+                    "SELECT name FROM sqlite_master WHERE type = 'table' ORDER BY name"
+                )
+            ).toEqual([{ name: 'alpha' }, { name: 'beta' }]);
+            expect(
+                await rows(migrated, "SELECT * FROM pragma_foreign_key_list('beta')")
+            ).toEqual([]);
+            expect(await rows(migrated, 'SELECT id, c1 FROM beta')).toEqual([
+                { id: 'b', c1: 'missing' },
+            ]);
+        } finally {
+            await migrated.destroy();
+        }
+    });
 });

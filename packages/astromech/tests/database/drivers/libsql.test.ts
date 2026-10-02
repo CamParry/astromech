@@ -53,4 +53,12 @@ describe('libsql adapter', () => {
             .getExecutor();
         expect(adapter.supportsMultipleConnections).toBe(true);
     });
+
+    it.each([':memory:', 'https://db.turso.io'])(
+        'reports transactional DDL on %s, so a migration run is one transaction',
+        (url) => {
+            const { adapter } = libsql({ url }).getInstance().getExecutor();
+            expect(adapter.supportsTransactionalDdl).toBe(true);
+        }
+    );
 });

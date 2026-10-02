@@ -38,23 +38,34 @@ fixed.
       the table pointing at it failed when the parent came first. Under a
       cascading key the early drop deleted the child rows instead. A dropped
       table now goes after the tables that point at it.
-- [ ] **Rebuilding a referenced table fails with foreign keys on.** Core runs
-      with foreign keys on. Inside one transaction, the rebuild fails at
-      commit: `defer_foreign_keys` does not clear the violation count the
-      `DROP` adds, and the `RENAME` does not lower it. Outside one it fails at
-      the `DROP TABLE`, and that is how every site runs it: Kysely's
-      `SqliteAdapter` reports no transactional DDL, so `Migrator` runs each
-      statement on its own on libsql (local and remote) and D1, the pragma has
-      no effect, and a failure leaves `__new_x` behind. Tested 2026-10-02:
-      `PRAGMA defer_foreign_keys = false` before the commit clears the count on
-      libsql and on D1 (Cloudflare's documented pattern), and
-      `PRAGMA foreign_key_check` still reports a real dangling reference; D1
-      ignores `PRAGMA foreign_keys = OFF`, and a pooled or remote libsql client
-      does not keep it between statements, so SQLite's 12-step procedure
-      cannot run through Kysely. Fixing it needs the rebuild in one
-      transaction: on libsql an adapter that reports transactional DDL (then
-      `Migrator` wraps the run), on D1 a `batch()`, which a migration's `up(db)`
-      cannot reach today. Found by seeding the parity property.
+- [ ] **Rebuilding a referenced table fails with foreign keys on.** Fixed on
+      libsql, open on D1. Core runs with foreign keys on, and Kysely's
+      `SqliteAdapter` reports no transactional DDL, so `Migrator` ran each
+      statement on its own, `defer_foreign_keys` had no effect, and the rebuild
+      failed at the `DROP TABLE`, leaving `__new_x` behind. Inside one
+      transaction it failed at commit instead: the `DROP` counts the rows
+      pointing at the table as violations, and the `RENAME` does not lower the
+      count. On libsql the driver's adapter now reports transactional DDL, so a
+      migration run is one transaction, and a generated migration with a
+      rebuild ends with `PRAGMA foreign_key_check` (throwing on any row) and
+      `PRAGMA defer_foreign_keys = false`, which clears the count (`DECISIONS.md`,
+      "A libsql migration run is one transaction"). D1 has no interactive
+      transactions and ignores `PRAGMA foreign_keys = OFF`:
+      [d1-migrations-run-as-one-batch](../proposed/d1-migrations-run-as-one-batch.md).
+      Found by seeding the parity property.
+- [ ] **A parent's rebuild fires a key's delete action on a child rebuilt in
+      the same migration.** `cascadeRebuildErrors` in
+      `packages/schema-engine/src/diff.ts` refuses a rebuild whose child keeps
+      an `ON DELETE cascade` or `set null` key in the next snapshot, but not
+      one whose child drops or changes that key and is rebuilt too. Rebuilds
+      run in snapshot order, so the parent's `DROP TABLE` runs first and fires
+      the old key's action: the child's rows are deleted, or their key column
+      set to NULL (or the migration fails on a NOT NULL column). Order the
+      rebuilds so a child whose old key points at a rebuilt table goes first,
+      as `dropTableOps` orders drops. Found by seeding the parity property once
+      it seeds rows that point at a rebuilt table; the property skips the case,
+      and `packages/schema-engine/tests/diff.property.test.ts` keeps it as an
+      expected failure.
 - [x] **A moved column produces no ops.** Reordering a table's columns with no
       other change diffs as nothing, so the migrated table keeps the old order
       while a fresh build has the new one (the same contract as the

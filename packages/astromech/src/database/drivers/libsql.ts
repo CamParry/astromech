@@ -81,7 +81,9 @@ export function libsql(options?: LibsqlOptions) {
         // type differs from `@libsql/client`'s by an unrelated `sync()` return
         // type; the runtime client is fully compatible.
         const config = { client: getClient() as never };
-        return isRemote() ? new RemoteLibsqlDialect(config) : new LibsqlDialect(config);
+        return isRemote()
+            ? new RemoteLibsqlDialect(config)
+            : new LocalLibsqlDialect(config);
     }
 
     function getInstance(): Kysely<DB> {
@@ -219,18 +221,35 @@ export function libsql(options?: LibsqlOptions) {
 }
 
 /**
- * Kysely's `SqliteAdapter` makes Kysely run one query at a time per instance,
- * which a local file database keeps. A remote database answers each query on
- * its own request or stream, so its dialect lifts that lock.
+ * A libsql database runs DDL inside a transaction, so its adapter says so, and
+ * Kysely's `Migrator` then runs a migration chain as one transaction, which a
+ * table rebuild's `defer_foreign_keys` needs (`DECISIONS.md`).
  */
-class RemoteLibsqlDialect extends LibsqlDialect {
-    override createAdapter(): DialectAdapter {
-        return new RemoteSqliteAdapter();
+class LibsqlAdapter extends SqliteAdapter {
+    override get supportsTransactionalDdl(): boolean {
+        return true;
     }
 }
 
-class RemoteSqliteAdapter extends SqliteAdapter {
+/**
+ * Kysely runs one query at a time per instance on a SQLite adapter, which a
+ * local file database keeps. A remote database answers each query on its own
+ * request or stream, so its adapter lifts that lock.
+ */
+class RemoteLibsqlAdapter extends LibsqlAdapter {
     override get supportsMultipleConnections(): boolean {
         return true;
+    }
+}
+
+class LocalLibsqlDialect extends LibsqlDialect {
+    override createAdapter(): DialectAdapter {
+        return new LibsqlAdapter();
+    }
+}
+
+class RemoteLibsqlDialect extends LibsqlDialect {
+    override createAdapter(): DialectAdapter {
+        return new RemoteLibsqlAdapter();
     }
 }
