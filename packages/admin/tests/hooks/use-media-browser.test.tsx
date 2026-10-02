@@ -8,11 +8,10 @@
 import type { MediaBrowserResult } from '@/admin/hooks/use-media-browser';
 import type { MediaBrowserQuery } from '@/admin/types/media';
 import type { Media, MediaQueryParams } from '@/types/index';
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { renderHook, waitFor } from '@testing-library/react';
-import React from 'react';
+import { waitFor } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { useMediaBrowser } from '@/admin/hooks/use-media-browser';
+import { renderAdminHook } from '../_support/render-admin';
 
 const { mediaQuery } = vi.hoisted(() => ({ mediaQuery: vi.fn() }));
 
@@ -58,15 +57,7 @@ function mountBrowser(
     query: MediaBrowserQuery,
     perPage: number
 ): { result: { current: MediaBrowserResult } } {
-    const queryClient = new QueryClient({
-        defaultOptions: { queries: { retry: false } },
-    });
-
-    return renderHook(() => useMediaBrowser(query, perPage), {
-        wrapper: ({ children }: { children: React.ReactNode }) => (
-            <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>
-        ),
-    });
+    return renderAdminHook(() => useMediaBrowser(query, perPage));
 }
 
 /** The params the transport was called with for one mount of the hook. */

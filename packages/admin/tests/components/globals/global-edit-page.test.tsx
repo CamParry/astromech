@@ -8,29 +8,13 @@
  * confirm warns when the staged read reports `diverged`.
  */
 
-import type { AuthUser } from '@/admin/context/auth';
+import type { RenderAdminResult } from '../../_support/render-admin';
 import type { AdminGlobal, Global, GlobalsService } from '@/types/index';
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import {
-    createMemoryHistory,
-    createRootRoute,
-    createRoute,
-    createRouter,
-    Outlet,
-    RouterProvider,
-    useSearch,
-} from '@tanstack/react-router';
-import { render, screen, waitFor } from '@testing-library/react';
-import userEvent from '@testing-library/user-event';
-import i18n from 'i18next';
-import { initReactI18next } from 'react-i18next';
-import { beforeAll, describe, expect, it, vi } from 'vitest';
+import { useSearch } from '@tanstack/react-router';
+import { screen, waitFor, within } from '@testing-library/react';
+import { describe, expect, it, vi } from 'vitest';
 import { GlobalEditPage } from '@/admin/components/globals/global-edit-page';
-import { ConfirmProvider } from '@/admin/components/ui/confirm';
-import { ToastProvider } from '@/admin/components/ui/toast';
-import { AiContextProvider } from '@/admin/context/ai-context';
-import { AuthProvider, sessionQueryOptions } from '@/admin/context/auth';
-import '@/admin/rendering/register-fields';
+import { findFieldControl, renderAdmin } from '../../_support/render-admin';
 
 // The page calls globals through the client; each test sets the stub.
 const client = vi.hoisted(() => ({ globals: undefined as unknown }));
@@ -61,13 +45,6 @@ vi.mock('virtual:astromech/admin-config', () => ({ default: adminConfig }));
 
 const KEY = 'site';
 const BASE_PATH = `/globals/${KEY}`;
-
-beforeAll(async () => {
-    await i18n.use(initReactI18next).init({
-        lng: 'en',
-        resources: { en: { translation: {} } },
-    });
-});
 
 function config(overrides: Partial<AdminGlobal> = {}): AdminGlobal {
     return {
@@ -160,19 +137,16 @@ function makeApi(rows: {
     };
 }
 
-function makeClient(permissions: string[]): QueryClient {
-    const queryClient = new QueryClient({
-        defaultOptions: { queries: { staleTime: 30_000, retry: false } },
-    });
-    queryClient.setQueryData<AuthUser>(sessionQueryOptions.queryKey, {
-        id: 'u1',
-        name: 'Admin',
-        email: 'admin@astromech.dev',
-        image: null,
-        role: 'admin',
-        permissions,
-    });
-    return queryClient;
+/** The page as its route renders it: the search params mapped to props. */
+function EditRoute() {
+    const search = useSearch({ strict: false }) as { locale?: string; staged?: boolean };
+    return (
+        <GlobalEditPage
+            globalKey={KEY}
+            locale={search.locale}
+            staged={search.staged ?? false}
+        />
+    );
 }
 
 function mountPage(options: {
@@ -180,129 +154,66 @@ function mountPage(options: {
     config: AdminGlobal;
     permissions?: string[];
     initialUrl?: string;
-}) {
+}): RenderAdminResult {
     client.globals = options.api;
     adminConfig.globals[KEY] = options.config;
 
-    const rootRoute = createRootRoute({ component: () => <Outlet /> });
-    const editRoute = createRoute({
-        getParentRoute: () => rootRoute,
-        path: BASE_PATH,
-        validateSearch: (search: Record<string, unknown>) => ({
-            locale: search['locale'] as string | undefined,
-            staged: search['staged'] === true || search['staged'] === 'true',
-        }),
-        component: function EditRoute() {
-            const search = useSearch({ strict: false }) as {
-                locale?: string;
-                staged?: boolean;
-            };
-            return (
-                <GlobalEditPage
-                    globalKey={KEY}
-                    locale={search.locale}
-                    staged={search.staged ?? false}
-                />
-            );
-        },
+    return renderAdmin(<EditRoute />, {
+        url: options.initialUrl ?? `${BASE_PATH}?locale=en`,
+        permissions: options.permissions ?? ['*'],
     });
-    const router = createRouter({
-        routeTree: rootRoute.addChildren([editRoute]),
-        history: createMemoryHistory({
-            initialEntries: [options.initialUrl ?? `${BASE_PATH}?locale=en`],
-        }),
-    });
-
-    render(
-        <QueryClientProvider client={makeClient(options.permissions ?? ['*'])}>
-            <ToastProvider>
-                <AuthProvider>
-                    <ConfirmProvider>
-                        <AiContextProvider>
-                            <RouterProvider router={router} />
-                        </AiContextProvider>
-                    </ConfirmProvider>
-                </AuthProvider>
-            </ToastProvider>
-        </QueryClientProvider>
-    );
-
-    return router as unknown as { state: { location: { href: string } } };
 }
 
-function control(selector: string): HTMLInputElement {
-    const el = document.querySelector<HTMLInputElement>(selector);
-    if (el === null) throw new Error(`no ${selector}`);
-    return el;
+/** The tagline field's input, once the form has rendered. */
+function tagline(): Promise<HTMLInputElement> {
+    return findFieldControl('tagline');
 }
 
-/** Click a button in the page header (not the confirm dialog's footer). */
-async function clickHeaderButton(label: string): Promise<void> {
-    const user = userEvent.setup({ delay: null });
-    const button = [...document.querySelectorAll('.am-page-header button')].find(
-        (el) => el.textContent === label
-    );
-    if (button === undefined) throw new Error(`no header button "${label}"`);
-    await user.click(button);
+/** Confirm the open `useConfirm` dialog with its `label` button. */
+async function confirmDialog(page: RenderAdminResult, label: string): Promise<void> {
+    const dialog = await screen.findByRole('alertdialog');
+    await page.user.click(within(dialog).getByRole('button', { name: label }));
 }
 
-/** Confirm the open `useConfirm` dialog. */
-async function confirmDialog(): Promise<void> {
-    const user = userEvent.setup({ delay: null });
-    const footer = await waitFor(() => {
-        const found = document.querySelector('.am-modal-footer');
-        if (found === null) throw new Error('no confirm dialog');
-        return found;
-    });
-    const buttons = [...footer.querySelectorAll('button')];
-    const confirmButton = buttons[buttons.length - 1];
-    if (confirmButton === undefined) throw new Error('the dialog has no confirm button');
-    await user.click(confirmButton);
+/** Open the `index`th Select's listbox and pick the option with this label. */
+async function pickOption(
+    page: RenderAdminResult,
+    index: number,
+    label: string
+): Promise<void> {
+    const trigger = screen.getAllByRole('combobox')[index];
+    if (trigger === undefined) throw new Error(`no combobox at ${index}`);
+    await page.user.click(trigger);
+    await page.user.click(await screen.findByRole('option', { name: label }));
 }
 
-/** Open a Select's listbox and pick the option with this label. */
-async function pickOption(triggerIndex: number, label: string): Promise<void> {
-    const user = userEvent.setup();
-    const triggers = [...document.querySelectorAll('[role="combobox"]')];
-    const trigger = triggers[triggerIndex];
-    if (trigger === undefined) throw new Error(`no combobox at ${triggerIndex}`);
-    await user.click(trigger);
-    const option = [...document.querySelectorAll('[role="option"]')].find(
-        (item) => item.textContent === label
-    );
-    if (option === undefined) {
-        throw new Error(
-            `no "${label}" option; rendered: ${[
-                ...document.querySelectorAll('[role="option"]'),
-            ]
-                .map((item) => item.textContent)
-                .join(', ')}`
-        );
-    }
-    await user.click(option);
-}
+const MERGE = 'Merge into current';
+const DISCARD = 'Discard staged change';
+const MERGE_MESSAGE =
+    "The current entry's content will be replaced with the staged change. This cannot be undone.";
+const DIVERGED_MESSAGE =
+    'Heads up: the current entry has been edited since this staged change was created. Merging will overwrite those edits. This cannot be undone.';
 
 describe('the global edit page', () => {
     it('renders an empty form for a global that has never been saved', async () => {
         const { api } = makeApi({ canonical: null });
         mountPage({ api, config: config() });
 
-        await waitFor(() => {
-            expect(control('input[name="tagline"]').value).toBe('');
+        await waitFor(async () => {
+            expect((await tagline()).value).toBe('');
         });
         // Nothing saved means nothing to badge.
         expect(document.querySelector('.am-badge')).toBeNull();
     });
 
     it('saves through `update` with the fields and the status', async () => {
-        const user = userEvent.setup({ delay: null });
         const { api, update } = makeApi({ canonical: makeGlobal() });
-        mountPage({ api, config: config() });
+        const page = mountPage({ api, config: config() });
 
-        const field = await waitFor(() => control('input[name="tagline"]'));
-        await user.clear(field);
-        await user.type(field, 'A new tagline');
-        await user.click(await screen.findByRole('button', { name: 'common.update' }));
+        const field = await tagline();
+        await page.user.clear(field);
+        await page.user.type(field, 'A new tagline');
+        await page.user.click(await screen.findByRole('button', { name: 'Update' }));
 
         await waitFor(() => {
             expect(update).toHaveBeenCalledTimes(1);
@@ -316,14 +227,13 @@ describe('the global edit page', () => {
     });
 
     it('publishes through the same `update` when the panel moved the status', async () => {
-        const user = userEvent.setup({ delay: null });
         const { api, update, publish } = makeApi({ canonical: makeGlobal() });
-        mountPage({ api, config: config() });
+        const page = mountPage({ api, config: config() });
 
-        await waitFor(() => control('input[name="tagline"]'));
+        await tagline();
         // The publish panel's status select is the only combobox on the page.
-        await pickOption(0, 'entries.published');
-        await user.click(await screen.findByRole('button', { name: 'common.update' }));
+        await pickOption(page, 0, 'Published');
+        await page.user.click(await screen.findByRole('button', { name: 'Update' }));
 
         await waitFor(() => {
             expect(update).toHaveBeenCalledTimes(1);
@@ -340,16 +250,16 @@ describe('the global edit page', () => {
         const { api } = makeApi({ canonical: makeGlobal() });
         mountPage({ api, config: config() });
 
-        await waitFor(() => control('input[name="tagline"]'));
+        await tagline();
         // Only the publish panel's status select.
-        expect(document.querySelectorAll('[role="combobox"]').length).toBe(1);
+        expect(screen.getAllByRole('combobox').length).toBe(1);
     });
 
     it('opens a missing locale instead of writing it', async () => {
         const { api, update } = makeApi({
             canonical: makeGlobal({ locales: ['en'] }),
         });
-        const router = mountPage({
+        const page = mountPage({
             api,
             config: config({
                 capabilities: {
@@ -361,12 +271,12 @@ describe('the global edit page', () => {
             }),
         });
 
-        await waitFor(() => control('input[name="tagline"]'));
+        await tagline();
         // Statuses are off here, so the switcher is the only combobox.
-        await pickOption(0, 'Add FR');
+        await pickOption(page, 0, 'Add FR');
 
         await waitFor(() => {
-            expect(router.state.location.href).toBe(`${BASE_PATH}?locale=fr`);
+            expect(page.location()).toBe(`${BASE_PATH}?locale=fr`);
         });
         // The row is written by the first save in that locale, not by the switch.
         expect(update).not.toHaveBeenCalled();
@@ -380,11 +290,11 @@ describe('the global edit page', () => {
             permissions: [`global:${KEY}:read`],
         });
 
-        await waitFor(() => control('input[name="tagline"]'));
-        expect(screen.queryByRole('button', { name: 'common.update' })).toBeNull();
-        expect(document.querySelector('.am-banner-info')?.textContent).toBe(
-            'permissions.readOnly'
-        );
+        await tagline();
+        expect(screen.queryByRole('button', { name: 'Update' })).toBeNull();
+        expect(
+            screen.getByText('You have read-only access to this entry type.')
+        ).toBeDefined();
     });
 
     /** The staged view of a staging-capable global, with a staged row present. */
@@ -394,7 +304,7 @@ describe('the global edit page', () => {
             diverged,
         };
         const handles = makeApi({ canonical: makeGlobal(), staged });
-        mountPage({
+        const page = mountPage({
             api: handles.api,
             config: config({
                 capabilities: {
@@ -406,17 +316,17 @@ describe('the global edit page', () => {
             }),
             initialUrl: `${BASE_PATH}?locale=en&staged=true`,
         });
-        await waitFor(() => {
-            expect(control('input[name="tagline"]').value).toBe('Staged');
+        await waitFor(async () => {
+            expect((await tagline()).value).toBe('Staged');
         });
-        return handles;
+        return { ...handles, page };
     }
 
     it('merges the staged change from the staged view', async () => {
-        const { mergeStaged } = await mountStaged();
+        const { mergeStaged, page } = await mountStaged();
 
-        await clickHeaderButton('staging.merge');
-        await confirmDialog();
+        await page.user.click(screen.getByRole('button', { name: MERGE }));
+        await confirmDialog(page, MERGE);
 
         await waitFor(() => {
             expect(mergeStaged).toHaveBeenCalledWith({ key: KEY, locale: 'en' });
@@ -424,33 +334,30 @@ describe('the global edit page', () => {
     });
 
     it('confirms a merge plainly when the canonical has not moved on', async () => {
-        await mountStaged(false);
+        const { page } = await mountStaged(false);
 
-        await clickHeaderButton('staging.merge');
+        await page.user.click(screen.getByRole('button', { name: MERGE }));
 
-        expect(await screen.findByText('staging.confirmMergeMessage')).toBeTruthy();
-        expect(screen.queryByText('staging.confirmMergeDivergedMessage')).toBeNull();
+        expect(await screen.findByText(MERGE_MESSAGE)).toBeDefined();
+        expect(screen.queryByText(DIVERGED_MESSAGE)).toBeNull();
     });
 
     it('warns before a merge when the server reports the canonical diverged', async () => {
-        await mountStaged(true);
+        const { page } = await mountStaged(true);
 
-        await clickHeaderButton('staging.merge');
+        await page.user.click(screen.getByRole('button', { name: MERGE }));
 
-        expect(
-            await screen.findByText('staging.confirmMergeDivergedMessage')
-        ).toBeTruthy();
-        expect(screen.queryByText('staging.confirmMergeMessage')).toBeNull();
+        expect(await screen.findByText(DIVERGED_MESSAGE)).toBeDefined();
+        expect(screen.queryByText(MERGE_MESSAGE)).toBeNull();
     });
 
     it('saves the staged row itself, not the canonical one', async () => {
-        const user = userEvent.setup({ delay: null });
-        const { update } = await mountStaged();
+        const { update, page } = await mountStaged();
 
-        const field = control('input[name="tagline"]');
-        await user.clear(field);
-        await user.type(field, 'Staged edit');
-        await clickHeaderButton('common.update');
+        const field = await tagline();
+        await page.user.clear(field);
+        await page.user.type(field, 'Staged edit');
+        await page.user.click(screen.getByRole('button', { name: 'Update' }));
 
         await waitFor(() => {
             expect(update).toHaveBeenCalledTimes(1);
@@ -464,10 +371,10 @@ describe('the global edit page', () => {
     });
 
     it('discards the staged change from the staged view', async () => {
-        const { deleteStaged } = await mountStaged();
+        const { deleteStaged, page } = await mountStaged();
 
-        await clickHeaderButton('staging.discard');
-        await confirmDialog();
+        await page.user.click(screen.getByRole('button', { name: DISCARD }));
+        await confirmDialog(page, DISCARD);
 
         await waitFor(() => {
             expect(deleteStaged).toHaveBeenCalledWith({ key: KEY, locale: 'en' });

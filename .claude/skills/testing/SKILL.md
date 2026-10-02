@@ -57,7 +57,7 @@ The house setup is `packages/astromech/tests/_support/harness.ts`; read its doc 
 - Hard-code the expected value. Recomputing it with the code under test makes the test agree with itself.
 - Use the most specific matcher (`toEqual` on the shape, `rejects.toBeInstanceOf(ValidationError)`), so a failure says what was expected and what happened.
 - Keep snapshots small and inline. A large stored snapshot gets updated without being read. `packages/astromech/tests/codegen/type-generator-golden.test.ts` is the exception, because its output is the product.
-- In a component test, find elements as a user would, by role or label. `packages/admin/tests/_support/dom-setup.ts` fails any test that makes a request it did not mock.
+- In a component test, find elements as a user would, by role or label, and assert the English text a user reads. Render admin UI through `packages/admin/tests/_support/render-admin.tsx`, which supplies the app's providers, a router and a signed-in user. A field's `<label>` is not yet tied to its control, so `findFieldControl(name)` there finds a field by its `name`. `packages/admin/tests/_support/dom-setup.ts` fails any test that makes a request it did not mock.
 
 ## Order, time and flakes
 

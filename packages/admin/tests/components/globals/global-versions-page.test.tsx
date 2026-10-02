@@ -8,7 +8,6 @@
  * never by a row id.
  */
 
-import type { AuthUser } from '@/admin/context/auth';
 import type {
     AdminGlobal,
     GlobalsService,
@@ -17,25 +16,11 @@ import type {
     User,
     VersionMetadata,
 } from '@/types/index';
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import {
-    createMemoryHistory,
-    createRootRoute,
-    createRoute,
-    createRouter,
-    Outlet,
-    RouterProvider,
-} from '@tanstack/react-router';
-import { render, waitFor } from '@testing-library/react';
-import userEvent from '@testing-library/user-event';
-import i18n from 'i18next';
-import { initReactI18next } from 'react-i18next';
-import { beforeAll, describe, expect, it, vi } from 'vitest';
+import { screen, waitFor, within } from '@testing-library/react';
+import { describe, expect, it, vi } from 'vitest';
 import { GlobalVersionsPage } from '@/admin/components/globals/global-versions-page';
-import { ConfirmProvider } from '@/admin/components/ui/confirm';
-import { ToastProvider } from '@/admin/components/ui/toast';
-import { AuthProvider, sessionQueryOptions } from '@/admin/context/auth';
 import { queryKeys } from '@/admin/hooks/use-query-keys';
+import { createTestQueryClient, renderAdmin } from '../../_support/render-admin';
 
 // The page calls globals through the client; each test sets the stub.
 const client = vi.hoisted(() => ({ globals: undefined as unknown }));
@@ -65,13 +50,6 @@ vi.mock('astromech/fetch', async (importOriginal) => {
 
 const KEY = 'site';
 const BASE_PATH = `/globals/${KEY}`;
-
-beforeAll(async () => {
-    await i18n.use(initReactI18next).init({
-        lng: 'en',
-        resources: { en: { translation: {} } },
-    });
-});
 
 const CONFIG = {
     label: 'Site',
@@ -112,63 +90,32 @@ function mountPage() {
     client.globals = api;
     adminConfig.globals[KEY] = CONFIG;
 
-    const queryClient = new QueryClient({
-        defaultOptions: { queries: { staleTime: 30_000, retry: false } },
-    });
-    queryClient.setQueryData<AuthUser>(sessionQueryOptions.queryKey, {
-        id: 'u1',
-        name: 'Admin',
-        email: 'admin@astromech.dev',
-        image: null,
-        role: 'admin',
-        permissions: ['*'],
-    });
+    const queryClient = createTestQueryClient();
     // No known users, so the page's author names need no request either.
     queryClient.setQueryData<QueryResult<User>>(queryKeys.users.list({ limit: 'all' }), {
         data: [],
         pagination: null,
     });
 
-    const rootRoute = createRootRoute({ component: () => <Outlet /> });
-    const versionsRoute = createRoute({
-        getParentRoute: () => rootRoute,
-        path: `${BASE_PATH}/versions`,
-        component: () => <GlobalVersionsPage globalKey={KEY} locale="en" />,
-    });
-    const router = createRouter({
-        routeTree: rootRoute.addChildren([versionsRoute]),
-        history: createMemoryHistory({ initialEntries: [`${BASE_PATH}/versions`] }),
-        // A restore navigates to the edit page, which this tree leaves out.
-        defaultNotFoundComponent: () => null,
+    const page = renderAdmin(<GlobalVersionsPage globalKey={KEY} locale="en" />, {
+        url: `${BASE_PATH}/versions`,
+        queryClient,
     });
 
-    render(
-        <QueryClientProvider client={queryClient}>
-            <ToastProvider>
-                <AuthProvider>
-                    <ConfirmProvider>
-                        <RouterProvider router={router} />
-                    </ConfirmProvider>
-                </AuthProvider>
-            </ToastProvider>
-        </QueryClientProvider>
-    );
-
-    return { restoreVersion, getVersion };
+    return { restoreVersion, getVersion, page };
 }
 
 describe('the global versions page', () => {
     it('lists the locale’s versions newest first', async () => {
         mountPage();
 
-        const numbers = await waitFor(() => {
-            const found = [...document.querySelectorAll('.am-versions-item-number')].map(
-                (el) => el.textContent
-            );
-            if (found.length === 0) throw new Error('no versions rendered');
-            return found;
-        });
-        expect(numbers).toEqual(['#3', '#2', '#1']);
+        // Each version is a button whose name leads with its number.
+        const items = await screen.findAllByRole('button', { name: /^#\d/ });
+        expect(items.map((item) => item.textContent?.slice(0, 2))).toEqual([
+            '#3',
+            '#2',
+            '#1',
+        ]);
     });
 
     it('reads the selected version and the one before it, and diffs them', async () => {
@@ -187,26 +134,15 @@ describe('the global versions page', () => {
     });
 
     it('restores the selected version by key, locale and number', async () => {
-        const user = userEvent.setup({ delay: null });
-        const { restoreVersion } = mountPage();
+        const { restoreVersion, page } = mountPage();
 
-        const restoreButton = await waitFor(() => {
-            const found = [...document.querySelectorAll('button')].find(
-                (el) => el.textContent === 'versions.restoreButton'
-            );
-            if (found === undefined) throw new Error('no restore button');
-            return found;
-        });
-        await user.click(restoreButton);
+        await page.user.click(
+            await screen.findByRole('button', { name: 'Restore this version' })
+        );
 
         // The restore is behind a confirmation.
-        const footer = await waitFor(() => {
-            const found = document.querySelector('.am-modal-footer');
-            if (found === null) throw new Error('no confirm dialog');
-            return found;
-        });
-        const buttons = [...footer.querySelectorAll('button')];
-        await user.click(buttons[buttons.length - 1] as HTMLButtonElement);
+        const dialog = await screen.findByRole('alertdialog');
+        await page.user.click(within(dialog).getByRole('button', { name: 'Restore' }));
 
         await waitFor(() => {
             expect(restoreVersion).toHaveBeenCalledWith({

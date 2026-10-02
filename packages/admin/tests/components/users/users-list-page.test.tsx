@@ -6,29 +6,13 @@
  * a delete asks before it calls the server.
  */
 
-import type { AuthUser } from '@/admin/context/auth';
 import type { QueryResult, User } from '@/types/index';
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import {
-    createMemoryHistory,
-    createRootRoute,
-    createRoute,
-    createRouter,
-    Outlet,
-    RouterProvider,
-} from '@tanstack/react-router';
-import { render, screen, waitFor, within } from '@testing-library/react';
+import { screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import i18n from 'i18next';
-import { initReactI18next } from 'react-i18next';
-import { afterEach, beforeAll, describe, expect, it, vi } from 'vitest';
-import { ConfirmProvider } from '@/admin/components/ui/confirm';
-import { ToastProvider } from '@/admin/components/ui/toast';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import { validateListSearch } from '@/admin/components/ui/use-list-state';
 import { UsersListPage } from '@/admin/components/users/users-list-page';
-import { AiContextProvider } from '@/admin/context/ai-context';
-import { AuthProvider, sessionQueryOptions } from '@/admin/context/auth';
-import en from '@/admin/locales/en.json';
+import { renderAdmin } from '../../_support/render-admin';
 
 const { query, remove } = vi.hoisted(() => ({ query: vi.fn(), remove: vi.fn() }));
 
@@ -64,64 +48,24 @@ const PAGE: QueryResult<User> = {
     pagination: { page: 1, pages: 1, total: 2, limit: 20 },
 };
 
-beforeAll(async () => {
-    await i18n.use(initReactI18next).init({
-        lng: 'en',
-        resources: { en: { translation: en } },
-        interpolation: { escapeValue: false },
-    });
-});
-
 afterEach(() => {
     query.mockReset();
     remove.mockReset();
 });
 
-/** Mount the list at `url` under a real router, and return the router. */
+/** Mount the list at `url` beside a user page its rows link to. */
 function mountList(url: string) {
-    const queryClient = new QueryClient({
-        defaultOptions: { queries: { staleTime: 30_000, retry: false } },
-    });
-    queryClient.setQueryData<AuthUser>(sessionQueryOptions.queryKey, {
-        id: 'admin',
-        name: 'Admin',
-        email: 'admin@astromech.dev',
-        image: null,
-        role: 'admin',
-        permissions: ['*'],
-    });
-
-    const rootRoute = createRootRoute({ component: () => <Outlet /> });
-    const listRoute = createRoute({
-        getParentRoute: () => rootRoute,
-        path: '/users',
-        validateSearch: validateListSearch,
-        component: UsersListPage,
-    });
-    const editRoute = createRoute({
-        getParentRoute: () => rootRoute,
-        path: '/users/$id',
-        component: () => <p>User page</p>,
-    });
-    const router = createRouter({
-        routeTree: rootRoute.addChildren([listRoute, editRoute]),
-        history: createMemoryHistory({ initialEntries: [url] }),
-    });
-
-    render(
-        <QueryClientProvider client={queryClient}>
-            <ToastProvider>
-                <AuthProvider>
-                    <ConfirmProvider>
-                        <AiContextProvider>
-                            <RouterProvider router={router} />
-                        </AiContextProvider>
-                    </ConfirmProvider>
-                </AuthProvider>
-            </ToastProvider>
-        </QueryClientProvider>
+    return renderAdmin(
+        [
+            {
+                path: '/users',
+                validateSearch: validateListSearch,
+                component: UsersListPage,
+            },
+            { path: '/users/$id', component: () => <p>User page</p> },
+        ],
+        { url }
     );
-    return router;
 }
 
 describe('the users list', () => {
@@ -141,25 +85,23 @@ describe('the users list', () => {
 
     it('writes a sort by name to the URL', async () => {
         query.mockResolvedValue(PAGE);
-        const router = mountList('/users?page=2');
+        const view = mountList('/users?page=2');
         await screen.findByText('Ada Lovelace');
 
         await userEvent.click(screen.getByRole('button', { name: /Name/ }));
 
-        await waitFor(() =>
-            expect(router.state.location.search).toEqual({ sort: 'name:asc' })
-        );
+        await waitFor(() => expect(view.search()).toEqual({ sort: 'name:asc' }));
     });
 
     it('links each row to its user', async () => {
         query.mockResolvedValue(PAGE);
-        const router = mountList('/users');
+        const view = mountList('/users');
 
         const link = await screen.findByRole('link', { name: 'Grace Hopper' });
         expect(link.getAttribute('href')).toBe('/users/u2');
         await userEvent.click(screen.getByText('u2@example.com'));
 
-        await waitFor(() => expect(router.state.location.pathname).toBe('/users/u2'));
+        await waitFor(() => expect(view.pathname()).toBe('/users/u2'));
     });
 
     it('asks before deleting a user, then deletes it', async () => {

@@ -12,39 +12,12 @@
  * entry, the next render (which the mutation settling itself triggers) copies
  * the STALE cached entry back over the just-saved values.
  *
- * This mounts the REAL `EntryEditPage` — not a hand-built stand-in — inside a
- * real `@tanstack/react-router` router (memory history) so `useNavigate` and
- * `Link` resolve, plus the plain-React-context providers the page's hooks
- * need (`ToastProvider`, `AuthProvider`, `ConfirmProvider`, `AiContextProvider`).
- * It deliberately skips the app's `_protected` layout/`AppShell` — that's nav
- * chrome unrelated to this bug — and declares its entry type in a mocked config rather
- * than going through a route loader, exactly as `entry-edit-cache-invalidation`
- * needs: a save must survive whatever the real page's `onSuccess` does, not
- * whatever this test's own copy of it does.
+ * This mounts the REAL `EntryEditPage`, not a hand-built stand-in, through
+ * `renderAdmin`, so a save must survive whatever the real page's `onSuccess`
+ * does, not whatever this test's own copy of it does. It declares its entry
+ * type in a mocked config rather than going through a route loader.
  */
 
-import type { AuthUser } from '@/admin/context/auth';
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import {
-    createMemoryHistory,
-    createRootRoute,
-    createRoute,
-    createRouter,
-    Outlet,
-    RouterProvider,
-} from '@tanstack/react-router';
-import { render, screen, waitFor } from '@testing-library/react';
-import userEvent from '@testing-library/user-event';
-import i18n from 'i18next';
-import { initReactI18next } from 'react-i18next';
-import { beforeAll, describe, expect, it, vi } from 'vitest';
-import { EntryEditPage } from '@/admin/components/entries/entry-edit-page';
-import { ConfirmProvider } from '@/admin/components/ui/confirm';
-import { ToastProvider } from '@/admin/components/ui/toast';
-import { AiContextProvider } from '@/admin/context/ai-context';
-import { AuthProvider, sessionQueryOptions } from '@/admin/context/auth';
-import { queryKeys } from '@/admin/hooks/use-query-keys';
-import '@/admin/rendering/register-fields';
 import type {
     AdminEntryType,
     EntriesService,
@@ -53,6 +26,12 @@ import type {
     QueryResult,
     User,
 } from '@/types/index';
+import type { QueryClient } from '@tanstack/react-query';
+import { screen, waitFor } from '@testing-library/react';
+import { describe, expect, it, vi } from 'vitest';
+import { EntryEditPage } from '@/admin/components/entries/entry-edit-page';
+import { queryKeys } from '@/admin/hooks/use-query-keys';
+import { createTestQueryClient, renderAdmin } from '../../_support/render-admin';
 
 // The page reads its entry type from the config; each mount declares it.
 const { adminConfig } = vi.hoisted(() => ({
@@ -79,15 +58,6 @@ vi.mock('astromech/fetch', async (importOriginal) => {
             },
         },
     };
-});
-
-beforeAll(async () => {
-    // The page reads labels through `useTranslation`; the SPA's own i18n module
-    // pulls in virtual modules, so stand up a bare instance instead.
-    await i18n.use(initReactI18next).init({
-        lng: 'en',
-        resources: { en: { translation: {} } },
-    });
 });
 
 const TYPE = 'caseStudy';
@@ -129,10 +99,7 @@ const ENTRY_TYPE_CONFIG: AdminEntryType = {
     titleField: 'title',
 };
 
-/**
- * Mounts the real `EntryEditPage` inside a real router + the provider stack
- * its hooks need, skipping only the `_protected` layout's nav chrome.
- */
+/** Mount the real `EntryEditPage` over a stub entries client. */
 function mountEditPage(queryClient: QueryClient) {
     const update = vi.fn(async (params: { data: { fields?: Record<string, unknown> } }) =>
         makeEntry((params.data.fields?.['customer'] as string) ?? '')
@@ -148,32 +115,10 @@ function mountEditPage(queryClient: QueryClient) {
     client.entries = api;
     adminConfig.entryTypes[TYPE] = ENTRY_TYPE_CONFIG;
 
-    const rootRoute = createRootRoute({ component: () => <Outlet /> });
-    const editRoute = createRoute({
-        getParentRoute: () => rootRoute,
-        path: '/',
-        component: () => <EntryEditPage type={TYPE} id={ID} locale={LOCALE} />,
+    const page = renderAdmin(<EntryEditPage type={TYPE} id={ID} locale={LOCALE} />, {
+        queryClient,
     });
-    const router = createRouter({
-        routeTree: rootRoute.addChildren([editRoute]),
-        history: createMemoryHistory({ initialEntries: ['/'] }),
-    });
-
-    render(
-        <QueryClientProvider client={queryClient}>
-            <ToastProvider>
-                <AuthProvider>
-                    <ConfirmProvider>
-                        <AiContextProvider>
-                            <RouterProvider router={router} />
-                        </AiContextProvider>
-                    </ConfirmProvider>
-                </AuthProvider>
-            </ToastProvider>
-        </QueryClientProvider>
-    );
-
-    return { update };
+    return { update, user: page.user };
 }
 
 /**
@@ -182,36 +127,21 @@ function mountEditPage(queryClient: QueryClient) {
  */
 async function waitForSave(button: HTMLElement, count: number): Promise<void> {
     await waitFor(() => {
-        expect(screen.getAllByText('entries.updated')).toHaveLength(count);
+        expect(screen.getAllByText('Case Study updated.')).toHaveLength(count);
+        // The spinner is the button's only loading signal; it is `aria-hidden`.
         expect(button.querySelector('.am-spinner')).toBeNull();
     });
 }
 
 describe('the entry edit page after a save', () => {
     it('keeps displaying the just-saved value, not the stale cached one', async () => {
-        const user = userEvent.setup();
-        // The admin app's real staleTime (admin/main.tsx) — nothing refetches
+        // The admin app's real staleTime (admin/main.tsx), so nothing refetches
         // this query on its own in the observation window.
-        const queryClient = new QueryClient({
-            defaultOptions: { queries: { staleTime: 30_000 } },
-        });
+        const queryClient = createTestQueryClient();
         queryClient.setQueryData(
             queryKeys.entries.get(TYPE, ID, LOCALE),
             makeEntry('Lumenflow')
         );
-        // Session, so `usePermissions()` grants the update action without a
-        // network round trip — the session query shares the same staleTime.
-        // The type argument is explicit because `setQueryData` wraps its value
-        // parameter in `NoInfer`, so the shape has to come from the key or from
-        // here — an object literal alone cannot drive the inference.
-        queryClient.setQueryData<AuthUser>(sessionQueryOptions.queryKey, {
-            id: 'u1',
-            name: 'Admin',
-            email: 'admin@astromech.dev',
-            image: null,
-            role: 'admin',
-            permissions: ['*'],
-        });
         // No known users, so the page's author names need no request either.
         queryClient.setQueryData<QueryResult<User>>(
             queryKeys.users.list({ limit: 'all' }),
@@ -219,6 +149,7 @@ describe('the entry edit page after a save', () => {
         );
 
         const page = mountEditPage(queryClient);
+        const { user } = page;
 
         const input = (await screen.findByDisplayValue('Lumenflow')) as HTMLInputElement;
         expect(input.name).toBe('customer');
@@ -226,7 +157,7 @@ describe('the entry edit page after a save', () => {
         // First edit + save, via the real Update button.
         await user.clear(input);
         await user.type(input, 'Lumenflow International');
-        const updateButton = await screen.findByRole('button', { name: 'common.update' });
+        const updateButton = await screen.findByRole('button', { name: 'Update' });
         await user.click(updateButton);
         await waitForSave(updateButton, 1);
 

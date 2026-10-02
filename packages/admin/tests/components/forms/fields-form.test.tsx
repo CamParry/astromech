@@ -8,25 +8,14 @@
  */
 
 import type { Field } from '@/types/index';
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { render, screen, waitFor } from '@testing-library/react';
+import { screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import i18n from 'i18next';
 import React from 'react';
-import { initReactI18next } from 'react-i18next';
-import { beforeAll, describe, expect, it, vi } from 'vitest';
-import '@/admin/rendering/register-fields';
+import { describe, expect, it, vi } from 'vitest';
 import { FieldsForm } from '@/admin/components/forms/fields-form';
-import { ToastProvider } from '@/admin/components/ui/toast';
 import { useFieldsForm } from '@/admin/hooks/use-fields-form';
 import { AstromechApiError } from '@/transport/http/client';
-
-beforeAll(async () => {
-    await i18n.use(initReactI18next).init({
-        lng: 'en',
-        resources: { en: { translation: {} } },
-    });
-});
+import { renderWithProviders } from '../../_support/render-admin';
 
 /** A redirect, as a plugin would declare it. */
 const FIELDS: Field[] = [
@@ -65,13 +54,7 @@ function RedirectForm({
 }
 
 function mount(onSubmit: Write, { readOnly = false, to = '' } = {}): void {
-    render(
-        <QueryClientProvider client={new QueryClient()}>
-            <ToastProvider>
-                <RedirectForm onSubmit={onSubmit} readOnly={readOnly} to={to} />
-            </ToastProvider>
-        </QueryClientProvider>
-    );
+    renderWithProviders(<RedirectForm onSubmit={onSubmit} readOnly={readOnly} to={to} />);
 }
 
 function inputNamed(name: string): HTMLInputElement {

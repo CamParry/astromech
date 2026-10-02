@@ -7,23 +7,10 @@
 
 import type { MediaBrowserQuery } from '@/admin/types/media';
 import { render, screen } from '@testing-library/react';
-import i18n from 'i18next';
-import { initReactI18next } from 'react-i18next';
-import { beforeAll, describe, expect, it, vi } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import { MediaEmpty } from '@/admin/components/media/media-empty';
-import en from '@/admin/locales/en.json';
 
 const BROWSING: MediaBrowserQuery = { q: '', type: 'all', page: 1 };
-
-beforeAll(async () => {
-    // The states differ only in their copy, so real strings are needed; the
-    // SPA's own i18n module pulls in virtual modules, so stand up a bare one.
-    await i18n.use(initReactI18next).init({
-        lng: 'en',
-        resources: { en: { translation: en } },
-        interpolation: { escapeValue: false },
-    });
-});
 
 /** Render the empty state for one browsing query and permission. */
 function renderEmpty(query: Partial<MediaBrowserQuery>, canUpload: boolean): void {

@@ -7,25 +7,13 @@
  */
 
 import type { Entry, Field } from '@/types/index';
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { act, render, waitFor } from '@testing-library/react';
-import i18n from 'i18next';
+import { act, waitFor } from '@testing-library/react';
 import React from 'react';
-import { initReactI18next } from 'react-i18next';
-import { beforeAll, describe, expect, it, vi } from 'vitest';
-import { ToastProvider } from '@/admin/components/ui/toast';
+import { describe, expect, it, vi } from 'vitest';
 import { useEntryForm } from '@/admin/hooks/use-entry-form';
+import { renderWithProviders } from '../_support/render-admin';
 
 type UseEntryFormResult = ReturnType<typeof useEntryForm<Entry>>;
-
-beforeAll(async () => {
-    // The hook reads labels through `useTranslation`; the SPA's own i18n module
-    // pulls in virtual modules, so stand up a bare instance instead.
-    await i18n.use(initReactI18next).init({
-        lng: 'en',
-        resources: { en: { translation: {} } },
-    });
-});
 
 const FIELDS: Field[] = [{ name: 'body', type: 'text', label: 'Body', required: true }];
 
@@ -78,13 +66,7 @@ function mountForm(defaults: {
         );
     }
 
-    const { unmount } = render(
-        <QueryClientProvider client={new QueryClient()}>
-            <ToastProvider>
-                <Probe />
-            </ToastProvider>
-        </QueryClientProvider>
-    );
+    const { unmount } = renderWithProviders(<Probe />);
 
     return {
         handle: () => {

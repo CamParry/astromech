@@ -8,9 +8,7 @@
 
 import type { DataField, Field } from '@/types/index';
 import { act, render, screen } from '@testing-library/react';
-import i18n from 'i18next';
-import { initReactI18next } from 'react-i18next';
-import { beforeAll, describe, expect, it } from 'vitest';
+import { describe, expect, it } from 'vitest';
 import '@/admin/rendering/register-fields';
 import { EntryFieldColumn } from '@/admin/components/entries/entry-fields-renderer';
 import { useFieldValue } from '@/admin/components/fields/field-context';
@@ -18,13 +16,6 @@ import { FieldErrorsProvider } from '@/admin/components/fields/field-errors-cont
 import { FormField } from '@/admin/components/fields/form-field';
 import { registerField } from '@/admin/rendering/field-registry';
 import { accordion, group, repeater, tab, tabs, text } from '@/fields/builder';
-
-beforeAll(async () => {
-    await i18n.use(initReactI18next).init({
-        lng: 'en',
-        resources: { en: { translation: {} } },
-    });
-});
 
 type Commit = { name: string; value: unknown };
 

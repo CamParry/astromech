@@ -16,29 +16,16 @@
  * `RepeaterField` and `KeyValueEditor` all carry a re-seed guard.
  */
 
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { act, render, waitFor } from '@testing-library/react';
-import userEvent from '@testing-library/user-event';
-import i18n from 'i18next';
-import React from 'react';
-import { initReactI18next } from 'react-i18next';
-import { beforeAll, describe, expect, it, vi } from 'vitest';
-import { ToastProvider } from '@/admin/components/ui/toast';
-import '@/admin/rendering/register-fields';
 import type { Entry, Field } from '@/types/index';
+import { act, screen, waitFor } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
+import React from 'react';
+import { describe, expect, it, vi } from 'vitest';
 import { EntryFieldColumn } from '@/admin/components/entries/entry-fields-renderer';
 import { useEntryForm } from '@/admin/hooks/use-entry-form';
+import { renderWithProviders } from '../../_support/render-admin';
 
 type UseEntryFormResult = ReturnType<typeof useEntryForm<Entry>>;
-
-beforeAll(async () => {
-    // The hook reads labels through `useTranslation`; the SPA's own i18n module
-    // pulls in virtual modules, so stand up a bare instance instead.
-    await i18n.use(initReactI18next).init({
-        lng: 'en',
-        resources: { en: { translation: {} } },
-    });
-});
 
 /** The demo's `seo.section()`: a named group, drawn as a titled panel. */
 const SEO_GROUP: Field = {
@@ -126,13 +113,7 @@ function mountEditPage({ main, sidebar = [], fields }: MountOptions): Harness {
         );
     }
 
-    render(
-        <QueryClientProvider client={new QueryClient()}>
-            <ToastProvider>
-                <Probe />
-            </ToastProvider>
-        </QueryClientProvider>
-    );
+    renderWithProviders(<Probe />);
 
     return {
         handle: () => {
@@ -213,11 +194,7 @@ describe('key-value on a fetched entry', () => {
             expect(document.querySelectorAll('.am-kv-editor-row')).toHaveLength(2);
         });
 
-        const add = [...document.querySelectorAll('button')].find((b) =>
-            (b.textContent ?? '').toLowerCase().includes('add')
-        );
-        if (add === undefined) throw new Error('no add-pair button');
-        await user.click(add);
+        await user.click(screen.getByRole('button', { name: /add/i }));
         // The key input of the row just added — the LAST one, so the assertion
         // reads the same way whether or not the stored pairs were seeded.
         const rows = [...document.querySelectorAll('.am-kv-editor-row')];

@@ -6,21 +6,10 @@
  * gated as a whole, so one unreadable global hides only itself.
  */
 
-import type { AuthUser } from '@/admin/context/auth';
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import {
-    createMemoryHistory,
-    createRootRoute,
-    createRouter,
-    RouterProvider,
-} from '@tanstack/react-router';
-import { render, waitFor } from '@testing-library/react';
-import i18n from 'i18next';
-import { initReactI18next } from 'react-i18next';
-import { beforeAll, describe, expect, it, vi } from 'vitest';
+import { screen, waitFor, within } from '@testing-library/react';
+import { describe, expect, it, vi } from 'vitest';
 import { Sidebar } from '@/admin/components/layout/sidebar';
-import { AuthProvider, sessionQueryOptions } from '@/admin/context/auth';
-import { UiProvider } from '@/admin/context/ui';
+import { renderAdmin } from '../../_support/render-admin';
 
 vi.mock('virtual:astromech/admin-config', () => ({
     default: {
@@ -38,50 +27,19 @@ vi.mock('virtual:astromech/admin-config', () => ({
     },
 }));
 
-beforeAll(async () => {
-    await i18n.use(initReactI18next).init({
-        lng: 'en',
-        resources: { en: { translation: {} } },
-    });
-});
-
-function mountSidebar(permissions: string[]) {
-    const queryClient = new QueryClient({
-        defaultOptions: { queries: { retry: false } },
-    });
-    queryClient.setQueryData<AuthUser>(sessionQueryOptions.queryKey, {
-        id: 'u1',
-        name: 'Editor',
-        email: 'editor@astromech.dev',
-        image: null,
-        role: 'editor',
-        permissions,
-    });
-
-    const rootRoute = createRootRoute({ component: () => <Sidebar /> });
-    const router = createRouter({
-        routeTree: rootRoute,
-        history: createMemoryHistory({ initialEntries: ['/'] }),
-    });
-
-    render(
-        <QueryClientProvider client={queryClient}>
-            <AuthProvider>
-                <UiProvider>
-                    <RouterProvider router={router} />
-                </UiProvider>
-            </AuthProvider>
-        </QueryClientProvider>
-    );
+function mountSidebar(permissions: string[]): void {
+    renderAdmin(<Sidebar />, { permissions });
 }
 
 function globalLinks(): { label: string; href: string | null }[] {
-    const block = document.querySelector('nav[aria-label="nav.globals"]');
+    const block = screen.queryByRole('navigation', { name: 'Globals' });
     if (block === null) return [];
-    return [...block.querySelectorAll('a')].map((a) => ({
-        label: a.textContent ?? '',
-        href: a.getAttribute('href'),
-    }));
+    return within(block)
+        .queryAllByRole('link')
+        .map((a) => ({
+            label: a.textContent ?? '',
+            href: a.getAttribute('href'),
+        }));
 }
 
 describe('the sidebar globals block', () => {
@@ -114,12 +72,8 @@ describe('the sidebar globals block', () => {
         mountSidebar(['entry:post:read']);
         // The globals block renders in the same pass as the primary nav, so once
         // the nav is up an absent block stays absent.
-        await waitFor(() => {
-            expect(
-                document.querySelector('nav[aria-label="nav.primary"]')
-            ).not.toBeNull();
-        });
+        expect(await screen.findByRole('navigation', { name: 'Primary' })).toBeDefined();
 
-        expect(document.querySelector('nav[aria-label="nav.globals"]')).toBeNull();
+        expect(screen.queryByRole('navigation', { name: 'Globals' })).toBeNull();
     });
 });

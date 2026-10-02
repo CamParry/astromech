@@ -6,41 +6,32 @@
 
 import type { AdminSlotName } from '@/types/config';
 import type { RenderResult } from '@testing-library/react';
-import { act, render } from '@testing-library/react';
+import { act } from '@testing-library/react';
 import { slots } from 'virtual:astromech/plugins/components';
-import { afterEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, describe, expect, it } from 'vitest';
 import { PluginSlot } from '@/admin/components/plugins/plugin-slot';
-
-const granted = vi.hoisted(() => ({ permissions: [] as string[] }));
-
-vi.mock('@/admin/hooks/use-permissions', () => ({
-    usePermissions: () => ({
-        hasPermission: (permission: string) => granted.permissions.includes(permission),
-    }),
-}));
+import { renderWithProviders } from '../../_support/render-admin';
 
 const drawer = slots['right-drawer'] ?? [];
 
 afterEach(() => {
     drawer.length = 0;
-    granted.permissions = [];
 });
 
 describe('PluginSlot', () => {
     it('should render nothing for a slot no plugin contributed to', async () => {
         // Also the proof the test shim exports the slot at all.
         expect(slots['right-drawer']).toEqual([]);
-        const mounted = await mount('right-drawer');
+        const mounted = await mount('right-drawer', []);
 
         expect(mounted.html()).toBe('');
         await mounted.unmount();
     });
 
     it('should render a contribution the current user has permission for', async () => {
-        granted.permissions = ['chat:use'];
         drawer.push(contribution('chat:drawer', 'chat:use'));
 
-        const mounted = await mount('right-drawer');
+        const mounted = await mount('right-drawer', ['chat:use']);
 
         expect(mounted.html()).toContain('drawer');
         await mounted.unmount();
@@ -49,7 +40,7 @@ describe('PluginSlot', () => {
     it('should filter out a contribution whose permission the user lacks', async () => {
         drawer.push(contribution('chat:drawer:denied', 'chat:use'));
 
-        const mounted = await mount('right-drawer');
+        const mounted = await mount('right-drawer', []);
 
         expect(mounted.html()).toBe('');
         await mounted.unmount();
@@ -69,11 +60,14 @@ function contribution(id: string, permission: string | null) {
     };
 }
 
-/** Mount one slot into a real root, awaiting any lazy contribution. */
-async function mount(name: AdminSlotName) {
+/**
+ * Mount one slot for a user holding `permissions`, awaiting any lazy
+ * contribution. The providers render nothing of their own into the container.
+ */
+async function mount(name: AdminSlotName, permissions: string[]) {
     let view: RenderResult | undefined;
     await act(async () => {
-        view = render(<PluginSlot name={name} />);
+        view = renderWithProviders(<PluginSlot name={name} />, { permissions });
     });
     if (view === undefined) throw new Error('the slot never rendered');
     const { container, unmount } = view;

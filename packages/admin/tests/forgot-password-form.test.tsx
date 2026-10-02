@@ -5,30 +5,13 @@
  * the email and the admin's reset page as `redirectTo`.
  */
 
-import {
-    createMemoryHistory,
-    createRootRoute,
-    createRoute,
-    createRouter,
-    Outlet,
-    RouterProvider,
-} from '@tanstack/react-router';
-import { render, screen } from '@testing-library/react';
+import { screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import i18n from 'i18next';
-import { initReactI18next } from 'react-i18next';
-import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
-import en from '@/admin/locales/en.json';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { Route as forgotPasswordRoute } from '@/admin/pages/_auth/forgot-password';
+import { renderAdmin } from './_support/render-admin';
 
 const fetchMock = vi.fn<typeof fetch>();
-
-beforeAll(async () => {
-    await i18n.use(initReactI18next).init({
-        lng: 'en',
-        resources: { en: { translation: en } },
-    });
-});
 
 beforeEach(() => {
     vi.stubGlobal('__ASTROMECH_BASE_PATH__', '/cms');
@@ -49,22 +32,14 @@ afterEach(() => {
 function mountPage(): void {
     const page = forgotPasswordRoute.options.component;
     if (page === undefined) throw new Error('the forgot-password route has no component');
-    const rootRoute = createRootRoute({ component: () => <Outlet /> });
-    const pageRoute = createRoute({
-        getParentRoute: () => rootRoute,
-        path: '/forgot-password',
-        component: page,
-    });
-    const loginRoute = createRoute({
-        getParentRoute: () => rootRoute,
-        path: '/login',
-        component: () => null,
-    });
-    const router = createRouter({
-        routeTree: rootRoute.addChildren([pageRoute, loginRoute]),
-        history: createMemoryHistory({ initialEntries: ['/forgot-password'] }),
-    });
-    render(<RouterProvider router={router} />);
+    // Signed out, as a visitor to the page is.
+    renderAdmin(
+        [
+            { path: '/forgot-password', component: page },
+            { path: '/login', component: () => <></> },
+        ],
+        { url: '/forgot-password', permissions: null }
+    );
 }
 
 describe('the forgot-password form', () => {
