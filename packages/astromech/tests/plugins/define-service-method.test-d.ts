@@ -63,17 +63,16 @@ describe('defineServiceMethod', () => {
     });
 
     it('rejects a handler returning a shape the output schema does not accept', () => {
-        const output = z.object({ id: z.string(), count: z.number() });
+        // The same call as "types the result from the output schema" above,
+        // which compiles, with only `count` changed. The overloads report
+        // the mismatch on the call, so the directive sits there.
+        // @ts-expect-error The handler's `count` is a string; the output schema wants a number.
         defineServiceMethod({
             access: 'public',
             input: z.object({ id: z.string() }),
-            output,
+            output: z.object({ id: z.string(), count: z.number() }),
             mutates: false,
-            handler: (input): z.input<typeof output> => ({
-                id: input.id,
-                // @ts-expect-error The output schema wants a number.
-                count: 'one',
-            }),
+            handler: (input) => ({ id: input.id, count: 'one' }),
         });
     });
 });
