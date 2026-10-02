@@ -10,8 +10,14 @@ import type {
     SeoSitemap,
     SeoSitemapUrl,
 } from '../types';
-import type { Entry, EntryStatus, PluginContext } from 'astromech';
-import { defineServiceMethod, noInput, resolveEntryPath, z } from 'astromech';
+import type { Entry, PluginContext } from 'astromech';
+import {
+    defineServiceMethod,
+    ENTRY_STATUSES,
+    noInput,
+    resolveEntryPath,
+    z,
+} from 'astromech';
 import { SEO_FIELD_NAME } from '../types';
 import {
     LENGTH_STATUSES,
@@ -47,11 +53,7 @@ export const seoOverviewItemSchema = z.object({
     type: z.string(),
     title: z.string(),
     slug: z.string().nullable(),
-    entryStatus: z.enum([
-        'unpublished',
-        'published',
-        'scheduled',
-    ] satisfies EntryStatus[]),
+    entryStatus: z.enum(ENTRY_STATUSES),
     metaTitle: seoFieldHealthSchema,
     metaDescription: seoFieldHealthSchema,
 });

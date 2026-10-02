@@ -43,7 +43,11 @@ export const TARGET_KINDS = [
 /** One of {@link TARGET_KINDS}. */
 export type TargetKind = (typeof TARGET_KINDS)[number];
 
-export type EntryStatus = 'unpublished' | 'published' | 'scheduled';
+/** The publication states an entry's or a global's content row carries. */
+export const ENTRY_STATUSES = ['unpublished', 'published', 'scheduled'] as const;
+
+/** One of {@link ENTRY_STATUSES}. */
+export type EntryStatus = (typeof ENTRY_STATUSES)[number];
 
 /** One locale of an entry of any type. Documented key by key on `entrySchema`. */
 export type Entry = z.output<typeof entrySchema>;

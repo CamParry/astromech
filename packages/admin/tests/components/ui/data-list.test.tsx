@@ -2,8 +2,8 @@
  * @vitest-environment happy-dom
  *
  * `DataList` over flat rows and `useListState`: it renders the rows, writes a
- * sort and a search to the URL and returns to the first page, links each row,
- * confirms a destructive bulk action before running it, and shows the empty,
+ * sort and a search to the URL and returns to the first page, links each row
+ * (leaving a click on a control in it to the control), confirms a destructive bulk action before running it, and shows the empty,
  * loading and error states.
  */
 
@@ -30,6 +30,7 @@ const COLUMNS: DataListColumn<Redirect>[] = [
 
 type ListOptions = {
     rows?: Redirect[];
+    columns?: DataListColumn<Redirect>[];
     isLoading?: boolean;
     isError?: boolean;
     bulkActions?: DataListBulkAction[];
@@ -38,6 +39,7 @@ type ListOptions = {
 /** A redirects list over `useListState`, as a plugin page would write it. */
 function RedirectsList({
     rows = REDIRECTS,
+    columns = COLUMNS,
     isLoading = false,
     isError = false,
     bulkActions,
@@ -46,7 +48,7 @@ function RedirectsList({
     return (
         <DataList
             rows={rows}
-            columns={COLUMNS}
+            columns={columns}
             isLoading={isLoading}
             isError={isError}
             search={list.q}
@@ -122,6 +124,33 @@ describe('DataList', () => {
         await userEvent.click(screen.getByText('/here'));
 
         await waitFor(() => expect(view.pathname()).toBe('/redirects/r2'));
+    });
+
+    it('leaves a row closed when a click lands on a control in it', async () => {
+        const copy = vi.fn();
+        const view = mountList('/redirects', {
+            columns: [
+                ...COLUMNS,
+                {
+                    key: 'copy',
+                    label: 'Copy',
+                    render: (row) => (
+                        <button type="button" onClick={() => copy(row.to)}>
+                            Copy {row.to}
+                        </button>
+                    ),
+                },
+            ],
+        });
+
+        await userEvent.click(await screen.findByRole('button', { name: 'Copy /new' }));
+        const [firstMenu] = screen.getAllByRole('button', { name: 'Actions' });
+        await userEvent.click(firstMenu as HTMLElement);
+
+        // The menu opens on the list, so neither click left it.
+        expect(await screen.findByRole('menuitem', { name: 'Edit /old' })).toBeTruthy();
+        expect(copy).toHaveBeenCalledWith('/new');
+        expect(view.pathname()).toBe('/redirects');
     });
 
     it('leaves a row closed when a click ends a text selection in it', async () => {

@@ -6,12 +6,13 @@
 
 import type { AdminNav, AdminNavLink } from '../../hooks/use-admin-nav';
 import type { AdminEntryType, Entry, Media, PluginNavItem, User } from 'astromech';
+import type { LucideIcon } from 'lucide-react';
 import { Dialog } from '@base-ui/react/dialog';
 import { useQuery } from '@tanstack/react-query';
 import { useNavigate } from '@tanstack/react-router';
 import { astromechUntypedClient } from 'astromech/fetch';
 import { entryPermission } from 'astromech/shared';
-import { Image, Puzzle, Users } from 'lucide-react';
+import { Database, Image, Puzzle, Users } from 'lucide-react';
 import React, {
     createContext,
     useCallback,
@@ -30,7 +31,6 @@ import { queryKeys } from '../../hooks/use-query-keys';
 import { resolveIcon } from '../../utilities/admin-icon';
 import { entryAdminPath } from '../../utilities/entry-admin-path';
 import { entryLabel } from '../entries/entry-label';
-import { EntryTypeIcon } from './entry-type-icon';
 
 /** Groups rendered in the palette. Static = always computed client-side. */
 type StaticGroup = 'Navigation' | 'EntryTypes' | 'Globals' | 'Pages';
@@ -41,7 +41,7 @@ type StaticCommandItem = {
     label: string;
     to: string;
     group: StaticGroup;
-    Icon: () => React.ReactElement;
+    Icon: LucideIcon;
 };
 
 type LiveCommandItem = {
@@ -57,7 +57,7 @@ type LiveCommandItem = {
      * live entries into one group per entry type. */
     typeId?: string;
     typeLabel?: string;
-    Icon: () => React.ReactElement;
+    Icon: LucideIcon;
 };
 
 type CommandItem = StaticCommandItem | LiveCommandItem;
@@ -130,13 +130,12 @@ export function CommandPalette(): React.ReactElement {
     const debouncedQuery = useDebounce(query.trim(), 200);
 
     const nav = useAdminNav();
-    const allStaticItems = staticItems(nav);
-
-    const q = query.toLowerCase();
-    const filteredStatic =
-        query.trim() === ''
-            ? allStaticItems
-            : allStaticItems.filter((item) => item.label.toLowerCase().includes(q));
+    const allStaticItems = useMemo(() => staticItems(nav), [nav]);
+    const filteredStatic = useMemo(() => {
+        if (query.trim() === '') return allStaticItems;
+        const q = query.toLowerCase();
+        return allStaticItems.filter((item) => item.label.toLowerCase().includes(q));
+    }, [allStaticItems, query]);
 
     // Every entry type the user may read, the site's and each plugin's.
     const readableTypes = useMemo(
@@ -195,7 +194,6 @@ export function CommandPalette(): React.ReactElement {
                     ? adminConfig.entryTypes[entry.type]
                     : undefined;
             const label = entryLabel(entry, entryType);
-            const iconName = entryType?.icon;
             const to = entryAdminPath(
                 typeof entry.type === 'string' ? entry.type : '',
                 entry.id
@@ -210,7 +208,7 @@ export function CommandPalette(): React.ReactElement {
                 ...(entryType?.plural !== undefined
                     ? { typeLabel: entryType.plural }
                     : {}),
-                Icon: () => <EntryTypeIcon name={iconName} size={15} />,
+                Icon: resolveIcon(entryType?.icon, Database),
             };
         });
     }, [liveQuery.data]);
@@ -224,7 +222,7 @@ export function CommandPalette(): React.ReactElement {
             sublabel: user.email,
             to: `/users/${user.id}`,
             group: 'LiveUsers' as const,
-            Icon: () => <Users size={15} />,
+            Icon: Users,
         }));
     }, [liveQuery.data]);
 
@@ -241,7 +239,7 @@ export function CommandPalette(): React.ReactElement {
                 to: '/media',
                 search: { item: m.id },
                 group: 'LiveMedia',
-                Icon: () => <Image size={15} />,
+                Icon: Image,
             };
         });
     }, [liveQuery.data]);
@@ -454,7 +452,7 @@ export function CommandPalette(): React.ReactElement {
                                                 onClick={() => activate(item)}
                                             >
                                                 <span className="am-cmdpal-item-icon">
-                                                    <Icon />
+                                                    <Icon size={15} />
                                                 </span>
                                                 <span className="am-cmdpal-item-label">
                                                     {item.label}
@@ -516,6 +514,6 @@ function toItem(group: StaticGroup): (link: AdminNavLink) => StaticCommandItem {
         label,
         to,
         group,
-        Icon: () => <Icon size={15} />,
+        Icon,
     });
 }

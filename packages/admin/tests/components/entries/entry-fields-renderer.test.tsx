@@ -1,13 +1,14 @@
 /**
  * @vitest-environment happy-dom
  *
- * The entry field renderer: a named group scopes its children's values and
- * paths to its key, an unnamed group draws a surface over its parent's values,
- * and a layout field inside a container item renders its fields as controls.
+ * The entry field renderer: a named group is a group named by its heading and
+ * scopes its children's values and paths to its key, an unnamed group draws a
+ * surface over its parent's values, and a layout field inside a container item
+ * renders its fields as controls.
  */
 
 import type { DataField, Field } from '@/types/index';
-import { act, render, screen } from '@testing-library/react';
+import { act, render, screen, within } from '@testing-library/react';
 import { describe, expect, it } from 'vitest';
 import '@/admin/rendering/register-fields';
 import { EntryFieldColumn } from '@/admin/components/entries/entry-fields-renderer';
@@ -69,13 +70,15 @@ describe('EntryFieldColumn', () => {
             { title: 'Hello', seo: { metaTitle: 'Meta' } }
         );
 
-        const heading = screen.getByRole('heading', { name: 'SEO' });
-        const panel = heading.closest('.am-panel');
-        expect(panel).not.toBeNull();
-        expect(panel?.textContent).toContain('How the page appears in search');
+        const panel = screen.getByRole('group', {
+            name: 'SEO',
+            description: 'How the page appears in search',
+        });
+        expect(panel.classList.contains('am-panel')).toBe(true);
+        expect(within(panel).getByRole('heading', { name: 'SEO' })).toBeTruthy();
 
         const input = inputFor(host, 'seo.metaTitle');
-        expect(panel?.contains(input)).toBe(true);
+        expect(panel.contains(input)).toBe(true);
         expect(input.value).toBe('Meta');
 
         typeInto(input, 'Changed');

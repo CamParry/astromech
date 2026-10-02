@@ -70,14 +70,19 @@ async function openPanel(view: ReturnType<typeof renderAdmin>): Promise<HTMLElem
 }
 
 describe('the notification bell', () => {
-    it('names the unread count for a screen reader', async () => {
-        count.mockResolvedValue(12);
-        renderAdmin(<NotificationBell />);
+    it.each([1, 12])(
+        'names an unread count of %i for a screen reader',
+        async (unread) => {
+            count.mockResolvedValue(unread);
+            renderAdmin(<NotificationBell />);
 
-        expect(
-            await screen.findByRole('button', { name: 'Notifications, 12 unread' })
-        ).toBeDefined();
-    });
+            expect(
+                await screen.findByRole('button', {
+                    name: `Notifications, ${unread} unread`,
+                })
+            ).toBeDefined();
+        }
+    );
 
     it('shows the unread count from the server', async () => {
         count.mockResolvedValue(3);

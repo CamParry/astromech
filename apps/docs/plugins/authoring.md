@@ -441,6 +441,21 @@ export default function RedirectsPage() {
 }
 ```
 
+A table you build yourself with `Table`, from `astromech/ui`, links its rows
+the same way. Give `<Table.Row>` an `href`, and wrap the row's primary cell in
+`<Table.RowLink>`, which renders the link a keyboard or screen reader reaches.
+A click anywhere else in the row opens it too, except a click on a control in
+the row, such as a button, a checkbox or a menu.
+
+```tsx
+<Table.Row href={`/plugin/redirects/${row.id}`}>
+    <Table.Td>
+        <Table.RowLink>{row.from}</Table.RowLink>
+    </Table.Td>
+    <Table.Td>{row.to}</Table.Td>
+</Table.Row>
+```
+
 #### A form over your own records
 
 `useFieldsForm` and `<FieldsForm>`, also from `astromech/ui/app`, give a page

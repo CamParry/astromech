@@ -5,14 +5,16 @@
  */
 
 import type { PluginNavItem } from 'astromech';
+import type { TFunction } from 'i18next';
 import type { LucideIcon } from 'lucide-react';
-import { globalPermission } from 'astromech/shared';
+import { globalPermission, hasPermission } from 'astromech/shared';
 import { Database, Globe, Image, LayoutDashboard, Puzzle, Users } from 'lucide-react';
+import { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import adminConfig from 'virtual:astromech/admin-config';
+import { useAuth } from '../context/auth';
 import { resolveLabel } from '../i18n/labels';
 import { resolveIcon } from '../utilities/admin-icon';
-import { usePermissions } from './use-permissions';
 
 /** One page link in the admin's navigation. */
 export type AdminNavLink = {
@@ -40,14 +42,22 @@ export type AdminNav = {
     system: AdminNavLink[];
 };
 
-/** The nav sections the signed-in user may open. */
+/** The nav sections the signed-in user may open, rebuilt only when the user or language changes. */
 export function useAdminNav(): AdminNav {
     const { t } = useTranslation();
-    const { canReadMedia, canReadUsers, hasPermission } = usePermissions();
+    const { user } = useAuth();
+    return useMemo(() => buildAdminNav(user?.permissions ?? [], t), [user, t]);
+}
+
+function buildAdminNav(permissions: string[], t: TFunction): AdminNav {
+    const allowed = (permission: string): boolean =>
+        hasPermission(permissions, permission);
 
     const primary: AdminNavLink[] = [
         { to: '/', label: t('nav.dashboard'), Icon: LayoutDashboard },
-        ...(canReadMedia() ? [{ to: '/media', label: t('nav.media'), Icon: Image }] : []),
+        ...(allowed('media:read')
+            ? [{ to: '/media', label: t('nav.media'), Icon: Image }]
+            : []),
     ];
     // The site's own types and globals; a plugin's appear in that plugin's
     // nav tree instead. Each global is gated on its own read permission.
@@ -63,7 +73,7 @@ export function useAdminNav(): AdminNav {
             ([key, global]) =>
                 global.plugin === undefined &&
                 global.nav &&
-                hasPermission(globalPermission(key, 'read'))
+                allowed(globalPermission(key, 'read'))
         )
         .map(([key, global]) => ({
             to: `/globals/${key}`,
@@ -75,7 +85,7 @@ export function useAdminNav(): AdminNav {
         .filter(
             (page) =>
                 page.nav !== false &&
-                (page.permission === null || hasPermission(page.permission))
+                (page.permission === null || allowed(page.permission))
         )
         .map((page) => ({
             to: `/page/${page.path}`,
@@ -85,10 +95,10 @@ export function useAdminNav(): AdminNav {
     const plugins = adminConfig.plugins
         .map((plugin) => ({
             label: plugin.label,
-            items: filterNavItems(plugin.nav, hasPermission),
+            items: filterNavItems(plugin.nav, allowed),
         }))
         .filter((plugin) => plugin.items.length > 0);
-    const system: AdminNavLink[] = canReadUsers()
+    const system: AdminNavLink[] = allowed('users:read')
         ? [{ to: '/users', label: t('nav.users'), Icon: Users }]
         : [];
 

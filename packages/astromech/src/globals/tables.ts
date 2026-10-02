@@ -7,6 +7,7 @@
 
 import type { Table, TableInsert, TableSelect } from '@/database/define-table';
 import { defineTable } from '@/database/define-table';
+import { ENTRY_STATUSES } from '@/types/domain';
 
 export const globalsTable = defineTable('globals', ({ col }) => ({
     id: col.id(),
@@ -29,7 +30,7 @@ export const globalContentTable = defineTable(
         }),
         locale: col.text({ notNull: true }),
         fields: col.json(),
-        status: col.enum(['unpublished', 'published', 'scheduled'], {
+        status: col.enum(ENTRY_STATUSES, {
             notNull: true,
             default: 'unpublished',
         }),

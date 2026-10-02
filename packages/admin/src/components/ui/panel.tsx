@@ -1,5 +1,5 @@
 import { clsx } from 'clsx';
-import React from 'react';
+import React, { useId } from 'react';
 
 type PanelProps = {
     children: React.ReactNode;
@@ -8,6 +8,8 @@ type PanelProps = {
     footer?: React.ReactNode;
     className?: string;
     padding?: boolean;
+    /** A role for the panel, such as `group`; the title names it and the description describes it. */
+    role?: React.AriaRole;
 };
 
 export function Panel({
@@ -17,16 +19,33 @@ export function Panel({
     footer,
     className,
     padding = true,
+    role,
 }: PanelProps): React.ReactElement {
+    const id = useId();
+    const titleId = `${id}-title`;
+    const descriptionId = `${id}-description`;
     const classes = clsx('am-panel', !padding && 'am-panel-no-padding', className);
 
     return (
-        <div className={classes}>
+        <div
+            className={classes}
+            {...(role !== undefined && {
+                role,
+                ...(title !== undefined && { 'aria-labelledby': titleId }),
+                ...(description !== undefined && { 'aria-describedby': descriptionId }),
+            })}
+        >
             {(title !== undefined || description !== undefined) && (
                 <div className="am-panel-header">
-                    {title !== undefined && <h2 className="am-panel-title">{title}</h2>}
+                    {title !== undefined && (
+                        <h2 id={titleId} className="am-panel-title">
+                            {title}
+                        </h2>
+                    )}
                     {description !== undefined && (
-                        <p className="am-panel-description">{description}</p>
+                        <p id={descriptionId} className="am-panel-description">
+                            {description}
+                        </p>
                     )}
                 </div>
             )}

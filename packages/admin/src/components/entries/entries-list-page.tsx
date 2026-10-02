@@ -231,11 +231,16 @@ function EntriesListBody({
         isTrash: list.isTrash,
         authorNames,
     };
+    // The title is the row link; without one, the first column is. The
+    // translations cell holds links of its own, so it never wraps in one.
+    const linkColumn =
+        tableColumns.find((column) => column.kind === 'title') ??
+        tableColumns.find((column) => column.kind !== 'translations');
     const dataColumns: DataListColumn<Entry>[] = tableColumns.map((column) => ({
         key: column.key,
         label: columnLabel(column),
         sortable: column.sortable,
-        link: column.kind === 'title',
+        link: column === linkColumn,
         render: (entry) =>
             getCellRenderer(column.kind)({
                 row: entry,

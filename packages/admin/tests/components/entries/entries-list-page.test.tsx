@@ -59,6 +59,7 @@ afterEach(() => {
     query.mockReset();
     adminConfig.entryTypes = {};
     adminConfig.locales = ['en'];
+    localStorage.removeItem('am-cols-post');
 });
 
 function makeEntry(id: string, title: string): Entry {
@@ -128,6 +129,24 @@ describe('the entries list', () => {
         expect(await screen.findByRole('cell', { name: 'Published' })).toBeTruthy();
     });
 
+    it('shows a status field’s own value in a status column', async () => {
+        adminConfig.entryTypes = {
+            post: {
+                ...POST,
+                adminColumns: [{ field: 'review', label: 'Review', kind: 'status' }],
+            },
+        };
+        query.mockResolvedValue({
+            data: [{ ...makeEntry('e1', 'Hello'), fields: { review: 'scheduled' } }],
+            pagination: { page: 1, pages: 1, total: 1, limit: 20 },
+        });
+
+        mountList('/entries/post');
+
+        expect(await screen.findByRole('cell', { name: 'Scheduled' })).toBeTruthy();
+        expect(screen.getAllByRole('cell', { name: 'Published' })).toHaveLength(1);
+    });
+
     it('writes a sort to the URL and returns to the first page', async () => {
         adminConfig.entryTypes = { post: POST };
         query.mockResolvedValue({
@@ -166,6 +185,25 @@ describe('the entries list', () => {
 
         await waitFor(() => expect(view.pathname()).toBe('/entries/post/e1'));
         expect(view.search()).toEqual({ locale: 'fr' });
+    });
+
+    it('links the first shown column once the title column is hidden', async () => {
+        adminConfig.entryTypes = { post: POST };
+        query.mockResolvedValue({
+            data: [makeEntry('e1', 'Hello')],
+            pagination: { page: 1, pages: 1, total: 1, limit: 20 },
+        });
+        const view = mountList('/entries/post');
+        await screen.findByRole('link', { name: 'Hello' });
+
+        await userEvent.click(screen.getByRole('button', { name: 'Toggle columns' }));
+        await userEvent.click(await screen.findByRole('menuitem', { name: 'Title' }));
+        await waitFor(() => expect(screen.queryByText('Hello')).toBeNull());
+        const link = screen.getByRole('link', { name: 'Published' });
+        link.focus();
+        await userEvent.keyboard('{Enter}');
+
+        await waitFor(() => expect(view.pathname()).toBe('/entries/post/e1'));
     });
 
     it('renders the not-found page for a type the config does not declare', async () => {
