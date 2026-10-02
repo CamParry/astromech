@@ -16,6 +16,7 @@ import type {
     GlobalConfig,
     ResolvedConfig,
     StorageObject,
+    StoragePutOptions,
 } from './config';
 import type { Permission } from './domain';
 import type { FieldType } from './fields';
@@ -39,7 +40,7 @@ export type PluginStorage = {
     put(
         key: string,
         body: ReadableStream | Uint8Array,
-        opts?: { contentType?: string }
+        opts?: StoragePutOptions
     ): Promise<void>;
     get(key: string): Promise<StorageObject | null>;
     list(prefix?: string): Promise<string[]>;

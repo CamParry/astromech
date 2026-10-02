@@ -8,12 +8,14 @@ import type {
     StorageDriver,
     StorageList,
     StorageObject,
+    StoragePutOptions,
     StorageRange,
     StorageStat,
 } from '@/types/index';
 import { AwsClient } from 'aws4fetch';
 import { resolveEnv } from '@/env';
 import { AstromechError } from '@/errors/astromech-error';
+import { toBytes } from '@/utilities/bytes';
 
 export type S3Options = {
     /** Falls back to `S3_ENDPOINT` on Node. Required on Workers. */
@@ -147,19 +149,28 @@ export function s3(options: S3Options): StorageDriver {
     return {
         name: 's3',
 
+        /**
+         * `PutObject` refuses a chunked body with no Content-Length, so a stream
+         * is sent as it is only with `contentLength`, and otherwise held in
+         * memory first.
+         */
         async put(
             key: string,
             body: ReadableStream | Uint8Array,
-            opts?: { contentType?: string }
+            opts?: StoragePutOptions
         ): Promise<void> {
             const { client } = resolve();
             const contentType = opts?.contentType;
+            const contentLength = opts?.contentLength;
+            const streamed =
+                body instanceof ReadableStream && contentLength !== undefined;
+            const headers: Record<string, string> = {};
+            if (contentType !== undefined) headers['content-type'] = contentType;
+            if (streamed) headers['content-length'] = String(contentLength);
             const res = await client.fetch(objectUrl(key), {
                 method: 'PUT',
-                body: body as BodyInit,
-                ...(contentType !== undefined
-                    ? { headers: { 'content-type': contentType } }
-                    : {}),
+                body: (streamed ? body : await toBytes(body)) as BodyInit,
+                headers,
             });
             if (!res.ok) throw await s3Error('put', key, res);
         },

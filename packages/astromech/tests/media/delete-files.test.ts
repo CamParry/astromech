@@ -1,4 +1,5 @@
 import type { StorageDriver } from '@/types/index';
+import { expectConsole } from '@tests/console';
 import {
     createTestDb,
     createTestStorage,
@@ -98,20 +99,22 @@ describe('mediaService.delete', () => {
         expect(await mediaService.get({ id: kept.id })).not.toBeNull();
     });
 
-    it('keeps the item when storage fails to delete its file', async () => {
+    // The row is gone by the time storage fails, so the file is left orphaned.
+    it('deletes the item and logs when storage fails to delete its file', async () => {
         const image = await uploadImageWithVariants();
         vi.spyOn(storage, 'delete').mockRejectedValueOnce(new Error('storage down'));
-
-        await expect(mediaService.delete({ id: image.id })).rejects.toThrow(
-            'storage down'
+        expectConsole(
+            'error',
+            `Could not remove the stored files of media ${image.id}, which are now orphaned: storage down`
         );
 
-        expect((await mediaService.get({ id: image.id }))?.id).toBe(image.id);
+        await mediaService.delete({ id: image.id });
+
+        expect(await mediaService.get({ id: image.id })).toBeNull();
     });
 
-    // The precondition for the open defect below: the injected failure reaches
-    // the row delete, which rolls back, so the failing case fails for the
-    // right reason.
+    // The injected failure reaches the row delete, which rolls back, so the
+    // case below fails for the right reason when it fails.
     it('keeps the row when the row delete fails', async () => {
         const image = await uploadImageWithVariants();
         const stopFailing = await failWritesTo(mediaTable, 'delete');
@@ -122,11 +125,7 @@ describe('mediaService.delete', () => {
         expect((await mediaService.get({ id: image.id }))?.id).toBe(image.id);
     });
 
-    // Defect: `delete` removes the files before the row's transaction runs, so
-    // when the row delete fails the item survives with its original gone, and
-    // every read of it serves a missing file. Deleting the files after the row
-    // commits would leave at worst an orphaned file instead.
-    it.fails('keeps the stored files when the row delete fails', async () => {
+    it('keeps the stored files when the row delete fails', async () => {
         const image = await uploadImageWithVariants();
         const stopFailing = await failWritesTo(mediaTable, 'delete');
 

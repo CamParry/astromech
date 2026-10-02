@@ -1,15 +1,14 @@
 import { z } from '@hono/zod-openapi';
 import { transaction } from '@/database/transaction';
 import { defineServiceMethod } from '@/services/define-service-method';
-import { deletePrefix } from '@/storage/prefix';
 import { getStorageDriver } from '@/storage/registry';
 import { originalKey } from '../internal/keys';
+import { removeFiles } from '../internal/remove-files';
 import { mediaRepository } from '../repository';
-import { variantPrefix } from '../serving/image/url';
 
 /**
- * Also deletes the original file and every derived variant from storage. A
- * missing item is a no-op.
+ * Also deletes the original file and every derived variant from storage, once
+ * the row is gone. A missing item is a no-op.
  */
 export const deleteMedia = defineServiceMethod({
     summary: 'Delete a media item.',
@@ -25,12 +24,9 @@ export const deleteMedia = defineServiceMethod({
 
         const row = await mediaRepository.findOne(id);
 
-        if (row) {
-            await driver.delete(originalKey(row.id, row.filename));
-            await deletePrefix(driver, variantPrefix(id));
-        }
-
         // `delete` removes the item's relationship rows, then the item.
         await transaction(() => mediaRepository.delete(id));
+
+        if (row) await removeFiles(driver, id, originalKey(row.id, row.filename));
     },
 });

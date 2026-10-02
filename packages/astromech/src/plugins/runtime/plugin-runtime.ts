@@ -17,6 +17,7 @@ import type {
     PluginServiceNamespace,
     ResolvedConfig,
     ResolvedPluginIdentity,
+    StoragePutOptions,
     TypedEntriesService,
     TypedGlobalsService,
 } from '@/types/index';
@@ -304,7 +305,7 @@ export function createPluginContext(
             put: (
                 key: string,
                 body: ReadableStream | Uint8Array,
-                opts?: { contentType?: string }
+                opts?: StoragePutOptions
             ) => getStorageDriver().put(PREFIX + key, body, opts),
             get: (key: string) => getStorageDriver().get(PREFIX + key),
             delete: (key: string) => getStorageDriver().delete(PREFIX + key),

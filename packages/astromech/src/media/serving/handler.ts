@@ -3,6 +3,7 @@ import type { ImageSource, StorageDriver } from '@/types/index';
 import { currentServices } from '@/app-context/services';
 import { getConfig } from '@/config/registry';
 import { getStorageDriver } from '@/storage/registry';
+import { toBytes } from '@/utilities/bytes';
 import { isOptimisableImage } from './image/dimensions';
 import { getImageConfig } from './image/registry';
 import {
@@ -22,30 +23,6 @@ export type MediaRequestInfo = {
     /** Raw `Range` request header. Honoured for originals only (see below). */
     range?: string | null;
 };
-
-async function streamToBytes(stream: ReadableStream): Promise<Uint8Array> {
-    const reader = stream.getReader();
-    const chunks: Uint8Array[] = [];
-    let totalLength = 0;
-    while (true) {
-        const { done, value } = await reader.read();
-        if (done) break;
-        chunks.push(value);
-        totalLength += value.length;
-    }
-    const result = new Uint8Array(totalLength);
-    let offset = 0;
-    for (const chunk of chunks) {
-        result.set(chunk, offset);
-        offset += chunk.length;
-    }
-    return result;
-}
-
-async function toBytes(body: ReadableStream | Uint8Array): Promise<Uint8Array> {
-    if (body instanceof Uint8Array) return body;
-    return streamToBytes(body);
-}
 
 function contentTypeForFormat(format: ImageFormat): string {
     return format === 'avif' ? 'image/avif' : 'image/webp';
@@ -184,7 +161,7 @@ async function serveMedia(info: MediaRequestInfo): Promise<Response> {
         getBytes: async () => {
             const o = await storage.get(key);
             if (!o) throw new Error('original missing');
-            return streamToBytes(o.body);
+            return toBytes(o.body);
         },
         originUrl: `${origin}${buildMediaUrl(getConfig().mediaRoute, id, ext)}`,
     };

@@ -8,10 +8,12 @@ import type {
     StorageDriver,
     StorageList,
     StorageObject,
+    StoragePutOptions,
     StorageRange,
     StorageStat,
 } from '@/types/index';
 import { resolveBinding } from '@/integrations/cloudflare/bindings';
+import { toBytes } from '@/utilities/bytes';
 
 /** Object metadata shared by `head()` and `get()`. Mirrors `R2Object`. */
 type R2ObjectLike = {
@@ -80,13 +82,18 @@ export function r2(options: R2Options): StorageDriver {
     return {
         name: 'r2',
 
+        /**
+         * R2 refuses a stream with no known length. On Workers a stream given
+         * `contentLength` is piped through `FixedLengthStream`; any other stream
+         * is held in memory first.
+         */
         async put(
             key: string,
             body: ReadableStream | Uint8Array,
-            opts?: { contentType?: string }
+            opts?: StoragePutOptions
         ): Promise<void> {
             const bucket = await getBucket();
-            const value = body as ReadableStream | ArrayBuffer | ArrayBufferView;
+            const value = await sizedBody(body, opts?.contentLength);
             const contentType = opts?.contentType;
             await bucket.put(
                 key,
@@ -167,4 +174,24 @@ export function r2(options: R2Options): StorageDriver {
             return publicUrl !== undefined ? `${publicUrl}/${key}` : null;
         },
     };
+}
+
+/** The Workers global that gives a stream a known length; absent under Node. */
+type FixedLengthStreamConstructor = new (
+    length: number
+) => TransformStream<Uint8Array, Uint8Array>;
+
+/** `body` in a form R2 accepts: bytes, or a stream R2 can see the length of. */
+async function sizedBody(
+    body: ReadableStream | Uint8Array,
+    contentLength: number | undefined
+): Promise<ReadableStream | Uint8Array> {
+    if (body instanceof Uint8Array) return body;
+    const FixedLengthStream = (
+        globalThis as { FixedLengthStream?: FixedLengthStreamConstructor }
+    ).FixedLengthStream;
+    if (contentLength !== undefined && FixedLengthStream !== undefined) {
+        return body.pipeThrough(new FixedLengthStream(contentLength));
+    }
+    return toBytes(body);
 }

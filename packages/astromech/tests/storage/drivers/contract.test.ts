@@ -47,8 +47,6 @@ type Row = {
     create: () => StorageDriver;
     /** Whether `get` answers the `contentType` a `put` gave. */
     storesContentType: boolean;
-    /** Whether a `put` of a stream of unknown length fails, which is a defect. */
-    refusesUnsizedStream: boolean;
 };
 
 const DRIVERS: Row[] = [
@@ -56,14 +54,11 @@ const DRIVERS: Row[] = [
         name: 'filesystem',
         create: () => createTestStorage(),
         storesContentType: false,
-        refusesUnsizedStream: false,
     },
     {
         name: 'r2',
         create: () => r2({ bucket }),
         storesContentType: true,
-        // Defect: roadmap/planned/r2-rejects-unsized-streams.md
-        refusesUnsizedStream: true,
     },
 ];
 
@@ -72,7 +67,7 @@ async function bytesOf(body: ReadableStream): Promise<Uint8Array> {
     return new Uint8Array(await new Response(body).arrayBuffer());
 }
 
-describe.each(DRIVERS)('$name', ({ create, storesContentType, refusesUnsizedStream }) => {
+describe.each(DRIVERS)('$name', ({ create, storesContentType }) => {
     let driver: StorageDriver;
     /** This test's own key prefix. */
     let ns: string;
@@ -101,22 +96,21 @@ describe.each(DRIVERS)('$name', ({ create, storesContentType, refusesUnsizedStre
             expect(result.contentType).toBe(storesContentType ? 'image/jpeg' : undefined);
         });
 
-        // Expected to fail on r2: roadmap/planned/r2-rejects-unsized-streams.md
-        (refusesUnsizedStream ? it.fails : it)(
-            'takes a ReadableStream body of unknown length',
-            async () => {
-                const body = new ReadableStream<Uint8Array>({
-                    start(controller) {
-                        controller.enqueue(new Uint8Array([7, 8, 9]));
-                        controller.close();
-                    },
-                });
-                await driver.put(`${ns}/streamed.bin`, body);
-                const result = await driver.get(`${ns}/streamed.bin`);
-                if (!result) throw new Error('expected a result');
-                expect(await bytesOf(result.body)).toEqual(new Uint8Array([7, 8, 9]));
-            }
-        );
+        it.each([
+            { length: 'unknown', opts: undefined },
+            { length: 'known', opts: { contentLength: 3 } },
+        ])('takes a ReadableStream body of $length length', async ({ opts }) => {
+            const body = new ReadableStream<Uint8Array>({
+                start(controller) {
+                    controller.enqueue(new Uint8Array([7, 8, 9]));
+                    controller.close();
+                },
+            });
+            await driver.put(`${ns}/streamed.bin`, body, opts);
+            const result = await driver.get(`${ns}/streamed.bin`);
+            if (!result) throw new Error('expected a result');
+            expect(await bytesOf(result.body)).toEqual(new Uint8Array([7, 8, 9]));
+        });
 
         it('answers null for a missing key', async () => {
             expect(await driver.get(`${ns}/does/not/exist`)).toBeNull();

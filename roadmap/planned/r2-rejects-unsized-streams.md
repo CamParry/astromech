@@ -22,7 +22,7 @@ S3 is outside the contract test, because it needs an S3 server; its tests stub
 
 ## The work
 
-- [ ] In the R2 driver, wrap a stream of known length in `FixedLengthStream`
+- [x] In the R2 driver, wrap a stream of known length in `FixedLengthStream`
       and buffer one of unknown length, or narrow `StorageDriver.put` and say
       so in its doc comment. Turn the contract test's expected failure for R2
       into a passing case.

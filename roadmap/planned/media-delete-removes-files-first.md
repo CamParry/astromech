@@ -9,6 +9,6 @@ as an expected failure.
 
 ## The work
 
-- [ ] Delete the stored files after the row's transaction commits, so a failed
+- [x] Delete the stored files after the row's transaction commits, so a failed
       delete leaves the item whole and a failed file removal leaves at worst an
       orphaned file. Turn the expected failure into a passing case.
