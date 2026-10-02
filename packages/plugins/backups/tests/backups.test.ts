@@ -138,6 +138,51 @@ describe('libsql.dump / restore', () => {
         expect(rowsAfter).toEqual([{ name: 'alpha' }, { name: 'beta' }]);
     });
 
+    // Column order is not part of the schema contract (`DECISIONS.md`): a
+    // migrated table and a fresh build can hold the same columns in another
+    // order, so the copy matches columns by name.
+    it('restores each value into its column when the live table orders them differently', async () => {
+        const { db } = app;
+        const { dump, restore } = databaseCapabilities();
+
+        await sql
+            .raw(`CREATE TABLE items (id TEXT PRIMARY KEY, first TEXT, second TEXT)`)
+            .execute(db);
+        await sql.raw(`INSERT INTO items VALUES ('1', 'one', 'two')`).execute(db);
+        const backup = await dump();
+
+        await sql.raw(`DROP TABLE items`).execute(db);
+        await sql
+            .raw(`CREATE TABLE items (id TEXT PRIMARY KEY, second TEXT, first TEXT)`)
+            .execute(db);
+
+        await restore(backup.stream, { preserve: [] });
+        await backup.cleanup();
+
+        const { rows } = await sql.raw(`SELECT id, first, second FROM items`).execute(db);
+        expect(rows).toEqual([{ id: '1', first: 'one', second: 'two' }]);
+    });
+
+    it('refuses a backup whose table has other columns than the live one', async () => {
+        const { db } = app;
+        const { dump, restore } = databaseCapabilities();
+
+        await sql.raw(`CREATE TABLE items (id TEXT PRIMARY KEY, name TEXT)`).execute(db);
+        await sql.raw(`INSERT INTO items VALUES ('1', 'alpha')`).execute(db);
+        const backup = await dump();
+
+        await sql.raw(`ALTER TABLE items DROP COLUMN name`).execute(db);
+        await sql.raw(`ALTER TABLE items ADD COLUMN label TEXT`).execute(db);
+
+        await expect(restore(backup.stream, { preserve: [] })).rejects.toThrow(
+            'restore: table "items" has other columns in the backup (id, name) than in the database (id, label)'
+        );
+        await backup.cleanup();
+
+        const { rows } = await sql.raw(`SELECT id, label FROM items`).execute(db);
+        expect(rows).toEqual([{ id: '1', label: null }]);
+    });
+
     it('rolls back every table when one table fails to copy', async () => {
         const { db } = app;
         const { dump, restore } = databaseCapabilities();

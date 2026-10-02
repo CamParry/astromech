@@ -52,9 +52,13 @@ generate spurious migrations if you include them.
 `key` and `kind` are opaque caller tags. The engine compares them for equality —
 a change forces a table rebuild — but never interprets them.
 
-Table order, column order, and index order in a snapshot are preserved verbatim:
-column order is what a rebuild's `INSERT…SELECT` mapping is built from, so it is
-part of the contract, not an accident. `serializeSnapshot` is a plain stable
+Table order, column order, and index order in a snapshot are preserved verbatim,
+and a fresh build creates columns in snapshot order. Column order is **not** part
+of the schema contract, though: a fast-path `ADD COLUMN` appends the column
+wherever the snapshot puts it, a column moved with no other change produces no
+ops, and a rebuild's `INSERT…SELECT` names every column. A migrated database can
+hold a table's columns in another order than a fresh build, so read and copy
+columns by name, never by position. `serializeSnapshot` is a plain stable
 `JSON.stringify(snapshot, null, 2)`.
 
 ## Locked policies
@@ -107,7 +111,8 @@ engine never prints.
 
 `dumpSchema(db, { tables? })` returns a whitespace-normalized `sqlite_master`
 dump ordered by `(type, tblName, name)`, excluding internal `sqlite_*` and
-implicit-index rows. It is the parity primitive: two databases built by
+implicit-index rows. Each `CREATE TABLE` lists its columns by name, then its
+table constraints, so column order does not count. It is the parity primitive: two databases built by
 different routes — an applied migration chain versus a direct
 `renderTableStatements` emit — are equivalent iff their `dumpSchema` output
 matches. Use it as a drift gate in CI.

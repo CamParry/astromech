@@ -6,7 +6,7 @@
 
 import type { DB } from '@/database/types';
 import type { DbDump } from '@/types/config';
-import type { Client, Config, Row } from '@libsql/client';
+import type { Client, Config, Row, Transaction } from '@libsql/client';
 import type { DialectAdapter } from 'kysely';
 import { randomUUID } from 'node:crypto';
 import { createReadStream, createWriteStream } from 'node:fs';
@@ -29,6 +29,37 @@ export type LibsqlOptions = {
 /** First scalar value of a libsql result row (rows are array- and name-indexed). */
 function firstValue(row: Row): unknown {
     return (row as unknown as unknown[])[0] ?? Object.values(row)[0];
+}
+
+async function columnNames(
+    tx: Transaction,
+    schema: 'main' | 'restore_src',
+    table: string
+): Promise<string[]> {
+    const result = await tx.execute({
+        sql: 'SELECT name FROM pragma_table_info(?, ?) ORDER BY cid',
+        args: [table, schema],
+    });
+    return result.rows.map((row) => String(row['name'] ?? firstValue(row)));
+}
+
+/**
+ * The quoted column list a restore copies one table through. Column order is
+ * not part of the schema contract, so the copy matches columns by name, and a
+ * backup whose table has other columns than the live one is refused.
+ */
+async function copyableColumns(tx: Transaction, table: string): Promise<string> {
+    const live = await columnNames(tx, 'main', table);
+    const backup = await columnNames(tx, 'restore_src', table);
+    const sameColumns =
+        live.length === backup.length && backup.every((name) => live.includes(name));
+    if (!sameColumns) {
+        throw new AstromechError(
+            `restore: table "${table}" has other columns in the backup ` +
+                `(${backup.join(', ')}) than in the database (${live.join(', ')})`
+        );
+    }
+    return live.map((name) => `"${name.replace(/"/g, '""')}"`).join(', ');
 }
 
 export function libsql(options?: LibsqlOptions) {
@@ -166,9 +197,10 @@ export function libsql(options?: LibsqlOptions) {
                         for (const { name } of tables) {
                             if (preserve.includes(name)) continue;
                             const q = name.replace(/"/g, '""');
+                            const columns = await copyableColumns(tx, name);
                             await tx.execute(`DELETE FROM main."${q}"`);
                             await tx.execute(
-                                `INSERT INTO main."${q}" SELECT * FROM restore_src."${q}"`
+                                `INSERT INTO main."${q}" (${columns}) SELECT ${columns} FROM restore_src."${q}"`
                             );
                         }
                         await tx.commit();

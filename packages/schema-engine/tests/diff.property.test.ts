@@ -6,8 +6,9 @@
  * add-column, index and rebuild paths. The strongest property is the parity
  * the README promises: build `a` in SQLite, apply the ops `diffSnapshots(a, b)`
  * returns, and the schema and the rows seeded into `a` match `b` built fresh
- * with the same rows. Two defects it found are kept as failing cases at the
- * end.
+ * with the same rows. Column order is not part of that contract
+ * (`DECISIONS.md`), so the schemas are compared without it. A defect it found
+ * is kept as a failing case at the end.
  */
 import type { TableOp } from '../src/diff';
 import type { Snapshot, SnapshotColumn, SnapshotTable } from '../src/model';
@@ -148,24 +149,6 @@ const snapshotPairArb: fc.Arbitrary<[Snapshot, Snapshot]> = snapshotArb.chain((a
             toSnapshot(tables.filter((t): t is SnapshotTable => t !== null)),
         ])
 );
-
-/** Whether a table the ops do not rebuild ends up in another column order
- *  than `b`'s. SQLite appends an added column, and a column moved without
- *  any other change makes no op at all, so see the failing cases below. */
-function reordersWithoutRebuild(ops: TableOp[], a: Snapshot, b: Snapshot): boolean {
-    const rebuilt = new Set(
-        ops.flatMap((op) => (op.kind === 'rebuildTable' ? [op.table.name] : []))
-    );
-    return Object.values(b.tables).some((next) => {
-        const prev = a.tables[next.name];
-        if (prev === undefined || rebuilt.has(next.name)) return false;
-        const added = ops.flatMap((op) =>
-            op.kind === 'addColumn' && op.table === next.name ? [op.column.name] : []
-        );
-        const migrated = [...prev.columns.map((c) => c.name), ...added];
-        return migrated.join() !== next.columns.map((c) => c.name).join();
-    });
-}
 
 function makeDb(): Kysely<unknown> {
     const client = createClient({ url: ':memory:' });
@@ -337,10 +320,9 @@ async function rows(db: Kysely<unknown>, query: string): Promise<unknown[]> {
 }
 
 /**
- * The schema as SQLite reports it: each table's columns in order, its foreign
- * keys, its CHECK clauses and its index statements. Read through the PRAGMAs
- * rather than `sqlite_master` text, which `ALTER TABLE ADD COLUMN` formats
- * differently from a fresh `CREATE TABLE` (see the failing case below).
+ * The schema as SQLite reports it: each table's columns by name, its foreign
+ * keys, its CHECK clauses and its index statements. Read through the PRAGMAs,
+ * a second view beside the oracle's `sqlite_master` text.
  */
 async function describeSchema(db: Kysely<unknown>): Promise<unknown> {
     const tables = (await rows(
@@ -353,13 +335,13 @@ async function describeSchema(db: Kysely<unknown>): Promise<unknown> {
             name,
             columns: await rows(
                 db,
-                `SELECT name, type, "notnull", dflt_value, pk FROM pragma_table_info('${name}') ORDER BY cid`
+                `SELECT name, type, "notnull", dflt_value, pk FROM pragma_table_info('${name}') ORDER BY name`
             ),
             fks: await rows(
                 db,
                 `SELECT "from", "table", "to", on_delete FROM pragma_foreign_key_list('${name}') ORDER BY "from"`
             ),
-            checks: createSql.match(/CHECK \([^)]*\)\)/g) ?? [],
+            checks: (createSql.match(/CHECK \([^)]*\)\)/g) ?? []).sort(),
             indexes: await rows(
                 db,
                 `SELECT name, sql FROM sqlite_master WHERE type = 'index' AND tbl_name = '${name}' AND sql IS NOT NULL ORDER BY name`
@@ -422,20 +404,7 @@ describe('diffSnapshots properties', () => {
     it('migrates a database built from a, and its rows, to the schema b builds fresh', async () => {
         await fc.assert(
             fc.asyncProperty(snapshotPairArb, async ([a, b]) => {
-                const { ops, errors } = diffSnapshots(a, b);
-                fc.pre(errors.length === 0 && !reordersWithoutRebuild(ops, a, b));
-                // `dumpSchema` text matches only where no fast-path add landed
-                // on a table without a table-level constraint (see below).
-                const spliced = new Set(
-                    ops.flatMap((op) => {
-                        if (op.kind !== 'addColumn') return [];
-                        const t = b.tables[op.table];
-                        return t?.fks.length === 0 && t.primaryKey === undefined
-                            ? [op.table]
-                            : [];
-                    })
-                );
-                const dumped = Object.keys(b.tables).filter((n) => !spliced.has(n));
+                fc.pre(diffSnapshots(a, b).errors.length === 0);
                 await migrateAndEmit(
                     a,
                     b,
@@ -445,9 +414,9 @@ describe('diffSnapshots properties', () => {
                             'property: applying diff(a, b) to a yields b'
                         ).toEqual(await describeSchema(fresh));
                         expect(
-                            await dumpSchema(migrated, { tables: dumped }),
-                            'property: the oracle dump matches off the spliced tables'
-                        ).toEqual(await dumpSchema(fresh, { tables: dumped }));
+                            await dumpSchema(migrated),
+                            'property: the oracle dump matches'
+                        ).toEqual(await dumpSchema(fresh));
                         expect(
                             await dumpRows(migrated),
                             'property: the rows of a survive the migration'
@@ -459,14 +428,13 @@ describe('diffSnapshots properties', () => {
         );
     });
 
-    // Found by the parity property above, kept as a plain case. `dumpSchema` is
+    // Found by the parity property above, kept as plain cases. `dumpSchema` is
     // documented as the parity primitive (README, "The oracle") and is core's
     // drift gate (`packages/astromech/tests/database/baseline-ddl-parity.test.ts`).
     // SQLite records `ALTER TABLE ADD COLUMN` by splicing `, <column>` in before
     // the table's first table-level constraint (a foreign key or composite key),
-    // or else before the closing `)`. Only that last case differs from a fresh
-    // emit: `… NOT NULL , \`c1\` text)` against `… NOT NULL, \`c1\` text )`.
-    // The parity property compares the dumps of every other table.
+    // or else before the closing `)`, which leaves
+    // `… NOT NULL , \`c1\` text)` where a fresh emit has `… NOT NULL, \`c1\` text )`.
     it('adds a column on the fast path to the same columns as a fresh emit', async () => {
         const a = snap(table('widgets', [col.id()]));
         const b = snap(table('widgets', [col.id(), col.text('c1')]));
@@ -476,7 +444,7 @@ describe('diffSnapshots properties', () => {
         });
     });
 
-    it.fails('dumps a fast-path added column the same as a fresh emit', async () => {
+    it('dumps a fast-path added column the same as a fresh emit', async () => {
         const a = snap(table('widgets', [col.id()]));
         const b = snap(table('widgets', [col.id(), col.text('c1')]));
         await migrateAndEmit(a, b, async (migrated, fresh) => {
@@ -486,9 +454,9 @@ describe('diffSnapshots properties', () => {
 
     // Found by the parity property, kept as plain cases. A new nullable column
     // takes the `ALTER TABLE ADD COLUMN` fast path wherever it sits in the
-    // snapshot, but SQLite appends it; and a column moved with no other change
-    // makes no op at all. The README makes column order part of the contract.
-    // The differ could rebuild the table instead when the order changes.
+    // snapshot, and SQLite appends it; a column moved with no other change
+    // makes no op at all. Column order is not part of the schema contract
+    // (`DECISIONS.md`), so both migrate to a schema the oracle calls equal.
     const reorders = [
         {
             change: 'a column is added mid-list',
@@ -518,13 +486,14 @@ describe('diffSnapshots properties', () => {
         }
     );
 
-    it.fails.each(reorders)(
-        'keeps snapshot column order when $change',
+    it.each(reorders)(
+        'migrates to a schema the oracle matches with a fresh emit when $change',
         async ({ a, b }) => {
             await migrateAndEmit(a, b, async (migrated, fresh) => {
                 expect(await describeSchema(migrated)).toEqual(
                     await describeSchema(fresh)
                 );
+                expect(await dumpSchema(migrated)).toEqual(await dumpSchema(fresh));
             });
         }
     );
