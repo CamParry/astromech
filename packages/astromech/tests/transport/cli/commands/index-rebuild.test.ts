@@ -1,101 +1,61 @@
 /**
- * `astromech index:rebuild`, run in process through the real boot: a config
- * file in a real temp directory opens a copy of the harness's migrated template
- * database with a libsql driver built inline from `kysely` and
- * `@libsql/kysely-libsql` (resolved through a `node_modules` symlink to core's),
- * the way core's `libsql` driver builds one. Rebuild and
- * drift logic is covered by `../relationship-index.test.ts`; this file covers
- * what the command does with it: what it writes, prints and exits with.
+ * `astromech index:rebuild`, run in process (`tests/_support/cli.ts`) through
+ * the real boot: a real config file in a site in a temp directory opens a copy
+ * of the harness's migrated template database. Rebuild and drift logic is
+ * covered by `../relationship-index.test.ts`; this file covers what the
+ * command does with it: what it writes, prints and exits with.
  */
 
-import { copyFile, mkdtemp, rm, symlink, writeFile } from 'node:fs/promises';
-import { tmpdir } from 'node:os';
+import { copyFile } from 'node:fs/promises';
 import { join } from 'node:path';
+import { createTempSite, run, writeSiteConfig } from '@tests/cli';
 import { resetRuntime } from '@tests/harness';
-import { afterEach, beforeEach, describe, expect, inject, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, inject, it } from 'vitest';
 import { currentServices } from '@/app-context/services';
 import { getDb } from '@/database/registry';
 import { relationshipsTable } from '@/database/tables';
 import indexRebuild from '@/transport/cli/commands/index-rebuild';
 import { bootApplication } from '@/transport/cli/config';
 
-/** Core's installed dependencies, which the temp site's config imports. */
-const NODE_MODULES = join(import.meta.dirname, '../../../../node_modules');
-
 let root: string;
-let printed: string[];
-let errors: string[];
 
 beforeEach(async () => {
     resetRuntime();
-    root = await mkdtemp(join(tmpdir(), 'astromech-index-rebuild-'));
+    root = await createTempSite();
     await copyFile(inject('testDbTemplate'), join(root, 'site.db'));
-    await symlink(NODE_MODULES, join(root, 'node_modules'), 'dir');
-    printed = [];
-    errors = [];
 });
 
 afterEach(async () => {
-    vi.restoreAllMocks();
-    resetRuntime();
-    process.exitCode = 0;
-    await rm(root, { recursive: true, force: true });
+    try {
+        await getDb().destroy();
+    } catch {
+        // A refused run never registered a database.
+    }
 });
 
 /**
  * A site config with two types that relate to `post`. `migrationsDir` names a
  * folder with no chain, so boot skips the drift check the template would pass.
+ * A remote driver throws if it is opened, so a refusal is seen to come first.
  */
-async function writeConfig(options: { remote?: boolean } = {}): Promise<string> {
-    const file = join(root, 'astromech.config.mjs');
-    const url = `file:${join(root, 'site.db')}`;
-    const related = `{ name: 'related', type: 'relationship', label: 'Related', target: 'post', multiple: true }`;
-    await writeFile(
-        file,
-        `import { createClient } from '@libsql/client';
-import { LibsqlDialect } from '@libsql/kysely-libsql';
-import { CamelCasePlugin, Kysely } from 'kysely';
-
-let instance;
-export default {
-    db: {
-        type: 'libsql',
-        isRemote: () => ${options.remote === true},
-        getInstance() {
-            instance ??= new Kysely({
-                dialect: new LibsqlDialect({ client: createClient({ url: ${JSON.stringify(url)} }) }),
-                plugins: [new CamelCasePlugin()],
-            });
-            return instance;
+function writeConfig(options: { remote?: boolean } = {}): Promise<string> {
+    const related = {
+        name: 'related',
+        type: 'relationship',
+        label: 'Related',
+        target: 'post',
+        multiple: true,
+    };
+    return writeSiteConfig(root, {
+        database: join(root, 'site.db'),
+        migrationsDir: join(root, 'no-migrations'),
+        entries: {
+            post: { single: 'Post', plural: 'Posts', fields: [related] },
+            note: { single: 'Note', plural: 'Notes', fields: [related] },
         },
-    },
-    migrationsDir: ${JSON.stringify(join(root, 'no-migrations'))},
-    entries: {
-        post: { single: 'Post', plural: 'Posts', fields: [${related}] },
-        note: { single: 'Note', plural: 'Notes', fields: [${related}] },
-    },
-};
-`
-    );
-    return file;
-}
-
-/** Run the command with `args`, as citty would after parsing them. */
-async function run(args: Record<string, unknown>): Promise<void> {
-    vi.spyOn(console, 'log').mockImplementation((line: unknown) => {
-        printed.push(String(line));
+        remote: options.remote === true,
+        throwOnOpen: options.remote === true,
     });
-    vi.spyOn(console, 'error').mockImplementation((line: unknown) => {
-        errors.push(String(line));
-    });
-    const runner = indexRebuild.run as (context: { args: unknown }) => Promise<void>;
-    try {
-        await runner({
-            args: { json: false, 'allow-remote': false, check: false, ...args },
-        });
-    } finally {
-        vi.restoreAllMocks();
-    }
 }
 
 /**
@@ -134,12 +94,13 @@ describe('index:rebuild', () => {
         const config = await writeConfig();
         const { target } = await seedThenEmptyIndex(config);
 
-        await run({ config });
-
-        expect(errors).toEqual([]);
-        expect(printed).toEqual([
-            'Rebuilt the relationships index: 3 sources scanned, 2 rows written, 0 orphan rows removed.',
-        ]);
+        expect(await run(indexRebuild, ['--config', config])).toEqual({
+            stdout: [
+                'Rebuilt the relationships index: 3 sources scanned, 2 rows written, 0 orphan rows removed.',
+            ],
+            stderr: [],
+            exitCode: 0,
+        });
         expect(await usedByTypes(target)).toEqual(['note', 'post']);
     });
 
@@ -147,9 +108,15 @@ describe('index:rebuild', () => {
         const config = await writeConfig();
         const { target } = await seedThenEmptyIndex(config);
 
-        await run({ config, type: 'note' });
+        const { stderr, exitCode } = await run(indexRebuild, [
+            '--config',
+            config,
+            '--type',
+            'note',
+        ]);
 
-        expect(errors).toEqual([]);
+        expect(stderr).toEqual([]);
+        expect(exitCode).toBe(0);
         expect(await usedByTypes(target)).toEqual(['note']);
     });
 
@@ -157,39 +124,42 @@ describe('index:rebuild', () => {
         const config = await writeConfig();
         const { target } = await seedThenEmptyIndex(config);
 
-        await run({ config, check: true });
+        const drift = await run(indexRebuild, ['--config', config, '--check']);
 
-        expect(process.exitCode).toBe(1);
-        expect(errors[0]).toBe(
+        expect(drift.exitCode).toBe(1);
+        expect(drift.stderr[0]).toBe(
             'Relationships index drift across 3 sources: 2 missing, 0 unexpected, 0 mismatched.'
         );
-        expect(errors.filter((line) => line.startsWith('  missing '))).toHaveLength(2);
-        expect(errors.at(-1)).toBe('Run `astromech index:rebuild` to repair.');
+        expect(drift.stderr.filter((line) => line.startsWith('  missing '))).toHaveLength(
+            2
+        );
+        expect(drift.stderr.at(-1)).toBe('Run `astromech index:rebuild` to repair.');
         expect(await usedByTypes(target)).toEqual([]);
 
-        await run({ config });
-        process.exitCode = 0;
-        errors = [];
+        await run(indexRebuild, ['--config', config]);
 
-        await run({ config, check: true });
-        expect(errors).toEqual([]);
-        expect(process.exitCode).toBe(0);
-        expect(printed.at(-1)).toBe(
-            'Relationships index is in sync (3 sources scanned).'
-        );
+        expect(await run(indexRebuild, ['--config', config, '--check'])).toEqual({
+            stdout: ['Relationships index is in sync (3 sources scanned).'],
+            stderr: [],
+            exitCode: 0,
+        });
     });
 
     it('refuses a remote database without --allow-remote, before opening it', async () => {
         const config = await writeConfig({ remote: true });
-        const exit = vi.spyOn(process, 'exit').mockImplementation(((code?: number) => {
-            throw new Error(`exit:${code}`);
-        }) as never);
 
-        await run({ config, json: true });
+        const { stdout, stderr, exitCode } = await run(indexRebuild, [
+            '--config',
+            config,
+            '--json',
+        ]);
 
-        expect(exit).toHaveBeenCalledWith(1);
-        expect(errors[0]).toContain('refusing to open the "libsql" database');
-        expect(errors[0]).toContain('--allow-remote');
-        expect(process.exitCode).toBe(1);
+        expect(exitCode).toBe(1);
+        expect(stdout).toEqual([]);
+        expect(stderr).toEqual([
+            expect.stringContaining('refusing to open the "libsql" database'),
+        ]);
+        expect(stderr[0]).toContain('--allow-remote');
+        expect(() => getDb()).toThrow();
     });
 });

@@ -1,121 +1,98 @@
 /**
- * `astromech db:rebaseline`, run in process against a migration chain in a real
- * temp directory, through a config file the command loads the way it loads a
- * site's.
+ * `astromech db:rebaseline`, run in process against a migration chain in a
+ * site in a temp directory, through a real config file the CLI loads the way
+ * it loads a site's (`tests/_support/cli.ts`). The command never opens the
+ * database.
+ *
+ * The bannered chain is kept in `fixtures/bannered-baseline/`, with the
+ * migration sources stored as `.ts.txt`: the command reads them as text, and a
+ * `.ts` file nothing imports would be reported as unused.
  */
 
-import {
-    copyFile,
-    cp,
-    mkdtemp,
-    readdir,
-    readFile,
-    rm,
-    writeFile,
-} from 'node:fs/promises';
-import { tmpdir } from 'node:os';
+import { copyFile, mkdir, readdir, readFile, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
+import { createTempSite, run, writeSiteConfig } from '@tests/cli';
 import { resetRuntime } from '@tests/harness';
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { beforeEach, describe, expect, it } from 'vitest';
 import { generateMigrations } from '@/database/generate';
 import { CORE_TABLES, cronTable } from '@/database/tables';
 import dbRebaseline from '@/transport/cli/commands/db-rebaseline';
 
 /**
- * The demo app's chain: a baseline with a `// ── <table> ──` banner per table,
- * as `db:rebaseline` writes one, and eight migrations past it that write data.
+ * A chain as `db:rebaseline` leaves one: a baseline of the `roles` table under
+ * its `// ── roles ──` banner, with the journal and snapshot that match it.
  */
-const DEMO_MIGRATIONS = join(
-    import.meta.dirname,
-    '../../../../../../apps/demo/migrations'
-);
+const BANNERED_BASELINE = join(import.meta.dirname, 'fixtures/bannered-baseline');
 
-let root: string;
+/** A migration that inserts a row into `roles`, which no snapshot can reproduce. */
+const DATA_MIGRATION = join(import.meta.dirname, 'fixtures/seed-editor-role.ts.txt');
+
+/** The `// ── <table> ──` line `db:rebaseline` splits a baseline on. */
+const BANNER = /^\s*\/\/ ── \S+ ─+\s*$/m;
+
+let site: string;
 let migrations: string;
-let printed: string[];
-let errors: string[];
 
 beforeEach(async () => {
-    root = await mkdtemp(join(tmpdir(), 'astromech-db-rebaseline-'));
-    migrations = join(root, 'migrations');
-    printed = [];
-    errors = [];
-    vi.spyOn(console, 'log').mockImplementation((line: unknown) => {
-        printed.push(String(line));
-    });
-    vi.spyOn(console, 'error').mockImplementation((line: unknown) => {
-        errors.push(String(line));
-    });
-    // A refusal calls `process.exit`; throwing makes it observable and stops the run.
-    vi.spyOn(process, 'exit').mockImplementation(((code?: number) => {
-        throw new Error(`exit:${code}`);
-    }) as never);
-});
-
-afterEach(async () => {
-    vi.restoreAllMocks();
-    // `loadConfig` registers the temp config's drivers.
     resetRuntime();
-    await rm(root, { recursive: true, force: true });
+    site = await createTempSite();
+    migrations = join(site, 'migrations');
 });
 
 /** Write a config naming the temp chain, with a database that is remote or local. */
-async function writeConfig(options: { remote?: boolean } = {}): Promise<string> {
-    const file = join(root, 'astromech.config.mjs');
-    await writeFile(
-        file,
-        `export default {
-            db: {
-                type: 'libsql',
-                isRemote: () => ${options.remote === true},
-                getInstance: () => ({}),
-            },
-            migrationsDir: ${JSON.stringify(migrations)},
-            entries: {},
-        };`
-    );
-    return file;
+function writeConfig(options: { remote?: boolean } = {}): Promise<string> {
+    return writeSiteConfig(site, {
+        database: join(site, 'database.db'),
+        migrationsDir: migrations,
+        remote: options.remote === true,
+    });
 }
 
 /**
- * A chain as `db:generate` writes it: a baseline of every core table but
- * `cron`, then, with `later`, a migration creating `cron`, which is schema only
- * and so collapsible.
+ * The bannered baseline, then, with `later`, one migration past it: `schema`
+ * is the one `db:generate` writes for every other core table, which is schema
+ * only and so collapsible; `data` is `0001_seed-editor-role`, which is not.
  */
-async function generateChain(options: { later: boolean }): Promise<void> {
+async function bannerChain(options: { later?: 'schema' | 'data' } = {}): Promise<void> {
+    await mkdir(migrations);
+    await copyFile(
+        join(BANNERED_BASELINE, '0000_baseline.ts.txt'),
+        join(migrations, '0000_baseline.ts')
+    );
+    for (const file of ['journal.json', 'snapshot.json']) {
+        await copyFile(join(BANNERED_BASELINE, file), join(migrations, file));
+    }
+    if (options.later === 'schema') {
+        await generateMigrations({
+            dir: migrations,
+            tables: CORE_TABLES,
+            dialect: 'sqlite',
+            name: 'add-core-tables',
+        });
+    }
+    if (options.later === 'data') {
+        await copyFile(DATA_MIGRATION, join(migrations, '0001_seed-editor-role.ts'));
+        const path = join(migrations, 'journal.json');
+        const journal = JSON.parse(await readFile(path, 'utf-8')) as {
+            entries: { idx: number; tag: string; when: number }[];
+        };
+        journal.entries.push({
+            idx: 1,
+            tag: '0001_seed-editor-role',
+            when: 1788000000000,
+        });
+        await writeFile(path, JSON.stringify(journal));
+    }
+}
+
+/** A baseline as `db:generate` writes it: every core table but `cron`. */
+async function generatedBaseline(): Promise<void> {
     await generateMigrations({
         dir: migrations,
         tables: CORE_TABLES.filter((table) => table !== cronTable),
         dialect: 'sqlite',
         name: 'baseline',
     });
-    if (options.later) {
-        await generateMigrations({
-            dir: migrations,
-            tables: CORE_TABLES,
-            dialect: 'sqlite',
-            name: 'add-cron',
-        });
-    }
-}
-
-/**
- * The same chain with the demo's bannered baseline in place of the generated
- * one, since the command refuses a baseline without banners (see the
- * `it.fails` case below).
- */
-async function bannerChain(options: { later: boolean }): Promise<void> {
-    await generateChain(options);
-    await copyFile(
-        join(DEMO_MIGRATIONS, '0000_baseline.ts'),
-        join(migrations, '0000_baseline.ts')
-    );
-}
-
-/** Run the command with `args`, as citty would after parsing them. */
-async function run(args: Record<string, unknown>): Promise<void> {
-    const runner = dbRebaseline.run as (context: { args: unknown }) => Promise<void>;
-    await runner({ args: { 'allow-remote': false, ...args } });
 }
 
 /** Every file under the temp chain with its contents, to show nothing changed. */
@@ -133,12 +110,17 @@ const coreNames = CORE_TABLES.map((table) => table.name).sort();
 
 describe('db:rebaseline', () => {
     it('with --collapse, folds the chain into a baseline of the core tables', async () => {
-        await bannerChain({ later: true });
+        await bannerChain({ later: 'schema' });
         const config = await writeConfig();
 
-        await run({ config, collapse: true });
+        const { stdout, stderr, exitCode } = await run(dbRebaseline, [
+            '--config',
+            config,
+            '--collapse',
+        ]);
 
-        expect(errors).toEqual([]);
+        expect(stderr).toEqual([]);
+        expect(exitCode).toBe(0);
         expect((await readdir(migrations)).sort()).toEqual([
             '0000_baseline.ts',
             'index.ts',
@@ -153,7 +135,7 @@ describe('db:rebaseline', () => {
         ]);
         const index = await readFile(join(migrations, 'index.ts'), 'utf-8');
         expect(index).toContain("from './0000_baseline'");
-        expect(index).not.toContain('0001_add-cron');
+        expect(index).not.toContain('0001_add-core-tables');
 
         const snapshot = JSON.parse(
             await readFile(join(migrations, 'snapshot.json'), 'utf-8')
@@ -162,50 +144,73 @@ describe('db:rebaseline', () => {
         const baseline = await readFile(join(migrations, '0000_baseline.ts'), 'utf-8');
         for (const name of coreNames) expect(baseline).toContain(`// ── ${name} ──`);
 
-        expect(printed[0]).toContain(`rewrote ${join(migrations, '0000_baseline.ts')}`);
-        expect(printed).toContain(
-            `[astromech db:rebaseline] deleted ${join(migrations, '0001_add-cron.ts')}`
+        expect(stdout[0]).toContain(`rewrote ${join(migrations, '0000_baseline.ts')}`);
+        expect(stdout).toContain(
+            `[astromech db:rebaseline] deleted ${join(migrations, '0001_add-core-tables.ts')}`
         );
-        expect(printed.at(-1)).toContain('WARNING');
+        expect(stdout.at(-1)).toContain('WARNING');
     });
 
     it('refuses a chain past the baseline without --collapse, changing nothing', async () => {
-        await bannerChain({ later: true });
+        await bannerChain({ later: 'schema' });
         const config = await writeConfig();
         const before = await chainContents();
 
-        await expect(run({ config })).rejects.toThrow('exit:1');
+        const { stderr, exitCode } = await run(dbRebaseline, ['--config', config]);
 
-        expect(errors[0]).toMatch(/^\[astromech db:rebaseline\] .*--collapse/);
+        expect(exitCode).toBe(1);
+        expect(stderr[0]).toMatch(/^\[astromech db:rebaseline\] .*--collapse/);
         expect(await chainContents()).toEqual(before);
     });
 
     it('refuses to collapse a migration that writes data, changing nothing', async () => {
-        await cp(DEMO_MIGRATIONS, migrations, { recursive: true });
+        await bannerChain({ later: 'data' });
         const config = await writeConfig();
         const before = await chainContents();
 
-        await expect(run({ config, collapse: true })).rejects.toThrow('exit:1');
+        const { stderr, exitCode } = await run(dbRebaseline, [
+            '--config',
+            config,
+            '--collapse',
+        ]);
 
-        expect(errors[0]).toContain('cannot collapse');
-        expect(errors[0]).toContain('0001_entry_content.ts');
+        expect(exitCode).toBe(1);
+        expect(stderr[0]).toContain('cannot collapse');
+        expect(stderr[0]).toContain('0001_seed-editor-role.ts');
         expect(await chainContents()).toEqual(before);
     });
 
     it('refuses a remote database unless --allow-remote is passed', async () => {
-        await bannerChain({ later: false });
+        await bannerChain();
         const config = await writeConfig({ remote: true });
         const before = await chainContents();
 
-        await expect(run({ config })).rejects.toThrow('exit:1');
-        expect(errors[0]).toContain('--allow-remote');
+        const refused = await run(dbRebaseline, ['--config', config]);
+        expect(refused.exitCode).toBe(1);
+        expect(refused.stderr[0]).toContain('--allow-remote');
         expect(await chainContents()).toEqual(before);
 
-        await run({ config, 'allow-remote': true });
+        const allowed = await run(dbRebaseline, ['--config', config, '--allow-remote']);
+        expect(allowed.exitCode).toBe(0);
         const snapshot = JSON.parse(
             await readFile(join(migrations, 'snapshot.json'), 'utf-8')
         );
         expect(Object.keys(snapshot.tables).sort()).toEqual(coreNames);
+    });
+
+    // The setup the `it.fails` case below relies on: if this fails, that case
+    // is failing for a reason other than the defect it names.
+    it('is refused a generated baseline for its missing banners, for the case below', async () => {
+        await generatedBaseline();
+        const config = await writeConfig();
+        const baseline = await readFile(join(migrations, '0000_baseline.ts'), 'utf-8');
+        expect(baseline).toContain('CREATE TABLE');
+        expect(baseline).not.toMatch(BANNER);
+
+        const { stderr, exitCode } = await run(dbRebaseline, ['--config', config]);
+
+        expect(exitCode).toBe(1);
+        expect(stderr[0]).toContain('sits before the first `// ── <table> ──` banner');
     });
 
     // DEFECT: `db:generate` writes a baseline with no `// ── <table> ──`
@@ -214,11 +219,11 @@ describe('db:rebaseline', () => {
     // `db:generate` started cannot rebaseline it without hand-adding a banner
     // per table. Remove `.fails` once the two agree.
     it.fails('rebaselines a baseline that db:generate wrote', async () => {
-        await generateChain({ later: false });
+        await generatedBaseline();
         const config = await writeConfig();
 
-        await run({ config });
+        const { stderr } = await run(dbRebaseline, ['--config', config]);
 
-        expect(errors).toEqual([]);
+        expect(stderr).toEqual([]);
     });
 });

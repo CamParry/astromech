@@ -1,60 +1,31 @@
 /**
- * `astromech db:generate`, run in process against a site in a temp directory.
- *
- * The site's config file is real and loaded the way the CLI loads it. Its
- * `db` is a libsql file database built inline, because a config in a temp
- * directory cannot import `astromech/database/libsql` from source.
+ * `astromech db:generate`, run in process against a site in a temp directory,
+ * through a real config file the CLI loads the way it loads a site's
+ * (`tests/_support/cli.ts`).
  */
 
-import { mkdtemp, readdir, readFile, rm, symlink, writeFile } from 'node:fs/promises';
-import { tmpdir } from 'node:os';
+import { readdir, readFile, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
-import { fileURLToPath } from 'node:url';
-import { expectConsole } from '@tests/console';
+import { createTempSite, run, writeSiteConfig } from '@tests/cli';
 import { resetRuntime } from '@tests/harness';
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { getDb } from '@/database/registry';
 import dbGenerate from '@/transport/cli/commands/db-generate';
 
 let siteDir: string;
 let migrationsDir: string;
-let printed: string[];
 
 /**
- * Write `astromech.config.mjs` for the site and return its path. A remote
- * driver throws if it is opened, so a refusal is seen to come first.
+ * The site's config. A remote driver throws if it is opened, so a refusal is
+ * seen to come first.
  */
-async function writeConfig(options: { remote?: boolean } = {}): Promise<string> {
-    const file = join(siteDir, 'astromech.config.mjs');
-    const url = `file:${join(siteDir, 'database.db')}`;
-    await writeFile(
-        file,
-        `import { CamelCasePlugin, Kysely } from 'kysely';
-        import { LibsqlDialect } from '@libsql/kysely-libsql';
-        let instance;
-        export default {
-            db: {
-                type: 'libsql',
-                isRemote: () => ${options.remote === true},
-                getInstance: () => {
-                    if (${options.remote === true}) throw new Error('opened the remote database');
-                    return (instance ??= new Kysely({
-                        dialect: new LibsqlDialect({ url: ${JSON.stringify(url)} }),
-                        plugins: [new CamelCasePlugin()],
-                    }));
-                },
-            },
-            entries: {},
-            migrationsDir: ${JSON.stringify(migrationsDir)},
-        };`
-    );
-    return file;
-}
-
-/** Run the command with `args`, as citty would after parsing them. */
-async function run(args: Record<string, unknown>): Promise<void> {
-    const runner = dbGenerate.run as (context: { args: unknown }) => Promise<void>;
-    await runner({ args: { 'allow-remote': false, ...args } });
+function writeConfig(options: { remote?: boolean } = {}): Promise<string> {
+    return writeSiteConfig(siteDir, {
+        database: join(siteDir, 'database.db'),
+        migrationsDir,
+        remote: options.remote === true,
+        throwOnOpen: options.remote === true,
+    });
 }
 
 /** Every file in the migrations folder, by name, with its contents. */
@@ -69,18 +40,8 @@ async function migrationFiles(): Promise<Record<string, string>> {
 
 beforeEach(async () => {
     resetRuntime();
-    siteDir = await mkdtemp(join(tmpdir(), 'astromech-cli-db-generate-'));
+    siteDir = await createTempSite();
     migrationsDir = join(siteDir, 'migrations');
-    // The config imports `kysely` and the libsql dialect, which a site has installed.
-    await symlink(
-        fileURLToPath(new URL('../../../../node_modules', import.meta.url)),
-        join(siteDir, 'node_modules'),
-        'dir'
-    );
-    printed = [];
-    vi.spyOn(console, 'log').mockImplementation((line: unknown) => {
-        printed.push(String(line));
-    });
 });
 
 afterEach(async () => {
@@ -89,16 +50,19 @@ afterEach(async () => {
     } catch {
         // A refused run never registered a database.
     }
-    await rm(siteDir, { recursive: true, force: true });
 });
 
 describe('db:generate', () => {
     it('writes the first migration, journal, snapshot and index into an empty folder', async () => {
-        await run({ config: await writeConfig() });
+        const result = await run(dbGenerate, ['--config', await writeConfig()]);
 
-        expect(printed).toEqual([
-            `[astromech db:generate] generated ${join(migrationsDir, '0000_migration.ts')}`,
-        ]);
+        expect(result).toEqual({
+            stdout: [
+                `[astromech db:generate] generated ${join(migrationsDir, '0000_migration.ts')}`,
+            ],
+            stderr: [],
+            exitCode: 0,
+        });
         const files = await migrationFiles();
         expect(Object.keys(files)).toEqual([
             '0000_migration.ts',
@@ -116,18 +80,22 @@ describe('db:generate', () => {
 
     it('writes nothing when the tables match the snapshot', async () => {
         const config = await writeConfig();
-        await run({ config });
+        await run(dbGenerate, ['--config', config]);
         const before = await migrationFiles();
 
-        await run({ config });
+        const result = await run(dbGenerate, ['--config', config]);
 
-        expect(printed.at(-1)).toBe('[astromech db:generate] no changes');
+        expect(result).toEqual({
+            stdout: ['[astromech db:generate] no changes'],
+            stderr: [],
+            exitCode: 0,
+        });
         expect(await migrationFiles()).toEqual(before);
     });
 
     it('writes a migration named by --name for a table the snapshot lacks', async () => {
         const config = await writeConfig();
-        await run({ config });
+        await run(dbGenerate, ['--config', config]);
         // Stand in for a core table added since the last generate.
         const snapshotPath = join(migrationsDir, 'snapshot.json');
         const snapshot = JSON.parse(await readFile(snapshotPath, 'utf-8')) as {
@@ -136,11 +104,15 @@ describe('db:generate', () => {
         delete snapshot.tables['_astromech_cron'];
         await writeFile(snapshotPath, JSON.stringify(snapshot));
 
-        await run({ config, name: 'add-cron' });
+        const result = await run(dbGenerate, ['--config', config, '--name', 'add-cron']);
 
-        expect(printed.at(-1)).toBe(
-            `[astromech db:generate] generated ${join(migrationsDir, '0001_add-cron.ts')}`
-        );
+        expect(result).toEqual({
+            stdout: [
+                `[astromech db:generate] generated ${join(migrationsDir, '0001_add-cron.ts')}`,
+            ],
+            stderr: [],
+            exitCode: 0,
+        });
         const files = await migrationFiles();
         expect(Object.keys(files)).toEqual([
             '0000_migration.ts',
@@ -171,9 +143,10 @@ describe('db:generate', () => {
     it('refuses an --ops file that does not default-export a function, writing nothing', async () => {
         const ops = join(siteDir, 'ops.mjs');
         await writeFile(ops, 'export const ops = [];');
+        const config = await writeConfig();
 
         await expect(
-            run({ config: await writeConfig(), ops, name: 'by-hand' })
+            run(dbGenerate, ['--config', config, '--ops', ops, '--name', 'by-hand'])
         ).rejects.toThrow(
             `[astromech db:generate] --ops file "${ops}" must default-export a function`
         );
@@ -181,14 +154,17 @@ describe('db:generate', () => {
     });
 
     it('refuses a remote database without --allow-remote, before opening it or writing', async () => {
-        vi.spyOn(process, 'exit').mockImplementation(((code?: number) => {
-            throw new Error(`exit:${code}`);
-        }) as never);
-        expectConsole('error', /refusing to open the "libsql" database: it is remote/);
+        const config = await writeConfig({ remote: true });
 
-        await expect(
-            run({ config: await writeConfig({ remote: true }) })
-        ).rejects.toThrow('exit:1');
+        expect(await run(dbGenerate, ['--config', config])).toEqual({
+            stdout: [],
+            stderr: [
+                expect.stringMatching(
+                    /refusing to open the "libsql" database: it is remote/
+                ),
+            ],
+            exitCode: 1,
+        });
         await expect(readdir(migrationsDir)).rejects.toThrow(/ENOENT/);
     });
 });

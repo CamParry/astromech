@@ -1,0 +1,10 @@
+import type { Kysely } from 'kysely';
+import { sql } from 'kysely';
+
+/** Seeds the `editor` role: a data statement, which the descriptors cannot reproduce. */
+export async function up(db: Kysely<unknown>): Promise<void> {
+    await sql`
+        INSERT INTO \`roles\` (\`slug\`, \`name\`, \`permissions\`, \`is_built_in\`, \`created_at\`, \`updated_at\`)
+        VALUES ('editor', 'Editor', '[]', 0, '2026-01-01T00:00:00.000Z', '2026-01-01T00:00:00.000Z')
+    `.execute(db);
+}

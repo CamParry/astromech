@@ -1,20 +1,16 @@
 /**
  * `astromech db:status`, run in process against a site in a temp directory: a
  * chain written by `db:generate` and applied by `db:init` to a real libsql
- * file database.
- *
- * The site's config file is real and loaded the way the CLI loads it. Its
- * `db` is a libsql file database built inline, because a config in a temp
- * directory cannot import `astromech/database/libsql` from source.
+ * file database, through a real config file the CLI loads the way it loads a
+ * site's (`tests/_support/cli.ts`).
  */
 
-import { mkdtemp, readFile, rm, symlink, writeFile } from 'node:fs/promises';
-import { tmpdir } from 'node:os';
+import { readdir, readFile, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
-import { fileURLToPath } from 'node:url';
-import { expectConsole } from '@tests/console';
+import { createTempSite, run, writeSiteConfig } from '@tests/cli';
 import { resetRuntime } from '@tests/harness';
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { sql } from 'kysely';
+import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { getDb } from '@/database/registry';
 import dbGenerate from '@/transport/cli/commands/db-generate';
 import dbInit from '@/transport/cli/commands/db-init';
@@ -22,68 +18,40 @@ import dbStatus from '@/transport/cli/commands/db-status';
 
 let siteDir: string;
 let migrationsDir: string;
-let printed: string[];
 
 /**
- * Write `astromech.config.mjs` for the site and return its path. `remote`
- * makes the driver report itself remote; it still opens the local file, so
- * `--allow-remote` has a database to read.
+ * The site's config. `remote` makes the driver report itself remote; it still
+ * opens the local file, so `--allow-remote` has a database to read.
  */
-async function writeConfig(options: { remote?: boolean } = {}): Promise<string> {
-    const file = join(siteDir, 'astromech.config.mjs');
-    const url = `file:${join(siteDir, 'database.db')}`;
-    await writeFile(
-        file,
-        `import { CamelCasePlugin, Kysely } from 'kysely';
-        import { LibsqlDialect } from '@libsql/kysely-libsql';
-        let instance;
-        export default {
-            db: {
-                type: 'libsql',
-                isRemote: () => ${options.remote === true},
-                getInstance: () =>
-                    (instance ??= new Kysely({
-                        dialect: new LibsqlDialect({ url: ${JSON.stringify(url)} }),
-                        plugins: [new CamelCasePlugin()],
-                    })),
-            },
-            entries: {},
-            migrationsDir: ${JSON.stringify(migrationsDir)},
-        };`
-    );
-    return file;
+function writeConfig(options: { remote?: boolean } = {}): Promise<string> {
+    return writeSiteConfig(siteDir, {
+        database: join(siteDir, 'database.db'),
+        migrationsDir,
+        remote: options.remote === true,
+    });
 }
 
-/** Run `command` with `args`, as citty would after parsing them. */
-async function run(
-    command: { run?: unknown },
-    args: Record<string, unknown>
-): Promise<void> {
-    const runner = command.run as (context: { args: unknown }) => Promise<void>;
-    await runner({ args: { 'allow-remote': false, ...args } });
-}
-
-/** What `db:status` prints, on its own. */
-async function status(args: Record<string, unknown>): Promise<string[]> {
-    printed = [];
-    await run(dbStatus, args);
-    return printed;
+/**
+ * Generate and apply the first migration, then generate a second one that is
+ * not applied: `0001_add-cron`, for a core table the snapshot stands in as
+ * having gained since the last generate.
+ */
+async function generateUnappliedMigration(config: string): Promise<void> {
+    await run(dbGenerate, ['--config', config]);
+    await run(dbInit, ['--config', config]);
+    const snapshotPath = join(migrationsDir, 'snapshot.json');
+    const snapshot = JSON.parse(await readFile(snapshotPath, 'utf-8')) as {
+        tables: Record<string, unknown>;
+    };
+    delete snapshot.tables['_astromech_cron'];
+    await writeFile(snapshotPath, JSON.stringify(snapshot));
+    await run(dbGenerate, ['--config', config, '--name', 'add-cron']);
 }
 
 beforeEach(async () => {
     resetRuntime();
-    siteDir = await mkdtemp(join(tmpdir(), 'astromech-cli-db-status-'));
+    siteDir = await createTempSite();
     migrationsDir = join(siteDir, 'migrations');
-    // The config and the generated chain import `kysely`, which a site has installed.
-    await symlink(
-        fileURLToPath(new URL('../../../../node_modules', import.meta.url)),
-        join(siteDir, 'node_modules'),
-        'dir'
-    );
-    printed = [];
-    vi.spyOn(console, 'log').mockImplementation((line: unknown) => {
-        printed.push(String(line));
-    });
 });
 
 afterEach(async () => {
@@ -92,25 +60,43 @@ afterEach(async () => {
     } catch {
         // A refused run never registered a database.
     }
-    await rm(siteDir, { recursive: true, force: true });
 });
 
 describe('db:status', () => {
     it('tells a database that was never initialised to run db:init', async () => {
-        expect(await status({ config: await writeConfig() })).toEqual([
-            'No migrations table found. Run db:init first.',
-        ]);
+        const config = await writeConfig();
+
+        expect(await run(dbStatus, ['--config', config])).toEqual({
+            stdout: ['No migrations table found. Run db:init first.'],
+            stderr: [],
+            exitCode: 0,
+        });
     });
 
     it('lists the migrations db:init applied', async () => {
         const config = await writeConfig();
-        await run(dbGenerate, { config });
-        await run(dbInit, { config });
+        await run(dbGenerate, ['--config', config]);
+        await run(dbInit, ['--config', config]);
 
-        expect(await status({ config })).toEqual([
-            'Applied migrations:',
-            '  0000_migration',
-        ]);
+        expect(await run(dbStatus, ['--config', config])).toEqual({
+            stdout: ['Applied migrations:', '  0000_migration'],
+            stderr: [],
+            exitCode: 0,
+        });
+    });
+
+    // The setup the `it.fails` case below relies on: if this fails, that case
+    // is failing for a reason other than the defect it names.
+    it('has a generated migration that is not applied, for the case below', async () => {
+        const config = await writeConfig();
+
+        await generateUnappliedMigration(config);
+
+        expect(await readdir(migrationsDir)).toContain('0001_add-cron.ts');
+        const { rows } = await sql<{
+            name: string;
+        }>`SELECT name FROM kysely_migration ORDER BY name`.execute(getDb());
+        expect(rows).toEqual([{ name: '0000_migration' }]);
     });
 
     // Defect: `db:status` reads only `kysely_migration`, never the config's
@@ -118,40 +104,36 @@ describe('db:status', () => {
     // missing from its output. Its description is "Show migration status".
     it.fails('lists a generated migration that has not been applied', async () => {
         const config = await writeConfig();
-        await run(dbGenerate, { config });
-        await run(dbInit, { config });
-        // Stand in for a core table added since the last generate.
-        const snapshotPath = join(migrationsDir, 'snapshot.json');
-        const snapshot = JSON.parse(await readFile(snapshotPath, 'utf-8')) as {
-            tables: Record<string, unknown>;
-        };
-        delete snapshot.tables['_astromech_cron'];
-        await writeFile(snapshotPath, JSON.stringify(snapshot));
-        await run(dbGenerate, { config, name: 'add-cron' });
+        await generateUnappliedMigration(config);
 
-        const lines = await status({ config });
+        const { stdout: lines } = await run(dbStatus, ['--config', config]);
 
         expect(lines).toContain('  0000_migration');
         expect(lines.some((line) => line.includes('0001_add-cron'))).toBe(true);
     });
 
     it('refuses a remote database without --allow-remote, before opening it', async () => {
-        vi.spyOn(process, 'exit').mockImplementation(((code?: number) => {
-            throw new Error(`exit:${code}`);
-        }) as never);
-        expectConsole('error', /refusing to open the "libsql" database: it is remote/);
+        const config = await writeConfig({ remote: true });
 
-        await expect(
-            status({ config: await writeConfig({ remote: true }) })
-        ).rejects.toThrow('exit:1');
+        expect(await run(dbStatus, ['--config', config])).toEqual({
+            stdout: [],
+            stderr: [
+                expect.stringMatching(
+                    /refusing to open the "libsql" database: it is remote/
+                ),
+            ],
+            exitCode: 1,
+        });
         expect(() => getDb()).toThrow();
     });
 
     it('reads a remote database when --allow-remote is passed', async () => {
         const config = await writeConfig({ remote: true });
 
-        expect(await status({ config, 'allow-remote': true })).toEqual([
-            'No migrations table found. Run db:init first.',
-        ]);
+        expect(await run(dbStatus, ['--config', config, '--allow-remote'])).toEqual({
+            stdout: ['No migrations table found. Run db:init first.'],
+            stderr: [],
+            exitCode: 0,
+        });
     });
 });
