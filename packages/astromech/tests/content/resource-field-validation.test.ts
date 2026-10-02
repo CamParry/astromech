@@ -25,16 +25,25 @@ const FIELDS: Field[] = [
     { name: 'tier', type: 'text', label: 'Tier', defaultValue: 'free' },
 ];
 
+/** Publishes a config in which every resource declares `fields`. */
+function setupFields(fields: Field[]): void {
+    const base = makeTestConfig();
+    setupTestConfig({
+        ...base,
+        entries: {
+            ...base.entries,
+            item: { single: 'Item', plural: 'Items', statuses: false, fields },
+        },
+        globals: [{ key: 'profile', label: 'Profile', statuses: false, fields }],
+        users: { fields },
+        media: { fields },
+    });
+}
+
 /** How the checks reach one resource. `id` is a global's key. */
 type Adapter = {
     /** The first write that carries `fields`; answers the resource it saved. */
     save(fields: JsonObject): Promise<{ id: string; fields: JsonObject }>;
-    /**
-     * What the default fills `tier` with on the first write that leaves it out.
-     * An upload stores no fields and skips the pipeline, and the first write of
-     * them is an update, so a media item's defaults are never filled.
-     */
-    defaultFilled: string | undefined;
     /** A later write of `fields`. */
     update(id: string, fields: JsonObject): Promise<{ fields: JsonObject }>;
     /**
@@ -54,7 +63,6 @@ const ADAPTERS: Record<ResourceType, Adapter> = {
     entry: {
         save: (fields) =>
             entriesService.create({ type: 'item', data: { title: 'T', fields } }),
-        defaultFilled: 'free',
         update: (id, fields) =>
             entriesService.update({ type: 'item', id, data: { fields } }),
         updateWithoutFields: {
@@ -71,7 +79,6 @@ const ADAPTERS: Record<ResourceType, Adapter> = {
             });
             return { id: saved.key, fields: saved.fields };
         },
-        defaultFilled: 'free',
         update: (key, fields) => globalsService.update({ key, data: { fields } }),
     },
     user: {
@@ -83,7 +90,6 @@ const ADAPTERS: Record<ResourceType, Adapter> = {
                     fields,
                 },
             }),
-        defaultFilled: 'free',
         update: (id, fields) => usersService.update({ id, data: { fields } }),
         updateWithoutFields: {
             write: (id) => usersService.update({ id, data: { name: 'Annabel' } }),
@@ -97,7 +103,6 @@ const ADAPTERS: Record<ResourceType, Adapter> = {
             const uploaded = await mediaService.upload({ file });
             return mediaService.update({ id: uploaded.id, data: { fields } });
         },
-        defaultFilled: undefined,
         update: (id, fields) => mediaService.update({ id, data: { fields } }),
         updateWithoutFields: {
             write: (id) => mediaService.update({ id, data: { alt: 'Described' } }),
@@ -108,17 +113,7 @@ const ADAPTERS: Record<ResourceType, Adapter> = {
 
 beforeEach(async () => {
     await createTestDb();
-    const base = makeTestConfig();
-    setupTestConfig({
-        ...base,
-        entries: {
-            ...base.entries,
-            item: { single: 'Item', plural: 'Items', statuses: false, fields: FIELDS },
-        },
-        globals: [{ key: 'profile', label: 'Profile', statuses: false, fields: FIELDS }],
-        users: { fields: FIELDS },
-        media: { fields: FIELDS },
-    });
+    setupFields(FIELDS);
 });
 
 describe.each(RESOURCE_TYPES)('%s', (kind) => {
@@ -183,9 +178,12 @@ describe.each(RESOURCE_TYPES)('%s', (kind) => {
     });
 
     describe('a default value', () => {
-        it('fills a field the first write leaves out, except on media', async () => {
+        // Fails on media until an upload runs the field pipeline:
+        // `roadmap/planned/media-upload-skips-field-defaults.md`
+        const fillsDefault = kind === 'media' ? it.fails : it;
+        fillsDefault('fills a field the first write leaves out', async () => {
             const saved = await adapter.save({ headline: 'Hi' });
-            expect(saved.fields['tier']).toBe(adapter.defaultFilled);
+            expect(saved.fields['tier']).toBe('free');
         });
 
         it('does not override a value the write gives', async () => {
@@ -207,17 +205,27 @@ describe.each(RESOURCE_TYPES)('%s', (kind) => {
     });
 });
 
-describe.each(RESOURCE_TYPES.filter((kind) => ADAPTERS[kind].updateWithoutFields))(
-    '%s',
-    (kind) => {
-        const { write, sets } = ADAPTERS[kind].updateWithoutFields ?? {};
+/** Every resource with a write that names no `fields` key. */
+const WITHOUT_FIELDS = RESOURCE_TYPES.flatMap((kind) => {
+    const updateWithoutFields = ADAPTERS[kind].updateWithoutFields;
+    return updateWithoutFields ? [{ kind, ...updateWithoutFields }] : [];
+});
 
-        it('writes a column outside its fields without running field validation', async () => {
-            const saved = await ADAPTERS[kind].save({ headline: 'Hi' });
+describe.each(WITHOUT_FIELDS)('$kind', ({ kind, write, sets }) => {
+    it('writes a column outside its fields without running field validation', async () => {
+        // Stores fields that now fail validation: saved while `headline` was
+        // optional, then made required, so a write that validated would refuse.
+        setupFields(
+            FIELDS.map((field) =>
+                field.name === 'headline' ? { ...field, required: false } : field
+            )
+        );
+        const saved = await ADAPTERS[kind].save({});
+        setupFields(FIELDS);
 
-            const updated = await write?.(saved.id);
+        const updated = await write(saved.id);
 
-            expect(updated).toHaveProperty(sets?.[0] ?? '', sets?.[1]);
-        });
-    }
-);
+        const [column, value] = sets;
+        expect(updated).toHaveProperty(column, value);
+    });
+});

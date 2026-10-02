@@ -241,12 +241,6 @@ describe.each(RESOURCE_TYPES)('%s', (kind) => {
             ]);
         });
 
-        it('writes no version when it is created, which replaces nothing', async () => {
-            const id = await adapter.create('one');
-
-            expect(await adapter.versions(id)).toEqual([]);
-        });
-
         it('writes no version when the content is unchanged', async () => {
             const id = await adapter.create('same');
             await adapter.write(id, 'same');
@@ -379,5 +373,24 @@ describe.each(RESOURCE_TYPES)('%s', (kind) => {
                 `${adapter.label(id)} has no version 7 in locale 'en'`
             );
         });
+    });
+});
+
+// Media is left out: its adapter creates through the repository, which writes
+// no version whatever the service does. Its own create path is `upload`, below.
+describe.each(RESOURCE_TYPES.filter((kind) => kind !== 'media'))('%s', (kind) => {
+    it('writes no version when it is created, which replaces nothing', async () => {
+        const id = await ADAPTERS[kind].create('one');
+
+        expect(await ADAPTERS[kind].versions(id)).toEqual([]);
+    });
+});
+
+describe('media', () => {
+    it('writes no version when it is uploaded, which replaces nothing', async () => {
+        const file = new File(['hello'], 'doc.txt', { type: 'text/plain' });
+        const uploaded = await mediaService.upload({ file });
+
+        expect(await mediaService.versions({ id: uploaded.id })).toEqual([]);
     });
 });

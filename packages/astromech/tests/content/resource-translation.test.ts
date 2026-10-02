@@ -279,3 +279,17 @@ describe.each(Object.entries(ADAPTERS))('%s', (_kind, adapter: Adapter) => {
         });
     });
 });
+
+// Only media has a per-locale column outside its fields.
+describe('media', () => {
+    it('leaves the default locale’s alt text alone when another locale is written', async () => {
+        const id = await ADAPTERS.media.create({});
+        await mediaService.update({ id, data: { alt: 'EN alt' } });
+
+        await mediaService.update({ id, locale: 'fr', data: { alt: 'FR alt' } });
+
+        const en = await mediaService.get({ id });
+        expect(en?.alt).toBe('EN alt');
+        expect(en?.locale).toBe('en');
+    });
+});
