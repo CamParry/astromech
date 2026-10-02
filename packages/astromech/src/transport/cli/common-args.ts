@@ -5,12 +5,17 @@
 
 import type { ArgsDef } from 'citty';
 
+/** `--config`, for a command that reads the config and never opens the database. */
+export const configPathArgs = {
+    config: { type: 'string', description: 'Path to astromech.config.ts' },
+} satisfies ArgsDef;
+
 /**
- * `--config` and `--allow-remote`, for every command that loads the config. A
+ * `--config` and `--allow-remote`, for every command that opens the database. A
  * remote database is refused unless `--allow-remote` says that is intended.
  */
 export const configArgs = {
-    config: { type: 'string', description: 'Path to astromech.config.ts' },
+    ...configPathArgs,
     'allow-remote': {
         type: 'boolean',
         default: false,

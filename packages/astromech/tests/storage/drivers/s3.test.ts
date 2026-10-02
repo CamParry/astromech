@@ -1,3 +1,6 @@
+import type { IncomingHttpHeaders } from 'node:http';
+import type { AddressInfo } from 'node:net';
+import { createServer } from 'node:http';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { s3 } from '@/storage/drivers/s3';
 
@@ -28,6 +31,49 @@ function sent(): Request {
     const req = requests[0];
     if (req === undefined) throw new Error('expected a request');
     return req;
+}
+
+/** A stream that yields each argument as one chunk. */
+function streamOf(...chunks: number[][]): ReadableStream<Uint8Array> {
+    return new ReadableStream<Uint8Array>({
+        start(controller) {
+            for (const chunk of chunks) controller.enqueue(new Uint8Array(chunk));
+            controller.close();
+        },
+    });
+}
+
+type Received = { headers: IncomingHttpHeaders; body: Uint8Array };
+
+/**
+ * A local S3 stand-in that records each request and answers it with the status
+ * `respond` gives for its index.
+ */
+async function listen(respond: (index: number) => number): Promise<{
+    endpoint: string;
+    received: Received[];
+    close: () => void;
+}> {
+    const received: Received[] = [];
+    const server = createServer((req, res) => {
+        const chunks: Buffer[] = [];
+        req.on('data', (chunk: Buffer) => chunks.push(chunk));
+        req.on('end', () => {
+            res.statusCode = respond(received.length);
+            received.push({
+                headers: req.headers,
+                body: new Uint8Array(Buffer.concat(chunks)),
+            });
+            res.end();
+        });
+    });
+    await new Promise<void>((resolve) => server.listen(0, '127.0.0.1', resolve));
+    const { port } = server.address() as AddressInfo;
+    return {
+        endpoint: `http://127.0.0.1:${port}`,
+        received,
+        close: () => server.close(),
+    };
 }
 
 async function drain(stream: ReadableStream): Promise<Uint8Array> {
@@ -83,6 +129,93 @@ describe('s3()', () => {
             expect(req.headers.get('content-type')).toBe('image/jpeg');
             // Proves signing actually ran rather than the request going out bare.
             expect(req.headers.get('authorization')).toMatch(/^AWS4-HMAC-SHA256 /);
+        });
+
+        // S3 refuses a chunked upload with no Content-Length, which is what fetch
+        // sends for a stream, so these read the request off a real socket.
+        it.each([
+            { length: 'unknown', opts: undefined },
+            { length: 'known', opts: { contentLength: 3 } },
+        ])(
+            'sends a ReadableStream body of $length length with its Content-Length',
+            async ({ opts }) => {
+                const server = await listen(() => 200);
+
+                try {
+                    await s3({ ...CREDENTIALS, endpoint: server.endpoint }).put(
+                        'uploads/streamed.bin',
+                        streamOf([7, 8], [9]),
+                        opts
+                    );
+                } finally {
+                    server.close();
+                }
+
+                expect(server.received).toHaveLength(1);
+                expect(server.received[0]?.headers['content-length']).toBe('3');
+                expect(server.received[0]?.headers['transfer-encoding']).toBeUndefined();
+                expect(server.received[0]?.body).toEqual(new Uint8Array([7, 8, 9]));
+            }
+        );
+
+        // A Worker's fetch ignores a hand-set Content-Length on a stream and
+        // sends it chunked unless the body is a `FixedLengthStream`.
+        it('pipes a stream of known length through FixedLengthStream where the runtime has one', async () => {
+            const lengths: number[] = [];
+            vi.stubGlobal(
+                'FixedLengthStream',
+                class extends TransformStream<Uint8Array, Uint8Array> {
+                    constructor(length: number) {
+                        super();
+                        lengths.push(length);
+                    }
+                }
+            );
+            stubFetch(() => new Response(null, { status: 200 }));
+
+            await s3(CREDENTIALS).put('uploads/streamed.bin', streamOf([7, 8], [9]), {
+                contentLength: 3,
+            });
+
+            expect(lengths).toEqual([3]);
+            expect(new Uint8Array(await sent().arrayBuffer())).toEqual(
+                new Uint8Array([7, 8, 9])
+            );
+        });
+
+        // A stream can be read once, so a failed streamed put is not resent.
+        it('sends a stream of known length once, even after a 503', async () => {
+            const server = await listen((index) => (index === 0 ? 503 : 200));
+
+            try {
+                await expect(
+                    s3({ ...CREDENTIALS, endpoint: server.endpoint }).put(
+                        'uploads/once.bin',
+                        streamOf([7, 8], [9]),
+                        { contentLength: 3 }
+                    )
+                ).rejects.toThrow(/503/);
+            } finally {
+                server.close();
+            }
+
+            expect(server.received).toHaveLength(1);
+        });
+
+        it('retries a put of bytes after a 503', async () => {
+            const server = await listen((index) => (index === 0 ? 503 : 200));
+
+            try {
+                await s3({ ...CREDENTIALS, endpoint: server.endpoint }).put(
+                    'uploads/retried.bin',
+                    new Uint8Array([7, 8, 9])
+                );
+            } finally {
+                server.close();
+            }
+
+            expect(server.received).toHaveLength(2);
+            expect(server.received[1]?.body).toEqual(new Uint8Array([7, 8, 9]));
         });
 
         it('throws with the status and the XML body on a non-2xx', async () => {

@@ -79,4 +79,18 @@ describe('generate:types', () => {
 
         expect(await readFile(out, 'utf-8')).toBe(first);
     });
+
+    it('runs against a remote database without --allow-remote or opening it', async () => {
+        const config = await writeSiteConfig(siteDir, {
+            remote: true,
+            throwOnOpen: true,
+        });
+        const out = join(siteDir, 'astromech.d.ts');
+
+        expect(await run(generateTypes, ['--config', config, '--out', out])).toEqual({
+            stdout: [`Types written to ${out}`],
+            stderr: [],
+            exitCode: 0,
+        });
+    });
 });

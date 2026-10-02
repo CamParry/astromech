@@ -457,7 +457,7 @@ harness and eight test files and every later stage runs faster for it.
       plus one `StorageDriver` contract test run against every driver. The contract covers
       the filesystem and R2 drivers; S3 needs a server and keeps a stubbed
       `fetch`. It found
-      [r2-rejects-unsized-streams](../planned/r2-rejects-unsized-streams.md).
+      [r2-rejects-unsized-streams](r2-rejects-unsized-streams.md).
 - [x] Delete or rewrite the tests that cannot fail (`cron-table`,
       `repository-surface`, `packages/astromech/tests/content/shared-helpers.test.ts`, the admin
       `cell-registry` case), fix the admin field-registry leak, rewrite
@@ -468,7 +468,7 @@ harness and eight test files and every later stage runs faster for it.
 ### Stage 5: missing coverage
 
 - [x] `media.delete` removes the stored file and its variants. It found
-      [media-delete-removes-files-first](../planned/media-delete-removes-files-first.md)
+      [media-delete-removes-files-first](media-delete-removes-files-first.md)
       and [media-upload-skips-field-defaults](../proposed/media-upload-skips-field-defaults.md).
 - [x] Backups restore, download, run, delete and permissions.
 - [x] Admin: `EntryNewPage`, `DeleteEntryModal`, `CreateLocaleModal`,
@@ -480,7 +480,7 @@ harness and eight test files and every later stage runs faster for it.
       [admin-ui-defects](../planned/admin-ui-defects.md).
 - [x] The 13 untested CLI commands and the assistant's chat route. The CLI
       tests share `packages/astromech/tests/_support/cli.ts`. Defects found:
-      [cli-defects](../planned/cli-defects.md).
+      [cli-defects](cli-defects.md).
 - [x] Inline type tests for `defineServiceMethod`, `defineHook` and
       `defineConfig`. `Hook.handler` is now `HookHandlerFor<HookEvent>`, and
       the `AnyCoreHookHandler` type export is gone.

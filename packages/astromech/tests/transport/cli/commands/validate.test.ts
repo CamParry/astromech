@@ -85,7 +85,7 @@ describe('validate', () => {
         expect(result).toEqual({
             stdout: [],
             stderr: [
-                '1 validation failures across 1 rows checked.',
+                '1 validation failure across 1 row checked.',
                 `  entry recipe/${id} (en): servings — Must be at most 8`,
             ],
             exitCode: 1,

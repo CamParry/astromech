@@ -26,6 +26,9 @@ export async function storeFile(
         };
     }
 
-    await driver.put(key, file.stream(), { contentType: file.type });
+    await driver.put(key, file.stream(), {
+        contentType: file.type,
+        contentLength: file.size,
+    });
     return { width: null, height: null, metadata: {} };
 }

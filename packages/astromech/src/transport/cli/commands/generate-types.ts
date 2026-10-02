@@ -1,7 +1,7 @@
 import { defineCommand } from 'citty';
 import { generateClientTypes } from '@/codegen/type-generator';
-import { configArgs, toAllowRemoteOption } from '../common-args';
-import { loadConfig } from '../config';
+import { configPathArgs } from '../common-args';
+import { loadConfigWithoutDrivers } from '../config';
 import { writeGenerated } from '../output';
 
 export default defineCommand({
@@ -15,12 +15,11 @@ export default defineCommand({
             description: 'Output path',
             default: '.astro/astromech.d.ts',
         },
-        ...configArgs,
+        ...configPathArgs,
     },
     async run({ args }) {
-        const { config: rawConfig, resolved } = await loadConfig(
-            args.config,
-            toAllowRemoteOption(args)
+        const { config: rawConfig, resolved } = await loadConfigWithoutDrivers(
+            args.config
         );
         const plugins = rawConfig.plugins ?? [];
         const types = generateClientTypes(resolved, plugins);

@@ -107,4 +107,29 @@ describe('permissions', () => {
         });
         expect(result.exitCode).toBe(1);
     });
+
+    it('runs against a remote database without --allow-remote or opening it', async () => {
+        const config = await writeSiteConfig(siteDir, {
+            globals: [{ key: 'site', label: 'Site', fields: [] }],
+            remote: true,
+            throwOnOpen: true,
+        });
+
+        const result = await run(permissions, [
+            '--config',
+            config,
+            '--filter',
+            'global:',
+        ]);
+
+        expect(result).toEqual({
+            stdout: [
+                'global:site:publish  Publish "site" global  (site)',
+                'global:site:read     Read "site" global  (site)',
+                'global:site:update   Update "site" global  (site)',
+            ],
+            stderr: [],
+            exitCode: 0,
+        });
+    });
 });

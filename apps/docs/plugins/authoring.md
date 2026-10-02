@@ -1096,9 +1096,11 @@ scoped to your plugin. You never see the driver the site configured, and you nev
 name the backend.
 
 **`ctx.storage`** — blob storage, with every key transparently prefixed
-`plugin/<alias>/`. `put(key, body, { contentType? })`, `get(key)`,
-`list(prefix?)`, `delete(key)`. `list()` hands back de-prefixed keys, so the
-strings you put in are the strings you get out:
+`plugin/<alias>/`. `put(key, body, { contentType?, contentLength? })`, `get(key)`,
+`list(prefix?)`, `delete(key)`. Pass `contentLength` with a stream when you know
+its size: R2 and S3 need a length, so a stream without one is held in memory.
+`list()` hands back de-prefixed keys, so the strings you put in are the strings
+you get out:
 
 ```ts
 await ctx.storage.put('exports/latest.json', bytes, { contentType: 'application/json' });

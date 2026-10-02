@@ -15,16 +15,11 @@ import dbGenerate from '@/transport/cli/commands/db-generate';
 let siteDir: string;
 let migrationsDir: string;
 
-/**
- * The site's config. A remote driver throws if it is opened, so a refusal is
- * seen to come first.
- */
-function writeConfig(options: { remote?: boolean } = {}): Promise<string> {
+/** The site's config. */
+function writeConfig(): Promise<string> {
     return writeSiteConfig(siteDir, {
         database: join(siteDir, 'database.db'),
         migrationsDir,
-        remote: options.remote === true,
-        throwOnOpen: options.remote === true,
     });
 }
 
@@ -153,18 +148,19 @@ describe('db:generate', () => {
         await expect(readdir(migrationsDir)).rejects.toThrow(/ENOENT/);
     });
 
-    it('refuses a remote database without --allow-remote, before opening it or writing', async () => {
-        const config = await writeConfig({ remote: true });
+    it('runs against a remote database without --allow-remote or opening it', async () => {
+        const config = await writeSiteConfig(siteDir, {
+            migrationsDir,
+            remote: true,
+            throwOnOpen: true,
+        });
 
         expect(await run(dbGenerate, ['--config', config])).toEqual({
-            stdout: [],
-            stderr: [
-                expect.stringMatching(
-                    /refusing to open the "libsql" database: it is remote/
-                ),
+            stdout: [
+                `[astromech db:generate] generated ${join(migrationsDir, '0000_migration.ts')}`,
             ],
-            exitCode: 1,
+            stderr: [],
+            exitCode: 0,
         });
-        await expect(readdir(migrationsDir)).rejects.toThrow(/ENOENT/);
     });
 });

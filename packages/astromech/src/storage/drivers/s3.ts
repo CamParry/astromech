@@ -8,12 +8,14 @@ import type {
     StorageDriver,
     StorageList,
     StorageObject,
+    StoragePutOptions,
     StorageRange,
     StorageStat,
 } from '@/types/index';
 import { AwsClient } from 'aws4fetch';
 import { resolveEnv } from '@/env';
 import { AstromechError } from '@/errors/astromech-error';
+import { fixedLengthStream, toBytes } from '@/utilities/bytes';
 
 export type S3Options = {
     /** Falls back to `S3_ENDPOINT` on Node. Required on Workers. */
@@ -147,20 +149,42 @@ export function s3(options: S3Options): StorageDriver {
     return {
         name: 's3',
 
+        /**
+         * `PutObject` refuses a chunked body with no Content-Length, so a stream
+         * is sent as it is only with `contentLength`, and otherwise held in
+         * memory first.
+         */
         async put(
             key: string,
             body: ReadableStream | Uint8Array,
-            opts?: { contentType?: string }
+            opts?: StoragePutOptions
         ): Promise<void> {
             const { client } = resolve();
+            const url = objectUrl(key);
             const contentType = opts?.contentType;
-            const res = await client.fetch(objectUrl(key), {
-                method: 'PUT',
-                body: body as BodyInit,
-                ...(contentType !== undefined
-                    ? { headers: { 'content-type': contentType } }
-                    : {}),
-            });
+            const contentLength = opts?.contentLength;
+            const headers: Record<string, string> = {};
+            if (contentType !== undefined) headers['content-type'] = contentType;
+
+            let res: Response;
+            if (body instanceof ReadableStream && contentLength !== undefined) {
+                // Node's fetch sends the header; a Worker's ignores it and needs
+                // a `FixedLengthStream`. Sent once, without aws4fetch's retry on
+                // a 5xx, because a stream that has been read cannot be resent.
+                headers['content-length'] = String(contentLength);
+                const init = {
+                    method: 'PUT',
+                    body: (fixedLengthStream(body, contentLength) ?? body) as BodyInit,
+                    headers,
+                };
+                res = await fetch(await client.sign(url, init));
+            } else {
+                res = await client.fetch(url, {
+                    method: 'PUT',
+                    body: (await toBytes(body)) as BodyInit,
+                    headers,
+                });
+            }
             if (!res.ok) throw await s3Error('put', key, res);
         },
 

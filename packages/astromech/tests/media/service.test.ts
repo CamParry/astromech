@@ -3,11 +3,13 @@ import type { MockInstance } from 'vitest';
 import {
     createTestDb,
     createTestStorage,
+    failWritesTo,
     makeTestConfig,
     setupTestConfig,
 } from '@tests/harness';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { currentServices } from '@/app-context/services';
+import { mediaTable } from '@/database/tables';
 
 const mediaService = currentServices.media;
 
@@ -125,5 +127,27 @@ describe('mediaService.replace', () => {
         expect(deleted).toHaveBeenCalledWith(`${m.id}.jpg`);
         expect(await stored(`${m.id}.jpg`)).toBe(false);
         expect(await stored(`${m.id}.png`)).toBe(true);
+    });
+
+    it('keeps the old original when the row update fails', async () => {
+        const m = await mediaService.upload({
+            file: new File([jpegBytes() as BlobPart], 'photo.jpg', {
+                type: 'image/jpeg',
+            }),
+        });
+        const stopFailing = await failWritesTo(mediaTable, 'update');
+
+        await expect(
+            mediaService.replace({
+                id: m.id,
+                file: new File([jpegBytes() as BlobPart], 'photo.png', {
+                    type: 'image/png',
+                }),
+            })
+        ).rejects.toThrow('boom');
+        await stopFailing();
+
+        expect((await mediaService.get({ id: m.id }))?.filename).toBe('photo.jpg');
+        expect(await stored(`${m.id}.jpg`)).toBe(true);
     });
 });

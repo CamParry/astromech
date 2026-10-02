@@ -105,10 +105,11 @@ locally, below, covers `wrangler dev`.
 
 Migrations are applied by command, never on boot. D1 reports itself remote
 whether it is the real database or wrangler's local emulation, and the CLI
-refuses a remote database by default, so both commands need `--allow-remote`:
+refuses to open a remote database by default, so `db:init` needs
+`--allow-remote`. `db:generate` never opens the database and takes no flag:
 
 ```
-astromech db:generate --allow-remote
+astromech db:generate
 astromech db:init --allow-remote
 ```
 

@@ -8,6 +8,7 @@ import type {
     StorageDriver,
     StorageList,
     StorageObject,
+    StoragePutOptions,
     StorageRange,
     StorageStat,
 } from '@/types/index';
@@ -78,7 +79,7 @@ export function filesystem(options: FilesystemOptions): StorageDriver {
         async put(
             key: string,
             body: ReadableStream | Uint8Array,
-            opts?: { contentType?: string }
+            opts?: StoragePutOptions
         ): Promise<void> {
             void opts;
             const dest = join(dir, key);

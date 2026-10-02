@@ -127,9 +127,11 @@ npx astromech db:rebaseline --collapse   # fold the whole chain into the baselin
 
 Without `--collapse` it refuses to run when the chain has anything past the
 baseline, because those migrations would replay on top of the file it rewrote.
-Blocks for tables you wrote by hand — anything with no table definition, under
-its `// ── <table> ──` banner — are copied across untouched; if the banners
-aren't there, the command refuses rather than guessing.
+It splits the baseline on its `// ── <table> ──` banners, which `db:generate`
+writes when it creates the first migration. Blocks for tables you wrote by hand
+— anything with no table definition, under its own banner — are copied across
+untouched; if a statement sits outside a banner, the command refuses rather than
+guessing.
 
 The files it writes are generated source, not formatted source, so run your
 formatter afterwards.

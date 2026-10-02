@@ -10,8 +10,9 @@ import { defineCommand } from 'citty';
 import { resolveMigrationsDir } from '@/database/app-migrations';
 import { rebaselineMigrations } from '@/database/generate';
 import { CORE_TABLES } from '@/database/tables';
-import { configArgs, toAllowRemoteOption } from '../common-args';
-import { loadConfig } from '../config';
+import { pluralise } from '@/utilities/strings';
+import { configPathArgs } from '../common-args';
+import { loadConfigWithoutDrivers } from '../config';
 
 export default defineCommand({
     meta: {
@@ -23,13 +24,10 @@ export default defineCommand({
             type: 'boolean',
             description: 'Fold every migration past the baseline into it',
         },
-        ...configArgs,
+        ...configPathArgs,
     },
     async run({ args }) {
-        const { resolved: config } = await loadConfig(
-            args.config,
-            toAllowRemoteOption(args)
-        );
+        const { resolved: config } = await loadConfigWithoutDrivers(args.config);
         const folder = config.migrationsDir;
 
         let result;
@@ -49,7 +47,7 @@ export default defineCommand({
 
         console.log(
             `[astromech db:rebaseline] rewrote ${join(folder, `${result.tag}.ts`)} — ` +
-                `${result.emitted.length} table(s) re-emitted, ` +
+                `${pluralise(result.emitted.length, 'table')} re-emitted, ` +
                 `${result.preserved.length} copied verbatim (${result.preserved.join(', ') || 'none'})`
         );
         for (const file of result.deleted) {

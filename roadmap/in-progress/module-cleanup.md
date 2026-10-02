@@ -93,8 +93,7 @@ the repository copies.
       `entries/methods/duplicate.ts` writes its copy without either (no field
       parse, no create hooks). Share one derivation.
 - [ ] Smaller: the two identical `VersionsPanel` wrappers in the admin; the two
-      no-op cron drivers; `quoteName`/`quoteLiteral` in `packages/schema-engine`;
-      the exclusion count in the MCP and CLI `methods` listings.
+      no-op cron drivers; `quoteName`/`quoteLiteral` in `packages/schema-engine`.
 
 ## Code in the wrong place
 

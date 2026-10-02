@@ -17,6 +17,7 @@ import type {
     PluginServiceNamespace,
     ResolvedConfig,
     ResolvedPluginIdentity,
+    StoragePutOptions,
     TypedEntriesService,
     TypedGlobalsService,
 } from '@/types/index';
@@ -37,6 +38,7 @@ import { typedServices } from '@/services/typed-services';
 import { listAll } from '@/storage/prefix';
 import { getStorageDriver } from '@/storage/registry';
 import { log } from '@/utilities/log';
+import { pluralise } from '@/utilities/strings';
 
 // Registry lives on globalThis, shared across the package's entry chunks.
 type RegisteredRawRoute = { identity: ResolvedPluginIdentity; route: PluginRawRoute };
@@ -129,8 +131,10 @@ export async function bootPlugins(defs: PluginDefinition[]): Promise<void> {
         const missing = (def.requiredEnv ?? []).filter((key) => !env[key]);
         if (missing.length > 0) {
             throw new Error(
-                `Astromech plugin "${def.package}" requires missing env var(s): ` +
-                    `${missing.join(', ')}. Set them in your environment or .env file.`
+                `Astromech plugin "${def.package}" is missing ` +
+                    `${pluralise(missing.length, 'required env var')}: ` +
+                    `${missing.join(', ')}. Set ${missing.length === 1 ? 'it' : 'them'} ` +
+                    'in your environment or .env file.'
             );
         }
 
@@ -304,7 +308,7 @@ export function createPluginContext(
             put: (
                 key: string,
                 body: ReadableStream | Uint8Array,
-                opts?: { contentType?: string }
+                opts?: StoragePutOptions
             ) => getStorageDriver().put(PREFIX + key, body, opts),
             get: (key: string) => getStorageDriver().get(PREFIX + key),
             delete: (key: string) => getStorageDriver().delete(PREFIX + key),

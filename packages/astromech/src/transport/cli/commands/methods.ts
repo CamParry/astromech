@@ -4,7 +4,7 @@ import type { ManifestMethod } from '@/types/index';
 import { defineCommand } from 'citty';
 import { getRole } from '@/permissions/roles';
 import { annotateManifest } from '@/policies/annotate-manifest';
-import { filterMethods } from '@/policies/method-filter';
+import { countExclusions, filterMethods } from '@/policies/method-filter';
 import { configArgs, jsonArgs } from '../common-args';
 import { withApplication } from '../config';
 import { filterArgs, toMethodFilter } from '../filter-args';
@@ -21,11 +21,7 @@ import { bootedManifest } from '../methods';
 function printExclusionSummary(excluded: ExcludedMethod[]): void {
     if (excluded.length === 0) return;
 
-    const counts = new Map<string, number>();
-    for (const { reason } of excluded) {
-        counts.set(reason, (counts.get(reason) ?? 0) + 1);
-    }
-    const breakdown = [...counts]
+    const breakdown = [...countExclusions(excluded)]
         .map(([reason, count]) => `${count} ${reason}`)
         .join('; ');
     console.log(`\n${excluded.length} excluded by surface policy: ${breakdown}`);
@@ -43,7 +39,7 @@ export default defineCommand({
     args: {
         filter: {
             type: 'string',
-            description: 'Case-insensitive substring match on method name',
+            description: 'Case-insensitive substring match on method id or name',
         },
         source: {
             type: 'string',
@@ -69,7 +65,11 @@ export default defineCommand({
             }
             if (args.filter !== undefined) {
                 const f = args.filter.toLowerCase();
-                listed = listed.filter((m) => m.name.toLowerCase().includes(f));
+                // The id as well as the name: only the id names an entry method's type.
+                listed = listed.filter(
+                    (m) =>
+                        m.id.toLowerCase().includes(f) || m.name.toLowerCase().includes(f)
+                );
             }
 
             // The method filter runs after the view filters, so `excluded` is
@@ -126,7 +126,8 @@ export default defineCommand({
                           ? 'dynamic'
                           : 'none';
 
-                console.log(`${m.name}${effectPart}  (permission: ${permission})`);
+                // The id, as `call` takes it and the MCP server titles its tools.
+                console.log(`${m.id}${effectPart}  (permission: ${permission})`);
             }
 
             printExclusionSummary(filtered.excluded);

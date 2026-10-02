@@ -145,9 +145,9 @@ export async function createTempSite(): Promise<string> {
 export type SiteConfigOptions = {
     /**
      * The libsql database file the config's driver opens. Leave it out for a
-     * command that registers the database but never queries it (codegen):
-     * `getInstance()` then returns a stand-in that throws on any property
-     * read, so no file is opened and a query fails the run.
+     * command that never queries the database (codegen): `getInstance()` then
+     * returns a stand-in that throws on any property read, so no file is
+     * opened and a query fails the run.
      */
     database?: string;
     /** The config's `migrationsDir`. */

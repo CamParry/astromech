@@ -9,7 +9,7 @@
         "preview": "wrangler dev",
         "typecheck": "astro sync && tsc --noEmit",
         "check:config": "tsx astromech.config.ts",
-        "db:generate": "tsx --tsconfig ../../packages/astromech/tsconfig.json ../../packages/astromech/src/transport/cli/index.ts db:generate --allow-remote",
+        "db:generate": "tsx --tsconfig ../../packages/astromech/tsconfig.json ../../packages/astromech/src/transport/cli/index.ts db:generate",
         "db:init": "tsx --tsconfig ../../packages/astromech/tsconfig.json ../../packages/astromech/src/transport/cli/index.ts db:init --allow-remote"
     },
     "dependencies": {

@@ -16,7 +16,11 @@ import { createClient } from '@libsql/client';
 import { LibsqlDialect } from '@libsql/kysely-libsql';
 import { Kysely, sql } from 'kysely';
 import { describe, expect, it } from 'vitest';
-import { generateMigrationFromOps, generateMigrations } from '../src/generate';
+import {
+    generateMigrationFromOps,
+    generateMigrations,
+    rebaselineMigrations,
+} from '../src/generate';
 import { col, index, snap, table } from './_support/tables';
 
 async function withTempDir(fn: (dir: string) => Promise<void>): Promise<void> {
@@ -65,6 +69,35 @@ describe('generateMigrations', () => {
             const indexSource = await readFile(resolve(dir, 'index.ts'), 'utf-8');
             expect(indexSource).toContain("import * as m0000 from './0000_init';");
             expect(indexSource).toContain("'0000_init': m0000,");
+        });
+    });
+
+    it('writes a first migration of new tables with the banners db:rebaseline splits on', async () => {
+        await withTempDir(async (dir) => {
+            const tables = snap(
+                table('widgets', [col.id(), col.text('name')], {
+                    indexes: [index('idx_widgets_name', ['name'])],
+                }),
+                table('gadgets', [col.id()])
+            );
+            await generateMigrations({
+                dir,
+                snapshot: tables,
+                dialect: 'sqlite',
+                name: 'init',
+            });
+
+            const source = await readFile(resolve(dir, '0000_init.ts'), 'utf-8');
+            expect(source).toMatch(/^\s*\/\/ ── gadgets ─+$/m);
+            expect(source).toMatch(/^\s*\/\/ ── widgets ─+$/m);
+
+            const result = await rebaselineMigrations({
+                dir,
+                snapshot: tables,
+                dialect: 'sqlite',
+            });
+            expect(result.emitted.sort()).toEqual(['gadgets', 'widgets']);
+            expect(result.preserved).toEqual([]);
         });
     });
 

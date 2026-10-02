@@ -148,12 +148,16 @@ async function writeMigration(opts: {
             : 0;
     const tag = `${String(idx).padStart(4, '0')}_${kebabCase(opts.name)}`;
 
+    // A first migration that only creates tables is the chain's baseline, so it
+    // gets the banner per table that `rebaselineMigrations` splits it on.
+    const created = ops.flatMap((op) => (op.kind === 'createTable' ? [op.table] : []));
+    const source =
+        idx === 0 && created.length === ops.length
+            ? renderBaselineFile(created.map(renderTableBlock))
+            : renderMigrationFile(ops, opts.dialect);
+
     await mkdir(dir, { recursive: true });
-    await writeFile(
-        resolve(dir, `${tag}.ts`),
-        renderMigrationFile(ops, opts.dialect),
-        'utf-8'
-    );
+    await writeFile(resolve(dir, `${tag}.ts`), source, 'utf-8');
 
     journal.entries.push({ idx, tag, when: Date.now() });
     await writeFile(
@@ -299,7 +303,7 @@ export async function rebaselineMigrations(opts: {
     const later = entries.slice(1);
     if (later.length > 0 && opts.collapse !== true) {
         throw new Error(
-            `the chain has ${later.length} migration(s) past the baseline ` +
+            `the chain has ${later.length} ${later.length === 1 ? 'migration' : 'migrations'} past the baseline ` +
                 `(${later.map((e) => e.tag).join(', ')}), so re-emitting the baseline alone ` +
                 'would leave them replaying on top of it. Pass --collapse to fold the whole ' +
                 'chain into a fresh baseline instead.'
@@ -336,7 +340,11 @@ export async function rebaselineMigrations(opts: {
         emitted.push(name);
     }
 
-    await writeFile(path, renderBaselineFile(sections), 'utf-8');
+    await writeFile(
+        path,
+        renderBaselineFile(sections, renderRebaselineComment()),
+        'utf-8'
+    );
 
     const deleted: string[] = [];
     if (later.length > 0) {
@@ -623,7 +631,8 @@ function renderTableBlock(table: SnapshotTable): string {
     return [banner, ...renderTableStatements(table).map(renderStatementLine)].join('\n');
 }
 
-function renderBaselineFile(sections: string[]): string {
+/** The doc comment over a baseline `rebaselineMigrations` rewrote. */
+function renderRebaselineComment(): string[] {
     const today = new Date().toISOString().slice(0, 10);
     return [
         '/**',
@@ -634,6 +643,13 @@ function renderBaselineFile(sections: string[]): string {
         ' * from the previous baseline. Rewriting history is legal only before a release.',
         ' */',
         '',
+    ];
+}
+
+/** A baseline module: `up()` holding one table section per entry, under `comment`'s lines. */
+function renderBaselineFile(sections: string[], comment: string[] = []): string {
+    return [
+        ...comment,
         "import { sql, type Kysely } from 'kysely';",
         '',
         'export async function up(db: Kysely<unknown>): Promise<void> {',

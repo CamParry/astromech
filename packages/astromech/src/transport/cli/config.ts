@@ -1,7 +1,7 @@
 /**
  * How a CLI command reaches the site: `bootApplication` boots it through
- * `createAstromech`, and `loadConfig` only loads and resolves the config, for
- * the commands that must run before the application can (`db:*`, codegen).
+ * `createAstromech`; `loadConfig` and `loadConfigWithoutDrivers` only load and
+ * resolve the config, for the commands that run before it can (`db:*`, codegen).
  */
 
 import type { Astromech } from '@/astromech';
@@ -49,32 +49,39 @@ export async function withApplication(
 }
 
 /**
- * Load the config file once, guard it, resolve it, and register the config and
- * its drivers the way boot does, without booting. For the commands the
- * application cannot boot without (`db:*`) and those that only read the config.
- *
- * `allowRemote` is `--allow-remote`: a remote database is refused by default so a
- * command meant for a dev machine cannot hit production by inheriting whatever
- * `DATABASE_URL` happens to be exported.
+ * `loadConfigWithoutDrivers`, guard the database, then register the config's
+ * drivers the way boot does, without booting. For the commands that open the
+ * database before the application can boot (`db:init`, `db:status`, `plugin:purge`).
  */
 export async function loadConfig(
     configPath?: string,
     options?: LoadOptions
 ): Promise<{ config: AstromechConfig; resolved: ResolvedConfig }> {
+    const loaded = await loadConfigWithoutDrivers(configPath);
+    assertLocalDatabase(loaded.config, options?.allowRemote === true);
+    // The raw config: `resolveConfig` strips the drivers from its result.
+    registerDrivers(loaded.config);
+    return loaded;
+}
+
+/**
+ * Load the config file once, then resolve and register the config, opening no
+ * driver. For the commands that only read the config: codegen, `permissions`,
+ * `db:generate` and `db:rebaseline`.
+ */
+export async function loadConfigWithoutDrivers(
+    configPath?: string
+): Promise<{ config: AstromechConfig; resolved: ResolvedConfig }> {
     const config = await loadConfigFile(process.cwd(), configPath);
-    assertLocalDatabase(config, options?.allowRemote === true);
-
-    // Before resolving: `resolveConfig` strips the drivers from the result.
-    registerDrivers(config);
-
     const resolved = resolveConfig(config);
     setConfig(resolved);
     return { config, resolved };
 }
 
 /**
- * Refuse a remote database unless the caller passed `--allow-remote`. Feature-detected
- * like `dump`/`restore`: a driver with no `isRemote` reads as local.
+ * Refuse a remote database unless the caller passed `--allow-remote`, so a command
+ * meant for a dev machine cannot write to production through an exported
+ * `DATABASE_URL`. A driver with no `isRemote` reads as local.
  */
 export function assertLocalDatabase(config: AstromechConfig, allowRemote: boolean): void {
     if (allowRemote) return;

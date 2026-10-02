@@ -81,13 +81,24 @@ export type StorageList = {
     cursor?: string;
 };
 
+/** Options for `StorageDriver.put`. */
+export type StoragePutOptions = {
+    contentType?: string;
+    /**
+     * The body's length in bytes, when the caller knows it. A driver whose
+     * backend needs a length holds a stream given without one in memory.
+     */
+    contentLength?: number;
+};
+
 export type StorageDriver = {
     name: string;
 
+    /** Store `body` under `key`. Any stream is accepted, of known length or not. */
     put(
         key: string,
         body: ReadableStream | Uint8Array,
-        opts?: { contentType?: string }
+        opts?: StoragePutOptions
     ): Promise<void>;
     get(key: string, opts?: { range?: StorageRange }): Promise<StorageObject | null>;
     stat(key: string): Promise<StorageStat | null>;
