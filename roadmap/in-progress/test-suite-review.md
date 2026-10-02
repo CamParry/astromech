@@ -83,10 +83,12 @@ audit cites them by number.
 5. **A bug fix starts with a failing test that reproduces the bug** (Strapi's
    `AGENTS.md`, WordPress's `@ticket` links).
 6. **Library code tests its public types.** Pocock says this pays for
-   libraries and rarely for apps; Payload does it. Here, inline `expectTypeOf`
-   in an ordinary test file is enough, because `typecheck` already compiles
-   `tests/` through each package's `tsconfig.test.json`; a separate
-   `*.test-d.ts` file adds nothing.
+   libraries and rarely for apps; Payload does it. Here a type-only test
+   lives in a `*.test-d.ts` file beside its runtime file: `typecheck`
+   compiles it through each package's `tsconfig.test.json` and vitest never
+   runs it. That keeps vitest's `requireAssertions` on, so every runtime test
+   must assert something. `expectTypeOf` inside a runtime test that also
+   asserts is fine.
 
 ### Test doubles
 
@@ -369,22 +371,32 @@ harness and eight test files and every later stage runs faster for it.
 
 ### Stage 3: agent guardrails
 
-- [ ] Make `pnpm -F <package> test:run -- <path>` run only that file, or fail
+- [x] Make `pnpm -F <package> test:run -- <path>` run only that file, or fail
       loudly. Today pnpm passes the `--` through and vitest runs the whole
       suite (160 to 200 s instead of about 2 s). Without the `--` it already
       filters. Root `AGENTS.md` and the `testing` skill name the working
-      command, but agents reach for this one first.
-- [ ] Share one base vitest config across packages for the settings that should
+      command, but agents reach for this one first. It now fails in 0.4 s and
+      names the right command: vitest's CLI parser moves everything after `--`
+      out of the file filters, and pnpm 11 has no setting to drop it.
+- [x] Share one base vitest config across packages for the settings that should
       not differ: `requireAssertions`, `allowOnly: false`, timeouts, the
       console policy and `restoreMocks`. Record why any package differs.
-- [ ] Try the source-resolving plugins on threads without per-file isolation,
-      and keep whichever is faster.
-- [ ] A check in `report:drift` that lists, for the branch, removed `expect`
+      `packages/astromech/tests/_support/vitest-base-config.ts`; schema-engine
+      keeps a commented copy because it sits below core. Four type-only tests
+      moved to `*.test-d.ts` files (principle 6).
+- [x] Try the source-resolving plugins on threads without per-file isolation,
+      and keep whichever is faster. Threads saved 12 to 14%; turning isolation
+      off saved nothing more, so the plugins run on threads, isolated
+      (`DECISIONS.md`).
+- [x] A check in `report:drift` that lists, for the branch, removed `expect`
       calls, new `.skip` or `.only`, new `vi.mock` calls and lowered coverage
       thresholds, so a reviewer sees them.
-- [ ] Decide whether `verify:fast` runs only the packages a branch touched plus
+- [x] Decide whether `verify:fast` runs only the packages a branch touched plus
       their dependents (a small script over `git diff`), now that each package
-      suite is fast.
+      suite is fast. No: `verify:fast` takes 100 to 110 s, but lint (about
+      90 s) and typecheck (55 to 72 s) finish close behind the tests, so
+      running fewer packages saves 10 to 20 s and risks missing a dependent.
+      Type-aware lint is the next thing to speed up.
 
 ### Stage 4: clean-up
 
