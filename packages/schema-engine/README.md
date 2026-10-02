@@ -86,8 +86,14 @@ ALTER TABLE `__new_x` RENAME TO `x`
 CREATE INDEX …                                    -- every index recreated
 ```
 
-No self-managed `BEGIN`/`COMMIT`: Kysely's `Migrator` already wraps each
-migration in a transaction, and `defer_foreign_keys` is transaction-scoped.
+No self-managed `BEGIN`/`COMMIT`. `defer_foreign_keys` lasts only until the
+end of a transaction, and Kysely's `Migrator` opens none on SQLite (its
+`SqliteAdapter` reports no transactional DDL), so under `migrateToLatest` each
+statement runs on its own and the pragma has no effect. Rebuilding a table that
+other rows point at therefore fails at its `DROP TABLE` while foreign keys are
+on. A dropped table goes after the tables that point at it: after their own
+drop, or after the rebuild that removes their key.
+
 Purely additive changes (a nullable column, or a NOT NULL column with a literal
 default, that is not a primary key) fast-path to native `ALTER TABLE ADD COLUMN`
 / `CREATE INDEX` / `DROP INDEX` instead.

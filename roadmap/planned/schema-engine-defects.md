@@ -32,12 +32,29 @@ fixed.
 - [x] **`renderLiteral` breaks on a NUL in a string.** SQLite stops reading at
       the NUL and fails with `unrecognized token`. It fails loudly, so it is
       not an injection risk.
+- [x] **Dropping a referenced table fails with foreign keys on.** Dropping it
+      together with the key pointing at it failed, because the `DROP TABLE`
+      ran before the rebuild that removes the key; dropping it together with
+      the table pointing at it failed when the parent came first. Under a
+      cascading key the early drop deleted the child rows instead. A dropped
+      table now goes after the tables that point at it.
 - [ ] **Rebuilding a referenced table fails with foreign keys on.** Core runs
-      with foreign keys on. Rebuilding a table that other tables' rows point
-      at fails at commit: `defer_foreign_keys` does not clear the violation
-      count the `DROP` adds. Dropping a referenced table together with the key
-      pointing at it also fails, because the `DROP TABLE` runs before the
-      rebuild that removes the key. Found by seeding the parity property.
+      with foreign keys on. Inside one transaction, the rebuild fails at
+      commit: `defer_foreign_keys` does not clear the violation count the
+      `DROP` adds, and the `RENAME` does not lower it. Outside one it fails at
+      the `DROP TABLE`, and that is how every site runs it: Kysely's
+      `SqliteAdapter` reports no transactional DDL, so `Migrator` runs each
+      statement on its own on libsql (local and remote) and D1, the pragma has
+      no effect, and a failure leaves `__new_x` behind. Tested 2026-10-02:
+      `PRAGMA defer_foreign_keys = false` before the commit clears the count on
+      libsql and on D1 (Cloudflare's documented pattern), and
+      `PRAGMA foreign_key_check` still reports a real dangling reference; D1
+      ignores `PRAGMA foreign_keys = OFF`, and a pooled or remote libsql client
+      does not keep it between statements, so SQLite's 12-step procedure
+      cannot run through Kysely. Fixing it needs the rebuild in one
+      transaction: on libsql an adapter that reports transactional DDL (then
+      `Migrator` wraps the run), on D1 a `batch()`, which a migration's `up(db)`
+      cannot reach today. Found by seeding the parity property.
 - [x] **A moved column produces no ops.** Reordering a table's columns with no
       other change diffs as nothing, so the migrated table keeps the old order
       while a fresh build has the new one (the same contract as the

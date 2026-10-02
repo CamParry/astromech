@@ -166,8 +166,9 @@ async function emit(db: Kysely<unknown>, snapshot: Snapshot): Promise<void> {
 }
 
 /** Build `a`, seed it, apply `diffSnapshots(a, b)` to it in one transaction
- *  (as Kysely's `Migrator` does, which `defer_foreign_keys` relies on), build
- *  `b` fresh beside it, and hand both databases to `check`. */
+ *  (which `defer_foreign_keys` relies on, though Kysely's `Migrator` opens none
+ *  on SQLite: see `roadmap/planned/schema-engine-defects.md`), build `b` fresh
+ *  beside it, and hand both databases to `check`. */
 async function migrateAndEmit(
     a: Snapshot,
     b: Snapshot,
@@ -222,8 +223,8 @@ function seedRows(t: SnapshotTable): Row[] {
  * reason that lies in the data rather than the migration. A table is left
  * empty when:
  *
- * - it points at a table the ops drop or rebuild: either fails at commit once
- *   a row points there (see the failing case below);
+ * - it points at a table the ops rebuild, which fails at commit once a row
+ *   points there (see the failing case below);
  * - `b` gives it a key with no `alpha` in `a`, so the key would point at an
  *   empty new table;
  * - `b` gives a key column a default the rows take (a new column, or NULL
@@ -238,14 +239,10 @@ function canSeed(
     a: Snapshot,
     ops: TableOp[]
 ): boolean {
-    const replaced = new Set(
-        ops.flatMap((op) => {
-            if (op.kind === 'dropTable') return [op.name];
-            if (op.kind === 'rebuildTable') return [op.table.name];
-            return [];
-        })
+    const rebuilt = new Set(
+        ops.flatMap((op) => (op.kind === 'rebuildTable' ? [op.table.name] : []))
     );
-    if (prev.fks.some((f) => replaced.has(f.targetTable))) return false;
+    if (prev.fks.some((f) => rebuilt.has(f.targetTable))) return false;
     const added = ops.flatMap((op) =>
         op.kind === 'addColumn' && op.table === prev.name ? [op.column] : []
     );
@@ -280,9 +277,13 @@ function seedBoth(a: Snapshot, b: Snapshot) {
         );
     });
     return async (migrated: Kysely<unknown>, fresh: Kysely<unknown>): Promise<void> => {
+        const filled = new Set<string>();
         for (const prev of Object.values(a.tables)) {
             const next = b.tables[prev.name];
             if (!canSeed(prev, next, a, ops)) continue;
+            // `alpha` comes first, and a row's key needs `alpha`'s rows.
+            if (prev.fks.some((f) => !filled.has(f.targetTable))) continue;
+            filled.add(prev.name);
             const seeded = seedRows(prev);
             for (const row of oneRow ? seeded.slice(1) : seeded) {
                 await insert(migrated, prev.name, row);
@@ -390,12 +391,15 @@ describe('diffSnapshots properties', () => {
                 const dropped = ops.flatMap((op) =>
                     op.kind === 'dropTable' ? [op.name] : []
                 );
+                // Drops follow the foreign keys rather than snapshot order.
                 expect(
-                    { created, dropped },
+                    { created, dropped: dropped.sort() },
                     'property: table-level ops follow the table sets'
                 ).toEqual({
                     created: Object.keys(b.tables).filter((n) => !(n in a.tables)),
-                    dropped: Object.keys(a.tables).filter((n) => !(n in b.tables)),
+                    dropped: Object.keys(a.tables)
+                        .filter((n) => !(n in b.tables))
+                        .sort(),
                 });
             })
         );
@@ -498,27 +502,29 @@ describe('diffSnapshots properties', () => {
         }
     );
 
-    // Found by seeding the parity property, kept as plain cases. With foreign
-    // keys on, as core requires, dropping a table counts each row that points
-    // at it as a violation, and `defer_foreign_keys` only moves the check to
-    // the commit. A rebuild's `RENAME` brings the rows back under the old name
-    // but does not clear that count, so the commit fails. A dropped table whose
-    // reference goes in the same change fails too: the `DROP TABLE` comes
-    // before the rebuild that removes the key, and before any deferral.
+    // Found by seeding the parity property. With foreign keys on, as core
+    // requires, dropping a table that rows point at either fails at once or,
+    // under `defer_foreign_keys`, counts each such row as a violation for the
+    // commit. So a dropped table goes after the tables that point at it: after
+    // the rebuild that removes their key, or after their own `DROP TABLE`.
     const alpha = table('alpha', [col.id(), col.text('c1')]);
     const child = table('beta', [col.id(), col.text('c1')], { fks: [fk('c1', 'alpha')] });
-    const referenced = [
-        {
-            change: 'rebuilds a table another table points at',
-            a: snap(alpha, child),
-            b: snap(table('alpha', [col.id()]), child),
-        },
-        {
-            change: 'drops a table along with the key pointing at it',
-            a: snap(alpha, child),
-            b: snap(table('beta', [col.id(), col.text('c1')])),
-        },
-    ];
+    const rebuildsReferenced = {
+        change: 'rebuilds a table another table points at',
+        a: snap(alpha, child),
+        b: snap(table('alpha', [col.id()]), child),
+    };
+    const dropsWithKey = {
+        change: 'drops a table along with the key pointing at it',
+        a: snap(alpha, child),
+        b: snap(table('beta', [col.id(), col.text('c1')])),
+    };
+    const dropsWithTable = {
+        change: 'drops a table along with the table pointing at it',
+        a: snap(alpha, child),
+        b: snap(),
+    };
+    const referenced = [rebuildsReferenced, dropsWithKey, dropsWithTable];
     async function seedReference(migrated: Kysely<unknown>): Promise<void> {
         await insert(migrated, 'alpha', { id: 'a', c1: null });
         await insert(migrated, 'beta', { id: 'b', c1: 'a' });
@@ -536,9 +542,33 @@ describe('diffSnapshots properties', () => {
         }
     );
 
-    it.fails.each(referenced)(
-        'keeps the rows when it $change and a row points there',
-        async ({ a, b }) => {
+    it.each([
+        { ...dropsWithKey, kept: { beta: [{ id: 'b', c1: 'a' }] } },
+        { ...dropsWithTable, kept: {} },
+    ])(
+        'keeps the other rows when it $change and a row points there',
+        async ({ a, b, kept }) => {
+            await migrateAndEmit(
+                a,
+                b,
+                async (migrated, fresh) => {
+                    expect(await describeSchema(migrated)).toEqual(
+                        await describeSchema(fresh)
+                    );
+                    expect(await dumpRows(migrated)).toEqual(kept);
+                },
+                seedReference
+            );
+        }
+    );
+
+    // Still open (`roadmap/planned/schema-engine-defects.md`). The rebuild's
+    // `RENAME` brings the rows' target back under the old name, but nothing
+    // takes the `DROP TABLE`'s violations off the count, so the commit fails.
+    it.fails(
+        'keeps the rows when it rebuilds a table another table points at and a row points there',
+        async () => {
+            const { a, b } = rebuildsReferenced;
             await migrateAndEmit(
                 a,
                 b,
