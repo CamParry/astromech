@@ -32,6 +32,7 @@ import React, { useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { buildDefaultValues } from '../../utilities/defaults';
 import { FieldList } from '../entries/entry-fields-renderer';
+import { useFieldControl } from './field-control-context';
 import { InlineTitle } from './inline-title';
 import './repeater-field.css';
 
@@ -240,6 +241,7 @@ export function RepeaterField({
     disabled,
 }: BaseFieldProps): React.ReactElement {
     const { t } = useTranslation();
+    const { labelId } = useFieldControl();
     const fields = field.fields || [];
     const arrayValue = Array.isArray(value) ? value : [];
     const [items, setItems] = useState<ItemWithId[]>(
@@ -348,7 +350,7 @@ export function RepeaterField({
     const sortableIds = items.map((i) => i._id);
 
     return (
-        <div className="am-repeater">
+        <div className="am-repeater" role="group" aria-labelledby={labelId}>
             <DndContext
                 sensors={sensors}
                 collisionDetection={closestCenter}

@@ -6,6 +6,12 @@ export type FieldControlState = {
     hasWarning?: boolean;
     /** Id of whichever message the wrapper rendered, error or warning. */
     errorId: string | undefined;
+    /** Id of the field's description, when it has one. */
+    descriptionId?: string | undefined;
+    /** Id of the field's label. */
+    labelId?: string | undefined;
+    /** Id the label's `htmlFor` points at, when the label names one control. */
+    controlId?: string | undefined;
 };
 
 const FieldControlContext = React.createContext<FieldControlState>({
@@ -29,27 +35,38 @@ export function FieldControlProvider({
 }
 
 /**
- * Lets a control self-mark from the enclosing `FieldWrapper`'s message
- * state. A warning never sets `aria-invalid` (it's advisory, not
- * rejected); outside a wrapper the context default yields nothing.
+ * Lets a control self-mark from the enclosing `FieldWrapper`'s state: the ids
+ * that name it from the label and describe it by the description and message.
+ * A warning never sets `aria-invalid`; outside a wrapper every id is undefined.
  */
 export function useFieldControl(): {
     hasError: boolean;
     hasWarning: boolean;
     ariaProps: { 'aria-invalid'?: true; 'aria-describedby'?: string };
+    /** The `id` for the field's one control, which the label points at. */
+    controlId: string | undefined;
+    /** For `aria-labelledby` on a group, or on a control the label cannot point at. */
+    labelId: string | undefined;
 } {
     const {
         hasError,
         hasWarning = false,
         errorId,
+        descriptionId,
+        labelId,
+        controlId,
     } = React.useContext(FieldControlContext);
-    const describedBy = errorId !== undefined ? { 'aria-describedby': errorId } : {};
-    if (hasError) {
-        return {
-            hasError,
-            hasWarning,
-            ariaProps: { 'aria-invalid': true, ...describedBy },
-        };
-    }
-    return { hasError, hasWarning, ariaProps: hasWarning ? describedBy : {} };
+    const describedBy = [descriptionId, errorId].filter((id) => id !== undefined);
+    return {
+        hasError,
+        hasWarning,
+        ariaProps: {
+            ...(hasError ? { 'aria-invalid': true } : {}),
+            ...(describedBy.length > 0
+                ? { 'aria-describedby': describedBy.join(' ') }
+                : {}),
+        },
+        controlId,
+        labelId,
+    };
 }

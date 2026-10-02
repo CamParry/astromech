@@ -1,6 +1,7 @@
 import type { BaseFieldProps } from 'astromech';
 import { useLabel } from '../../i18n/entry-namespace';
 import { MultiSelect } from '../ui/multi-select';
+import { useFieldControl } from './field-control-context';
 
 export function MultiselectField({
     name,
@@ -11,6 +12,7 @@ export function MultiselectField({
     disabled,
 }: BaseFieldProps) {
     const label = useLabel();
+    const { controlId } = useFieldControl();
     const selectedValues = Array.isArray(value) ? value.map(String) : [];
 
     const options: { value: string; label: string }[] =
@@ -31,6 +33,7 @@ export function MultiselectField({
                     val.map((v) => v.value)
                 )
             }
+            id={controlId}
             name={name}
             required={!!required}
             {...(disabled !== undefined ? { disabled } : {})}

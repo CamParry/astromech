@@ -12,6 +12,8 @@ export type MultiSelectProps<T = MultiSelectOption> = {
     onValueChange?: (value: T[]) => void;
     itemToStringValue?: (item: T) => string;
     itemToStringLabel?: (item: T) => string;
+    /** The input's id. Defaults to a generated one. */
+    id?: string | undefined;
     name?: string;
     required?: boolean;
     disabled?: boolean;
@@ -27,6 +29,7 @@ export function MultiSelect<T = MultiSelectOption>({
     onValueChange,
     itemToStringValue,
     itemToStringLabel,
+    id: givenId,
     name,
     required,
     disabled,
@@ -36,7 +39,8 @@ export function MultiSelect<T = MultiSelectOption>({
     const { t } = useTranslation();
     const { ariaProps } = useFieldControl();
     const anchorRef = useRef<HTMLDivElement | null>(null);
-    const id = useId();
+    const generatedId = useId();
+    const id = givenId ?? generatedId;
 
     const selectedValues = value ?? [];
     const placeholderText = placeholder ?? t('fields.multiSelectPlaceholder');

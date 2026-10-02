@@ -1,6 +1,7 @@
 import type { BaseFieldProps } from 'astromech';
 import { useLabel } from '../../i18n/entry-namespace';
 import { CheckboxGroup } from '../ui/checkbox-group';
+import { useFieldControl } from './field-control-context';
 
 export function CheckboxGroupField({
     name,
@@ -10,6 +11,7 @@ export function CheckboxGroupField({
     disabled,
 }: BaseFieldProps) {
     const label = useLabel();
+    const { labelId } = useFieldControl();
 
     const options: { value: string; label: string }[] = (field.options ?? []).map(
         (opt) => {
@@ -22,6 +24,7 @@ export function CheckboxGroupField({
 
     return (
         <CheckboxGroup
+            aria-labelledby={labelId}
             options={options}
             value={checked}
             name={name}

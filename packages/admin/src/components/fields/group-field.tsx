@@ -1,9 +1,11 @@
 import type { BaseFieldProps } from 'astromech';
 import { parseInstancePath } from 'astromech/shared';
 import { FieldList } from '../entries/entry-fields-renderer';
+import { useFieldControl } from './field-control-context';
 import './group-field.css';
 
 export function GroupField({ name, value, field, onChange, disabled }: BaseFieldProps) {
+    const { labelId } = useFieldControl();
     const groupValue =
         typeof value === 'object' && value !== null && !Array.isArray(value)
             ? (value as Record<string, unknown>)
@@ -13,7 +15,11 @@ export function GroupField({ name, value, field, onChange, disabled }: BaseField
         field.boxed === false ? 'am-group-field' : 'am-group-field am-group-field--boxed';
 
     return (
-        <div className={className}>
+        <div
+            className={className}
+            // An unboxed group has no label of its own; a `labelId` here is a parent's.
+            {...(field.boxed !== false && { role: 'group', 'aria-labelledby': labelId })}
+        >
             <FieldList
                 nodes={field.fields ?? []}
                 scope={{

@@ -31,14 +31,14 @@ export function LinkField({ name, value, onChange, disabled }: BaseFieldProps) {
     const link = toLinkValue(value);
     // The two `Input`s pick the error association up from the context themselves;
     // this bare `select` is the one control that has to apply it by hand.
-    const { ariaProps } = useFieldControl();
+    const { ariaProps, labelId } = useFieldControl();
 
     function handleChange(key: keyof LinkValue, val: string) {
         onChange(name, { ...toObject(value), ...link, [key]: val });
     }
 
     return (
-        <div className="am-link-field">
+        <div className="am-link-field" role="group" aria-labelledby={labelId}>
             <div className="am-link-field-row">
                 <label className="am-link-field-label" htmlFor={`${name}--url`}>
                     URL

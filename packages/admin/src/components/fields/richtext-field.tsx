@@ -3,6 +3,7 @@ import type { JSONContent } from '@tiptap/core';
 import type { BaseFieldProps } from 'astromech';
 import React from 'react';
 import { RichTextEditor } from '../ui/rich-text-editor';
+import { useFieldControl } from './field-control-context';
 
 /**
  * Coerce an incoming field value to a valid ProseMirror JSON doc. Passes an
@@ -40,6 +41,7 @@ export function RichtextField({
     onChange,
     disabled,
 }: BaseFieldProps): React.ReactElement {
+    const { labelId } = useFieldControl();
     const allow = field.allow;
     const docValue = coerceToDoc(value);
 
@@ -51,6 +53,7 @@ export function RichtextField({
         onChange: handleChange,
         disabled: disabled ?? false,
         ...(allow !== undefined ? { allow } : {}),
+        ...(labelId !== undefined ? { 'aria-labelledby': labelId } : {}),
         ...(docValue !== undefined ? { value: docValue } : {}),
     };
 

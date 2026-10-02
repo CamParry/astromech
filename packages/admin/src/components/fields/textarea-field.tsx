@@ -1,5 +1,6 @@
 import type { BaseFieldProps } from 'astromech';
 import { Textarea } from '../ui/textarea';
+import { useFieldControl } from './field-control-context';
 import { FieldCount } from './field-count';
 
 export function TextareaField({
@@ -10,11 +11,13 @@ export function TextareaField({
     onChange,
     disabled,
 }: BaseFieldProps) {
+    const { controlId } = useFieldControl();
     const stringValue = typeof value === 'string' ? value : '';
 
     return (
         <>
             <Textarea
+                id={controlId}
                 name={name}
                 value={stringValue}
                 required={required}

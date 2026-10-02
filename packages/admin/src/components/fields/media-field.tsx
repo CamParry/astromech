@@ -63,7 +63,7 @@ export function MediaField({
     onChange,
     disabled,
 }: BaseFieldProps) {
-    const { hasError } = useFieldControl();
+    const { hasError, labelId } = useFieldControl();
     const { t } = useTranslation();
     const multiple = field.multiple === true;
     const accept = typeof field.accept === 'string' ? field.accept : undefined;
@@ -202,7 +202,7 @@ export function MediaField({
     const hasSelection = selectedIds.length > 0;
 
     return (
-        <div className="am-media-picker">
+        <div className="am-media-picker" role="group" aria-labelledby={labelId}>
             {isLoadingItems ? (
                 <Spinner />
             ) : hasSelection ? (

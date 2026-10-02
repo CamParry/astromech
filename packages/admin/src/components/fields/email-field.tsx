@@ -1,5 +1,6 @@
 import type { BaseFieldProps } from 'astromech';
 import { Input } from '../ui/input';
+import { useFieldControl } from './field-control-context';
 
 export function EmailField({
     name,
@@ -8,8 +9,10 @@ export function EmailField({
     onChange,
     disabled,
 }: BaseFieldProps) {
+    const { controlId } = useFieldControl();
     return (
         <Input
+            id={controlId}
             type="email"
             name={name}
             value={typeof value === 'string' ? value : ''}

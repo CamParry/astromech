@@ -17,7 +17,7 @@ export type SelectProps = {
     disabled?: boolean;
     required?: boolean;
     name?: string;
-    id?: string;
+    id?: string | undefined;
     className?: string;
     style?: React.CSSProperties;
     triggerPrefix?: string;

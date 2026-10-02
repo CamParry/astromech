@@ -19,7 +19,7 @@ import {
     Outlet,
     RouterProvider,
 } from '@tanstack/react-router';
-import { act, render, renderHook, waitFor } from '@testing-library/react';
+import { act, render, renderHook } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import i18n from 'i18next';
 import { ConfirmProvider } from '@/admin/components/ui/confirm';
@@ -190,21 +190,6 @@ export function renderAdminHook<T>(
         ),
     });
     return { ...result, queryClient };
-}
-
-/**
- * The form control a field named `name` renders, once it has rendered. A
- * field's `<label>` is not tied to its control, so neither a label nor an
- * accessible name can find it; its `name` attribute can.
- */
-export async function findFieldControl<E extends Element = HTMLInputElement>(
-    name: string
-): Promise<E> {
-    return waitFor(() => {
-        const control = document.querySelector<E>(`[name="${name}"]`);
-        if (control === null) throw new Error(`no control for the field "${name}"`);
-        return control;
-    });
 }
 
 /** The signed-in user `renderAdmin` seeds, holding `permissions`. */

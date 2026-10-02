@@ -1,9 +1,12 @@
 import type { BaseFieldProps } from 'astromech';
 import { Input } from '../ui/input';
+import { useFieldControl } from './field-control-context';
 
 export function SlugField({ name, value, required, onChange, disabled }: BaseFieldProps) {
+    const { controlId } = useFieldControl();
     return (
         <Input
+            id={controlId}
             type="text"
             name={name}
             value={typeof value === 'string' ? value : ''}

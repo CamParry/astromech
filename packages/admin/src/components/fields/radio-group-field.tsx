@@ -1,6 +1,7 @@
 import type { BaseFieldProps } from 'astromech';
 import { useLabel } from '../../i18n/entry-namespace';
 import { RadioGroup } from '../ui/radio-group';
+import { useFieldControl } from './field-control-context';
 
 export function RadioGroupField({
     name,
@@ -10,6 +11,7 @@ export function RadioGroupField({
     disabled,
 }: BaseFieldProps) {
     const label = useLabel();
+    const { labelId } = useFieldControl();
 
     const options: { value: string; label: string }[] = (field.options ?? []).map(
         (opt) => {
@@ -22,6 +24,7 @@ export function RadioGroupField({
 
     return (
         <RadioGroup
+            aria-labelledby={labelId}
             options={options}
             value={selected}
             onChange={(v) => onChange(name, v)}

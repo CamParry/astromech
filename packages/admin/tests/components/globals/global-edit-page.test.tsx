@@ -14,7 +14,7 @@ import { useSearch } from '@tanstack/react-router';
 import { screen, waitFor, within } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
 import { GlobalEditPage } from '@/admin/components/globals/global-edit-page';
-import { findFieldControl, renderAdmin } from '../../_support/render-admin';
+import { renderAdmin } from '../../_support/render-admin';
 
 // The page calls globals through the client; each test sets the stub.
 const client = vi.hoisted(() => ({ globals: undefined as unknown }));
@@ -166,7 +166,7 @@ function mountPage(options: {
 
 /** The tagline field's input, once the form has rendered. */
 function tagline(): Promise<HTMLInputElement> {
-    return findFieldControl('tagline');
+    return screen.findByRole<HTMLInputElement>('textbox', { name: 'Tagline' });
 }
 
 /** Confirm the open `useConfirm` dialog with its `label` button. */

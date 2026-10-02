@@ -34,6 +34,7 @@ import { useTranslation } from 'react-i18next';
 import { useBlocksField } from '../../hooks/use-blocks-field';
 import { useLabel } from '../../i18n/entry-namespace';
 import { FieldList } from '../entries/entry-fields-renderer';
+import { useFieldControl } from './field-control-context';
 import { InlineTitle } from './inline-title';
 import './blocks-field.css';
 
@@ -277,6 +278,7 @@ export function BlocksField({
     disabled,
 }: BaseFieldProps): React.ReactElement {
     const { t } = useTranslation();
+    const { labelId } = useFieldControl();
     const blockDefs = field.blocks ?? [];
     const [pickerOpen, setPickerOpen] = useState(false);
     const pickerAnchorRef = useRef<HTMLDivElement>(null);
@@ -313,7 +315,7 @@ export function BlocksField({
     const sortableIds = blocks.map((b) => b._id);
 
     return (
-        <div className="am-blocks">
+        <div className="am-blocks" role="group" aria-labelledby={labelId}>
             {blocks.length === 0 && (
                 <div className="am-blocks-empty">
                     <p className="am-blocks-empty-text">{t('fields.blocksEmpty')}</p>

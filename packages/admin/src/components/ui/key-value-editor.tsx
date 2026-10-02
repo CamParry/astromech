@@ -9,6 +9,8 @@ export type KeyValueEditorProps = {
     keyPlaceholder?: string;
     valuePlaceholder?: string;
     disabled?: boolean;
+    /** The id of the label naming the editor's group of pairs. */
+    'aria-labelledby'?: string | undefined;
 };
 
 type PairWithId = { _id: string; key: string; value: string };
@@ -37,6 +39,7 @@ export function KeyValueEditor({
     keyPlaceholder = 'Key',
     valuePlaceholder = 'Value',
     disabled,
+    'aria-labelledby': labelledBy,
 }: KeyValueEditorProps): React.ReactElement {
     const [pairs, setPairs] = useState<PairWithId[]>(() => recordToPairs(value));
 
@@ -68,7 +71,7 @@ export function KeyValueEditor({
     }
 
     return (
-        <div className="am-kv-editor">
+        <div className="am-kv-editor" role="group" aria-labelledby={labelledBy}>
             {pairs.length > 0 && (
                 <div className="am-kv-editor-rows">
                     {pairs.map((pair) => (

@@ -1,5 +1,6 @@
 import type { BaseFieldProps } from 'astromech';
 import { Input } from '../ui/input';
+import { useFieldControl } from './field-control-context';
 
 export function NumberField({
     name,
@@ -9,8 +10,10 @@ export function NumberField({
     onChange,
     disabled,
 }: BaseFieldProps) {
+    const { controlId } = useFieldControl();
     return (
         <Input
+            id={controlId}
             type="number"
             name={name}
             value={

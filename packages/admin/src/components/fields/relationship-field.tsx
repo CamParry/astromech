@@ -3,6 +3,7 @@ import { astromechUntypedClient } from 'astromech/fetch';
 import { useEffect, useState } from 'react';
 import adminConfig from 'virtual:astromech/admin-config';
 import { MultiSelect } from '../ui/multi-select';
+import { useFieldControl } from './field-control-context';
 
 type EntryOption = {
     id: string;
@@ -18,6 +19,7 @@ export function RelationshipField({
     onChange,
     disabled,
 }: BaseFieldProps) {
+    const { controlId } = useFieldControl();
     const target = field.target || '';
     const multiple = field.multiple || false;
     // When the target is a titleless entry type, never fall back to a field
@@ -51,6 +53,7 @@ export function RelationshipField({
             itemToStringValue={(e) => e.id}
             itemToStringLabel={(e) => (targetTitleless ? e.id : e.title)}
             multiple={multiple}
+            id={controlId}
             name={name}
             required={!!required}
             {...(disabled !== undefined && { disabled })}

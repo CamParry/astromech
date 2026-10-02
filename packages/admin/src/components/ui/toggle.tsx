@@ -10,6 +10,8 @@ type ToggleProps = {
     disabled?: boolean;
     name?: string;
     id?: string;
+    /** The id of a label outside the toggle that names it. */
+    'aria-labelledby'?: string | undefined;
 };
 
 export function Toggle({
@@ -20,6 +22,7 @@ export function Toggle({
     disabled,
     name,
     id,
+    'aria-labelledby': labelledBy,
 }: ToggleProps): React.ReactElement {
     const { ariaProps } = useFieldControl();
     return (
@@ -32,6 +35,7 @@ export function Toggle({
                 disabled={disabled}
                 name={name}
                 id={id}
+                {...(labelledBy !== undefined && { 'aria-labelledby': labelledBy })}
                 {...ariaProps}
             >
                 <Switch.Thumb className="am-toggle-thumb" />

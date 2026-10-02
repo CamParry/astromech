@@ -12,7 +12,7 @@ import { screen, waitFor } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { EntryNewPage } from '@/admin/components/entries/entry-new-page';
 import { AstromechApiError } from '@/transport/http/client';
-import { findFieldControl, renderAdmin } from '../../_support/render-admin';
+import { renderAdmin } from '../../_support/render-admin';
 
 const { entries, adminConfig } = vi.hoisted(() => ({
     entries: { create: vi.fn<(params: unknown) => Promise<unknown>>() },
@@ -77,7 +77,10 @@ describe('EntryNewPage', () => {
 
         expect(await screen.findByText('Excerpt')).not.toBeNull();
         await page.user.type(screen.getByLabelText(/Title/), 'Hello world');
-        await page.user.type(await findFieldControl('excerpt'), 'A short summary');
+        await page.user.type(
+            await screen.findByRole('textbox', { name: 'Excerpt' }),
+            'A short summary'
+        );
         await page.user.click(screen.getByRole('button', { name: 'Publish' }));
 
         await waitFor(() => expect(page.location()).toBe('/entries/post/p1?locale=en'));
@@ -105,13 +108,16 @@ describe('EntryNewPage', () => {
         const page = mountPage();
 
         await page.user.type(await screen.findByLabelText(/Title/), 'Hello world');
-        await page.user.type(await findFieldControl('excerpt'), 'Hi');
+        await page.user.type(
+            await screen.findByRole('textbox', { name: 'Excerpt' }),
+            'Hi'
+        );
         await page.user.click(
             screen.getByRole('button', { name: 'Save as Unpublished' })
         );
 
         expect(await screen.findByText('Excerpt is too short')).not.toBeNull();
-        const excerpt = await findFieldControl('excerpt');
+        const excerpt = await screen.findByRole('textbox', { name: 'Excerpt' });
         expect(excerpt.getAttribute('aria-invalid')).toBe('true');
         expect(page.location()).toBe('/entries/post/new');
     });
