@@ -94,13 +94,14 @@ async function newestMtime(dir, keep) {
 }
 
 // The route tree (`*.gen.ts`) is regenerated on a timing unrelated to the
-// build, and test files (`*.test.ts`, `*.test.tsx`) are not build inputs, so
-// neither should mark `dist` stale.
+// build, and test files (`*.test.ts`, `*.test.tsx`, `*.test-d.ts`) are not
+// build inputs, so neither should mark `dist` stale.
 function isBuildInput(fileName) {
     return (
         !fileName.endsWith('.gen.ts') &&
         !fileName.endsWith('.test.ts') &&
-        !fileName.endsWith('.test.tsx')
+        !fileName.endsWith('.test.tsx') &&
+        !fileName.endsWith('.test-d.ts')
     );
 }
 

@@ -226,7 +226,7 @@ Plugins are the exception. A plugin reaches the database only through `ctx.db`, 
 
 **The Node floor is 22.13**, in every published package's `engines`, and CI tests the floor and the Active LTS. Rejected: an unverified `>=20`, and inheriting the floor from peer dependencies.
 
-**Tests share one module graph per worker.** Core and the admin run `pool: 'threads'` with `isolate: false`; a file that mocks a module or writes a shared global opts back into isolation through `tests/_support/isolated-tests.ts`, which `tests/isolation-list.test.ts` checks. Rejected: the default `forks` pool (it rebuilds the graph per file), vitest's `*.non-isolated.test.ts` suffix (inverted, when most files are safe), and one root workspace (no faster, and it breaks tests that find config from the working directory).
+**Tests share one module graph per worker.** Core and the admin run `pool: 'threads'` with `isolate: false`; a file that mocks a module or writes a shared global opts back into isolation through `tests/_support/isolated-tests.ts`, which `tests/isolation-list.test.ts` checks. Rejected: the default `forks` pool (it rebuilds the graph per file), vitest's `*.non-isolated.test.ts` suffix (inverted, when most files are safe), and one root workspace (no faster, and it breaks tests that find config from the working directory). The plugins run on threads but keep per-file isolation: each suite takes a few seconds, turning isolation off saves nothing measurable there, and three of the six mock modules or set globals.
 
 **Coverage thresholds are per directory and only raised.** Rejected: one global number, whose average hides a directory near zero.
 

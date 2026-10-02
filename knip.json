@@ -21,6 +21,7 @@
                 "src/exports/*.ts!",
                 "scripts/*.{mjs,ts}!",
                 "tests/**/*.test.{ts,tsx}",
+                "tests/**/*.test-d.ts",
                 "tests/_support/**/*.{ts,tsx}"
             ],
             "project": [
@@ -35,13 +36,14 @@
                 "src/exports/*.ts!",
                 "src/pages/**/*.tsx!",
                 "tests/**/*.test.{ts,tsx}",
+                "tests/**/*.test-d.ts",
                 "tests/_support/**/*.{ts,tsx}"
             ],
             "project": ["src/**/*.{ts,tsx,astro}!", "tests/**/*.{ts,tsx}"],
             "ignoreUnresolved": ["./routeTree.gen"]
         },
         "packages/schema-engine": {
-            "entry": ["tests/**/*.test.ts"],
+            "entry": ["tests/**/*.test.ts", "tests/**/*.test-d.ts"],
             "project": ["src/**/*.ts!", "tests/**/*.ts"]
         },
         "packages/plugins/*": {
@@ -49,7 +51,8 @@
                 "src/tables/index.ts!",
                 "src/admin/**/*.tsx!",
                 "migrations/**/*.ts!",
-                "tests/**/*.test.{ts,tsx}"
+                "tests/**/*.test.{ts,tsx}",
+                "tests/**/*.test-d.ts"
             ],
             "project": [
                 "src/**/*.{ts,tsx}!",

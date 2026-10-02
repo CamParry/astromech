@@ -24,6 +24,7 @@ If following it would make the code or the test worse, or would need a workaroun
 - **Write fewer, stronger tests.** Agents tend to write too many. Leave out what another check already proves: what `tsc` checks, a mapping with no branches, a route-table row that only forwards to a method (`packages/astromech/tests/transport/http/routes/rest-route.test.ts` covers the table, and the method's own test covers the method). Before adding a test, look for one of the same behaviour and add a case or an `it.each` row to it.
 - **A rule that holds for every member of a set is tested once, over the set.** `packages/astromech/tests/content/resource-conformance.test.ts` runs its checks over every resource, and the parity tests (`packages/astromech/tests/transport/http/routes/rpc-parity.test.ts` and `packages/astromech/tests/transport/mcp/parity.test.ts`) over every manifest method. Add a case there rather than a copy per member.
 - **A bug fix starts with a test that fails for the bug's reason.**
+- **Every runtime test asserts something; a type-only test lives in a `*.test-d.ts` file.** Vitest fails a test that makes no `expect` call, and an `expectTypeOf` check does nothing at runtime. A `*.test-d.ts` file next to the runtime one (`packages/astromech/tests/database/plugin-tables.test-d.ts`) is compiled by the package's `typecheck` and never run by vitest, so its checks fail where they can.
 
 ## Writing a test with the code
 
@@ -69,7 +70,7 @@ The house setup is `packages/astromech/tests/_support/harness.ts`; read its doc 
 
 Run the cheapest check that can catch your mistake after every edit, and the expensive ones before the change lands.
 
-- **After each edit**: the test files for what you touched, with `pnpm -F <package> exec vitest run <path>`. Not `pnpm -F <package> test:run -- <path>`: pnpm passes the `--` through and vitest then runs the whole suite. Not `vitest related` either: the harness imports most of `src`, so it selects most of the suite and runs slower than all of it.
+- **After each edit**: the test files for what you touched, with `pnpm -F <package> exec vitest run <path>`. `pnpm -F <package> test:run <path>` also works, but not with a `--` before the path: pnpm passes the `--` through, vitest ignores what follows it, and the config stops the run rather than test the whole suite (`packages/astromech/tests/_support/vitest-base-config.ts`). Not `vitest related` either: the harness imports most of `src`, so it selects most of the suite and runs slower than all of it.
 - **Before handing work back**: `pnpm -F <package> typecheck` and `pnpm -F <package> test:run`. The admin and the plugins compile core from source, so a change to core's `src` also needs their suites, or `pnpm run verify:fast`, which runs every package suite without coverage thresholds.
 - **Before a change lands**: `pnpm run verify`. Coverage thresholds are checked only by a whole-suite coverage run (`pnpm run test:run`, inside `verify`), so after a failure rerun the whole suite, not the failed files.
 - **Run one full suite at a time.** Parallel runs have been killed for low memory, and other sessions may share the checkout.
@@ -81,4 +82,4 @@ Thresholds are set per directory in the `vitest.config.ts` of core and of the ad
 
 ## Reviewing a test change
 
-Read a test diff as closely as the code. Look for a removed `expect`, a new `.skip`, `.only` or `vi.mock`, a loosened matcher, and a new test that cannot fail. For each new test, ask which behaviour it protects.
+Read a test diff as closely as the code. Look for a removed `expect`, a new `.skip`, `.only` or `vi.mock`, a loosened matcher, and a new test that cannot fail. `pnpm run report:drift` lists the first four (and lowered coverage thresholds); a loosened matcher and a test that cannot fail need a reader. For each new test, ask which behaviour it protects.
