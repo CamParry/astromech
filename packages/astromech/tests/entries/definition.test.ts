@@ -145,7 +145,7 @@ describe('entryCatalogue', () => {
 describe('bind', () => {
     it('writes the context’s user, with no request store in play', async () => {
         const author = await createTestUser(getDb());
-        const ctx = createAppContext({ user: { id: author.id } as never, role: admin });
+        const ctx = createAppContext({ user: author, role: admin });
 
         const entry = await entriesDefinition
             .bind(ctx)

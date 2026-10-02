@@ -19,12 +19,12 @@ import type {
 import { describe, expect, it } from 'vitest';
 import { resolveConfig } from '@/config/resolve';
 
-const dbDriver = {
+const dbDriver: DatabaseDriver = {
     type: 'test',
     getInstance: () => {
         throw new Error('not called');
     },
-} as unknown as DatabaseDriver;
+};
 
 const storageDriver: StorageDriver = {
     name: 'noop',
@@ -81,9 +81,7 @@ function fullConfig(): AstromechConfig {
 }
 
 describe('resolveConfig strips registry-held capabilities', () => {
-    // Read through an index signature: the whole point is that the type does not
-    // admit these keys, so a property access would not compile.
-    const resolved = resolveConfig(fullConfig()) as unknown as Record<string, unknown>;
+    const resolved = resolveConfig(fullConfig());
 
     it.each(['db', 'storage', 'email', 'scheduler', 'ai', 'plugins'])(
         'drops %s',
@@ -93,10 +91,10 @@ describe('resolveConfig strips registry-held capabilities', () => {
     );
 
     it('drops media.image, which a top-level omit cannot reach', () => {
-        expect(resolved['media']).not.toHaveProperty('image');
+        expect(resolved.media).not.toHaveProperty('image');
     });
 
     it('keeps the rest of media', () => {
-        expect(resolved['media']).toMatchObject({ access: 'public', fields: [] });
+        expect(resolved.media).toMatchObject({ access: 'public', fields: [] });
     });
 });

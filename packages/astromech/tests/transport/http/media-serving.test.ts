@@ -10,11 +10,13 @@ import type {
     MediaAccess,
     StorageDriver,
 } from '@/types/index';
-import type { OpenAPIHono } from '@hono/zod-openapi';
 import { createTestDb, makeTestConfig, setupTestConfig } from '@tests/harness';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { currentServices } from '@/app-context/services';
 import { createHttpApp } from '@/transport/http/app';
+
+/** The composed HTTP app, typed as `createHttpApp` builds it. */
+type HttpApp = ReturnType<typeof createHttpApp>;
 
 const mediaService = currentServices.media;
 
@@ -61,7 +63,7 @@ function makeStorage(): StorageDriver {
 }
 
 type Setup = {
-    app: OpenAPIHono;
+    app: HttpApp;
     api: string;
     storage: StorageDriver;
     mediaUrl: string;
@@ -88,7 +90,7 @@ async function setup(
     });
 
     return {
-        app: createHttpApp(resolved) as unknown as OpenAPIHono,
+        app: createHttpApp(resolved),
         api: `${resolved.basePath}/api`,
         storage,
         mediaUrl: `${resolved.mediaRoute}/${media.id}.jpg`,

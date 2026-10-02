@@ -7,7 +7,8 @@
  * happens below a container.
  */
 
-import type { Field, FieldValidationContext, ValidationMode } from '@/types/fields';
+import type { FieldValidationContext, ValidationMode } from '@/types/fields';
+import { field } from '@tests/fixtures';
 import { describe, expect, it } from 'vitest';
 import { safeParseFields } from '@/fields/parse-fields';
 
@@ -20,10 +21,6 @@ function fakeCtx(operation: 'create' | 'update' = 'create', validation?: Validat
         resource: { kind: 'entry' as const, record: {} },
         user: null,
     };
-}
-
-function field(def: Partial<Field> & { name: string; type: string }): Field {
-    return def as Field;
 }
 
 /** The single error key produced, for tests that expect exactly one. */

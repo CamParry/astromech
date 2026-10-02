@@ -29,14 +29,14 @@ beforeEach(async () => {
     const config = makeTestConfig();
     if (config.entries.post) config.entries.post.staging = true;
     setupTestConfig(config);
-    author = (await createTestUser(db, {
+    author = await createTestUser(db, {
         name: 'Author',
         email: 'author@test.dev',
-    })) as unknown as User;
-    other = (await createTestUser(db, {
+    });
+    other = await createTestUser(db, {
         name: 'Other',
         email: 'other@test.dev',
-    })) as unknown as User;
+    });
 });
 
 /** The canonical content row's two columns, read straight from the table. */

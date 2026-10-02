@@ -10,11 +10,11 @@
  * drift apart.
  */
 import type { SchemaRow } from '@astromech/schema-engine';
+import type { Kysely } from 'kysely';
 import { dumpSchema, renderTableStatements } from '@astromech/schema-engine';
 import { createClient } from '@libsql/client';
-import { LibsqlDialect } from '@libsql/kysely-libsql';
-import { createTestDb } from '@tests/harness';
-import { Kysely, sql } from 'kysely';
+import { createTestDb, openPlainDb } from '@tests/harness';
+import { sql } from 'kysely';
 import { describe, expect, it } from 'vitest';
 import { toSnapshotTable } from '@/database/table-snapshot';
 import { CORE_TABLES } from '@/database/tables';
@@ -23,9 +23,7 @@ const TABLE_NAMES = CORE_TABLES.map((table) => table.name);
 
 async function buildEmitterDb(): Promise<Kysely<unknown>> {
     const client = createClient({ url: ':memory:' });
-    const db = new Kysely<unknown>({
-        dialect: new LibsqlDialect({ client: client as never }),
-    });
+    const db = openPlainDb(client);
     for (const table of CORE_TABLES) {
         for (const statement of renderTableStatements(toSnapshotTable(table, 'sqlite'))) {
             await sql.raw(statement).execute(db);

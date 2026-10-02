@@ -91,13 +91,13 @@ describe('update', () => {
         const author = await createTestUser(getDb());
         const editor = await createTestUser(getDb());
 
-        const created = await runAsUser({ id: author.id } as never, () =>
+        const created = await runAsUser(author, () =>
             api.update({ key: 'contact', data: { fields: { email: 'a@b.dev' } } })
         );
         expect(created.createdBy).toBe(author.id);
         expect(created.updatedBy).toBe(author.id);
 
-        const edited = await runAsUser({ id: editor.id } as never, () =>
+        const edited = await runAsUser(editor, () =>
             api.update({ key: 'contact', data: { fields: { phone: '1' } } })
         );
         expect(edited.createdBy).toBe(author.id);

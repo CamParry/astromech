@@ -5,7 +5,7 @@
 
 import type { DB } from '@/database/types';
 import type { AstromechConfig } from '@/types/index';
-import type { Kysely, Updateable } from 'kysely';
+import type { Kysely } from 'kysely';
 import { createTestDb, makeTestConfig, setupTestConfig } from '@tests/harness';
 import { beforeEach, describe, expect, it } from 'vitest';
 import { systemAppContext } from '@/app-context/app-context';
@@ -81,7 +81,7 @@ describe('createWorkerEntry().scheduled', () => {
                 encodePatchWith(cronTable, {
                     nextRun: past,
                     lock: null,
-                }) as unknown as Updateable<DB['_astromech_cron']>
+                })
             )
             .where('name', '=', 'cf-test-job')
             .execute();

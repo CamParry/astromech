@@ -9,7 +9,7 @@
 import type { DB } from '@/database/types';
 import type { RequestScope } from '@/request-scope/request-scope';
 import type { Role, User } from '@/types/index';
-import type { Kysely, Updateable } from 'kysely';
+import type { Kysely } from 'kysely';
 import { OpenAPIHono } from '@hono/zod-openapi';
 import { adminRole } from '@tests/fixtures';
 import { createTestDb, makeTestConfig, requestAs, setupTestConfig } from '@tests/harness';
@@ -102,7 +102,7 @@ async function seedDueJob(): Promise<{ ran: boolean }> {
             encodePatchWith(cronTable, {
                 nextRun: new Date('2023-01-01T00:00:00.000Z'),
                 lock: null,
-            }) as unknown as Updateable<DB['_astromech_cron']>
+            })
         )
         .where('name', '=', 'probe')
         .execute();

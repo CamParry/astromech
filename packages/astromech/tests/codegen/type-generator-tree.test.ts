@@ -1,22 +1,13 @@
-import type { ResolvedConfig } from '@/types/index';
+import type { Field, ResolvedConfig } from '@/types/index';
+import { resolveTestConfig } from '@tests/harness';
 import { describe, expect, it } from 'vitest';
 import { generateClientTypes } from '@/codegen/type-generator';
 
-function makeConfig(fields: object[]): ResolvedConfig {
-    return {
-        entryTypes: {
-            pages: {
-                fields: {
-                    main: fields as never,
-                    sidebar: [],
-                },
-            },
-        },
-        globals: {},
-        pages: {},
-        locales: [],
-        defaultLocale: 'en',
-    } as unknown as ResolvedConfig;
+/** A config whose only entry type is `pages`, holding `fields`. */
+function makeConfig(fields: Field[]): ResolvedConfig {
+    return resolveTestConfig({
+        entries: { pages: { single: 'Page', plural: 'Pages', fields } },
+    });
 }
 
 describe('type-generator — tree field', () => {
@@ -109,20 +100,19 @@ describe('type-generator — tree field', () => {
 });
 
 describe('type-generator — hoisted names', () => {
-    const menu = {
+    const menu: Field = {
         name: 'menu',
         type: 'tree',
         fields: [{ name: 'label', type: 'text' }],
     };
 
     it('gives two entry types with the same tree field distinct node types', () => {
-        const config = {
-            ...makeConfig([menu]),
-            entryTypes: {
-                header: { fields: { main: [menu], sidebar: [] } },
-                footer: { fields: { main: [menu], sidebar: [] } },
+        const config = resolveTestConfig({
+            entries: {
+                header: { single: 'Header', plural: 'Headers', fields: [menu] },
+                footer: { single: 'Footer', plural: 'Footers', fields: [menu] },
             },
-        } as unknown as ResolvedConfig;
+        });
 
         const output = generateClientTypes(config);
 
@@ -144,10 +134,15 @@ describe('type-generator — hoisted names', () => {
     });
 
     it('quotes an entry-type key that is not an identifier', () => {
-        const config = {
-            ...makeConfig([]),
-            entryTypes: { 'case-study': { fields: { main: [], sidebar: [] } } },
-        } as unknown as ResolvedConfig;
+        const config = resolveTestConfig({
+            entries: {
+                'case-study': {
+                    single: 'Case study',
+                    plural: 'Case studies',
+                    fields: [],
+                },
+            },
+        });
 
         expect(generateClientTypes(config)).toContain(
             '"case-study": { fields: CaseStudyFields;'
@@ -157,18 +152,19 @@ describe('type-generator — hoisted names', () => {
 
 describe('type-generator — relation targets', () => {
     it('types users, media and unknown targets on the Relations type', () => {
-        const output = generateClientTypes(
-            makeConfig([
-                { name: 'author', type: 'relationship', target: 'users' },
-                { name: 'cover', type: 'relationship', target: 'media' },
-                {
-                    name: 'other',
-                    type: 'relationship',
-                    target: 'nowhere',
-                    multiple: true,
-                },
-            ])
-        );
+        const config = makeConfig([
+            { name: 'author', type: 'relationship', target: 'users' },
+            { name: 'cover', type: 'relationship', target: 'media' },
+        ]);
+        // Added after resolving, because the resolver refuses an unknown target.
+        config.entryTypes['pages']?.fields.main.push({
+            name: 'other',
+            type: 'relationship',
+            target: 'nowhere',
+            multiple: true,
+        });
+
+        const output = generateClientTypes(config);
 
         expect(output).toContain("author: import('astromech').User;");
         expect(output).toContain("cover: import('astromech').Media;");

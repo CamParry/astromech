@@ -6,14 +6,15 @@
 
 import type { DB } from '@/database/types';
 import type { Client } from '@libsql/client';
+import type { Kysely } from 'kysely';
 import { access, mkdtemp, rm, symlink } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { createClient } from '@libsql/client';
-import { LibsqlDialect } from '@libsql/kysely-libsql';
 import { makeTestConfig } from '@tests/harness';
-import { CamelCasePlugin, Kysely, sql } from 'kysely';
+import { openTestDb } from '@tests/test-db';
+import { sql } from 'kysely';
 import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
 import { resolveConfig } from '@/config/resolve';
 import { resolveMigrationsDir } from '@/database/app-migrations';
@@ -36,12 +37,7 @@ beforeAll(async () => {
     );
 
     client = createClient({ url: `file:${join(siteDir, 'database.db')}` });
-    db = new Kysely<DB>({
-        // `@libsql/kysely-libsql` pins an older `@libsql/core` Client type; the
-        // runtime client is compatible (see the libsql driver).
-        dialect: new LibsqlDialect({ client: client as never }),
-        plugins: [new CamelCasePlugin()],
-    });
+    db = openTestDb(client);
 });
 
 // Per test, since `restoreMocks` undoes every spy before each test runs.

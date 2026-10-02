@@ -1,4 +1,5 @@
-import type { PluginDefinition, ResolvedConfig } from '@/types/index';
+import type { EntryType, PluginDefinition, ResolvedConfig } from '@/types/index';
+import { resolveTestConfig } from '@tests/harness';
 import { beforeEach, describe, expect, it } from 'vitest';
 import { z } from 'zod';
 import { generateClientTypes } from '@/codegen/type-generator';
@@ -72,23 +73,25 @@ describe('pluginFieldTypes', () => {
 });
 
 describe('generateClientTypes with plugin field types', () => {
-    const config = {
-        basePath: '/cms',
-        globals: {},
-        entryTypes: {
-            posts: {
-                single: 'Post',
-                plural: 'Posts',
-                fields: {
-                    main: [{ name: 'seo', type: 'seo-meta' }],
-                    sidebar: [],
-                },
-            },
-        },
-        trash: { enabled: true, retentionDays: 30 },
-    } as unknown as ResolvedConfig;
+    let config: ResolvedConfig;
 
     beforeEach(() => {
+        config = resolveTestConfig({
+            entries: {
+                posts: {
+                    single: 'Post',
+                    plural: 'Posts',
+                    fields: [{ name: 'seo', type: 'seo-meta' }],
+                },
+            },
+            plugins: [
+                def({
+                    package: '@a/seo',
+                    fields: [{ type: 'seo-meta', component: '@a/seo/field' }],
+                }),
+            ],
+        });
+        // Resolving registers the plugin's field type; each test sets its own.
         setPluginFieldTypes([]);
     });
 
@@ -142,55 +145,27 @@ describe('generateClientTypes with plugin field types', () => {
 });
 
 describe('generateClientTypes — plugin entry types', () => {
-    const baseConfig = {
-        basePath: '/cms',
-        globals: {},
-        entryTypes: {
-            posts: {
-                single: 'Post',
-                plural: 'Posts',
-                fields: { main: [], sidebar: [] },
-            },
-        },
-        trash: { enabled: true, retentionDays: 30 },
-    } as unknown as ResolvedConfig;
+    const posts: EntryType = { single: 'Post', plural: 'Posts', fields: [] };
 
-    const formFields = {
-        main: [
-            {
-                name: 'from',
-                type: 'text' as const,
-                label: 'From',
-                required: true as const,
-            },
-            {
-                name: 'to',
-                type: 'text' as const,
-                label: 'To',
-                required: true as const,
-            },
-            {
-                name: 'status',
-                type: 'select' as const,
-                label: 'Type',
-                options: ['301', '302'],
-            },
-            { name: 'enabled', type: 'boolean' as const, label: 'Enabled' },
+    const formEntryType: EntryType = {
+        type: 'form',
+        single: 'Form',
+        plural: 'Forms',
+        fields: [
+            { name: 'from', type: 'text', label: 'From', required: true },
+            { name: 'to', type: 'text', label: 'To', required: true },
+            { name: 'status', type: 'select', label: 'Type', options: ['301', '302'] },
+            { name: 'enabled', type: 'boolean', label: 'Enabled' },
         ],
-        sidebar: [],
     };
 
-    const configWithPluginEntries = {
-        ...baseConfig,
-        entryTypes: {
-            ...baseConfig.entryTypes,
-            'forms/form': {
-                single: 'Form',
-                plural: 'Forms',
-                fields: formFields,
-            },
-        },
-    } as unknown as ResolvedConfig;
+    /** The forms plugin, contributing the `forms/form` entry type. */
+    const formsPlugin = def({ package: '@astromech/forms', entries: [formEntryType] });
+
+    const configWithPluginEntries = resolveTestConfig({
+        entries: { posts },
+        plugins: [formsPlugin],
+    });
 
     it('generates the FormsFormFields type from the qualified id', () => {
         const output = generateClientTypes(configWithPluginEntries);
@@ -215,59 +190,54 @@ describe('generateClientTypes — plugin entry types', () => {
     });
 
     it('resolves a qualified relation target to the plugin Fields type, public shape included', () => {
-        const configWithRelation = {
-            ...configWithPluginEntries,
-            entryTypes: {
-                ...configWithPluginEntries.entryTypes,
+        const configWithRelation = resolveTestConfig({
+            entries: {
                 posts: {
-                    single: 'Post',
-                    plural: 'Posts',
-                    fields: {
-                        main: [
-                            {
-                                name: 'related_form',
-                                type: 'relationship',
-                                target: 'forms/form',
-                                label: 'Related Form',
-                            },
-                        ],
-                        sidebar: [],
-                    },
+                    ...posts,
+                    fields: [
+                        {
+                            name: 'related_form',
+                            type: 'relationship',
+                            target: 'forms/form',
+                            label: 'Related Form',
+                        },
+                    ],
                 },
             },
-        } as unknown as ResolvedConfig;
+            plugins: [formsPlugin],
+        });
 
         const output = generateClientTypes(configWithRelation);
         expect(output).toContain("import('astromech').TypedEntry<FormsFormFields>");
     });
 
     it('PascalCases hyphenated plugin/type names into the Fields type name', () => {
-        const configWithHyphenated = {
-            ...baseConfig,
-            entryTypes: {
-                'my-plugin/some-type': {
-                    single: 'Some Type',
-                    plural: 'Some Types',
-                    fields: {
-                        main: [{ name: 'title', type: 'text' as const, label: 'Title' }],
-                        sidebar: [],
-                    },
-                },
-            },
-        } as unknown as ResolvedConfig;
+        const configWithHyphenated = resolveTestConfig({
+            entries: { posts },
+            plugins: [
+                def({
+                    package: 'my-plugin',
+                    entries: [
+                        {
+                            type: 'some-type',
+                            single: 'Some Type',
+                            plural: 'Some Types',
+                            fields: [{ name: 'title', type: 'text', label: 'Title' }],
+                        },
+                    ],
+                }),
+            ],
+        });
 
         const output = generateClientTypes(configWithHyphenated);
         expect(output).toContain('export type MyPluginSomeTypeFields = {');
     });
 
     it('throws when two ids generate the same type name', () => {
-        const colliding = {
-            ...baseConfig,
-            entryTypes: {
-                forms_form: { fields: { main: [], sidebar: [] } },
-                'forms/form': { fields: { main: [], sidebar: [] } },
-            },
-        } as unknown as ResolvedConfig;
+        const colliding = resolveTestConfig({
+            entries: { forms_form: { single: 'Form', plural: 'Forms', fields: [] } },
+            plugins: [formsPlugin],
+        });
 
         expect(() => generateClientTypes(colliding)).toThrow(
             /"forms_form" and "forms\/form" both generate/

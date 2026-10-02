@@ -15,7 +15,6 @@ import type {
     Role,
     User,
 } from '@/types/index';
-import type { OpenAPIHono } from '@hono/zod-openapi';
 import { adminRole, roleWith } from '@tests/fixtures';
 import {
     contextAs,
@@ -31,6 +30,9 @@ import { setMethodManifest } from '@/codegen/manifest-registry';
 import { generateMethodManifest } from '@/codegen/method-manifest';
 import { createHttpApp } from '@/transport/http/app';
 import { buildScopedDispatch } from '@/transport/tools/dispatch';
+
+/** The composed HTTP app, typed as `createHttpApp` builds it. */
+type HttpApp = ReturnType<typeof createHttpApp>;
 
 const entriesService = currentServices.entries;
 const usersService = currentServices.users;
@@ -93,7 +95,7 @@ function signOut(): void {
  * A fresh DB, config and boot-generated manifest, with the composed app mounted
  * over them and `role` signed in.
  */
-async function freshApp(role: Role = adminRole): Promise<OpenAPIHono> {
+async function freshApp(role: Role = adminRole): Promise<HttpApp> {
     await createTestDb();
     const resolved = setupTestConfig(testConfig());
     manifest = generateMethodManifest(resolved, [testPlugin]);
@@ -105,11 +107,11 @@ async function freshApp(role: Role = adminRole): Promise<OpenAPIHono> {
     identity = { user: signedInUser, role };
 
     api = `${resolved.basePath}/api`;
-    return createHttpApp(resolved) as unknown as OpenAPIHono;
+    return createHttpApp(resolved);
 }
 
 /** POST one method id, percent-encoded so a qualified entry type id survives. */
-async function call(app: OpenAPIHono, id: string, args: unknown = {}): Promise<Response> {
+async function call(app: HttpApp, id: string, args: unknown = {}): Promise<Response> {
     return requestAs(app, identity, `${api}/rpc/${encodeURIComponent(id)}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },

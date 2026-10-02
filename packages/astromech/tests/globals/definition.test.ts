@@ -61,7 +61,7 @@ describe('the catalogue', () => {
 describe('bind', () => {
     it('writes the context’s user, with no request store in play', async () => {
         const author = await createTestUser(getDb());
-        const ctx = createAppContext({ user: { id: author.id } as never, role: admin });
+        const ctx = createAppContext({ user: author, role: admin });
 
         const saved = await globalsDefinition
             .bind(ctx)
@@ -73,7 +73,7 @@ describe('bind', () => {
 
     it('hands a sibling reached through ctx.globals the same user', async () => {
         const author = await createTestUser(getDb());
-        const ctx = createAppContext({ user: { id: author.id } as never, role: admin });
+        const ctx = createAppContext({ user: author, role: admin });
 
         // `site` hides its `private` field from a public read, so a non-null
         // `secret` proves the sibling read ran as the same authenticated user.

@@ -6,7 +6,6 @@
  * method stands between that and the admin.
  */
 
-import type { Global } from '@/types/index';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { astromechClient as client } from '@/transport/http/client';
 
@@ -45,7 +44,7 @@ afterEach(() => {
     vi.unstubAllGlobals();
 });
 
-const global = { key: 'site', locale: 'en', fields: { title: 'A' } } as unknown as Global;
+const global = { key: 'site', locale: 'en', fields: { title: 'A' } };
 
 type Case = {
     name: string;

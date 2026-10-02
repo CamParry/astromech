@@ -7,7 +7,7 @@
  */
 import type { CronRow } from '@/database/tables';
 import type { DB } from '@/database/types';
-import type { Kysely, Updateable } from 'kysely';
+import type { Kysely } from 'kysely';
 import { createTestDb, makeTestConfig, setupTestConfig } from '@tests/harness';
 import { Cron } from 'croner';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
@@ -64,7 +64,7 @@ describe('onTick / runDue', () => {
             .set(
                 encodePatchWith(cronTable, {
                     schedule: '0 12 * * *',
-                }) as unknown as Updateable<DB['_astromech_cron']>
+                })
             )
             .where('name', '=', 'test-job')
             .execute();
@@ -104,7 +104,7 @@ describe('onTick / runDue', () => {
                 encodePatchWith(cronTable, {
                     nextRun: past,
                     lock: null,
-                }) as unknown as Updateable<DB['_astromech_cron']>
+                })
             )
             .where('name', '=', 'test-job')
             .execute();
@@ -121,7 +121,7 @@ describe('onTick / runDue', () => {
                 encodePatchWith(cronTable, {
                     nextRun: future,
                     lock: null,
-                }) as unknown as Updateable<DB['_astromech_cron']>
+                })
             )
             .where('name', '=', 'test-job')
             .execute();
@@ -156,7 +156,7 @@ describe('onTick / runDue', () => {
                     nextRun: past,
                     enabled: false,
                     lock: null,
-                }) as unknown as Updateable<DB['_astromech_cron']>
+                })
             )
             .where('name', '=', 'test-job')
             .execute();
@@ -189,7 +189,7 @@ describe('onTick / runDue', () => {
                     schedule: '0 0 * * *',
                     nextRun: past,
                     lock: null,
-                }) as unknown as Updateable<DB['_astromech_cron']>
+                })
             )
             .where('name', '=', 'test-job')
             .execute();
@@ -229,7 +229,7 @@ describe('onTick / runDue', () => {
                 encodePatchWith(cronTable, {
                     nextRun: past,
                     lock: null,
-                }) as unknown as Updateable<DB['_astromech_cron']>
+                })
             )
             .where('name', '=', 'test-job')
             .execute();
@@ -293,7 +293,7 @@ describe('onTick / runDue', () => {
                 encodePatchWith(cronTable, {
                     nextRun: past,
                     lock: futureLock,
-                }) as unknown as Updateable<DB['_astromech_cron']>
+                })
             )
             .where('name', '=', 'test-job')
             .execute();
@@ -309,7 +309,7 @@ describe('onTick / runDue', () => {
                 encodePatchWith(cronTable, {
                     nextRun: past,
                     lock: pastLock,
-                }) as unknown as Updateable<DB['_astromech_cron']>
+                })
             )
             .where('name', '=', 'test-job')
             .execute();
@@ -343,7 +343,7 @@ describe('onTick / runDue', () => {
                 encodePatchWith(cronTable, {
                     nextRun: past,
                     lock: null,
-                }) as unknown as Updateable<DB['_astromech_cron']>
+                })
             )
             .where('name', '=', 'test-job')
             .execute();
@@ -441,7 +441,7 @@ describe('onTick / runDue', () => {
                 encodePatchWith(cronTable, {
                     nextRun: veryPast,
                     lock: null,
-                }) as unknown as Updateable<DB['_astromech_cron']>
+                })
             )
             .where('name', '=', 'test-job')
             .execute();

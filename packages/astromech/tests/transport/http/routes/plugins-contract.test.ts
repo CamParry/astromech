@@ -12,7 +12,7 @@
 
 import type { AstromechConfig, PluginDefinition, Role, User } from '@/types/index';
 import { OpenAPIHono } from '@hono/zod-openapi';
-import { roleWith } from '@tests/fixtures';
+import { makeUser, roleWith } from '@tests/fixtures';
 import { createTestDb, makeTestConfig, requestAs, setupTestConfig } from '@tests/harness';
 import { describe, expect, it } from 'vitest';
 import { z } from 'zod';
@@ -81,7 +81,7 @@ function configWithProbe(): AstromechConfig {
     return { ...makeTestConfig(), plugins: [probePlugin] };
 }
 
-const signedInUser = { id: 'u1', email: 'a@b.dev' } as unknown as User;
+const signedInUser = makeUser({ id: 'u1', email: 'a@b.dev' });
 
 /** Register the probe plugin, then build the router over it. */
 async function freshApp(): Promise<OpenAPIHono> {

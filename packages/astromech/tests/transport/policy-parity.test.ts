@@ -19,7 +19,6 @@ import type {
     Role,
     User,
 } from '@/types/index';
-import type { OpenAPIHono } from '@hono/zod-openapi';
 import { adminRole, roleWith } from '@tests/fixtures';
 import { createTestDb, makeTestConfig, requestAs, setupTestConfig } from '@tests/harness';
 import { beforeEach, describe, expect, it } from 'vitest';
@@ -34,6 +33,9 @@ import { createPluginContext } from '@/plugins/runtime/plugin-runtime';
 import { callMethod } from '@/policies/call-method';
 import { createHttpApp } from '@/transport/http/app';
 import { buildScopedDispatch } from '@/transport/tools/dispatch';
+
+/** The composed HTTP app, typed as `createHttpApp` builds it. */
+type HttpApp = ReturnType<typeof createHttpApp>;
 
 /** A plugin with nothing of its own, so its `ctx` can be built. */
 const probe: PluginDefinition = { package: 'probe' };
@@ -56,7 +58,7 @@ function testConfig(): AstromechConfig {
 /** What a call came to: an error code, `null`, or `ok` for anything else. */
 type Outcome = string;
 
-let app: OpenAPIHono;
+let app: HttpApp;
 let api: string;
 let manifest: MethodManifest;
 /** The site's only admin, and the user every transport acts as. */
@@ -71,7 +73,7 @@ beforeEach(async () => {
         data: { email: 'admin@test.dev', name: 'Admin', role: 'admin' },
     });
     api = `${resolved.basePath}/api`;
-    app = createHttpApp(resolved) as unknown as OpenAPIHono;
+    app = createHttpApp(resolved);
 });
 
 /** The transports, each calling one manifest method with `args` as `role`. */

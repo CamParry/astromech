@@ -3,7 +3,8 @@
  * infrastructure sources only, and absent rather than spoofable.
  */
 
-import type { ResolvedConfig, TrustProxy } from '@/types/index';
+import type { TrustProxy } from '@/types/index';
+import { resolveTestConfig } from '@tests/harness';
 import { Hono } from 'hono';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { setConfig } from '@/config/registry';
@@ -22,14 +23,14 @@ function pretendWorkers(): void {
     vi.stubGlobal('navigator', { userAgent: 'Cloudflare-Workers' });
 }
 
-/** Publish a config carrying only `security.trustProxy`. */
+/** Publish a config whose `security.trustProxy` is `value`. */
 function trustProxy(value: TrustProxy): void {
-    setConfig({ security: { trustProxy: value } } as unknown as ResolvedConfig);
+    setConfig(resolveTestConfig({ security: { trustProxy: value } }));
 }
 
 describe('getClientAddress', () => {
     beforeEach(() => {
-        setConfig({} as unknown as ResolvedConfig);
+        setConfig(resolveTestConfig());
     });
 
     afterEach(() => {

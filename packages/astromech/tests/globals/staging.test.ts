@@ -4,6 +4,7 @@
  * capability gate is exercised against `contact`.
  */
 
+import { invalid } from '@tests/fixtures';
 import { createTestDb, createTestUser, runAsUser, setupTestConfig } from '@tests/harness';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { currentServices } from '@/app-context/services';
@@ -65,10 +66,12 @@ describe('createStaged', () => {
         await saveSite();
 
         await expect(
-            api.createStaged({
-                key: 'site',
-                data: { fields: { title: 42, undeclared: 'x' } },
-            } as never)
+            api.createStaged(
+                invalid({
+                    key: 'site',
+                    data: { fields: { title: 42, undeclared: 'x' } },
+                })
+            )
         ).rejects.toThrow(ValidationError);
         expect(await api.getStaged({ key: 'site' })).toBeNull();
     });
@@ -184,7 +187,7 @@ describe('the global row stamp and divergence', () => {
 
     it("reports the staged change's own last edit on a staged read", async () => {
         const editor = await createTestUser(getDb());
-        await runAsUser({ id: editor.id } as never, () =>
+        await runAsUser(editor, () =>
             api.update({ key: 'site', staged: true, data: { fields: { title: 'D' } } })
         );
 

@@ -50,7 +50,7 @@ The house setup is `packages/astromech/tests/_support/harness.ts`; read its doc 
 - **Read a write back through the public read path**, not raw SQL, unless the point is that nothing was written.
 - **Keep every value the assertion depends on visible in the test.** Helpers supply defaults. Some repetition is better than a reader searching `_support/` for the input.
 - **Shared setup moves to `_support/` once a second file needs it**, and a helper there throws when it cannot build what it was asked for, as `createTestUser` does. A fixture that fails quietly hides broken tests.
-- **Build typed values rather than casting.** A typed builder such as `makeUser` in `packages/admin/tests/components/users/users-list-page.test.tsx` breaks when the type changes; `as unknown as User` hides the change, and the next agent copies it.
+- **Build typed values rather than casting.** A typed builder breaks when the type changes; `as unknown as User` hides the change, and the next agent copies it. Core's are `makeUser` and `field` in `packages/astromech/tests/_support/fixtures.ts`, and `createTestUser` (which returns the `User`) and `resolveTestConfig` in the harness. Input that breaks its type on purpose, to reach the runtime check behind it, goes through `invalid<T>()` from the same fixtures file, so the intent is named and searchable.
 
 ## How a test reads
 

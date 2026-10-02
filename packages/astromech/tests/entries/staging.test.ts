@@ -201,7 +201,7 @@ describe('the entry row stamp and divergence', () => {
         const editor = await createTestUser(getDb());
         const id = await stagedPost();
         vi.setSystemTime(t2);
-        await runAsUser({ id: editor.id } as never, () =>
+        await runAsUser(editor, () =>
             api.update({ type: 'post', id, staged: true, data: { title: 'Draft' } })
         );
 

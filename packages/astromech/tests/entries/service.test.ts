@@ -1376,19 +1376,19 @@ describe('hooks', () => {
 
     it('hands the update hooks the public entry, without the content row id', async () => {
         const entry = await api.create({ type: 'post', data: { title: 'Before' } });
-        const seen: Record<string, unknown>[] = [];
+        const seen: Entry[] = [];
         const resolved = setupTestConfig();
         const probe: PluginDefinition = {
             package: '@test/probe',
             hooks: [
                 defineHook('entry:beforeUpdate', (ctx) => {
-                    seen.push(ctx.entry as unknown as Record<string, unknown>);
+                    seen.push(ctx.entry);
                 }),
                 defineHook('entry:afterUpdate', (ctx) => {
-                    seen.push(ctx.entry as unknown as Record<string, unknown>);
+                    seen.push(ctx.entry);
                 }),
                 defineHook('entry:beforeDelete', (ctx) => {
-                    seen.push(ctx.entry as unknown as Record<string, unknown>);
+                    seen.push(ctx.entry);
                 }),
             ],
         };
@@ -1399,7 +1399,7 @@ describe('hooks', () => {
 
         expect(seen).toHaveLength(3);
         for (const payload of seen) {
-            expect(payload['id']).toBe(entry.id);
+            expect(payload.id).toBe(entry.id);
             expect(payload).not.toHaveProperty('contentId');
         }
     });

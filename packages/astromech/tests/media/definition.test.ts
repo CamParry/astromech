@@ -73,7 +73,7 @@ describe('the catalogue', () => {
 describe('bind', () => {
     it('records the context’s user as the author, with no request store in play', async () => {
         const author = await createTestUser(getDb(), { name: 'Author' });
-        const ctx = createAppContext({ user: { id: author.id } as never, role: admin });
+        const ctx = createAppContext({ user: author, role: admin });
 
         const uploaded = await mediaDefinition
             .bind(ctx)
@@ -85,7 +85,7 @@ describe('bind', () => {
 
     it('hands a sibling reached through ctx.media the same user', async () => {
         const author = await createTestUser(getDb(), { name: 'Author' });
-        const ctx = createAppContext({ user: { id: author.id } as never, role: admin });
+        const ctx = createAppContext({ user: author, role: admin });
 
         const uploaded = await ctx.media.upload({
             file: new File(['x'], 'b.txt', { type: 'text/plain' }),
@@ -108,14 +108,14 @@ describe('bind', () => {
             vi.useFakeTimers({ toFake: ['Date'] });
             vi.setSystemTime(new Date('2026-01-01T00:00:00.000Z'));
             const uploaded = await createAppContext({
-                user: { id: author.id } as never,
+                user: author,
                 role: admin,
             }).media.upload({ file: new File(['x'], 'c.txt', { type: 'text/plain' }) });
             const later = new Date('2026-01-02T00:00:00.000Z');
             vi.setSystemTime(later);
 
             const edited = await createAppContext({
-                user: { id: editor.id } as never,
+                user: editor,
                 role: admin,
             }).media.update({ id: uploaded.id, data: { alt: 'Described' } });
 

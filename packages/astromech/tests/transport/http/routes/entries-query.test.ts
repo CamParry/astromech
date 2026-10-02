@@ -9,8 +9,9 @@
  */
 
 import type { AuthVariables } from '@/transport/http/middleware/auth';
-import type { Entry, Role, User } from '@/types/index';
+import type { Entry, Role } from '@/types/index';
 import { OpenAPIHono } from '@hono/zod-openapi';
+import { makeUser, roleWith } from '@tests/fixtures';
 import { createTestDb, setupTestConfig } from '@tests/harness';
 import { beforeEach, describe, expect, it } from 'vitest';
 import { createAppContext } from '@/app-context/app-context';
@@ -20,16 +21,7 @@ import { createEntriesRouter } from '@/transport/http/routes/entries';
 
 const api = currentServices.entries;
 
-const fakeUser = { id: 'u1', email: 'a@b.dev' } as unknown as User;
-
-function roleWith(permissions: string[]): Role {
-    return {
-        slug: 'test',
-        name: 'Test',
-        permissions: permissions as Role['permissions'],
-        isBuiltIn: false,
-    };
-}
+const fakeUser = makeUser({ id: 'u1', email: 'a@b.dev' });
 
 /** Mount the entries router in isolation with an injected role and the app's `onError`. */
 function mountedApp(role: Role): OpenAPIHono<{ Variables: AuthVariables }> {

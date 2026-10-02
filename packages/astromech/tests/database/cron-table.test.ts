@@ -1,5 +1,3 @@
-import type { DB } from '@/database/types';
-import type { Insertable } from 'kysely';
 import { createTestDb } from '@tests/harness';
 import { sql } from 'kysely';
 import { describe, expect, it } from 'vitest';
@@ -27,7 +25,7 @@ describe('_astromech_cron table', () => {
                     schedule: '* * * * *',
                     enabled: true,
                     nextRun: now,
-                }) as unknown as Insertable<DB['_astromech_cron']>
+                })
             )
             .execute();
         const rows = await db.selectFrom('_astromech_cron').selectAll().execute();

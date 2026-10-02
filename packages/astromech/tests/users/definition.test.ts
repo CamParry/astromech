@@ -74,7 +74,7 @@ describe('the catalogue', () => {
 describe('bind', () => {
     it('records the context’s user as the author, with no request store in play', async () => {
         const author = await createTestUser(getDb(), { name: 'Author' });
-        const ctx = createAppContext({ user: { id: author.id } as never, role: admin });
+        const ctx = createAppContext({ user: author, role: admin });
 
         const created = await usersDefinition
             .bind(ctx)
@@ -88,7 +88,7 @@ describe('bind', () => {
 
     it('hands a sibling reached through ctx.users the same user', async () => {
         const author = await createTestUser(getDb(), { name: 'Author' });
-        const ctx = createAppContext({ user: { id: author.id } as never, role: admin });
+        const ctx = createAppContext({ user: author, role: admin });
 
         // `create` lists the existing users through `ctx.users.query` to build
         // its relationship lookups, so a create exercises the sibling call.

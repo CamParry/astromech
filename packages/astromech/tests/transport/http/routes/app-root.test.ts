@@ -8,23 +8,25 @@
  */
 
 import type { Role, User } from '@/types/index';
-import type { OpenAPIHono } from '@hono/zod-openapi';
 import { adminRole } from '@tests/fixtures';
 import { createTestDb, makeTestConfig, requestAs, setupTestConfig } from '@tests/harness';
 import { describe, expect, it } from 'vitest';
 import { currentServices } from '@/app-context/services';
 import { createHttpApp } from '@/transport/http/app';
 
+/** The composed HTTP app, typed as `createHttpApp` builds it. */
+type HttpApp = ReturnType<typeof createHttpApp>;
+
 const usersService = currentServices.users;
 
 /** The API prefix the current app registered its routes under. */
 let api: string;
 
-async function freshApp(): Promise<OpenAPIHono> {
+async function freshApp(): Promise<HttpApp> {
     await createTestDb();
     const resolved = setupTestConfig(makeTestConfig());
     api = `${resolved.basePath}/api`;
-    return createHttpApp(resolved) as unknown as OpenAPIHono;
+    return createHttpApp(resolved);
 }
 
 describe('GET /setup/check', () => {
@@ -165,7 +167,7 @@ describe('the Better Auth catch-all', () => {
 });
 
 describe('POST /setup', () => {
-    const setup = (app: OpenAPIHono, body: unknown) =>
+    const setup = (app: HttpApp, body: unknown) =>
         app.request(`${api}/setup`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },

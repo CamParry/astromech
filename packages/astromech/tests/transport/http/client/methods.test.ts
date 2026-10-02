@@ -10,7 +10,6 @@
  * unwrapped value returned.
  */
 
-import type { Entry, Media, Notification, User } from '@/types/index';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import {
     AstromechApiError,
@@ -68,11 +67,11 @@ describe('astromechUntypedClient', () => {
     });
 });
 
-const entry = { id: 'e1', type: 'post', title: 'One' } as unknown as Entry;
+const entry = { id: 'e1', type: 'post', title: 'One' };
 const entries = [entry];
-const media = { id: 'm1', filename: 'a.png' } as unknown as Media;
-const user = { id: 'u1', email: 'a@b.c' } as unknown as User;
-const notification = { id: 'n1' } as unknown as Notification;
+const media = { id: 'm1', filename: 'a.png' };
+const user = { id: 'u1', email: 'a@b.c' };
+const notification = { id: 'n1' };
 const page = { data: entries, total: 1, page: 1, limit: 20, pages: 1 };
 
 type Case = {

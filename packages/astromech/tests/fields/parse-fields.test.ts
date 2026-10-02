@@ -1,5 +1,6 @@
 import type { ResourceType } from '@/types/domain';
-import type { Field, FieldValidationContext, ValidationMode } from '@/types/fields';
+import type { FieldValidationContext, ValidationMode } from '@/types/fields';
+import { field } from '@tests/fixtures';
 import { beforeEach, describe, expect, it } from 'vitest';
 import { group, tab, tabs } from '@/fields/builder';
 import { setPluginFieldTypes } from '@/fields/field-type-registry';
@@ -19,10 +20,6 @@ function fakeCtx(overrides: CtxOverrides = {}) {
         user: null,
         ...overrides,
     };
-}
-
-function field(def: Partial<Field> & { name: string; type: string }): Field {
-    return def as Field;
 }
 
 describe('required', () => {

@@ -9,6 +9,7 @@
  */
 import type { Where } from '@/database/repository/where';
 import { renderTableStatements } from '@astromech/schema-engine';
+import { invalid } from '@tests/fixtures';
 import { createTestDb } from '@tests/harness';
 import { sql } from 'kysely';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
@@ -202,7 +203,7 @@ describe('createRepository – where', () => {
 
         // Bare arrays are a runtime lenience for loosely-typed callers; the
         // typed DSL spells this `{ in: [...] }`.
-        const where = { type: ['post', 'card'] } as unknown as Where<typeof entriesProbe>;
+        const where = invalid<Where<typeof entriesProbe>>({ type: ['post', 'card'] });
         const rows = await repository.findMany({
             where,
             orderBy: [['title', 'asc']],
@@ -303,14 +304,14 @@ describe('createRepository – where', () => {
     });
 
     it('throws for an unknown column key', async () => {
-        const bogus = { nope: 'x' } as unknown as Where<typeof entriesProbe>;
+        const bogus = invalid<Where<typeof entriesProbe>>({ nope: 'x' });
         await expect(entryRepository().findMany({ where: bogus })).rejects.toThrow(
             /unknown column "nope"/
         );
     });
 
     it('throws when an in operand is not an array', async () => {
-        const bogus = { type: { in: 'post' } } as unknown as Where<typeof entriesProbe>;
+        const bogus = invalid<Where<typeof entriesProbe>>({ type: { in: 'post' } });
         await expect(entryRepository().findMany({ where: bogus })).rejects.toThrow(
             /expects an array/
         );
@@ -405,7 +406,7 @@ describe('createRepository – where or', () => {
     });
 
     it('throws when or is not an array', async () => {
-        const bogus = { or: { title: 'A' } } as unknown as Where<typeof entriesProbe>;
+        const bogus = invalid<Where<typeof entriesProbe>>({ or: { title: 'A' } });
         await expect(entryRepository().findMany({ where: bogus })).rejects.toThrow(
             AstromechError
         );
@@ -499,7 +500,7 @@ describe('createRepository – where contains', () => {
     });
 
     it('throws when the contains operand is not a string', async () => {
-        const bogus = { title: { contains: 5 } } as unknown as Where<typeof entriesProbe>;
+        const bogus = invalid<Where<typeof entriesProbe>>({ title: { contains: 5 } });
         await expect(entryRepository().findMany({ where: bogus })).rejects.toThrow(
             AstromechError
         );

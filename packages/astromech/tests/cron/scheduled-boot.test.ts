@@ -7,7 +7,7 @@
 
 import type { DB } from '@/database/types';
 import type { AstromechConfig } from '@/types/index';
-import type { Kysely, Updateable } from 'kysely';
+import type { Kysely } from 'kysely';
 import { createTestDb, makeTestConfig, resetRuntime } from '@tests/harness';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { interval } from '@/cron/drivers/interval';
@@ -89,7 +89,7 @@ describe('createWorkerEntry().scheduled on an uncreated application', () => {
                 encodePatchWith(cronTable, {
                     nextRun: new Date(seedTime.getTime() - 60_000),
                     lock: null,
-                }) as unknown as Updateable<DB['_astromech_cron']>
+                })
             )
             .where('name', '=', 'boot-test-job')
             .execute();

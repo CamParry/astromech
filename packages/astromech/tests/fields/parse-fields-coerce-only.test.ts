@@ -5,7 +5,8 @@
  * second pass over an untouched value is directly observable.
  */
 
-import type { Field, ValidationMode } from '@/types/fields';
+import type { ValidationMode } from '@/types/fields';
+import { field } from '@tests/fixtures';
 import { beforeEach, describe, expect, it } from 'vitest';
 import { setPluginFieldTypes } from '@/fields/field-type-registry';
 import { safeParseFields } from '@/fields/parse-fields';
@@ -23,10 +24,6 @@ function fakeCtx(overrides: CtxOverrides = {}) {
         user: null,
         ...overrides,
     };
-}
-
-function field(def: Partial<Field> & { name: string; type: string }): Field {
-    return def as Field;
 }
 
 // Appends a marker on every pass, so `f(f(x)) !== f(x)`.

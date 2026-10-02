@@ -1,4 +1,5 @@
 import type { EntryType } from '@/types/index';
+import { invalid } from '@tests/fixtures';
 import { describe, expect, it } from 'vitest';
 import { assertEntryTypeValid, toResolvedEntryCapabilities } from '@/config/entry-types';
 
@@ -157,12 +158,12 @@ describe('assertEntryTypeValid — titleField', () => {
     });
 
     it("'name' throws with descriptive message", () => {
-        // Cast needed because the type already restricts to 'title' | false | undefined.
-        const cfg = {
+        // The type already restricts `titleField` to 'title' | false | undefined.
+        const cfg = invalid<EntryType>({
             single: 'Item',
             plural: 'Items',
             titleField: 'name',
-        } as unknown as EntryType;
+        });
         expect(() => assertEntryTypeValid('widget', cfg)).toThrow(
             `Astromech entry type "widget": titleField must be 'title' or false (got "name"). A custom title field name is not supported — a type is either titled on \`title\` or titleless.`
         );

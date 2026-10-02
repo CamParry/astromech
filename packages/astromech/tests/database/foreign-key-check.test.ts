@@ -8,11 +8,10 @@
  * The D1 case is in `tests/integrations/cloudflare/d1-local-emulation.test.ts`.
  */
 
-import type { DB } from '@/database/types';
 import { createClient } from '@libsql/client';
-import { LibsqlDialect } from '@libsql/kysely-libsql';
 import { createTestDb } from '@tests/harness';
-import { CamelCasePlugin, Kysely, sql } from 'kysely';
+import { openTestDb } from '@tests/test-db';
+import { sql } from 'kysely';
 import { describe, expect, it } from 'vitest';
 import { assertForeignKeysEnforced, runMigrations } from '@/database/migrations';
 import { AstromechError } from '@/errors/astromech-error';
@@ -26,12 +25,7 @@ describe('the foreign key check', () => {
 
     it('stops runMigrations when PRAGMA foreign_keys reads 0', async () => {
         const client = createClient({ url: ':memory:' });
-        const db = new Kysely<DB>({
-            // `@libsql/kysely-libsql` pins an older `@libsql/core` Client type;
-            // the runtime client is compatible (see the libsql driver).
-            dialect: new LibsqlDialect({ client: client as never }),
-            plugins: [new CamelCasePlugin()],
-        });
+        const db = openTestDb(client);
         try {
             await sql`PRAGMA foreign_keys = OFF`.execute(db);
             const messages: string[] = [];

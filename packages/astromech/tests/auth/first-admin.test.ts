@@ -7,6 +7,7 @@
 
 import type { DB } from '@/database/types';
 import type { Kysely } from 'kysely';
+import { invalid } from '@tests/fixtures';
 import { createTestDb, setupTestConfig } from '@tests/harness';
 import { sql } from 'kysely';
 import { beforeEach, describe, expect, it } from 'vitest';
@@ -40,7 +41,7 @@ type Refusal = { statusCode?: number; body?: { code?: string } } | null;
  */
 function signUp(email: string, extra: Record<string, unknown> = {}): Promise<unknown> {
     const body = { email, password: 'password123', name: 'Signup', ...extra };
-    return getAuth().api.signUpEmail({ body } as unknown as SignUpArgs);
+    return getAuth().api.signUpEmail(invalid<SignUpArgs>({ body }));
 }
 
 /** The error a sign-up rejects with, or null if it succeeds. */

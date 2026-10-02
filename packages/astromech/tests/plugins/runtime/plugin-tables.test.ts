@@ -1,5 +1,6 @@
 import type { Table } from '@/database/define-table';
 import type { PluginDefinition } from '@/types/index';
+import { invalid } from '@tests/fixtures';
 import { describe, expect, it } from 'vitest';
 import { defineTable } from '@/database/define-table';
 import {
@@ -38,7 +39,7 @@ describe('collectPluginTables', () => {
         const collected = collectPluginTables([
             def({
                 package: '@astromech/x',
-                tables: [{ foo: 'bar' } as unknown as Table],
+                tables: [invalid<Table>({ foo: 'bar' })],
             }),
         ]);
         expect(collected).toEqual([]);

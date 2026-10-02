@@ -4,7 +4,8 @@
  * there is none, since a session-scoped verb has no subject without one.
  */
 
-import type { NotificationsService, User } from '@/types/index';
+import type { NotificationsService } from '@/types/index';
+import { makeUser } from '@tests/fixtures';
 import { createTestDb, createTestUser, setupTestConfig } from '@tests/harness';
 import { beforeEach, describe, expect, it } from 'vitest';
 import { createAppContext } from '@/app-context/app-context';
@@ -21,7 +22,7 @@ const METHODS: (keyof NotificationsService)[] = [
 /** One user's inbox: the methods bound to a context acting as them. */
 function inbox(userId: string): NotificationsService {
     return notificationsDefinition.bind(
-        createAppContext({ user: { id: userId } as User, role: null })
+        createAppContext({ user: makeUser({ id: userId }), role: null })
     );
 }
 

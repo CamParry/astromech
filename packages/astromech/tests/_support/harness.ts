@@ -44,10 +44,12 @@ import type {
 // Declares `testDbDir` and `testDbTemplate` on vitest's `ProvidedContext`,
 // for `inject` below.
 import type {} from './global-setup';
-import type { Kysely } from 'kysely';
+import type { Client } from '@libsql/client';
 import * as fs from 'node:fs/promises';
 import * as path from 'node:path';
+import { LibsqlDialect } from '@libsql/kysely-libsql';
 import { noopStorage } from '@tests/fixtures';
+import { Kysely } from 'kysely';
 import { inject } from 'vitest';
 import { createAppContext } from '@/app-context/app-context';
 import { setConfig } from '@/config/registry';
@@ -69,6 +71,19 @@ type Db = Kysely<DB>;
 // each test database is copied from.
 const TEST_DB_DIR = inject('testDbDir');
 const TEST_DB_TEMPLATE = inject('testDbTemplate');
+
+/**
+ * A Kysely over `client` with no plugins, so a query names each column as it
+ * is stored. For a test of one migration on a database of its own; the app's
+ * shape, camel-cased, is `openTestDb` in `test-db.ts`.
+ */
+export function openPlainDb(client: Client): Kysely<unknown> {
+    // `@libsql/kysely-libsql` pins an older `@libsql/core` Client type; the
+    // runtime client is compatible (see the libsql driver).
+    return new Kysely<unknown>({
+        dialect: new LibsqlDialect({ client: client as never }),
+    });
+}
 
 /**
  * Reset the runtime with `resetRuntime()`, then copy the migrated template to
@@ -188,6 +203,16 @@ export function makeTestConfig(): AstromechConfig {
 }
 
 /**
+ * Resolve `makeTestConfig()` with `overrides` laid over it, without publishing
+ * it, for code that takes a `ResolvedConfig` as an argument.
+ */
+export function resolveTestConfig(
+    overrides: Partial<AstromechConfig> = {}
+): ResolvedConfig {
+    return resolveConfig({ ...makeTestConfig(), ...overrides });
+}
+
+/**
  * Resolve the test config, publish it and register its drivers, the way boot
  * does. The database is the one `createTestDb()` opened unless the config names
  * its own. Also resets the plugin runtime (no hooks) unless `plugins` is supplied.
@@ -264,14 +289,15 @@ export function registerTestPlugins(
 
 /**
  * Insert a user row and its content row (entries reference users via nullable
- * FKs). `fields` and `locale` go on the content row; `locale` defaults to `en`
- * rather than reading the config, because a route test seeds its acting user
- * before `setupTestConfig` runs.
+ * FKs), and return the user as the users service answers it. `fields` and
+ * `locale` go on the content row; `locale` defaults to `en` rather than reading
+ * the config, because a route test seeds its acting user before
+ * `setupTestConfig` runs. Throws when either insert returns no row.
  */
 export async function createTestUser(
     db: Db,
     overrides: Partial<UserTableRow> & { fields?: JsonObject; locale?: string } = {}
-): Promise<UserTableRow> {
+): Promise<User> {
     const { fields, locale, ...account } = overrides;
     const row = await db
         .insertInto('users')
@@ -288,16 +314,31 @@ export async function createTestUser(
     if (!row) throw new Error('failed to insert test user');
     const user = decodeWith(usersTable, row);
 
-    await db
+    const contentRow = await db
         .insertInto('userContent')
         .values(
             encodeWith(userContentTable, {
                 userId: user.id,
                 locale: locale ?? 'en',
                 fields: fields ?? {},
-            }) as never
+            })
         )
-        .execute();
+        .returningAll()
+        .executeTakeFirst();
+    if (!contentRow) throw new Error('failed to insert test user content');
+    const content = decodeWith(userContentTable, contentRow);
 
-    return user;
+    return {
+        id: user.id,
+        email: user.email,
+        name: user.name,
+        emailVerified: user.emailVerified,
+        image: user.image,
+        locale: content.locale,
+        locales: [content.locale],
+        fields: fields ?? {},
+        role: user.role,
+        createdAt: user.createdAt,
+        updatedAt: user.updatedAt,
+    };
 }
