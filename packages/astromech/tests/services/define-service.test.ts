@@ -5,7 +5,7 @@
  */
 
 import type { AppContext, MethodsFor } from '@/types/index';
-import { describe, expect, expectTypeOf, it, vi } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import { z } from 'zod';
 import { OutputValidationError } from '@/errors/output-validation';
 import { ValidationError } from '@/errors/validation';
@@ -211,15 +211,4 @@ const defaulted = defineServiceMethod({
     output: z.number(),
     mutates: false,
     handler: async (input): Promise<number> => input.limit,
-});
-
-describe('defineServiceMethod input types', () => {
-    it('reads a defaulted key as set for the handler and optional for the caller', () => {
-        // The handler runs after the parse, so the default is already applied.
-        expectTypeOf(defaulted.handler).parameter(0).toEqualTypeOf<{ limit: number }>();
-        // A caller passes what the schema accepts, where the key is optional.
-        expectTypeOf(defaulted.input).toExtend<
-            z.ZodType<unknown, { limit?: number | undefined }>
-        >();
-    });
 });

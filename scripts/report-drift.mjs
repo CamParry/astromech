@@ -102,7 +102,7 @@ const THRESHOLD_METRIC = /\b(lines|functions|branches|statements)\s*:\s*(\d+(?:\
 /** The files the report reads, as paths from the repo root. */
 const SOURCE_FILE =
     /^(packages\/plugins\/[^/]+|packages\/[^/]+|apps\/[^/]+)\/src\/.+\.(ts|tsx|mjs|js)$/;
-const TEST_FILE = /(^|\/)(tests?|__tests__)\/|\.(test|spec)\.[cm]?[jt]sx?$/;
+const TEST_FILE = /(^|\/)(tests?|__tests__)\/|\.(test|spec)(-d)?\.[cm]?[jt]sx?$/;
 const CODE_FILE = /\.[cm]?[jt]sx?$/;
 const VITEST_CONFIG = /(^|\/)vitest\.config\.[cm]?[jt]s$/;
 

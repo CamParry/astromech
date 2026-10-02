@@ -16,6 +16,10 @@ import { fileURLToPath } from 'node:url';
  * every project.
  */
 export const baseTestOptions = {
+    // A test that asserts nothing passes whatever the code does. A type-only
+    // test lives in a `*.test-d.ts` file, which `typecheck` compiles and
+    // vitest does not run.
+    expect: { requireAssertions: true },
     // Vitest allows `.only` outside CI, where it silently narrows a run.
     allowOnly: false,
     // Vitest's defaults, set here so every package uses the same ones. A

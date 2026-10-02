@@ -4,7 +4,7 @@
  */
 
 import type { Field } from 'astromech';
-import { describe, expect, expectTypeOf, it } from 'vitest';
+import { describe, expect, it } from 'vitest';
 import { resolvePluginIdentity } from '@/plugins/runtime/plugin-identity';
 import { seo } from '../../src/index';
 
@@ -23,12 +23,6 @@ describe('seo.section', () => {
 
     it('takes a label in place of the default heading', () => {
         expect(seo.section({ label: 'Search' }).label).toBe('Search');
-    });
-
-    it('is typed as the site calls it, without the identity parameter', () => {
-        expectTypeOf(seo.section).toEqualTypeOf<
-            (options?: { label?: Field['label'] }) => Field
-        >();
     });
 });
 

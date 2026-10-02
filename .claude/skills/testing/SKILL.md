@@ -24,6 +24,7 @@ If following it would make the code or the test worse, or would need a workaroun
 - **Write fewer, stronger tests.** Agents tend to write too many. Leave out what another check already proves: what `tsc` checks, a mapping with no branches, a route-table row that only forwards to a method (`packages/astromech/tests/transport/http/routes/rest-route.test.ts` covers the table, and the method's own test covers the method). Before adding a test, look for one of the same behaviour and add a case or an `it.each` row to it.
 - **A rule that holds for every member of a set is tested once, over the set.** `packages/astromech/tests/content/resource-conformance.test.ts` runs its checks over every resource, and the parity tests (`packages/astromech/tests/transport/http/routes/rpc-parity.test.ts` and `packages/astromech/tests/transport/mcp/parity.test.ts`) over every manifest method. Add a case there rather than a copy per member.
 - **A bug fix starts with a test that fails for the bug's reason.**
+- **Every runtime test asserts something; a type-only test lives in a `*.test-d.ts` file.** Vitest fails a test that makes no `expect` call, and an `expectTypeOf` check does nothing at runtime. A `*.test-d.ts` file next to the runtime one (`packages/astromech/tests/database/plugin-tables.test-d.ts`) is compiled by the package's `typecheck` and never run by vitest, so its checks fail where they can.
 
 ## Writing a test with the code
 

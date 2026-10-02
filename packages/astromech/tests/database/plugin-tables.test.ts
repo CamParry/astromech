@@ -3,12 +3,12 @@
  * its tables on a site's `db` handle. These checks are type-level: the
  * augmentation below adds one table through the `astromech` specifier, the
  * same way a plugin does, and `DB` has to pick it up next to core's tables.
+ * `plugin-tables.test-d.ts` holds the checks that are type-level only.
  */
 
 import type { KyselyOf } from '@/database/define-table';
 import type { DB } from '@/database/types';
 import type { PluginDB } from 'astromech';
-import type { Kysely } from 'kysely';
 import { describe, expect, expectTypeOf, it } from 'vitest';
 import { definePluginTable } from '@/database/define-plugin-table';
 
@@ -28,10 +28,6 @@ declare module 'astromech' {
     > {}
 }
 
-function selectLabels(db: Kysely<DB>) {
-    return db.selectFrom('pluginAcmeWidgetsWidgets').select('label').execute();
-}
-
 describe('AstromechPluginTables', () => {
     it('adds every table in the array to DB under its Kysely key', () => {
         // Each key is the camel-cased SQL name.
@@ -45,13 +41,5 @@ describe('AstromechPluginTables', () => {
         expectTypeOf<DB['pluginAcmeWidgetsGadgets']>().toEqualTypeOf<
             KyselyOf<typeof gadgetsTable>
         >();
-    });
-
-    it("keeps core's tables", () => {
-        expectTypeOf<DB>().toHaveProperty('entries');
-    });
-
-    it('lets a Kysely<DB> query the augmented table', () => {
-        expectTypeOf(selectLabels).returns.resolves.toEqualTypeOf<{ label: string }[]>();
     });
 });

@@ -22,6 +22,7 @@ export default defineConfig({
     test: {
         environment: 'node',
         include: ['tests/**/*.test.ts'],
+        expect: { requireAssertions: true },
         allowOnly: false,
         testTimeout: 5000,
         hookTimeout: 10_000,
