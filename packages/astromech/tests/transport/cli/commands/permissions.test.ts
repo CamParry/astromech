@@ -108,9 +108,10 @@ describe('permissions', () => {
         expect(result.exitCode).toBe(1);
     });
 
-    it('runs without opening the database', async () => {
+    it('runs against a remote database without --allow-remote or opening it', async () => {
         const config = await writeSiteConfig(siteDir, {
             globals: [{ key: 'site', label: 'Site', fields: [] }],
+            remote: true,
             throwOnOpen: true,
         });
 

@@ -11,7 +11,7 @@ import { resolveMigrationsDir } from '@/database/app-migrations';
 import { rebaselineMigrations } from '@/database/generate';
 import { CORE_TABLES } from '@/database/tables';
 import { pluralise } from '@/utilities/strings';
-import { configArgs, toAllowRemoteOption } from '../common-args';
+import { configPathArgs } from '../common-args';
 import { loadConfigWithoutDrivers } from '../config';
 
 export default defineCommand({
@@ -24,13 +24,10 @@ export default defineCommand({
             type: 'boolean',
             description: 'Fold every migration past the baseline into it',
         },
-        ...configArgs,
+        ...configPathArgs,
     },
     async run({ args }) {
-        const { resolved: config } = await loadConfigWithoutDrivers(
-            args.config,
-            toAllowRemoteOption(args)
-        );
+        const { resolved: config } = await loadConfigWithoutDrivers(args.config);
         const folder = config.migrationsDir;
 
         let result;

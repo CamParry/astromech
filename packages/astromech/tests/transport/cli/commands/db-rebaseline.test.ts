@@ -36,12 +36,11 @@ beforeEach(async () => {
     migrations = join(site, 'migrations');
 });
 
-/** Write a config naming the temp chain, with a database that is remote or local. */
-function writeConfig(options: { remote?: boolean } = {}): Promise<string> {
+/** Write a config naming the temp chain. */
+function writeConfig(): Promise<string> {
     return writeSiteConfig(site, {
         database: join(site, 'database.db'),
         migrationsDir: migrations,
-        remote: options.remote === true,
     });
 }
 
@@ -179,25 +178,6 @@ describe('db:rebaseline', () => {
         expect(await chainContents()).toEqual(before);
     });
 
-    it('refuses a remote database unless --allow-remote is passed', async () => {
-        await bannerChain();
-        const config = await writeConfig({ remote: true });
-        const before = await chainContents();
-
-        const refused = await run(dbRebaseline, ['--config', config]);
-        expect(refused.exitCode).toBe(1);
-        expect(refused.stderr).toEqual([expect.stringContaining('--allow-remote')]);
-        expect(await chainContents()).toEqual(before);
-
-        const allowed = await run(dbRebaseline, ['--config', config, '--allow-remote']);
-        expect(allowed.exitCode).toBe(0);
-        expect(allowed.stderr).toEqual([]);
-        const snapshot = JSON.parse(
-            await readFile(join(migrations, 'snapshot.json'), 'utf-8')
-        );
-        expect(Object.keys(snapshot.tables).sort()).toEqual(coreNames);
-    });
-
     it('rebaselines a baseline that db:generate wrote', async () => {
         await generatedBaseline();
         const config = await writeConfig();
@@ -210,10 +190,11 @@ describe('db:rebaseline', () => {
         for (const name of coreNames) expect(baseline).toContain(`// ── ${name} ──`);
     });
 
-    it('runs without opening the database', async () => {
+    it('runs against a remote database without --allow-remote or opening it', async () => {
         await bannerChain();
         const config = await writeSiteConfig(site, {
             migrationsDir: migrations,
+            remote: true,
             throwOnOpen: true,
         });
 

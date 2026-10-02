@@ -303,7 +303,7 @@ export async function rebaselineMigrations(opts: {
     const later = entries.slice(1);
     if (later.length > 0 && opts.collapse !== true) {
         throw new Error(
-            `the chain has ${later.length} migration(s) past the baseline ` +
+            `the chain has ${later.length} ${later.length === 1 ? 'migration' : 'migrations'} past the baseline ` +
                 `(${later.map((e) => e.tag).join(', ')}), so re-emitting the baseline alone ` +
                 'would leave them replaying on top of it. Pass --collapse to fold the whole ' +
                 'chain into a fresh baseline instead.'

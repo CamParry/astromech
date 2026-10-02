@@ -76,8 +76,11 @@ describe('generate:manifest', () => {
         expect(await readFile(out, 'utf-8')).toBe(first);
     });
 
-    it('runs without opening the database', async () => {
-        const config = await writeSiteConfig(siteDir, { throwOnOpen: true });
+    it('runs against a remote database without --allow-remote or opening it', async () => {
+        const config = await writeSiteConfig(siteDir, {
+            remote: true,
+            throwOnOpen: true,
+        });
         const out = join(siteDir, 'methods.json');
 
         expect(await run(generateManifest, ['--config', config, '--out', out])).toEqual({

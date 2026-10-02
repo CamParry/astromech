@@ -13,7 +13,7 @@ import { createJiti } from 'jiti';
 import { resolveMigrationsDir } from '@/database/app-migrations';
 import { generateMigrations, generateMigrationsFromOps } from '@/database/generate';
 import { CORE_TABLES } from '@/database/tables';
-import { configArgs, toAllowRemoteOption } from '../common-args';
+import { configPathArgs } from '../common-args';
 import { loadConfigWithoutDrivers } from '../config';
 
 /** Load an ops file's default export, failing loudly if it is not a function. */
@@ -35,7 +35,7 @@ export default defineCommand({
         description: 'Generate migrations for the core tables',
     },
     args: {
-        ...configArgs,
+        ...configPathArgs,
         name: { type: 'string', description: 'migration name (kebab-case)' },
         ops: {
             type: 'string',
@@ -45,10 +45,7 @@ export default defineCommand({
         },
     },
     async run({ args }) {
-        const { resolved: config } = await loadConfigWithoutDrivers(
-            args.config,
-            toAllowRemoteOption(args)
-        );
+        const { resolved: config } = await loadConfigWithoutDrivers(args.config);
         const common = {
             dir: resolveMigrationsDir(config.migrationsDir),
             tables: CORE_TABLES,

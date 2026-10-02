@@ -4,7 +4,7 @@ import {
     METHOD_MANIFEST_FILENAME,
     serialiseMethodManifest,
 } from '@/codegen/method-manifest';
-import { configArgs, toAllowRemoteOption } from '../common-args';
+import { configPathArgs } from '../common-args';
 import { loadConfigWithoutDrivers } from '../config';
 import { writeGenerated } from '../output';
 
@@ -19,12 +19,11 @@ export default defineCommand({
             description: 'Output path',
             default: `.astro/${METHOD_MANIFEST_FILENAME}`,
         },
-        ...configArgs,
+        ...configPathArgs,
     },
     async run({ args }) {
         const { config: rawConfig, resolved } = await loadConfigWithoutDrivers(
-            args.config,
-            toAllowRemoteOption(args)
+            args.config
         );
         const plugins = rawConfig.plugins ?? [];
         const json = serialiseMethodManifest(generateMethodManifest(resolved, plugins));

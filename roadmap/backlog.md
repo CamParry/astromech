@@ -104,7 +104,7 @@ not be re-derived.
 ### Runtime integrations follow-ups
 
 - [ ] Rename `apps/demo` to name its runtime, now that a second runtime demo exists. It touches `check:boot`, `check:config`, `AGENTS.md` and several docs paths, so it is worth doing when a third demo makes the set obvious rather than on its own
-- [ ] The D1 driver reports itself remote whether it is reaching the real database or wrangler's local emulation, and cannot tell the two apart. So `db:generate` and `db:init` against a local D1 need `--allow-remote`, which is the flag that exists to make a genuinely remote write deliberate
+- [ ] The D1 driver reports itself remote whether it is reaching the real database or wrangler's local emulation, and cannot tell the two apart. So `db:init` and `db:status` against a local D1 need `--allow-remote`, which is the flag that exists to make a genuinely remote write deliberate
 
 ### Test harness follow-ups
 
