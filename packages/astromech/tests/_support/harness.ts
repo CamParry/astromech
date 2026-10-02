@@ -29,6 +29,7 @@
  * records the acting user, so a route test acting as `testUser` needs that row
  * to exist — `mount-router.ts`'s `seedTestUser` inserts it via `createTestUser`.
  */
+import type { Table } from '@/database/define-table';
 import type { UserTableRow } from '@/database/tables';
 import type { DB } from '@/database/types';
 import type {
@@ -49,7 +50,7 @@ import * as fs from 'node:fs/promises';
 import * as path from 'node:path';
 import { LibsqlDialect } from '@libsql/kysely-libsql';
 import { noopStorage } from '@tests/fixtures';
-import { Kysely } from 'kysely';
+import { Kysely, sql } from 'kysely';
 import { inject } from 'vitest';
 import { createAppContext } from '@/app-context/app-context';
 import { setConfig } from '@/config/registry';
@@ -57,7 +58,7 @@ import { resolveConfig } from '@/config/resolve';
 import { decodeWith, encodeWith } from '@/database/codec';
 import { getDatabaseDriver, setDatabaseDriver } from '@/database/driver-registry';
 import { libsql } from '@/database/drivers/libsql';
-import { setDb } from '@/database/registry';
+import { getDb, setDb } from '@/database/registry';
 import { userContentTable, usersTable } from '@/database/tables';
 import { DEFAULT_ROLE_SLUG } from '@/permissions/roles';
 import { registerPlugins } from '@/plugins/runtime/plugin-runtime';
@@ -275,6 +276,29 @@ export function requestAs(
 ): Promise<Response> {
     const request = new Request(new URL(path, 'http://localhost'), init);
     return runInRequestScope({ request, ...identity }, async () => app.fetch(request));
+}
+
+/**
+ * Make every `operation` on `table` fail with the message `boom` until the
+ * returned function drops the trigger. The failure is raised inside the write's
+ * own transaction, as a constraint violation would be. A `TEMP` trigger would
+ * reach only the pooled connection that created it, so this one is not.
+ */
+export async function failWritesTo(
+    table: Table,
+    operation: 'insert' | 'update' | 'delete'
+): Promise<() => Promise<void>> {
+    const db = getDb();
+    const trigger = `fail_${table.name}_${operation}`;
+    await sql
+        .raw(
+            `CREATE TRIGGER ${trigger} BEFORE ${operation.toUpperCase()} ON ${table.name} ` +
+                `BEGIN SELECT RAISE(ABORT, 'boom'); END`
+        )
+        .execute(db);
+    return async () => {
+        await sql.raw(`DROP TRIGGER ${trigger}`).execute(db);
+    };
 }
 
 /**

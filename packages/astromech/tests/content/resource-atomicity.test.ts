@@ -2,16 +2,21 @@
  * A write that touches more than one row runs in one transaction, so when its
  * relationship index write fails, every other row it wrote rolls back with it.
  * Each row of the table is one such write: what it needs first, the call that
- * fails, and what must still hold afterwards.
+ * fails, and what must still hold afterwards. The failure is a trigger on the
+ * real `relationships` table, so every write it references must name a target.
  */
 
-import { createTestDb, makeTestConfig, setupTestConfig } from '@tests/harness';
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import {
+    createTestDb,
+    failWritesTo,
+    makeTestConfig,
+    setupTestConfig,
+} from '@tests/harness';
+import { beforeEach, describe, expect, it } from 'vitest';
 import { currentServices } from '@/app-context/services';
-import { relationshipRepository } from '@/content/repository/relationships';
 import { getDb } from '@/database/registry';
 import { createRepository } from '@/database/repository/create-repository';
-import { entriesTable } from '@/database/tables';
+import { entriesTable, relationshipsTable } from '@/database/tables';
 import { mediaRepository } from '@/media/repository';
 
 const entriesService = currentServices.entries;
@@ -21,7 +26,7 @@ const usersService = currentServices.users;
 /** One write that must be atomic. */
 type AtomicWrite = {
     name: string;
-    /** Which relationship index write fails: the insert, or the delete. */
+    /** Which relationship index write fails: an insert, or a delete. */
     failing: 'insert' | 'delete';
     /** Write what the call needs; answer the call and the check after it. */
     arrange(): Promise<{ act(): Promise<unknown>; expectUnchanged(): Promise<void> }>;
@@ -32,13 +37,14 @@ const WRITES: AtomicWrite[] = [
         name: 'entries.create',
         failing: 'insert',
         async arrange() {
+            const target = await post();
             return {
                 act: () =>
                     entriesService.create({
                         type: 'post',
                         data: {
                             title: 'Orphan candidate',
-                            fields: { related: [crypto.randomUUID()] },
+                            fields: { related: [target] },
                         },
                     }),
                 async expectUnchanged() {
@@ -46,7 +52,7 @@ const WRITES: AtomicWrite[] = [
                         .selectFrom('entries')
                         .selectAll()
                         .execute();
-                    expect(rows).toHaveLength(0);
+                    expect(rows.map((row) => row.id)).toEqual([target]);
                 },
             };
         },
@@ -55,9 +61,10 @@ const WRITES: AtomicWrite[] = [
         name: 'entries.duplicate',
         failing: 'insert',
         async arrange() {
+            const target = await post();
             const source = await entriesService.create({
                 type: 'post',
-                data: { title: 'Source' },
+                data: { title: 'Source', fields: { related: [target] } },
             });
             return {
                 act: () => entriesService.duplicate({ type: 'post', id: source.id }),
@@ -66,8 +73,9 @@ const WRITES: AtomicWrite[] = [
                         .selectFrom('entries')
                         .selectAll()
                         .execute();
-                    expect(rows).toHaveLength(1);
-                    expect(rows[0]?.id).toBe(source.id);
+                    expect(rows.map((row) => row.id).sort()).toEqual(
+                        [target, source.id].sort()
+                    );
                 },
             };
         },
@@ -76,14 +84,15 @@ const WRITES: AtomicWrite[] = [
         name: 'entries.restoreVersion',
         failing: 'insert',
         async arrange() {
+            const target = await post();
             const entry = await entriesService.create({
                 type: 'post',
-                data: { title: 'Orig', fields: { body: 'orig' } },
+                data: { title: 'Orig', fields: { body: 'orig', related: [target] } },
             });
             await entriesService.update({
                 type: 'post',
                 id: entry.id,
-                data: { title: 'Changed', fields: { body: 'changed' } },
+                data: { title: 'Changed', fields: { body: 'changed', related: [] } },
             });
             const versionsBefore = await entriesService.versions({
                 type: 'post',
@@ -118,9 +127,10 @@ const WRITES: AtomicWrite[] = [
         name: 'entries.createStaged',
         failing: 'insert',
         async arrange() {
+            const target = await post();
             const canonical = await entriesService.create({
                 type: 'post',
-                data: { title: 'Canonical' },
+                data: { title: 'Canonical', fields: { related: [target] } },
             });
             return {
                 act: () =>
@@ -130,19 +140,20 @@ const WRITES: AtomicWrite[] = [
                         .selectFrom('entries')
                         .selectAll()
                         .execute();
-                    expect(rows).toHaveLength(1);
-                    expect(rows[0]?.id).toBe(canonical.id);
+                    expect(rows.map((row) => row.id).sort()).toEqual(
+                        [target, canonical.id].sort()
+                    );
                 },
             };
         },
     },
     {
         name: 'entries.deleteStaged',
-        failing: 'insert',
+        failing: 'delete',
         async arrange() {
             const canonical = await entriesService.create({
                 type: 'post',
-                data: { title: 'Canonical' },
+                data: { title: 'Canonical', fields: { related: [await post()] } },
             });
             await entriesService.createStaged({ type: 'post', id: canonical.id });
             return {
@@ -163,11 +174,15 @@ const WRITES: AtomicWrite[] = [
         failing: 'insert',
         async arrange() {
             const id = await mediaItem();
+            const target = await post();
             return {
                 act: () =>
                     mediaService.update({
                         id,
-                        data: { alt: 'second alt', fields: { credit: 'second' } },
+                        data: {
+                            alt: 'second alt',
+                            fields: { credit: 'second', cover: target },
+                        },
                     }),
                 async expectUnchanged() {
                     const item = await mediaService.get({ id });
@@ -182,10 +197,10 @@ const WRITES: AtomicWrite[] = [
         name: 'media.restoreVersion',
         failing: 'insert',
         async arrange() {
-            const id = await mediaItem();
+            const id = await mediaItem(await post());
             await mediaService.update({
                 id,
-                data: { alt: 'second alt', fields: { credit: 'second' } },
+                data: { alt: 'second alt', fields: { credit: 'second', cover: null } },
             });
             const [version] = await mediaService.versions({ id });
             if (!version) throw new Error('expected a version snapshot');
@@ -204,9 +219,16 @@ const WRITES: AtomicWrite[] = [
         failing: 'insert',
         async arrange() {
             await ann();
+            const target = await post();
             return {
                 act: () =>
-                    usersService.create({ data: { email: 'bob@test.dev', name: 'Bob' } }),
+                    usersService.create({
+                        data: {
+                            email: 'bob@test.dev',
+                            name: 'Bob',
+                            fields: { favourite: target },
+                        },
+                    }),
                 async expectUnchanged() {
                     const { data } = await usersService.query({ limit: 'all' });
                     expect(data.map((user) => user.email)).toEqual(['ann@test.dev']);
@@ -219,11 +241,15 @@ const WRITES: AtomicWrite[] = [
         failing: 'insert',
         async arrange() {
             const id = await ann();
+            const target = await post();
             return {
                 act: () =>
                     usersService.update({
                         id,
-                        data: { name: 'Annabel', fields: { bio: 'second bio' } },
+                        data: {
+                            name: 'Annabel',
+                            fields: { bio: 'second bio', favourite: target },
+                        },
                     }),
                 async expectUnchanged() {
                     const user = await usersService.get({ id });
@@ -238,8 +264,11 @@ const WRITES: AtomicWrite[] = [
         name: 'users.restoreVersion',
         failing: 'insert',
         async arrange() {
-            const id = await ann();
-            await usersService.update({ id, data: { fields: { bio: 'second bio' } } });
+            const id = await ann(await post());
+            await usersService.update({
+                id,
+                data: { fields: { bio: 'second bio', favourite: null } },
+            });
             const [version] = await usersService.versions({ id });
             if (!version) throw new Error('expected a version snapshot');
             return {
@@ -258,7 +287,7 @@ const WRITES: AtomicWrite[] = [
         name: 'users.delete',
         failing: 'delete',
         async arrange() {
-            const id = await ann();
+            const id = await ann(await post());
             const entries = createRepository(entriesTable);
             const entry = await entries.create({
                 type: 'post',
@@ -279,33 +308,30 @@ const WRITES: AtomicWrite[] = [
     },
 ];
 
-/** A media item whose content was authored without a version. */
-async function mediaItem(): Promise<string> {
+/** A post for a write to reference; answers its id. */
+async function post(): Promise<string> {
+    return (await entriesService.create({ type: 'post', data: { title: 'Target' } })).id;
+}
+
+/** A media item whose content was authored without a version or an index row. */
+async function mediaItem(cover: string | null = null): Promise<string> {
     const row = await mediaRepository.create(
         { filename: 'photo.png', mimeType: 'image/png', size: 1 },
-        { alt: 'first alt', fields: { credit: 'first credit' } }
+        { alt: 'first alt', fields: { credit: 'first credit', cover } }
     );
     return row.id;
 }
 
-/** The user Ann, with a bio. */
-async function ann(): Promise<string> {
+/** The user Ann, with a bio and, when given, a favourite post. */
+async function ann(favourite: string | null = null): Promise<string> {
     const user = await usersService.create({
-        data: { email: 'ann@test.dev', name: 'Ann', fields: { bio: 'first bio' } },
+        data: {
+            email: 'ann@test.dev',
+            name: 'Ann',
+            fields: { bio: 'first bio', favourite },
+        },
     });
     return user.id;
-}
-
-/**
- * Make the relationship index's `failing` write throw `boom` until the returned
- * function is called.
- */
-function failRelationshipIndex(failing: 'insert' | 'delete'): () => void {
-    const method = failing === 'insert' ? 'replaceForSource' : 'deleteByResource';
-    const spy = vi
-        .spyOn(relationshipRepository, method)
-        .mockRejectedValue(new Error('boom'));
-    return () => spy.mockRestore();
 }
 
 beforeEach(async () => {
@@ -324,11 +350,22 @@ beforeEach(async () => {
         },
         media: {
             translatable: true,
-            fields: [{ name: 'credit', type: 'text', label: 'Credit' }],
+            fields: [
+                { name: 'credit', type: 'text', label: 'Credit' },
+                { name: 'cover', type: 'relationship', label: 'Cover', target: 'post' },
+            ],
         },
         users: {
             translatable: true,
-            fields: [{ name: 'bio', type: 'text', label: 'Bio' }],
+            fields: [
+                { name: 'bio', type: 'text', label: 'Bio' },
+                {
+                    name: 'favourite',
+                    type: 'relationship',
+                    label: 'Favourite',
+                    target: 'post',
+                },
+            ],
         },
     });
 });
@@ -339,9 +376,9 @@ describe('a write that touches more than one row', () => {
         async ({ failing, arrange }) => {
             const { act, expectUnchanged } = await arrange();
 
-            const stopFailing = failRelationshipIndex(failing);
+            const stopFailing = await failWritesTo(relationshipsTable, failing);
             await expect(act()).rejects.toThrow('boom');
-            stopFailing();
+            await stopFailing();
 
             await expectUnchanged();
         }

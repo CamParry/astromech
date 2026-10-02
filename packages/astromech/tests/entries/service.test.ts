@@ -5,9 +5,11 @@
  */
 
 import type { Entry, PluginDefinition } from '@/types/index';
+import { LibsqlError } from '@libsql/client';
 import { expectConsole } from '@tests/console';
 import {
     createTestDb,
+    failWritesTo,
     makeTestConfig,
     registerTestPlugins,
     setupTestConfig,
@@ -1019,75 +1021,77 @@ describe('bulk', () => {
 
 // A single id is a batch of one, and the `BulkOperationError` envelope the
 // write loop adds names nothing the caller does not know, so each single-id
-// verb hands back the underlying error. The failure is forced by spying on the
-// one repository method that runs inside that loop.
+// verb hands back the underlying error: here the database's own, raised by a
+// trigger on the `entries` row the verb writes.
 describe('a single id rethrows the underlying error, unwrapped', () => {
-    function rejects(): Promise<never> {
-        return Promise.reject(new ValidationError([]));
-    }
+    type Verb = {
+        verb: string;
+        operation: 'update' | 'delete';
+        /** The entry's state before the call: `published` or `trashed`, if any. */
+        before?: 'published' | 'trashed';
+        call(id: string): Promise<unknown>;
+    };
 
-    it('update', async () => {
-        const entry = await api.create({ type: 'post', data: { title: 'A' } });
-        vi.spyOn(entryRepository, 'update').mockImplementation(rejects);
-        await expect(
-            api.update({ type: 'post', id: entry.id, data: { title: 'B' } })
-        ).rejects.toBeInstanceOf(ValidationError);
-    });
+    const VERBS: Verb[] = [
+        {
+            verb: 'update',
+            operation: 'update',
+            call: (id) => api.update({ type: 'post', id, data: { title: 'B' } }),
+        },
+        {
+            verb: 'publish',
+            operation: 'update',
+            call: (id) => api.publish({ type: 'post', id }),
+        },
+        {
+            verb: 'unpublish',
+            operation: 'update',
+            before: 'published',
+            call: (id) => api.unpublish({ type: 'post', id }),
+        },
+        {
+            verb: 'schedule',
+            operation: 'update',
+            call: (id) =>
+                api.schedule({
+                    type: 'post',
+                    id,
+                    publishedAt: new Date(Date.now() + 60_000),
+                }),
+        },
+        {
+            verb: 'trash',
+            operation: 'update',
+            call: (id) => api.trash({ type: 'post', id }),
+        },
+        {
+            verb: 'restore',
+            operation: 'update',
+            before: 'trashed',
+            call: (id) => api.restore({ type: 'post', id }),
+        },
+        {
+            verb: 'delete',
+            operation: 'delete',
+            call: (id) => api.delete({ type: 'post', id }),
+        },
+    ];
 
-    it('publish', async () => {
-        const entry = await api.create({ type: 'post', data: { title: 'A' } });
-        vi.spyOn(entryRepository, 'update').mockImplementation(rejects);
-        await expect(api.publish({ type: 'post', id: entry.id })).rejects.toBeInstanceOf(
-            ValidationError
-        );
-    });
-
-    it('unpublish', async () => {
+    it.each(VERBS)('$verb', async ({ operation, before, call }) => {
         const entry = await api.create({
             type: 'post',
-            data: { title: 'A', status: 'published' },
+            data: {
+                title: 'A',
+                ...(before === 'published' ? { status: 'published' } : {}),
+            },
         });
-        vi.spyOn(entryRepository, 'update').mockImplementation(rejects);
-        await expect(
-            api.unpublish({ type: 'post', id: entry.id })
-        ).rejects.toBeInstanceOf(ValidationError);
-    });
+        if (before === 'trashed') await api.trash({ type: 'post', id: entry.id });
+        await failWritesTo(entriesTable, operation);
 
-    it('schedule', async () => {
-        const entry = await api.create({ type: 'post', data: { title: 'A' } });
-        vi.spyOn(entryRepository, 'update').mockImplementation(rejects);
-        await expect(
-            api.schedule({
-                type: 'post',
-                id: entry.id,
-                publishedAt: new Date(Date.now() + 60_000),
-            })
-        ).rejects.toBeInstanceOf(ValidationError);
-    });
+        const refused = call(entry.id);
 
-    it('trash', async () => {
-        const entry = await api.create({ type: 'post', data: { title: 'A' } });
-        vi.spyOn(entryRepository.trash, 'trash').mockImplementation(rejects);
-        await expect(api.trash({ type: 'post', id: entry.id })).rejects.toBeInstanceOf(
-            ValidationError
-        );
-    });
-
-    it('restore', async () => {
-        const entry = await api.create({ type: 'post', data: { title: 'A' } });
-        await api.trash({ type: 'post', id: entry.id });
-        vi.spyOn(entryRepository.trash, 'restore').mockImplementation(rejects);
-        await expect(api.restore({ type: 'post', id: entry.id })).rejects.toBeInstanceOf(
-            ValidationError
-        );
-    });
-
-    it('delete', async () => {
-        const entry = await api.create({ type: 'post', data: { title: 'A' } });
-        vi.spyOn(entryRepository, 'delete').mockImplementation(rejects);
-        await expect(api.delete({ type: 'post', id: entry.id })).rejects.toBeInstanceOf(
-            ValidationError
-        );
+        await expect(refused).rejects.toBeInstanceOf(LibsqlError);
+        await expect(refused).rejects.toThrow('boom');
     });
 });
 
