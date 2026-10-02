@@ -179,7 +179,7 @@ describe.each(RESOURCE_TYPES)('%s', (kind) => {
 
     describe('a default value', () => {
         // Fails on media until an upload runs the field pipeline:
-        // `roadmap/planned/media-upload-skips-field-defaults.md`
+        // `roadmap/proposed/media-upload-skips-field-defaults.md`
         const fillsDefault = kind === 'media' ? it.fails : it;
         fillsDefault('fills a field the first write leaves out', async () => {
             const saved = await adapter.save({ headline: 'Hi' });

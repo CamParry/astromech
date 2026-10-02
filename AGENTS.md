@@ -9,7 +9,7 @@ Nested `AGENTS.md` files cover `packages/astromech`, `packages/admin`, `packages
 `packages/*` is published to npm; `apps/*` is never published. `apps/demo` is the app to run and browser-verify against. `ARCHITECTURE.md` ("Repository layout") lists every package.
 
 - `ARCHITECTURE.md`: where code lives and what it may import. `TERMINOLOGY.md`: what a term means. `DECISIONS.md`: why a choice beat the alternatives.
-- `roadmap/`: one file per feature, status by directory (`planned/`, `in-progress/`, `completed/`).
+- `roadmap/`: one file per feature, status by directory (`proposed/` needs planning, `planned/` is ready to build, then `in-progress/`, `completed/`).
 - `specs/`: in-flight designs, deleted once the work ships.
 
 ## Commands and the gate

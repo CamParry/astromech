@@ -49,5 +49,5 @@ version answers what the row used to look like; this answers who changed it and
 through what.
 
 **Not the plugin.** `@astromech/activity-log` in
-`roadmap/planned/additional-first-party-plugins.md` is a presentation surface
+`roadmap/proposed/additional-first-party-plugins.md` is a presentation surface
 over this data, and must not become a second place the recording happens.

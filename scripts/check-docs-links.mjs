@@ -37,6 +37,7 @@ const SKIP_DIRS = new Set([
 // to `completed/` is exactly the rot worth catching.
 const PATHS_UNCHECKED_TREES = [
     join('specs', ''),
+    join('roadmap', 'proposed', ''),
     join('roadmap', 'planned', ''),
     join('roadmap', 'completed', ''),
     join('decisions', ''),

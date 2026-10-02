@@ -1,10 +1,16 @@
 # Roadmap
 
-One feature per file, split across three directories:
+One feature per file, split across four directories:
 
-- `planned/` — not started
+- `proposed/` — not started, and needs planning: an open decision, a missing
+  design, or a trigger it waits for
+- `planned/` — not started, and ready to build: the decisions are made and the
+  work items are concrete
 - `in-progress/` — started, partially done
 - `completed/` — shipped
+
+A file moves from `proposed/` to `planned/` once nothing in it waits on a
+decision.
 
 Status is encoded by the directory, so there are no status fields or emoji to go
 stale. To add a feature, create a file in the right directory. To change status,
@@ -12,7 +18,7 @@ stale. To add a feature, create a file in the right directory. To change status,
 
 `check:docs` catches a **markdown link** to the old path from anywhere. It does
 not catch a **backticked path**, because those go unchecked in `specs/`,
-`roadmap/planned/` and `roadmap/completed/` — planned work names files that do
+`roadmap/proposed/`, `roadmap/planned/` and `roadmap/completed/` — planned work names files that do
 not exist yet, and the frozen tree was accurate when written. So after a
 `git mv`, grep for the old path as well. A reference in `completed/` is history
 and should be left alone; one in a live document should be repointed.

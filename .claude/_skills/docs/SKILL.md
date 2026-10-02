@@ -45,7 +45,7 @@ Nothing in it is binding. It is evidence, so a settled question is not re-argued
 
 ## Roadmap
 
-One file per feature. **Status is the directory** (`planned/` → `in-progress/` → `completed/`) and never a field, a heading, or an emoji inside the file. Change status with `git mv`.
+One file per feature. **Status is the directory** (`proposed/` → `planned/` → `in-progress/` → `completed/`; `proposed/` needs planning, `planned/` is ready to build) and never a field, a heading, or an emoji inside the file. Change status with `git mv`.
 
 `backlog.md` holds unscheduled work that belongs to no single feature: one line each, with a link if there is detail. It is not a bug tracker and not an essay. A known defect in shipped code belongs in the roadmap file for the feature it breaks, where the person picking that feature back up will see it.
 
