@@ -198,33 +198,50 @@ describe('renderLiteral properties', () => {
         }
     }
 
-    it.fails(
-        'rejects NaN and the infinities, or renders them so SQLite reads a number',
-        async () => {
+    /** The check the non-finite cases pass when fixed: SQLite reads a number. */
+    function readsNumber(got: unknown): boolean {
+        return typeof asNumber(got) === 'number';
+    }
+
+    it('renders NaN and the infinities as bare words, and reads a finite number back', async () => {
+        const client = makeClient();
+        expect(await outcome(client, 1.5, readsNumber)).toBe('reads back');
+        expect([Number.NaN, Infinity, -Infinity].map((v) => renderLiteral(v))).toEqual([
+            'NaN',
+            'Infinity',
+            '-Infinity',
+        ]);
+        client.close();
+    });
+
+    // Today: "no such column: NaN"; and `DEFAULT NaN` in a `real` column
+    // parses as a bare word and stores the text 'NaN'.
+    it.fails.each([Number.NaN, Infinity, -Infinity])(
+        'rejects %s, or renders it so SQLite reads a number',
+        async (value) => {
             const client = makeClient();
-            // Today: "no such column: NaN"; and `DEFAULT NaN` in a `real` column
-            // parses as a bare word and stores the text 'NaN'.
-            for (const value of [Number.NaN, Infinity, -Infinity]) {
-                const result = await outcome(
-                    client,
-                    value,
-                    (got) => typeof asNumber(got) === 'number'
-                );
-                expect(['rejected', 'reads back']).toContain(result);
-            }
+            const result = await outcome(client, value, readsNumber);
             client.close();
+            expect(['rejected', 'reads back']).toContain(result);
         }
     );
 
+    it('renders a NUL into the literal as-is, and reads a string without one back', async () => {
+        const client = makeClient();
+        expect(await outcome(client, 'ab', (got) => got === 'ab')).toBe('reads back');
+        expect(renderLiteral('a\0b')).toBe("'a\0b'");
+        client.close();
+    });
+
+    // Today: SQLite stops reading the statement at the NUL and fails with
+    // `unrecognized token: "'a"`.
     it.fails(
         'rejects a string containing NUL, or renders it so SQLite reads it back',
         async () => {
             const client = makeClient();
-            // Today: SQLite stops reading the statement at the NUL and fails with
-            // `unrecognized token: "'a"`.
             const result = await outcome(client, 'a\0b', (got) => got === 'a\0b');
-            expect(['rejected', 'reads back']).toContain(result);
             client.close();
+            expect(['rejected', 'reads back']).toContain(result);
         }
     );
 });

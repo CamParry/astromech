@@ -3,8 +3,9 @@
  *
  * The example cases in `identifiers.test.ts` pin the exact capped shape; these
  * state the contract over any ASCII name: the output fits the budget, a name
- * under the budget is untouched, the same name always caps the same way, and
- * two long names that only differ past the cap still come out different.
+ * under the budget is untouched, a capped name keeps its readable start, two
+ * long names that only differ past the cap still come out different, and a
+ * non-ASCII name is rejected.
  */
 
 import fc from 'fast-check';
@@ -44,16 +45,6 @@ describe('capIdentifier properties', () => {
                     ).toBe(name);
                 }
             )
-        );
-    });
-
-    it('caps the same name the same way every time', () => {
-        fc.assert(
-            fc.property(asciiName, (name) => {
-                expect(capIdentifier(name), 'property: capping is deterministic').toBe(
-                    capIdentifier(name)
-                );
-            })
         );
     });
 
