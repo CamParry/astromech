@@ -40,6 +40,7 @@ import type {
     PluginDefinition,
     ResolvedConfig,
     Role,
+    StorageDriver,
     User,
 } from '@/types/index';
 // Declares `testDbDir` and `testDbTemplate` on vitest's `ProvidedContext`,
@@ -64,6 +65,7 @@ import { DEFAULT_ROLE_SLUG } from '@/permissions/roles';
 import { registerPlugins } from '@/plugins/runtime/plugin-runtime';
 import { registerDrivers } from '@/register-drivers';
 import { runInRequestScope } from '@/request-scope/request-scope';
+import { filesystem } from '@/storage/drivers/filesystem';
 
 type Db = Kysely<DB>;
 
@@ -99,6 +101,18 @@ export async function createTestDb(): Promise<Db> {
     setDb(driver.getInstance());
     setDatabaseDriver(driver);
     return driver.getInstance();
+}
+
+/**
+ * The `filesystem` storage driver over a new directory in the run's temp dir,
+ * which global setup removes, serving public URLs under `urlPrefix` when given.
+ * For a test that reads a file back; one that never does keeps `noopStorage`.
+ */
+export function createTestStorage(options: { urlPrefix?: string } = {}): StorageDriver {
+    return filesystem({
+        dir: path.join(TEST_DB_DIR, `storage-${crypto.randomUUID()}`),
+        ...options,
+    });
 }
 
 /**

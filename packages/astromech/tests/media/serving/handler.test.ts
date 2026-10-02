@@ -1,6 +1,11 @@
 import type { ImageFormat } from '@/media/serving/image/url';
 import type { ImageDriver, ImageSource, StorageDriver } from '@/types/index';
-import { createTestDb, makeTestConfig, setupTestConfig } from '@tests/harness';
+import {
+    createTestDb,
+    createTestStorage,
+    makeTestConfig,
+    setupTestConfig,
+} from '@tests/harness';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { currentServices } from '@/app-context/services';
 import { handleMediaRequest } from '@/media/serving/handler';
@@ -48,74 +53,6 @@ function makeJpegBytes(): Uint8Array {
     ]);
 }
 
-function makeMemoryStorage(): StorageDriver {
-    const store = new Map<string, Uint8Array>();
-    return {
-        name: 'memory',
-        async put(key, body, _opts) {
-            const bytes =
-                body instanceof Uint8Array
-                    ? body
-                    : await (async () => {
-                          const reader = (body as ReadableStream).getReader();
-                          const chunks: Uint8Array[] = [];
-                          while (true) {
-                              const { done, value } = await reader.read();
-                              if (done) break;
-                              chunks.push(value);
-                          }
-                          const total = chunks.reduce((n, c) => n + c.length, 0);
-                          const out = new Uint8Array(total);
-                          let offset = 0;
-                          for (const c of chunks) {
-                              out.set(c, offset);
-                              offset += c.length;
-                          }
-                          return out;
-                      })();
-            store.set(key, bytes);
-        },
-        async get(key, opts) {
-            const bytes = store.get(key);
-            if (!bytes) return null;
-            // Honest range support: the slice is what the body carries (`size`),
-            // while `totalSize` stays the whole object — that split is exactly
-            // what `Content-Range` is built from.
-            const range = opts?.range;
-            const offset = range?.offset ?? 0;
-            const end =
-                range?.length === undefined
-                    ? bytes.length
-                    : Math.min(bytes.length, offset + range.length);
-            const slice = bytes.slice(offset, end);
-            let pos = 0;
-            const body = new ReadableStream<Uint8Array>({
-                pull(controller) {
-                    if (pos < slice.length) {
-                        controller.enqueue(slice.slice(pos));
-                        pos = slice.length;
-                    }
-                    controller.close();
-                },
-            });
-            return { body, size: slice.length, totalSize: bytes.length };
-        },
-        async stat(key) {
-            const bytes = store.get(key);
-            return bytes ? { size: bytes.length } : null;
-        },
-        async delete(key) {
-            store.delete(key);
-        },
-        async list(prefix) {
-            return { keys: [...store.keys()].filter((k) => k.startsWith(prefix)) };
-        },
-        getPublicUrl: () => null,
-        // expose store for assertions
-        _store: store,
-    } as StorageDriver & { _store: Map<string, Uint8Array> };
-}
-
 const VARIANT_BYTES = new TextEncoder().encode('VARIANT');
 
 function makeFakeImageDriver() {
@@ -131,14 +68,12 @@ function makeFakeImageDriver() {
     return { driver, calls };
 }
 
-let storage: ReturnType<typeof makeMemoryStorage> & { _store: Map<string, Uint8Array> };
+let storage: StorageDriver;
 let fakeDriver: ReturnType<typeof makeFakeImageDriver>;
 
 beforeEach(async () => {
     await createTestDb();
-    storage = makeMemoryStorage() as ReturnType<typeof makeMemoryStorage> & {
-        _store: Map<string, Uint8Array>;
-    };
+    storage = createTestStorage();
     fakeDriver = makeFakeImageDriver();
     setupTestConfig({
         ...makeTestConfig(),
@@ -249,9 +184,7 @@ describe('handleMediaRequest', () => {
 
         // Variant was written back to storage
         const vKey = `variants/${media.id}/${version}/320.webp`;
-        expect(
-            (storage as unknown as { _store: Map<string, Uint8Array> })._store.has(vKey)
-        ).toBe(true);
+        expect(await storage.stat(vKey)).not.toBeNull();
     });
 
     it('6. valid variant cache hit → 200, transform NOT called again', async () => {
@@ -502,9 +435,7 @@ describe('handleMediaRequest failures', () => {
         );
         expect(res.headers.get('ETag')).toBe(`"${version}"`);
         expect(await readBody(res)).toEqual(jpegBytes);
-        expect(
-            [...storage._store.keys()].filter((k) => k.startsWith('variants/'))
-        ).toEqual([]);
+        expect((await storage.list('variants/')).keys).toEqual([]);
         expect(errors).toHaveBeenCalledOnce();
     });
 

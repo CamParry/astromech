@@ -1,6 +1,12 @@
 import type { StorageDriver } from '@/types/index';
-import { createTestDb, makeTestConfig, setupTestConfig } from '@tests/harness';
-import { beforeEach, describe, expect, it } from 'vitest';
+import type { MockInstance } from 'vitest';
+import {
+    createTestDb,
+    createTestStorage,
+    makeTestConfig,
+    setupTestConfig,
+} from '@tests/harness';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { currentServices } from '@/app-context/services';
 
 const mediaService = currentServices.media;
@@ -14,83 +20,27 @@ function jpegBytes(): Uint8Array {
     ]);
 }
 
-type PutRecord = { key: string; streamed: boolean };
+let storage: StorageDriver;
 
-function makeTrackingStorage(): StorageDriver & {
-    keys: Set<string>;
-    puts: PutRecord[];
-    deletes: string[];
-} {
-    const store = new Map<string, Uint8Array>();
-    const puts: PutRecord[] = [];
-    const deletes: string[] = [];
-
-    async function drain(stream: ReadableStream): Promise<Uint8Array> {
-        const reader = (stream as ReadableStream<Uint8Array>).getReader();
-        const chunks: Uint8Array[] = [];
-        for (;;) {
-            const { done, value } = await reader.read();
-            if (done) break;
-            chunks.push(value);
-        }
-        const total = chunks.reduce((n, c) => n + c.length, 0);
-        const out = new Uint8Array(total);
-        let off = 0;
-        for (const c of chunks) {
-            out.set(c, off);
-            off += c.length;
-        }
-        return out;
-    }
-
-    return {
-        name: 'tracking',
-        keys: new Set(store.keys()),
-        puts,
-        deletes,
-        async put(key, body) {
-            const streamed = !(body instanceof Uint8Array);
-            puts.push({ key, streamed });
-            store.set(key, body instanceof Uint8Array ? body : await drain(body));
-            this.keys = new Set(store.keys());
-        },
-        async get(key) {
-            const bytes = store.get(key);
-            if (!bytes) return null;
-            const body = new ReadableStream<Uint8Array>({
-                start(c) {
-                    c.enqueue(bytes);
-                    c.close();
-                },
-            });
-            return { body, size: bytes.length, totalSize: bytes.length };
-        },
-        async stat(key) {
-            const bytes = store.get(key);
-            return bytes ? { size: bytes.length } : null;
-        },
-        async delete(key) {
-            deletes.push(key);
-            store.delete(key);
-            this.keys = new Set(store.keys());
-        },
-        async list(prefix) {
-            return { keys: [...store.keys()].filter((k) => k.startsWith(prefix)) };
-        },
-        getPublicUrl: () => null,
-    };
+/** Whether `storage` holds `key`. */
+async function stored(key: string): Promise<boolean> {
+    return (await storage.stat(key)) !== null;
 }
 
-let storage: ReturnType<typeof makeTrackingStorage>;
+/** Whether the last `put` was handed a stream rather than buffered bytes. */
+function lastPutStreamed(put: MockInstance<StorageDriver['put']>): boolean {
+    return !(put.mock.calls.at(-1)?.[1] instanceof Uint8Array);
+}
 
 beforeEach(async () => {
     await createTestDb();
-    storage = makeTrackingStorage();
+    storage = createTestStorage();
     setupTestConfig({ ...makeTestConfig(), storage });
 });
 
 describe('mediaService.upload', () => {
     it('buffers an image and records dimensions + version', async () => {
+        const put = vi.spyOn(storage, 'put');
         const media = await mediaService.upload({
             file: new File([jpegBytes() as BlobPart], 'photo.jpg', {
                 type: 'image/jpeg',
@@ -100,7 +50,7 @@ describe('mediaService.upload', () => {
         expect(media.height).toBe(1);
         expect(media.metadata?.version).toMatch(/^[0-9a-f]{12}$/);
         // Image path buffers (Uint8Array put), not streamed.
-        expect(storage.puts.at(-1)?.streamed).toBe(false);
+        expect(lastPutStreamed(put)).toBe(false);
     });
 
     it('mints a ULID id, not a UUID', async () => {
@@ -113,10 +63,11 @@ describe('mediaService.upload', () => {
         expect(media.id).toMatch(/^[0-9A-HJKMNP-TV-Z]{26}$/);
         expect(media.id).not.toMatch(/-/);
         // The storage key is derived from the id, so the two must agree.
-        expect(storage.keys.has(`${media.id}.jpg`)).toBe(true);
+        expect(await stored(`${media.id}.jpg`)).toBe(true);
     });
 
     it('streams a non-image straight to storage (never buffered)', async () => {
+        const put = vi.spyOn(storage, 'put');
         const media = await mediaService.upload({
             file: new File(['hello world' as BlobPart], 'notes.txt', {
                 type: 'text/plain',
@@ -125,7 +76,7 @@ describe('mediaService.upload', () => {
         expect(media.width).toBeNull();
         expect(media.height).toBeNull();
         expect(media.metadata?.version).toBeUndefined();
-        expect(storage.puts.at(-1)?.streamed).toBe(true);
+        expect(lastPutStreamed(put)).toBe(true);
     });
 });
 
@@ -149,11 +100,9 @@ describe('mediaService.replace', () => {
             }),
         });
 
-        expect(storage.keys.has(`${m.id}.jpg`)).toBe(true);
+        expect(await stored(`${m.id}.jpg`)).toBe(true);
         // Old variant purged via deletePrefix.
-        expect([...storage.keys].some((k) => k.startsWith(`variants/${m.id}/`))).toBe(
-            false
-        );
+        expect((await storage.list(`variants/${m.id}/`)).keys).toEqual([]);
     });
 
     it('deletes the old original when the extension changes', async () => {
@@ -162,15 +111,16 @@ describe('mediaService.replace', () => {
                 type: 'image/jpeg',
             }),
         });
-        expect(storage.keys.has(`${m.id}.jpg`)).toBe(true);
+        expect(await stored(`${m.id}.jpg`)).toBe(true);
+        const deleted = vi.spyOn(storage, 'delete');
 
         await mediaService.replace({
             id: m.id,
             file: new File([jpegBytes() as BlobPart], 'photo.png', { type: 'image/png' }),
         });
 
-        expect(storage.deletes).toContain(`${m.id}.jpg`);
-        expect(storage.keys.has(`${m.id}.jpg`)).toBe(false);
-        expect(storage.keys.has(`${m.id}.png`)).toBe(true);
+        expect(deleted).toHaveBeenCalledWith(`${m.id}.jpg`);
+        expect(await stored(`${m.id}.jpg`)).toBe(false);
+        expect(await stored(`${m.id}.png`)).toBe(true);
     });
 });

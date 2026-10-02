@@ -1,4 +1,5 @@
-import type { AstromechConfig, DatabaseDriver, StorageDriver } from '@/types/index';
+import type { AstromechConfig, DatabaseDriver } from '@/types/index';
+import { noopStorage } from '@tests/fixtures';
 import { describe, expect, it } from 'vitest';
 import { generateMethodManifest } from '@/codegen/method-manifest';
 import { resolveConfig } from '@/config/resolve';
@@ -15,25 +16,6 @@ describe('buildPermissionCatalogue', () => {
         type: 'test',
         getInstance() {
             throw new Error('not called');
-        },
-    };
-
-    const storageDriver: StorageDriver = {
-        name: 'noop',
-        async put() {
-            return undefined;
-        },
-        async get() {
-            return null;
-        },
-        async stat() {
-            return null;
-        },
-        async delete() {
-            return undefined;
-        },
-        async list() {
-            return { keys: [] };
         },
     };
 
@@ -65,7 +47,7 @@ describe('buildPermissionCatalogue', () => {
 
     const resolved = resolveConfig({
         db: driver,
-        storage: storageDriver,
+        storage: noopStorage,
         entries: {
             posts: {
                 single: 'Post',

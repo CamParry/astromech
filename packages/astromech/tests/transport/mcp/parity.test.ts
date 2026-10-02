@@ -15,8 +15,8 @@ import type {
     DatabaseDriver,
     MethodManifest,
     PluginDefinition,
-    StorageDriver,
 } from '@/types/index';
+import { noopStorage } from '@tests/fixtures';
 import { describe, expect, it, vi } from 'vitest';
 import { z } from 'zod';
 import { generateMethodManifest } from '@/codegen/method-manifest';
@@ -49,25 +49,6 @@ const driver: DatabaseDriver = {
     },
 };
 
-const storageDriver: StorageDriver = {
-    name: 'noop',
-    async put() {
-        return undefined;
-    },
-    async get() {
-        return null;
-    },
-    async stat() {
-        return null;
-    },
-    async delete() {
-        return undefined;
-    },
-    async list() {
-        return { keys: [] };
-    },
-};
-
 /** A plugin-mounted entry type, so qualified type ids are covered too. */
 const testPlugin: PluginDefinition = {
     package: '@test/my-plugin',
@@ -92,7 +73,7 @@ const testPlugin: PluginDefinition = {
 
 const resolved = resolveConfig({
     db: driver,
-    storage: storageDriver,
+    storage: noopStorage,
     entries: {
         posts: {
             single: 'Post',

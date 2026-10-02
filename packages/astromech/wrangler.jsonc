@@ -1,8 +1,9 @@
 {
     // Exists so wrangler's `getPlatformProxy()` has a config to discover when
     // tests resolve a Cloudflare binding in a plain Node process. It is not
-    // deployed and not published (`files` is ["dist", "src"]) — the only
-    // consumer is `tests/cloudflare/d1-local-emulation.test.ts`.
+    // deployed and not published (`files` is ["dist", "src"]). Its consumers
+    // are `tests/integrations/cloudflare/d1-local-emulation.test.ts` (`DB`) and
+    // the storage driver tests under `tests/storage/drivers/` (`MEDIA`).
     //
     // `database_id` is a placeholder: local emulation keys its SQLite file off
     // `database_name` and never contacts the API.
@@ -14,6 +15,12 @@
             "binding": "DB",
             "database_name": "astromech-test",
             "database_id": "local-emulation-only",
+        },
+    ],
+    "r2_buckets": [
+        {
+            "binding": "MEDIA",
+            "bucket_name": "astromech-test-media",
         },
     ],
 }

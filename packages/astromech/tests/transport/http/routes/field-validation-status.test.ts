@@ -23,11 +23,12 @@
  */
 
 import type { AuthVariables } from '@/transport/http/middleware/auth';
-import type { AstromechConfig, StorageDriver } from '@/types/index';
+import type { AstromechConfig } from '@/types/index';
 import { OpenAPIHono } from '@hono/zod-openapi';
 import { adminRole } from '@tests/fixtures';
 import {
     createTestDb,
+    createTestStorage,
     createTestUser,
     makeTestConfig,
     setupTestConfig,
@@ -56,42 +57,6 @@ type ErrorBody = {
 
 const fakeUser = testUser;
 
-/** In-memory storage so `media.upload` can persist a record to update. */
-function memoryStorage(): StorageDriver {
-    const store = new Map<string, Uint8Array>();
-    return {
-        name: 'memory',
-        async put(key, body) {
-            store.set(key, body instanceof Uint8Array ? body : new Uint8Array());
-        },
-        async get(key) {
-            const bytes = store.get(key);
-            if (!bytes) return null;
-            return {
-                body: new ReadableStream<Uint8Array>({
-                    start(c) {
-                        c.enqueue(bytes);
-                        c.close();
-                    },
-                }),
-                size: bytes.length,
-                totalSize: bytes.length,
-            };
-        },
-        async stat(key) {
-            const bytes = store.get(key);
-            return bytes ? { size: bytes.length } : null;
-        },
-        async delete(key) {
-            store.delete(key);
-        },
-        async list(prefix) {
-            return { keys: [...store.keys()].filter((k) => k.startsWith(prefix)) };
-        },
-        getPublicUrl: () => null,
-    };
-}
-
 /**
  * Mount the real routers with the real `app.onError(onError)`, which is the seam
  * under test, behind a stub that injects an admin user/role (Better Auth
@@ -119,7 +84,7 @@ function makeConfig(): AstromechConfig {
     const base = makeTestConfig();
     return {
         ...base,
-        storage: memoryStorage(),
+        storage: createTestStorage(),
         entries: {
             ...base.entries,
             post: {

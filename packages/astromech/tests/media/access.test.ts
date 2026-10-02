@@ -4,8 +4,13 @@
  * these tests pin both directions of it and the driver fallback.
  */
 
-import type { AstromechConfig, MediaAccess, StorageDriver } from '@/types/index';
-import { createTestDb, makeTestConfig, setupTestConfig } from '@tests/harness';
+import type { AstromechConfig, MediaAccess } from '@/types/index';
+import {
+    createTestDb,
+    createTestStorage,
+    makeTestConfig,
+    setupTestConfig,
+} from '@tests/harness';
 import { describe, expect, it } from 'vitest';
 import { currentServices } from '@/app-context/services';
 import { buildImageAttrs } from '@/media/serving/image/build-image-attrs';
@@ -21,42 +26,6 @@ function jpegBytes(): Uint8Array {
     ]);
 }
 
-/** `publicUrl: null` models a driver with no public URL (filesystem, plain r2). */
-function makeStorage(publicUrl: 'cdn' | null): StorageDriver {
-    const store = new Map<string, Uint8Array>();
-    const driver: StorageDriver = {
-        name: 'memory',
-        async put(key, body) {
-            store.set(key, body instanceof Uint8Array ? body : new Uint8Array());
-        },
-        async get(key) {
-            const bytes = store.get(key);
-            if (!bytes) return null;
-            const body = new ReadableStream<Uint8Array>({
-                start(c) {
-                    c.enqueue(bytes);
-                    c.close();
-                },
-            });
-            return { body, size: bytes.length, totalSize: bytes.length };
-        },
-        async stat(key) {
-            const bytes = store.get(key);
-            return bytes ? { size: bytes.length } : null;
-        },
-        async delete(key) {
-            store.delete(key);
-        },
-        async list(prefix) {
-            return { keys: [...store.keys()].filter((k) => k.startsWith(prefix)) };
-        },
-    };
-    if (publicUrl === 'cdn') {
-        driver.getPublicUrl = (key: string): string => `https://cdn.example/${key}`;
-    }
-    return driver;
-}
-
 async function setup(
     access: MediaAccess | undefined,
     publicUrl: 'cdn' | null
@@ -65,7 +34,10 @@ async function setup(
     const base = makeTestConfig();
     const config: AstromechConfig = {
         ...base,
-        storage: makeStorage(publicUrl),
+        // `null` is a driver with no public URL, as filesystem and plain r2 are.
+        storage: createTestStorage(
+            publicUrl === 'cdn' ? { urlPrefix: 'https://cdn.example' } : {}
+        ),
         ...(access === undefined ? {} : { media: { ...base.media, access } }),
     };
     setupTestConfig(config);

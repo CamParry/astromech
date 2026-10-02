@@ -14,8 +14,8 @@ import type {
     ImageDriver,
     ModelInstance,
     SchedulerDriver,
-    StorageDriver,
 } from '@/types/index';
+import { noopStorage } from '@tests/fixtures';
 import { describe, expect, it } from 'vitest';
 import { resolveConfig } from '@/config/resolve';
 
@@ -23,25 +23,6 @@ const dbDriver: DatabaseDriver = {
     type: 'test',
     getInstance: () => {
         throw new Error('not called');
-    },
-};
-
-const storageDriver: StorageDriver = {
-    name: 'noop',
-    async put() {
-        return undefined;
-    },
-    async get() {
-        return null;
-    },
-    async stat() {
-        return null;
-    },
-    async delete() {
-        return undefined;
-    },
-    async list() {
-        return { keys: [] };
     },
 };
 
@@ -70,7 +51,7 @@ const schedulerDriver: SchedulerDriver = {
 function fullConfig(): AstromechConfig {
     return {
         db: dbDriver,
-        storage: storageDriver,
+        storage: noopStorage,
         email: emailDriver,
         scheduler: schedulerDriver,
         ai: { model: {} as ModelInstance },
