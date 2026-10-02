@@ -3,7 +3,9 @@
  *
  * Every field type takes its accessible name from its label: a field with one
  * control names that control, and a field with several names the group that
- * holds them. This walks the registry rather than checking one field.
+ * holds them, and a required field's control is marked required while its
+ * name leaves out the asterisk. This walks the registry rather than checking
+ * one field.
  */
 
 import type { DataField } from '@/types/index';
@@ -12,6 +14,7 @@ import { describe, expect, it } from 'vitest';
 import { CORE_FIELD_TYPES } from '@/types/index';
 import '@/admin/rendering/register-fields';
 import { FormField } from '@/admin/components/fields/form-field';
+import { getFieldComponent } from '@/admin/rendering/field-registry';
 
 const LABEL = 'Headline';
 
@@ -67,10 +70,11 @@ const CASES: {
 ];
 
 describe('field accessible names', () => {
-    it('has a case for every registered field type', () => {
-        const layout = new Set(['accordion', 'tab', 'tabs']);
+    it('has a case for every field type the admin registers a component for', () => {
         expect(CASES.map((c) => c.field.type).sort()).toEqual(
-            CORE_FIELD_TYPES.filter((type) => !layout.has(type)).sort()
+            CORE_FIELD_TYPES.filter(
+                (type) => getFieldComponent(type) !== undefined
+            ).sort()
         );
     });
 
@@ -93,4 +97,46 @@ describe('field accessible names', () => {
             }
         }
     );
+
+    it('names a nested range field by its label, not by its path', () => {
+        const { container } = render(
+            <FormField
+                field={{ name: 'level', type: 'range', min: 0, max: 10 }}
+                name="blocks[b1].level"
+                value={5}
+                onChange={() => undefined}
+            />
+        );
+
+        const label = container.querySelector('.am-field-label')?.textContent ?? '';
+        expect(label).not.toContain('blocks');
+        expect(screen.getByRole('slider', { name: label })).toBeTruthy();
+    });
+
+    it.each(CASES.filter(({ role }) => role === undefined || REQUIRABLE.has(role)))(
+        'marks the required $field.type field’s $role required, out of its name',
+        ({ field, value, role, name = LABEL }) => {
+            const { container } = render(
+                <FormField
+                    field={{ ...field, name: 'f', label: LABEL, required: true }}
+                    value={value}
+                    onChange={() => undefined}
+                />
+            );
+
+            // A role's name is the accessible name, which leaves out the
+            // hidden asterisk; a date input has no role to look it up by.
+            const named =
+                role === undefined
+                    ? container.querySelector('input[name="f"]')
+                    : screen.getByRole(role, { name });
+            expect(
+                named?.hasAttribute('required') === true ||
+                    named?.getAttribute('aria-required') === 'true'
+            ).toBe(true);
+        }
+    );
 });
+
+/** The roles that take `aria-required`; a group, a button or a slider does not. */
+const REQUIRABLE = new Set(['textbox', 'spinbutton', 'switch', 'combobox', 'radiogroup']);

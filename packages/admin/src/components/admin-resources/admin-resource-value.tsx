@@ -3,11 +3,12 @@
  * formatted, a boolean as a tick, an option as its label, and an empty value as a dash.
  */
 
-import type { DataField, SelectOption } from 'astromech';
+import type { DataField } from 'astromech';
 import { Check } from 'lucide-react';
 import React from 'react';
 import { useLabel } from '../../i18n/entry-namespace';
 import { formatDate, formatDatetime } from '../../utilities/dates';
+import { fieldOptions } from '../fields/field-options';
 
 export type AdminResourceValueProps = {
     field: DataField;
@@ -35,16 +36,9 @@ export function AdminResourceValue({
     }
 
     if (field.options !== undefined) {
-        const options = field.options.map(
-            (option): SelectOption =>
-                typeof option === 'string' ? { value: option, label: option } : option
-        );
-        const optionLabel = (item: unknown): string => {
-            const option = options.find((candidate) => candidate.value === item);
-            return option === undefined
-                ? String(item)
-                : label(option.label, option.value);
-        };
+        const options = fieldOptions(field, label);
+        const optionLabel = (item: unknown): string =>
+            options.find((option) => option.value === item)?.label ?? String(item);
         return (
             <>{(Array.isArray(value) ? value : [value]).map(optionLabel).join(', ')}</>
         );

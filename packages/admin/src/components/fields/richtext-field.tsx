@@ -38,6 +38,7 @@ export function RichtextField({
     name,
     value,
     field,
+    required,
     onChange,
     disabled,
 }: BaseFieldProps): React.ReactElement {
@@ -52,6 +53,7 @@ export function RichtextField({
     const editorProps: RichTextEditorProps = {
         onChange: handleChange,
         disabled: disabled ?? false,
+        required: required ?? false,
         ...(allow !== undefined ? { allow } : {}),
         ...(labelId !== undefined ? { 'aria-labelledby': labelId } : {}),
         ...(docValue !== undefined ? { value: docValue } : {}),

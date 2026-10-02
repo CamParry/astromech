@@ -261,6 +261,13 @@ export function validate(value: unknown): string | undefined {
 }
 ```
 
+The admin draws the field's label as a `span`, since it cannot know which
+element the field renders, so the field names its own control: read `labelId`
+from `useFieldControl()` (`astromech/ui/fields`) and pass it as
+`aria-labelledby`, beside the `ariaProps` that carry the error and description.
+Without it the control has no name, even a single native input.
+[Field validation](../content/field-validation.md#accessibility) has the detail.
+
 Then reference it anywhere a field is declared: `{ name: 'quality', type: 'rating' }`.
 A field whose type has `affectsData: false` still takes a name, which the admin
 uses as its key; nothing is stored under it.

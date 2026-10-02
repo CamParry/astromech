@@ -31,6 +31,8 @@ export type RichTextEditorProps = {
     disabled?: boolean;
     allow?: RichTextAllow;
     placeholder?: string;
+    /** Marks the editable area `aria-required`, which a contenteditable has no attribute for. */
+    required?: boolean;
     /** The id of the label naming the editable area. */
     'aria-labelledby'?: string;
 };
@@ -256,6 +258,7 @@ export function RichTextEditor({
     disabled,
     allow,
     placeholder,
+    required,
     'aria-labelledby': labelledBy,
 }: RichTextEditorProps): React.ReactElement | null {
     const [linkPopover, setLinkPopover] = useState<LinkPopoverState>({ open: false });
@@ -287,6 +290,8 @@ export function RichTextEditor({
                 role: 'textbox',
                 'aria-multiline': 'true',
                 ...(labelledBy !== undefined ? { 'aria-labelledby': labelledBy } : {}),
+                ...(required === true ? { 'aria-required': 'true' } : {}),
+                ...(disabled === true ? { 'aria-disabled': 'true' } : {}),
                 ...(ariaProps['aria-invalid'] !== undefined
                     ? { 'aria-invalid': 'true' }
                     : {}),

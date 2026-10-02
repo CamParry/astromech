@@ -356,18 +356,20 @@ that takes focus but not `aria-invalid`, so it carries the message without the
 invalid state.)
 
 A field type that renders its own control reads the same state through
-`useFieldControl` and spreads the ARIA it returns:
+`useFieldControl`, names its control with `labelId`, and spreads the ARIA it
+returns:
 
 ```tsx
 import { useFieldControl } from 'astromech/ui/fields';
 
 function StarRatingField({ value, onChange }: BaseFieldProps) {
-    const { hasError, ariaProps } = useFieldControl();
+    const { hasError, ariaProps, labelId } = useFieldControl();
     return (
         <div
             role="slider"
             tabIndex={0}
             aria-valuenow={Number(value ?? 0)}
+            aria-labelledby={labelId}
             className={hasError ? 'is-invalid' : undefined}
             {...ariaProps}
         />
@@ -375,6 +377,18 @@ function StarRatingField({ value, onChange }: BaseFieldProps) {
 }
 ```
 
-`ariaProps` is `aria-invalid` plus `aria-describedby` pointing at the message
-`FieldWrapper` rendered, and is empty when the field has no error — so the same
-component is safe to render outside a field wrapper.
+`labelId` is the id of the field's label. A plugin field's label is a `span`
+rather than a `<label>`, because the admin cannot know which element the field
+renders, so a control without `aria-labelledby={labelId}` has no name, even a
+single native input. For a field with several controls, put it on the element
+that holds them, with `role="group"`.
+
+`ariaProps` is `aria-invalid` plus `aria-describedby` pointing at the field's
+description and the message `FieldWrapper` rendered, and is empty when the
+field has neither, so the same component is safe to render outside a field
+wrapper.
+
+The asterisk on a required field's label is hidden from a screen reader, so a
+control marks itself required: a native input with `required`, any other control
+whose role allows it (a textbox, combobox, radio group or switch, not a slider)
+with `aria-required`.
