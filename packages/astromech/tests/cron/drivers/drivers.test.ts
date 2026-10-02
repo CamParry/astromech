@@ -1,3 +1,4 @@
+import { resetRuntime } from '@tests/harness';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { cloudflareCron } from '@/cron/drivers/cloudflare';
 import { interval } from '@/cron/drivers/interval';
@@ -6,13 +7,13 @@ import { globals } from '@/registry';
 
 describe('interval', () => {
     beforeEach(() => {
-        globals().cronInterval = undefined;
+        resetRuntime();
         vi.useFakeTimers();
     });
 
     afterEach(() => {
         interval().stop?.();
-        globals().cronInterval = undefined;
+        resetRuntime();
         vi.useRealTimers();
     });
 

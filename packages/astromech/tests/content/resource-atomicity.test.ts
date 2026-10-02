@@ -1,12 +1,14 @@
 /**
- * A write that touches more than one row runs in one transaction, so when its
- * relationship index write fails, every other row it wrote rolls back with it.
- * Each row of the table is one such write: what it needs first, the call that
- * fails, and what must still hold afterwards. The failure is a trigger on the
- * real `relationships` table, so every write it references must name a target.
- * Where the risk is an orphaned row no read path shows, the check counts rows.
+ * A write that touches more than one row runs in one transaction, so when one
+ * of its writes fails, every other row it wrote rolls back with it. Each row of
+ * the table is one such write: what it needs first, the call that fails, and
+ * what must still hold afterwards. The failure is a trigger on a real table,
+ * the `relationships` index unless a row names another, so every write that
+ * fails there must name a target. Where the risk is an orphaned row no read
+ * path shows, the check counts rows.
  */
 
+import type { Table } from '@/database/define-table';
 import {
     createTestDb,
     failWritesTo,
@@ -19,6 +21,7 @@ import { getDb } from '@/database/registry';
 import { createRepository } from '@/database/repository/create-repository';
 import { entriesTable, relationshipsTable } from '@/database/tables';
 import { mediaRepository } from '@/media/repository';
+import { usersTable } from '@/users/tables';
 
 const entriesService = currentServices.entries;
 const mediaService = currentServices.media;
@@ -27,8 +30,10 @@ const usersService = currentServices.users;
 /** One write that must be atomic. */
 type AtomicWrite = {
     name: string;
-    /** Which relationship index write fails: an insert, or a delete. */
+    /** Which write fails: an insert, or a delete. */
     failing: 'insert' | 'delete';
+    /** The table that write goes to; the `relationships` index by default. */
+    failingTable?: Table;
     /** Write what the call needs; answer the call and the check after it. */
     arrange(): Promise<{ act(): Promise<unknown>; expectUnchanged(): Promise<void> }>;
 };
@@ -283,12 +288,15 @@ const WRITES: AtomicWrite[] = [
         },
     },
     {
-        // `delete` clears the author columns that name the user before it drops
-        // the row, so a failing index delete must leave both.
+        // `delete` drops the user's relationship rows, then the `users` row
+        // (which clears the author columns that name the user). The users row
+        // delete fails, so the relationship delete before it must roll back.
         name: 'users.delete',
         failing: 'delete',
+        failingTable: usersTable,
         async arrange() {
-            const id = await ann(await post());
+            const favourite = await post();
+            const id = await ann(favourite);
             const entries = createRepository(entriesTable);
             const entry = await entries.create({
                 type: 'post',
@@ -303,6 +311,11 @@ const WRITES: AtomicWrite[] = [
                         createdBy: id,
                         updatedBy: id,
                     });
+                    const index = await getDb()
+                        .selectFrom('relationships')
+                        .select(['sourceId', 'targetId'])
+                        .execute();
+                    expect(index).toEqual([{ sourceId: id, targetId: favourite }]);
                 },
             };
         },
@@ -373,11 +386,11 @@ beforeEach(async () => {
 
 describe('a write that touches more than one row', () => {
     it.each(WRITES)(
-        '$name leaves every row as it was when its index write fails',
-        async ({ failing, arrange }) => {
+        '$name leaves every row as it was when one of its writes fails',
+        async ({ failing, failingTable = relationshipsTable, arrange }) => {
             const { act, expectUnchanged } = await arrange();
 
-            const stopFailing = await failWritesTo(relationshipsTable, failing);
+            const stopFailing = await failWritesTo(failingTable, failing);
             await expect(act()).rejects.toThrow('boom');
             await stopFailing();
 

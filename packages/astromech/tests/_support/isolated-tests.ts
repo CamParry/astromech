@@ -5,8 +5,8 @@
  * once and reuses it across files, which is where most of the run time went.
  * A file listed here opts back into per-file isolation because it mocks a
  * module other files import, resets the module registry, stubs a global, or
- * writes `globalThis.__astromech` (all of which leak across files in a shared
- * graph).
+ * writes `globalThis.__astromech`, directly or through `globals()` (all of which
+ * leak across files in a shared graph).
  *
  * `tests/isolation-list.test.ts` fails if this list and the files that actually
  * do those things disagree, so it cannot drift.

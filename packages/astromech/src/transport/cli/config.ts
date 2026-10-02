@@ -50,8 +50,8 @@ export async function withApplication(
 
 /**
  * Load the config file once, guard it, resolve it, and register the config and
- * its drivers the way boot does, without booting. For the commands the application cannot boot
- * without (`db:*`) and those that only read the config.
+ * its drivers the way boot does, without booting. For the commands the
+ * application cannot boot without (`db:*`) and those that only read the config.
  *
  * `allowRemote` is `--allow-remote`: a remote database is refused by default so a
  * command meant for a dev machine cannot hit production by inheriting whatever
