@@ -1,7 +1,7 @@
 # Schema engine defects found by the property tests
 
 Found by the property tests added in stage 5 of
-[test-suite-review](../in-progress/test-suite-review.md), under
+[test-suite-review](../completed/test-suite-review.md), under
 `packages/schema-engine/tests/`. Each is an expected failure (`it.fails`) until
 fixed.
 

@@ -1,7 +1,7 @@
 # CLI defects found by the stage 5 tests
 
 Found by the command tests added in stage 5 of
-[test-suite-review](../in-progress/test-suite-review.md), under
+[test-suite-review](../completed/test-suite-review.md), under
 `packages/astromech/tests/transport/cli/commands/`. The two tested ones are
 expected failures (`it.fails`) until fixed. Command sources are in
 `packages/astromech/src/transport/cli/commands/`.

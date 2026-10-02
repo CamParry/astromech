@@ -109,7 +109,7 @@ load-and-check and outside any transaction. Decide the order there first.
       restates its status and trigger the same way
       (`packages/plugins/backups/src/tables/runs.ts:14`).
 - [ ] **11. Migrate the test database once.** Planned as stage 2a of
-      [test-suite-review](../in-progress/test-suite-review.md), which has the measurements.
+      [test-suite-review](../completed/test-suite-review.md), which has the measurements.
 - [ ] **12. Turn on the `no-unsafe-*` rules.** A trial run of the five rules
       finds 26 hits, all untyped data flows, e.g. `params: any` in
       `entries/internal/preview.ts:29` and an `any` stream chunk in
@@ -142,7 +142,7 @@ load-and-check and outside any transaction. Decide the order there first.
       statuses from it. A lint rule can then ban `throw new Error` under
       `methods/` and `internal/`.
 - [ ] **17. Shared boundary doubles.** Planned in stages 2b and 4 of
-      [test-suite-review](../in-progress/test-suite-review.md), which uses the real
+      [test-suite-review](../completed/test-suite-review.md), which uses the real
       filesystem driver plus a `StorageDriver` contract test rather than a
       memory fake. Add a `recordingEmail()` double there for the per-file email
       drivers, and include these mocks of Astromech's own modules in its

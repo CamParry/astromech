@@ -4,7 +4,7 @@
 and its variants before the transaction that deletes the row. If the row
 delete fails, the item stays in the library and its file is gone. Found by
 `packages/astromech/tests/media/delete-files.test.ts` in stage 5 of
-[test-suite-review](../in-progress/test-suite-review.md), which marks the case
+[test-suite-review](../completed/test-suite-review.md), which marks the case
 as an expected failure.
 
 ## The work

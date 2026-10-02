@@ -32,7 +32,7 @@ Finished items are deleted rather than ticked; the record of what shipped is in
 
 ### Services
 
-- [ ] To discuss: a bound service method throws synchronously when its input fails to parse, rather than returning a rejected promise, so a caller's `.catch()` misses the error and tests need an `attempt()` wrapper (`packages/astromech/tests/entries/write-policy.test.ts`, `packages/astromech/tests/services/define-service.test.ts`). Decide whether bound methods always reject. Raised by the test suite review (`roadmap/in-progress/test-suite-review.md`)
+- [ ] To discuss: a bound service method throws synchronously when its input fails to parse, rather than returning a rejected promise, so a caller's `.catch()` misses the error and tests need an `attempt()` wrapper (`packages/astromech/tests/entries/write-policy.test.ts`, `packages/astromech/tests/services/define-service.test.ts`). Decide whether bound methods always reject. Raised by the test suite review (`roadmap/completed/test-suite-review.md`)
 
 ### Plugins
 
@@ -111,6 +111,12 @@ not be re-derived.
 - [ ] The test run leaks its temp database directory when it is killed. `packages/astromech/tests/_support/global-setup.ts` removes it in its teardown, which never runs on SIGKILL, so every interrupted run strands an `astromech-test-*` directory (template plus one database per test) under `tmpdir()`. Sweep stale `astromech-test-*` directories when global setup starts.
 - [ ] Local `typecheck` can miss an error a module augmentation causes in an unchanged file: core's `tsconfig.test.json` is `incremental`, and with a cached build info a new `declare module 'astromech'` in a test file did not re-report TS2322 in `packages/astromech/src/plugins/define-hook.ts` (seen 2026-10-02; `--incremental false` showed it). CI starts with no cache, so it catches these. Decide whether the local gate should drop `incremental` or clear the cache.
 - [ ] `packages/astromech/tests/storage/drivers/contract.test.ts` failed once with workerd `SQLITE_BUSY_RECOVERY` (seed 1790952991978, 2026-10-02; a rerun passed). It and `tests/integrations/cloudflare/d1-local-emulation.test.ts` each start wrangler's proxy over core's one shared `.wrangler` state directory, and shuffled order can start two at once. Give each file its own persist directory, or add both to core's isolated-test list.
+- [ ] Leftovers from the test suite review (`roadmap/completed/test-suite-review.md`):
+    - The translation conformance table covers media and users only, so entries and globals keep their own shared-field and relationship tests. Fold all four.
+    - The admin tests build an `Entry` with `as unknown as Entry` in 10 places. Add a typed admin `Entry` builder.
+    - The assistant's admin tests still mock `astromech/ui` and their own `use-chat`.
+    - The backups libsql dump and restore tests use a hand-written runs table instead of the migration, and `resolveKeep`'s tests replace `ctx.globals` with a fake.
+    - `entry-edit-locale-switch.test.tsx` still wraps `useEntryForm` to watch a transient partial `seo` group that no output shows.
 
 ### Permissions follow-ups
 
@@ -119,6 +125,6 @@ not be re-derived.
 
 ### Content follow-ups
 
-- [ ] `packages/astromech/src/content/versions.ts` falls back to the current fields (`?? current.fields`) when a stored version has none, but no write can store a version without fields: every repository maps null to `{}` before `snapshotVersion`. Remove the fallback, or say what old data it is for. Found in stage 4 of `roadmap/in-progress/test-suite-review.md`.
-- [ ] Decide what a slug is for a title with no ASCII letters. `slugify` keeps only ASCII letters and digits, so a Japanese, Greek or Cyrillic title gets no slug, and accents are dropped rather than converted (`Café` becomes `caf`). Transliterate, allow Unicode slugs, or keep it and say so. Found by the slug property tests in stage 5 of `roadmap/in-progress/test-suite-review.md`.
+- [ ] `packages/astromech/src/content/versions.ts` falls back to the current fields (`?? current.fields`) when a stored version has none, but no write can store a version without fields: every repository maps null to `{}` before `snapshotVersion`. Remove the fallback, or say what old data it is for. Found in stage 4 of `roadmap/completed/test-suite-review.md`.
+- [ ] Decide what a slug is for a title with no ASCII letters. `slugify` keeps only ASCII letters and digits, so a Japanese, Greek or Cyrillic title gets no slug, and accents are dropped rather than converted (`Café` becomes `caf`). Transliterate, allow Unicode slugs, or keep it and say so. Found by the slug property tests in stage 5 of `roadmap/completed/test-suite-review.md`.
 - [ ] The assistant's `readChatRequest` checks only that `aiContext` is an array, so an item of any shape gets through and `formatAiContextMessage` then throws a TypeError. Validate each item's shape and update the existing `chat.test.ts` case that asserts arbitrary objects are accepted. Recorded as an expected failure in the assistant's `readChatRequest` property tests.

@@ -3,7 +3,7 @@
 Creating an entry whose generated slug matches a trashed entry's fails with
 `SQLITE_CONSTRAINT: UNIQUE constraint failed: entry_content.type,
 entry_content.locale, entry_content.slug`. Found by the shuffled test runs in
-[test-suite-review](../in-progress/test-suite-review.md), stage 2b.
+[test-suite-review](../completed/test-suite-review.md), stage 2b.
 
 To reproduce: create a `post` titled "Same", trash it, then create another
 `post` titled "Same".

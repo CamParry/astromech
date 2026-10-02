@@ -7,7 +7,7 @@ operation is `create`. So a media field's configured `defaultValue` never
 applies on upload, and neither do the built-in type defaults (`false` for a
 checkbox, `[]` for a repeater). Entries, globals and users fill them. Found by
 the conformance tables in stage 4 of
-[test-suite-review](../in-progress/test-suite-review.md):
+[test-suite-review](../completed/test-suite-review.md):
 `packages/astromech/tests/content/resource-field-validation.test.ts` marks the
 media row as an expected failure until this is fixed.
 

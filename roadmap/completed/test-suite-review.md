@@ -10,9 +10,8 @@ rather than a description of the suite. The earlier coverage review is
 The principles below include the changes the audit argued for. The `testing`
 skill (`.claude/skills/testing/SKILL.md`) is the working form of them: goals and
 their reasons rather than rules. This file holds the research, the audit
-summary and the implementation plan. The audit reports themselves, with every
-finding's file and line, are in `specs/test-suite-review/`, one per area, and
-are deleted when this work ships.
+summary and the implementation plan. The audit reports, with every finding's
+file and line, were deleted when this work shipped; git history has them.
 
 ## Sources
 
@@ -299,7 +298,7 @@ A question about bound service methods throwing synchronously is in
 ## Implementation plan
 
 From stage 2 on, each stage lands on main before the next starts. The audit
-reports in `specs/test-suite-review/` name the files for every item. Stages 2b
+reports named the files for every item. Stages 2b
 and 4 touch many test files, so each runs on its own branch and worktree, one
 commit per item, with the whole core suite run before and after to show the
 test count did not drop.
@@ -492,10 +491,10 @@ harness and eight test files and every later stage runs faster for it.
       `diffSnapshots`, `readChatRequest`, slug handling. Defects found:
       [schema-engine-defects](../planned/schema-engine-defects.md) and
       [trashed-entry-slug-collision](../planned/trashed-entry-slug-collision.md).
-- [ ] Try mutation testing (Stryker, incremental) on one core directory, and
+- [x] Try mutation testing (Stryker, incremental) on one core directory, and
       keep it as an occasional check only if it finds assertions that miss.
       Tried on `src/utilities/` (Stryker 10, 12 minutes): 17 of 31 surviving
       mutants were missing assertions, in files at 97% line coverage, and it
-      found a `deepEqual` bug. Left: fix `deepEqual`, add the missing
-      assertions, and add a script and a `testing` skill note for running it
-      one directory at a time.
+      found a `deepEqual` bug, now fixed. Kept as a manual check:
+      `pnpm -F astromech test:mutation src/<dir>`, described in the `testing`
+      skill. After the new assertions, `src/utilities` scores 94%.

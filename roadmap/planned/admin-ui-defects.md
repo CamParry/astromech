@@ -1,7 +1,7 @@
 # Admin UI defects found by the stage 5 tests
 
 Found by the admin component tests added in stage 5 of
-[test-suite-review](../in-progress/test-suite-review.md). Each tested one is an
+[test-suite-review](../completed/test-suite-review.md). Each tested one is an
 expected failure (`it.fails`) until fixed.
 
 - [ ] The command palette lists Media and Users to every user; the sidebar hides

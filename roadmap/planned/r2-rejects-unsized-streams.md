@@ -4,7 +4,7 @@
 `ReadableStream`, but the R2 driver (`packages/astromech/src/storage/drivers/r2.ts`)
 passes a stream to `bucket.put` unchanged, and R2 refuses one without a known
 length ("must have a known length"). Found by the storage driver contract test
-in stage 4 of [test-suite-review](../in-progress/test-suite-review.md).
+in stage 4 of [test-suite-review](../completed/test-suite-review.md).
 
 Where it bites:
 
