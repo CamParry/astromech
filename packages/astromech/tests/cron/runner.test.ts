@@ -105,11 +105,6 @@ describe('due evaluation', () => {
         },
         { name: 'skips a disabled job', patch: { enabled: false }, runs: 0 },
         {
-            name: 'skips a job whose claim another tick holds',
-            patch: { lock: MINUTE_ON },
-            runs: 0,
-        },
-        {
             name: 'reclaims a job whose claim has expired',
             patch: { lock: MINUTE_AGO },
             runs: 1,

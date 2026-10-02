@@ -196,7 +196,15 @@ describe('restoreVersion', () => {
         });
         await usersService.update({ id: user.id, data: { fields: { bio: 'Now' } } });
         // A version row may hold no fields at all; nothing writes one today.
-        await getDb().updateTable('userVersions').set({ fields: null }).execute();
+        const cleared = await getDb()
+            .updateTable('userVersions')
+            .set({ fields: null })
+            .where('version', '=', 1)
+            .where('contentId', 'in', (eb) =>
+                eb.selectFrom('userContent').select('id').where('userId', '=', user.id)
+            )
+            .executeTakeFirstOrThrow();
+        expect(cleared.numUpdatedRows).toBe(1n);
 
         const restored = await usersService.restoreVersion({ id: user.id, version: 1 });
 

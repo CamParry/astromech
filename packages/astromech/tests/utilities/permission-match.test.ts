@@ -19,6 +19,7 @@ describe('matchesPermission', () => {
         // a trailing `*` matches one or more remaining segments
         ['entry:*', 'entry:posts', true],
         ['entry:*', 'entry:posts:read', true],
+        ['entry:*', 'entry:read:full', true],
         ['entry:*', 'entry', false],
         ['media:*', 'media:read', true],
         ['entry:posts:*', 'entry:posts:read', true],
@@ -31,6 +32,7 @@ describe('matchesPermission', () => {
         ['entry:*:read', 'entry:a:b:read', false],
         ['entry:*:read', 'entry:read', false],
         ['entry:*:read', 'entry:posts', false],
+        ['entry:*:read', 'entry:read:full', false],
         // a pattern shorter than the check, with no trailing `*`
         ['entry:posts', 'entry:posts:read', false],
         // the root segment never crosses over

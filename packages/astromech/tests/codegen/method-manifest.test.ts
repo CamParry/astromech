@@ -6,6 +6,7 @@
  */
 
 import type {
+    EntriesManifestMethod,
     JsonSchemaObject,
     ManifestMethod,
     MethodManifest,
@@ -113,8 +114,9 @@ describe('the manifest document', () => {
     it('serialises to the manifest as JSON, with a trailing newline', () => {
         const serialised = serialiseMethodManifest(manifest);
 
-        expect(serialised.endsWith('\n')).toBe(true);
-        expect(JSON.parse(serialised)).toEqual(JSON.parse(JSON.stringify(manifest)));
+        expect(serialised.endsWith('}\n')).toBe(true);
+        expect(serialised.startsWith('{\n  "version": 3,\n  "methods": [\n')).toBe(true);
+        expect(JSON.parse(serialised)).toEqual(manifest);
     });
 });
 
@@ -337,10 +339,18 @@ describe('the rules every method of a kind keeps', () => {
     });
 
     it('names its own type in every entry method’s input', () => {
-        const entries = manifest.methods.filter((m) => m.source === 'entries');
+        expect(
+            properties(method('entries.get', 'test_my_plugin/widget').input)['type']
+        ).toEqual({
+            type: 'string',
+            const: 'test_my_plugin/widget',
+        });
+
+        const entries = manifest.methods.filter(
+            (m): m is EntriesManifestMethod => m.source === 'entries'
+        );
         expect(entries.length).toBeGreaterThan(0);
         for (const m of entries) {
-            if (m.source !== 'entries') continue;
             expect(properties(m.input)['type'], m.id).toEqual({
                 type: 'string',
                 const: m.typeId,
