@@ -114,3 +114,7 @@ not be re-derived.
 
 - [ ] A plugin service method can demand a permission its plugin never declares in `permissions`, and nothing catches it, so `astromech permissions` would not list it. A check when the plugin registers would, at the cost of a new boot error. Found fixing `completed/permission-catalogue-drifts-from-manifest.md`.
 - [ ] The admin restates which methods a resource offers by reading capabilities directly (`packages/admin/src/components/entries/entry-edit-page.tsx` near line 312, `packages/admin/src/components/globals/global-edit-page.tsx` near line 142, `packages/admin/src/hooks/use-edit-controller.ts` near line 188). They agree with the methods today; reading the method manifest instead would remove the second source.
+
+### Content follow-ups
+
+- [ ] `packages/astromech/src/content/versions.ts` falls back to the current fields (`?? current.fields`) when a stored version has none, but no write can store a version without fields: every repository maps null to `{}` before `snapshotVersion`. Remove the fallback, or say what old data it is for. Found in stage 4 of `roadmap/in-progress/test-suite-review.md`.

@@ -400,8 +400,8 @@ harness and eight test files and every later stage runs faster for it.
 
 ### Stage 4: clean-up
 
-- [ ] Replace the session mock in five files with a `requestAs()` helper over
-      the real request scope; keep it only in `request-scope.test.ts`.
+- [x] Replace the session mock in five files with a `requestAs()` helper over
+      the real request scope; keep it only in `request-scope.test.ts`. `requestAs()` in the harness.
 - [x] Move the admin's own-hook mocks to the client edge, and add one shared
       admin render helper for the provider stack, router and real English
       strings. `renderAdmin` and its siblings in
@@ -422,33 +422,44 @@ harness and eight test files and every later stage runs faster for it.
       `loop/run`, `loop/request` and `sessions/repository` mock `astromech`,
       and `deleted-user` builds its own Kysely (needs the assistant's
       migrations in the harness chain).
-- [ ] The hand registrations stage 2b left, each checked by its own test:
+- [x] The hand registrations stage 2b left, each checked by its own test:
       `plugin-runtime` (`setEmailDriver`), `d1-local-emulation` and
       `dangling-relations` (`setDb`), `database-transaction-degrade`
       (`setDatabaseDriver`), `model-access` (`setAiModels`),
       `scheduled-handler` (`setSchedulerDriver`), the hand drivers in
       `astromech.test`, `scheduled-boot` and `middleware`, and
       `src/transport/cli/config.ts`, which calls `setDb` itself. Keep each one
-      that is the behaviour under test; move the rest onto the config.
+      that is the behaviour under test; move the rest onto the config. Kept, each with a
+      comment: `setAiModels`, `setSchedulerDriver` and the exploding `setDb`
+      in `dangling-relations`. The CLI's `loadConfig` now calls
+      `registerDrivers`.
 - [x] Plugin structure tests import core internals (`resolvePluginIdentity`,
       `resolveAdminResources`, `derivePluginNav`); assert through the
       manifest or the admin output instead.
-- [ ] Fold the copied suites into conformance tables (versions, translation,
+- [x] Fold the copied suites into conformance tables (versions, translation,
       relationships, field validation, definition, atomicity), and the plugin
       contract tests into one `it.each` over every plugin. The plugin half is done:
       `packages/astromech/tests/_support/plugin-contract.ts`, called from each
-      plugin's `tests/contract.test.ts`.
-- [ ] Inject atomicity failures with a SQLite trigger instead of repository
+      plugin's `tests/contract.test.ts`. Core: five
+      `packages/astromech/tests/content/resource-*.test.ts` tables. The
+      translation table covers media and users only, so entries and globals
+      keep their own shared-field and relationship tests; folding all four is
+      open.
+- [x] Inject atomicity failures with a SQLite trigger instead of repository
       spies, and delete the three tests that only check which repository a
-      service calls.
-- [ ] Replace raw-SQL write checks with the public read path where principle
+      service calls. `failWritesTo` in the harness.
+- [x] Replace raw-SQL write checks with the public read path where principle
       14 does not exempt them.
-- [ ] Typed builders in `_support/` first (`createTestUser` returning a
+- [x] Typed builders in `_support/` first (`createTestUser` returning a
       `User`, a `ResolvedConfig` builder, a field builder), then remove the
-      casts that copy them.
-- [ ] Replace the seven hand-written storage fakes with the filesystem driver,
-      plus one `StorageDriver` contract test run against every driver.
-- [ ] Delete or rewrite the tests that cannot fail (`cron-table`,
+      casts that copy them. Casts in core's tests went
+      from 117 to 25; deliberately invalid input goes through `invalid()`.
+- [x] Replace the seven hand-written storage fakes with the filesystem driver,
+      plus one `StorageDriver` contract test run against every driver. The contract covers
+      the filesystem and R2 drivers; S3 needs a server and keeps a stubbed
+      `fetch`. It found
+      [r2-rejects-unsized-streams](../planned/r2-rejects-unsized-streams.md).
+- [x] Delete or rewrite the tests that cannot fail (`cron-table`,
       `repository-surface`, `packages/astromech/tests/content/shared-helpers.test.ts`, the admin
       `cell-registry` case), fix the admin field-registry leak, rewrite
       `packages/astromech/tests/cron/runner.test.ts` and `method-manifest.test.ts` as tables, and move
