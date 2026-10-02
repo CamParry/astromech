@@ -107,4 +107,28 @@ describe('permissions', () => {
         });
         expect(result.exitCode).toBe(1);
     });
+
+    it('runs without opening the database', async () => {
+        const config = await writeSiteConfig(siteDir, {
+            globals: [{ key: 'site', label: 'Site', fields: [] }],
+            throwOnOpen: true,
+        });
+
+        const result = await run(permissions, [
+            '--config',
+            config,
+            '--filter',
+            'global:',
+        ]);
+
+        expect(result).toEqual({
+            stdout: [
+                'global:site:publish  Publish "site" global  (site)',
+                'global:site:read     Read "site" global  (site)',
+                'global:site:update   Update "site" global  (site)',
+            ],
+            stderr: [],
+            exitCode: 0,
+        });
+    });
 });

@@ -73,9 +73,9 @@ entries, and plugins, with effect hints and permission strings. It reads the
 manifest the boot generates, so it needs no prior build.
 
 ```sh
-astromech methods                     # text: name, [effects], (permission)
+astromech methods                     # text: id, [effects], (permission)
 astromech methods --source entries    # filter by source: core | entries | plugin
-astromech methods --filter create     # case-insensitive substring on method name
+astromech methods --filter create     # case-insensitive substring on method id or name
 astromech methods --json              # full manifest entries (input/output schemas, entryType, …)
 ```
 

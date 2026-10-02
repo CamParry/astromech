@@ -167,4 +167,19 @@ describe('db:generate', () => {
         });
         await expect(readdir(migrationsDir)).rejects.toThrow(/ENOENT/);
     });
+
+    it('runs without opening the database', async () => {
+        const config = await writeSiteConfig(siteDir, {
+            migrationsDir,
+            throwOnOpen: true,
+        });
+
+        expect(await run(dbGenerate, ['--config', config])).toEqual({
+            stdout: [
+                `[astromech db:generate] generated ${join(migrationsDir, '0000_migration.ts')}`,
+            ],
+            stderr: [],
+            exitCode: 0,
+        });
+    });
 });

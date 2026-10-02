@@ -5,7 +5,7 @@ import {
     serialiseMethodManifest,
 } from '@/codegen/method-manifest';
 import { configArgs, toAllowRemoteOption } from '../common-args';
-import { loadConfig } from '../config';
+import { loadConfigWithoutDrivers } from '../config';
 import { writeGenerated } from '../output';
 
 export default defineCommand({
@@ -22,7 +22,7 @@ export default defineCommand({
         ...configArgs,
     },
     async run({ args }) {
-        const { config: rawConfig, resolved } = await loadConfig(
+        const { config: rawConfig, resolved } = await loadConfigWithoutDrivers(
             args.config,
             toAllowRemoteOption(args)
         );

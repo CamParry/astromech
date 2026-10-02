@@ -5,6 +5,7 @@ import type {
 import { defineCommand } from 'citty';
 import { systemAppContext } from '@/app-context/app-context';
 import { validateStoredContent } from '@/transport/cli/validate-stored-content';
+import { pluralise } from '@/utilities/strings';
 import { configArgs } from '../common-args';
 import { withApplication } from '../config';
 
@@ -31,12 +32,13 @@ export default defineCommand({
 /** Print the findings, and fail the process only when there are some. */
 function reportFindings(report: ValidationReport): void {
     if (report.findings.length === 0) {
-        console.log(`All rows valid (${report.rowsChecked} rows checked).`);
+        console.log(`All rows valid (${pluralise(report.rowsChecked, 'row')} checked).`);
         return;
     }
 
     console.error(
-        `${report.findings.length} validation failures across ${report.rowsChecked} rows checked.`
+        `${pluralise(report.findings.length, 'validation failure')} across ` +
+            `${pluralise(report.rowsChecked, 'row')} checked.`
     );
     for (const finding of report.findings) {
         console.error(`  ${describe(finding)}`);

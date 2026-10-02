@@ -15,7 +15,9 @@ export function resolveMigrationsDir(migrationsDir: string): string {
 /** Import `<dir>/index.ts`. Throws if it is missing or malformed. */
 export async function loadAppMigrations(dir: string): Promise<MigrationProvider> {
     const { createJiti } = await import('jiti');
-    const jiti = createJiti(import.meta.url);
+    // No module cache: `db:generate` rewrites `index.ts`, and a cached copy
+    // would hide the migrations it added from a later load in the same process.
+    const jiti = createJiti(import.meta.url, { moduleCache: false });
     const file = resolve(dir, 'index.ts');
     const mod = await jiti.import<{ migrationProvider?: MigrationProvider }>(file);
     if (!mod.migrationProvider) {
@@ -24,4 +26,15 @@ export async function loadAppMigrations(dir: string): Promise<MigrationProvider>
         );
     }
     return mod.migrationProvider;
+}
+
+/** Whether `<dir>/index.ts` exists. False where the runtime has no filesystem to look in. */
+export async function hasAppMigrations(dir: string): Promise<boolean> {
+    try {
+        const { access } = await import('node:fs/promises');
+        await access(resolve(dir, 'index.ts'));
+        return true;
+    } catch {
+        return false;
+    }
 }

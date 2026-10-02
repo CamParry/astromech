@@ -4,6 +4,7 @@ import {
     checkRelationshipIndex,
     rebuildRelationshipIndex,
 } from '@/transport/cli/relationship-index';
+import { pluralise } from '@/utilities/strings';
 import { configArgs } from '../common-args';
 import { withApplication } from '../config';
 
@@ -33,9 +34,9 @@ export default defineCommand({
 
             const report = await rebuildRelationshipIndex(scope);
             console.log(
-                `Rebuilt the relationships index: ${report.sourcesScanned} sources scanned, ` +
-                    `${report.rowsWritten} rows written, ` +
-                    `${report.orphanRowsRemoved} orphan rows removed.`
+                `Rebuilt the relationships index: ${pluralise(report.sourcesScanned, 'source')} scanned, ` +
+                    `${pluralise(report.rowsWritten, 'row')} written, ` +
+                    `${pluralise(report.orphanRowsRemoved, 'orphan row')} removed.`
             );
         }),
 });
@@ -46,13 +47,13 @@ function reportDrift(report: DriftReport): void {
         report.missing.length + report.unexpected.length + report.mismatched.length;
     if (total === 0) {
         console.log(
-            `Relationships index is in sync (${report.sourcesScanned} sources scanned).`
+            `Relationships index is in sync (${pluralise(report.sourcesScanned, 'source')} scanned).`
         );
         return;
     }
 
     console.error(
-        `Relationships index drift across ${report.sourcesScanned} sources: ` +
+        `Relationships index drift across ${pluralise(report.sourcesScanned, 'source')}: ` +
             `${report.missing.length} missing, ${report.unexpected.length} unexpected, ` +
             `${report.mismatched.length} mismatched.`
     );

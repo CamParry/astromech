@@ -12,6 +12,7 @@ import { defineCommand } from 'citty';
 import { sql } from 'kysely';
 import { getDb } from '@/database/registry';
 import { pluginNamespace } from '@/plugins/runtime/plugin-identity';
+import { pluralise } from '@/utilities/strings';
 import { configArgs, toAllowRemoteOption } from '../common-args';
 import { loadConfig } from '../config';
 
@@ -125,8 +126,8 @@ export default defineCommand({
             }
         }
         console.log(
-            `[astromech plugin:purge] removed ${result.migrations} migration row(s) ` +
-                `and ${result.tracked} tracking row(s) for "${pkg}"`
+            `[astromech plugin:purge] removed ${pluralise(result.migrations, 'migration row')} ` +
+                `and ${pluralise(result.tracked, 'tracking row')} for "${pkg}"`
         );
     },
 });

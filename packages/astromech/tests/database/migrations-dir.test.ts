@@ -7,11 +7,12 @@
 import type { DB } from '@/database/types';
 import type { Client } from '@libsql/client';
 import type { Kysely } from 'kysely';
-import { access, mkdtemp, rm, symlink } from 'node:fs/promises';
+import { access, mkdir, mkdtemp, rm, symlink, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { createClient } from '@libsql/client';
+import { expectConsole } from '@tests/console';
 import { makeTestConfig } from '@tests/harness';
 import { openTestDb } from '@tests/test-db';
 import { sql } from 'kysely';
@@ -75,7 +76,7 @@ describe('a config naming its own migrationsDir', () => {
         const warn = vi.spyOn(log, 'warn').mockImplementation(() => undefined);
         await checkMigrationDrift(db, [], migrationsDir);
         expect(warn).toHaveBeenCalledTimes(1);
-        expect(warn.mock.calls[0]?.[0]).toContain('have not been applied');
+        expect(warn.mock.calls[0]?.[0]).toContain('1 migration has not been applied');
 
         const messages: string[] = [];
         const logger = {
@@ -92,5 +93,29 @@ describe('a config naming its own migrationsDir', () => {
         warn.mockClear();
         await checkMigrationDrift(db, [], migrationsDir);
         expect(warn).not.toHaveBeenCalled();
+    });
+});
+
+describe('checkMigrationDrift', () => {
+    it('logs a migrations index that fails to load, and skips the check', async () => {
+        await mkdir(join(siteDir, 'broken'));
+        await writeFile(
+            join(siteDir, 'broken', 'index.ts'),
+            'export const migrationProvider = {;\n'
+        );
+        expectConsole(
+            'error',
+            '[Astromech] could not load the migrations, so the database was not checked for pending ones'
+        );
+
+        await expect(checkMigrationDrift(db, [], './broken')).resolves.toBeUndefined();
+    });
+
+    // A bundled runtime ships no migrations folder, and a new site may not have
+    // run `db:generate` yet.
+    it('skips the check without logging when the migrations folder does not exist', async () => {
+        await expect(
+            checkMigrationDrift(db, [], './no-migrations-here')
+        ).resolves.toBeUndefined();
     });
 });

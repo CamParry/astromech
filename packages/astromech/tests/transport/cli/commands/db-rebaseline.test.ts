@@ -27,9 +27,6 @@ const BANNERED_BASELINE = join(import.meta.dirname, 'fixtures/bannered-baseline'
 /** A migration that inserts a row into `roles`, which no snapshot can reproduce. */
 const DATA_MIGRATION = join(import.meta.dirname, 'fixtures/seed-editor-role.ts.txt');
 
-/** The `// ── <table> ──` line `db:rebaseline` splits a baseline on. */
-const BANNER = /^\s*\/\/ ── \S+ ─+\s*$/m;
-
 let site: string;
 let migrations: string;
 
@@ -201,34 +198,28 @@ describe('db:rebaseline', () => {
         expect(Object.keys(snapshot.tables).sort()).toEqual(coreNames);
     });
 
-    // The setup the `it.fails` case below relies on: if this fails, that case
-    // is failing for a reason other than the defect it names.
-    it('is refused a generated baseline for its missing banners, for the case below', async () => {
+    it('rebaselines a baseline that db:generate wrote', async () => {
         await generatedBaseline();
         const config = await writeConfig();
-        const baseline = await readFile(join(migrations, '0000_baseline.ts'), 'utf-8');
-        expect(baseline).toContain('CREATE TABLE');
-        expect(baseline).not.toMatch(BANNER);
 
         const { stderr, exitCode } = await run(dbRebaseline, ['--config', config]);
 
-        expect(exitCode).toBe(1);
-        expect(stderr).toEqual([
-            expect.stringContaining('sits before the first `// ── <table> ──` banner'),
-        ]);
+        expect(stderr).toEqual([]);
+        expect(exitCode).toBe(0);
+        const baseline = await readFile(join(migrations, '0000_baseline.ts'), 'utf-8');
+        for (const name of coreNames) expect(baseline).toContain(`// ── ${name} ──`);
     });
 
-    // DEFECT: `db:generate` writes a baseline with no `// ── <table> ──`
-    // banners, and `db:rebaseline` refuses any baseline without them ("the
-    // statement … sits before the first banner"). So a site whose chain
-    // `db:generate` started cannot rebaseline it without hand-adding a banner
-    // per table. Remove `.fails` once the two agree.
-    it.fails('rebaselines a baseline that db:generate wrote', async () => {
-        await generatedBaseline();
-        const config = await writeConfig();
+    it('runs without opening the database', async () => {
+        await bannerChain();
+        const config = await writeSiteConfig(site, {
+            migrationsDir: migrations,
+            throwOnOpen: true,
+        });
 
-        const { stderr } = await run(dbRebaseline, ['--config', config]);
+        const { stderr, exitCode } = await run(dbRebaseline, ['--config', config]);
 
         expect(stderr).toEqual([]);
+        expect(exitCode).toBe(0);
     });
 });

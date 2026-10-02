@@ -5,10 +5,15 @@ import type { MigrationProvider } from 'kysely/migration';
 import { mergeMigrationProviders, migrateToLatest } from '@astromech/schema-engine';
 import { sql } from 'kysely';
 import { Migrator } from 'kysely/migration';
-import { loadAppMigrations, resolveMigrationsDir } from '@/database/app-migrations';
+import {
+    hasAppMigrations,
+    loadAppMigrations,
+    resolveMigrationsDir,
+} from '@/database/app-migrations';
 import { collectPluginMigrations } from '@/database/plugin-migrations';
 import { AstromechError } from '@/errors/astromech-error';
 import { log } from '@/utilities/log';
+import { pluralise } from '@/utilities/strings';
 
 /**
  * Migrations at the two moments the runtime touches them: applying the chain on
@@ -86,27 +91,42 @@ export async function checkMigrationDrift(
     let provider: MigrationProvider;
     try {
         provider = await loadMergedProvider(plugins, migrationsDir);
-    } catch {
-        // No migrations directory to compare against — a bundled runtime ships
-        // none, and the app may not have run `db:generate` yet.
+    } catch (error) {
+        // Quiet when there is no chain: a bundled runtime ships none, and a new
+        // site may not have run `db:generate` yet.
+        if (await hasAppMigrations(resolveMigrationsDir(migrationsDir))) {
+            log.error(
+                'could not load the migrations, so the database was not checked ' +
+                    `for pending ones: ${describe(error)}`
+            );
+        }
         return;
     }
 
-    const migrator = new Migrator({ db, provider, allowUnorderedMigrations: true });
-    const pending = (await migrator.getMigrations()).filter(
-        (migration) => migration.executedAt === undefined
-    );
+    const pending = await listPendingMigrations(db, provider);
     if (pending.length === 0) return;
 
     log.warn(
-        `${pending.length} migration(s) have not been applied to this ` +
-            `database: ${pending.map((migration) => migration.name).join(', ')}. ` +
+        `${pluralise(pending.length, 'migration')} ${pending.length === 1 ? 'has' : 'have'} ` +
+            'not been applied to this ' +
+            `database: ${pending.join(', ')}. ` +
             'Run `astromech db:init`.'
     );
 }
 
+/** The names of the migrations in `provider` that `db` has not applied, in apply order. */
+export async function listPendingMigrations(
+    db: Kysely<DB>,
+    provider: MigrationProvider
+): Promise<string[]> {
+    const migrator = new Migrator({ db, provider, allowUnorderedMigrations: true });
+    return (await migrator.getMigrations())
+        .filter((migration) => migration.executedAt === undefined)
+        .map((migration) => migration.name);
+}
+
 /** The app's own migrations with each plugin's merged in, as one provider. */
-async function loadMergedProvider(
+export async function loadMergedProvider(
     plugins: PluginDefinition[],
     migrationsDir: string
 ): Promise<MigrationProvider> {

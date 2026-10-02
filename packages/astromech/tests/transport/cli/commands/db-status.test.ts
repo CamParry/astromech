@@ -85,38 +85,39 @@ describe('db:status', () => {
         });
     });
 
-    // The setup the `it.fails` case below relies on: if this fails, that case
-    // is failing for a reason other than the defect it names.
-    it('has a generated migration that is not applied, for the case below', async () => {
+    it('lists a generated migration that has not been applied as pending', async () => {
         const config = await writeConfig();
-
         await generateUnappliedMigration(config);
-
         expect(await readdir(migrationsDir)).toContain('0001_add-cron.ts');
         const { rows } = await sql<{
             name: string;
         }>`SELECT name FROM kysely_migration ORDER BY name`.execute(getDb());
         expect(rows).toEqual([{ name: '0000_migration' }]);
-        // Today's output in this state: the case below fails only on the
-        // missing `0001_add-cron` line.
+
         expect(await run(dbStatus, ['--config', config])).toEqual({
-            stdout: ['Applied migrations:', '  0000_migration'],
+            stdout: [
+                'Applied migrations:',
+                '  0000_migration',
+                'Pending migrations:',
+                '  0001_add-cron',
+            ],
             stderr: [],
             exitCode: 0,
         });
     });
 
-    // Defect: `db:status` reads only `kysely_migration`, never the config's
-    // migrations folder, so a generated migration that has not been applied is
-    // missing from its output. Its description is "Show migration status".
-    it.fails('lists a generated migration that has not been applied', async () => {
+    it('prints the error and exits 1 when the database cannot be read', async () => {
         const config = await writeConfig();
-        await generateUnappliedMigration(config);
+        await writeFile(
+            join(siteDir, 'database.db'),
+            'not a SQLite database '.repeat(10)
+        );
 
-        const { stdout: lines } = await run(dbStatus, ['--config', config]);
+        const { stdout, stderr, exitCode } = await run(dbStatus, ['--config', config]);
 
-        expect(lines).toContain('  0000_migration');
-        expect(lines.some((line) => line.includes('0001_add-cron'))).toBe(true);
+        expect(stdout).toEqual([]);
+        expect(stderr).toEqual([expect.stringMatching(/^Error: /)]);
+        expect(exitCode).toBe(1);
     });
 
     it('refuses a remote database without --allow-remote, before opening it', async () => {

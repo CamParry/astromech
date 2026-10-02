@@ -1,7 +1,7 @@
 import { defineCommand } from 'citty';
 import { buildPermissionCatalogue } from '@/policies/permission-catalogue';
 import { configArgs, jsonArgs, toAllowRemoteOption } from '../common-args';
-import { loadConfig } from '../config';
+import { loadConfigWithoutDrivers } from '../config';
 import { printError } from '../output';
 
 export default defineCommand({
@@ -20,7 +20,7 @@ export default defineCommand({
     },
     async run({ args }) {
         try {
-            const { config: rawConfig, resolved } = await loadConfig(
+            const { config: rawConfig, resolved } = await loadConfigWithoutDrivers(
                 args.config,
                 toAllowRemoteOption(args)
             );

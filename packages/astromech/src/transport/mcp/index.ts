@@ -10,9 +10,10 @@ import type { ConfirmOptions } from '@/policies/confirmation';
 import type { MethodFilter } from '@/policies/method-filter';
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
 import { getDatabaseDriver } from '@/database/driver-registry';
-import { filterMethods } from '@/policies/method-filter';
+import { countExclusions, filterMethods } from '@/policies/method-filter';
 import { bootApplication } from '@/transport/cli/config';
 import { bootedManifest } from '@/transport/cli/methods';
+import { pluralise } from '@/utilities/strings';
 import { createMcpServer } from './server';
 
 /** Above this many exclusions, the per-method lines stop being readable. */
@@ -35,12 +36,10 @@ function reportExclusions(excluded: readonly { id: string; reason: string }[]): 
         return;
     }
 
-    const counts = new Map<string, number>();
-    for (const { reason } of excluded) {
-        counts.set(reason, (counts.get(reason) ?? 0) + 1);
-    }
-    for (const [reason, count] of counts) {
-        console.error(`[astromech mcp] excluded ${count} methods: ${reason}`);
+    for (const [reason, count] of countExclusions(excluded)) {
+        console.error(
+            `[astromech mcp] excluded ${pluralise(count, 'method')}: ${reason}`
+        );
     }
 }
 
@@ -77,7 +76,7 @@ export async function runMcpServer(
     const { server, tools, skipped } = createMcpServer({ ...manifest, methods }, confirm);
 
     console.error(
-        `[astromech mcp] ready: ${tools.length} tools, ${skipped.length} skipped, ` +
+        `[astromech mcp] ready: ${pluralise(tools.length, 'tool')}, ${skipped.length} skipped, ` +
             `${excluded.length} excluded by surface, ` +
             `confirm: ${describeConfirm(confirm)}`
     );

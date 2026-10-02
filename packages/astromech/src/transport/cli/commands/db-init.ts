@@ -1,8 +1,6 @@
-import { mergeMigrationProviders, migrateToLatest } from '@astromech/schema-engine';
+import { migrateToLatest } from '@astromech/schema-engine';
 import { defineCommand } from 'citty';
-import { loadAppMigrations, resolveMigrationsDir } from '@/database/app-migrations';
-import { assertForeignKeysEnforced } from '@/database/migrations';
-import { collectPluginMigrations } from '@/database/plugin-migrations';
+import { assertForeignKeysEnforced, loadMergedProvider } from '@/database/migrations';
 import { getDb } from '@/database/registry';
 import { configArgs, toAllowRemoteOption } from '../common-args';
 import { loadConfig } from '../config';
@@ -19,15 +17,12 @@ export default defineCommand({
             args.config,
             toAllowRemoteOption(args)
         );
-        const migrationProvider = await loadAppMigrations(
-            resolveMigrationsDir(config.migrationsDir)
-        );
         // Plugin migrations merge into the app chain at apply time, so a newly
         // installed plugin can introduce a migration that sorts before ones
         // already applied — hence `allowUnorderedMigrations`.
-        const merged = mergeMigrationProviders(
-            migrationProvider,
-            collectPluginMigrations(rawConfig.plugins ?? [])
+        const merged = await loadMergedProvider(
+            rawConfig.plugins ?? [],
+            config.migrationsDir
         );
         await assertForeignKeysEnforced(getDb());
         console.log('Running migrations...');

@@ -15,3 +15,8 @@ export function slugify(s: string): string {
         .replace(/[^a-z0-9]+/g, '-')
         .replace(/^-+|-+$/g, '');
 }
+
+/** A count with its noun, plural unless the count is 1: `1 row`, `3 rows`. */
+export function pluralise(count: number, noun: string): string {
+    return `${count} ${noun}${count === 1 ? '' : 's'}`;
+}

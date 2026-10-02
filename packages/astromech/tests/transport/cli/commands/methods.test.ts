@@ -46,12 +46,12 @@ describe('methods', () => {
         ]);
 
         expect(stdout).toContain(
-            'entries.create  [mutates]  (permission: entry:recipe:create)'
+            'entries.recipe.create  [mutates]  (permission: entry:recipe:create)'
         );
         expect(stdout).toContain(
-            'entries.delete  [mutates destructive]  (permission: entry:recipe:delete)'
+            'entries.recipe.delete  [mutates destructive]  (permission: entry:recipe:delete)'
         );
-        expect(stdout).toContain('entries.get  (permission: entry:recipe:read)');
+        expect(stdout).toContain('entries.recipe.get  (permission: entry:recipe:read)');
         expect(stdout.every((line) => line.startsWith('entries.'))).toBe(true);
         expect(stderr).toEqual([]);
     });
@@ -64,9 +64,9 @@ describe('methods', () => {
             'reader',
         ]);
 
-        expect(stdout).toContain('entries.get  (permission: entry:recipe:read)');
+        expect(stdout).toContain('entries.recipe.get  (permission: entry:recipe:read)');
         expect(stdout).toContain(
-            'entries.create  [mutates denied]  (permission: entry:recipe:create)'
+            'entries.recipe.create  [mutates denied]  (permission: entry:recipe:create)'
         );
         expect(stdout).toContain('globals.get  [depends]  (permission: dynamic)');
         expect(stdout).toContain('notifications.count  (permission: none)');
@@ -83,11 +83,25 @@ describe('methods', () => {
         ]);
 
         expect(stdout).toEqual([
-            'entries.get  (permission: entry:recipe:read)',
-            'entries.query  (permission: entry:recipe:read)',
-            'entries.usedBy  (permission: entry:recipe:read)',
+            'entries.recipe.get  (permission: entry:recipe:read)',
+            'entries.recipe.query  (permission: entry:recipe:read)',
+            'entries.recipe.usedBy  (permission: entry:recipe:read)',
             '\n10 excluded by surface policy: 10 read-only surface: method mutates state',
         ]);
+    });
+
+    it('matches --filter against the entry type as well as the method name', async () => {
+        const { stdout } = await runOk(methods, [
+            '--config',
+            configPath,
+            '--filter',
+            'RECIPE',
+        ]);
+
+        expect(stdout).toContain(
+            'entries.recipe.create  [mutates]  (permission: entry:recipe:create)'
+        );
+        expect(stdout.every((line) => line.startsWith('entries.recipe.'))).toBe(true);
     });
 
     it('carries the excluded methods alongside the kept ones under --json', async () => {

@@ -79,3 +79,14 @@ export function filterMethods(
 
     return { methods: kept, excluded };
 }
+
+/** How many methods each reason excluded, in the order the reasons first appear. */
+export function countExclusions(
+    excluded: readonly ExcludedMethod[]
+): Map<string, number> {
+    const counts = new Map<string, number>();
+    for (const { reason } of excluded) {
+        counts.set(reason, (counts.get(reason) ?? 0) + 1);
+    }
+    return counts;
+}
