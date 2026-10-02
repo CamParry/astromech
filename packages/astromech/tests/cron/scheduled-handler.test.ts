@@ -6,7 +6,12 @@
 import type { DB } from '@/database/types';
 import type { AstromechConfig } from '@/types/index';
 import type { Kysely } from 'kysely';
-import { createTestDb, makeTestConfig, setupTestConfig } from '@tests/harness';
+import {
+    createTestDb,
+    makeTestConfig,
+    resetRuntime,
+    setupTestConfig,
+} from '@tests/harness';
 import { beforeEach, describe, expect, it } from 'vitest';
 import { systemAppContext } from '@/app-context/app-context';
 import { cloudflareCron } from '@/cron/drivers/cloudflare';
@@ -27,7 +32,7 @@ import { globals } from '@/registry';
 
 beforeEach(async () => {
     await createTestDb();
-    config = makeTestConfig() as AstromechConfig;
+    config = makeTestConfig();
     setupTestConfig(config);
     // `setupTestConfig` mirrors the boot rather than running it, so the slot
     // the scheduled handler reads is filled by hand. The created path is covered in
@@ -119,13 +124,14 @@ describe('createWorkerEntry().scheduled', () => {
 });
 
 describe('scheduler driver selection', () => {
+    // The registry itself is under test here, so the driver is set by hand.
     it('setSchedulerDriver / getSchedulerDriver round-trips via globalThis', () => {
         setSchedulerDriver(interval());
         expect(getSchedulerDriver()?.name).toBe('interval');
     });
 
     it('getSchedulerDriver returns null when no driver is set', () => {
-        delete globalThis.__astromech?.scheduler;
+        resetRuntime();
         expect(getSchedulerDriver()).toBeNull();
     });
 });

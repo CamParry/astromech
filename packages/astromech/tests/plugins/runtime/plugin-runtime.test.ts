@@ -8,13 +8,17 @@ import type {
     User,
 } from '@/types/index';
 import { adminRole } from '@tests/fixtures';
-import { createTestDb } from '@tests/harness';
+import {
+    createTestDb,
+    makeTestConfig,
+    resolveTestConfig,
+    setupTestConfig,
+} from '@tests/harness';
 import { createElement } from 'react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { z } from 'zod';
 import { createAppContext, systemAppContext } from '@/app-context/app-context';
 import { getCronJobs } from '@/cron/registry';
-import { setEmailDriver } from '@/email/registry';
 import { runHook } from '@/hooks/hooks';
 import { defineHook } from '@/plugins/define-hook';
 import { resolvePluginIdentity } from '@/plugins/runtime/plugin-identity';
@@ -32,59 +36,27 @@ vi.mock('@/transport/tools/scoped-tools', () => ({
     buildScopedTools: vi.fn(() => []),
 }));
 
-const config: ResolvedConfig = {
-    basePath: '/cms',
-    resolvedRoles: {},
-    entryTypes: {
+const config: ResolvedConfig = resolveTestConfig({
+    entries: {
         posts: {
-            id: 'posts',
             single: 'Post',
             plural: 'Posts',
-            fields: {
-                main: [
-                    { name: 'body', type: 'richtext' },
-                    { name: 'seo-meta', type: 'json' },
-                ],
-                sidebar: [],
-            },
-            capabilities: {
-                statuses: true,
-                slug: true,
-                translatable: false,
-                versioning: false,
-                staging: false,
-                trash: true,
-            },
-            titleField: 'title',
+            translatable: false,
+            versioning: false,
+            fields: [
+                { name: 'body', type: 'richtext' },
+                { name: 'seo-meta', type: 'json' },
+            ],
         },
         pages: {
-            id: 'pages',
             single: 'Page',
             plural: 'Pages',
-            fields: {
-                main: [{ name: 'body', type: 'richtext' }],
-                sidebar: [],
-            },
-            capabilities: {
-                statuses: true,
-                slug: true,
-                translatable: false,
-                versioning: false,
-                staging: false,
-                trash: true,
-            },
-            titleField: 'title',
+            translatable: false,
+            versioning: false,
+            fields: [{ name: 'body', type: 'richtext' }],
         },
     },
-    globals: {},
-    adminPages: [],
-    trash: { enabled: true, retentionDays: 30 },
-    timezone: 'UTC',
-    mediaRoute: '/_media',
-    migrationsDir: './migrations',
-    media: { access: 'public', translatable: false },
-    users: { fields: [], translatable: false },
-};
+});
 
 const def = (
     partial: Partial<PluginDefinition> & { package: string }
@@ -213,13 +185,16 @@ describe('createPluginContext', () => {
     // The port renders, rather than passing the element through: a driver only
     // ever sees html, so a plugin never touches EmailMessage or the renderer.
     it('renders the element and hands the html to the email driver', async () => {
-        registerPlugins([def({ package: '@astromech/seo' })], config);
         const sent: EmailMessage[] = [];
-        setEmailDriver({
-            name: 'capture',
-            send: async (message: EmailMessage): Promise<void> => {
-                sent.push(message);
+        setupTestConfig({
+            ...makeTestConfig(),
+            email: {
+                name: 'capture',
+                send: async (message: EmailMessage): Promise<void> => {
+                    sent.push(message);
+                },
             },
+            plugins: [def({ package: '@astromech/seo' })],
         });
         const ctx = createPluginContext(
             resolvePluginIdentity(def({ package: '@astromech/seo' })),

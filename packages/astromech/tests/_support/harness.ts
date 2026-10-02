@@ -203,6 +203,15 @@ export function makeTestConfig(): AstromechConfig {
 }
 
 /**
+ * `makeTestConfig()` with the `libsql` driver `createTestDb()` opened as its
+ * database, for a test that feeds a raw config through the real boot rather
+ * than `setupTestConfig`. Call it before anything resets the runtime.
+ */
+export function makeBootConfig(): AstromechConfig {
+    return { ...makeTestConfig(), db: openedDb() };
+}
+
+/**
  * Resolve `makeTestConfig()` with `overrides` laid over it, without publishing
  * it, for code that takes a `ResolvedConfig` as an argument.
  */

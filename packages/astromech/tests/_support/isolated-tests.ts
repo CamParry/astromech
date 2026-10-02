@@ -13,7 +13,6 @@
  */
 export const isolatedTests = [
     'tests/cron/runner.test.ts',
-    'tests/cron/scheduled-handler.test.ts',
     'tests/integrations/astro/middleware.test.ts',
     'tests/plugins/runtime/plugin-runtime.test.ts',
     'tests/policies/call-method.test.ts',

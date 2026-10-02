@@ -19,11 +19,11 @@ import type { Db } from '@/database/types';
 import type { Kysely } from 'kysely';
 import type { MigrationProvider } from 'kysely/migration';
 import { migrateToLatest } from '@astromech/schema-engine';
+import { makeTestConfig, setupTestConfig } from '@tests/harness';
 import { sql } from 'kysely';
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 import { d1 } from '@/database/drivers/d1';
 import { assertForeignKeysEnforced } from '@/database/migrations';
-import { setDb } from '@/database/registry';
 import { clearEnvSource } from '@/env';
 import {
     disposeBindings,
@@ -173,7 +173,8 @@ describe('d1() against local emulation', () => {
             created_at TEXT NOT NULL,
             updated_at TEXT NOT NULL
         )`.execute(db);
-        setDb(db as unknown as Db);
+        // The app wired to this D1 database the way boot wires it.
+        setupTestConfig({ ...makeTestConfig(), db: d1({ binding: 'DB' }) });
 
         const first = await userRepository.createIfEmpty({
             email: 'first@test.dev',
