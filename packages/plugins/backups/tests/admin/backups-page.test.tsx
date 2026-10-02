@@ -83,6 +83,8 @@ describe('BackupsPage', () => {
                     status: 'failed',
                     trigger: 'manual',
                     key: null,
+                    // The run has a size, but no stored file, so the page hides it.
+                    sizeBytes: 1536,
                 }),
             ])
         );
@@ -164,9 +166,12 @@ describe('BackupsPage', () => {
 
     it('restores a backup with a POST to its restore route after the user confirms', async () => {
         backups.list.mockResolvedValue(listing([backupRun({ id: 'run_1' })]));
-        const fetch = vi.fn<typeof globalThis.fetch>(
-            async () => new Response(null, { status: 204 })
-        );
+        const restoreUrl = '/cms/api/plugins/backups/runs/run_1/restore';
+        const fetch = vi.fn<typeof globalThis.fetch>(async (input) => {
+            if (input !== restoreUrl)
+                throw new Error(`unmocked request: ${String(input)}`);
+            return new Response(null, { status: 204 });
+        });
         vi.stubGlobal('fetch', fetch);
         const { user } = renderPage();
 
@@ -182,13 +187,9 @@ describe('BackupsPage', () => {
         expect(
             await screen.findByText('Restore complete. A page refresh is recommended.')
         ).not.toBeNull();
-        expect(fetch).toHaveBeenCalledWith(
-            '/cms/api/plugins/backups/runs/run_1/restore',
-            {
-                credentials: 'include',
-                method: 'POST',
-            }
-        );
+        expect(fetch.mock.calls).toEqual([
+            [restoreUrl, { credentials: 'include', method: 'POST' }],
+        ]);
         await waitFor(() => {
             expect(
                 screen.queryByRole('alertdialog', { name: 'Restore this backup?' })

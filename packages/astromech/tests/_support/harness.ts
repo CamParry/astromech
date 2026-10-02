@@ -70,9 +70,21 @@ type Db = Kysely<DB>;
 
 // Written by `global-setup.ts`, which removes both once every worker has
 // finished: the run's temp dir for test databases, and the migrated template
-// each test database is copied from.
-const TEST_DB_DIR = inject('testDbDir');
-const TEST_DB_TEMPLATE = inject('testDbTemplate');
+// each test database is copied from. A vitest project without that global setup
+// gets `undefined` for both, which `testDbPaths()` reports by name.
+const TEST_DB_DIR: string | undefined = inject('testDbDir');
+const TEST_DB_TEMPLATE: string | undefined = inject('testDbTemplate');
+
+function testDbPaths(): { dir: string; template: string } {
+    if (TEST_DB_DIR === undefined || TEST_DB_TEMPLATE === undefined) {
+        throw new Error(
+            "the test database needs core's global setup " +
+                '(packages/astromech/tests/_support/global-setup.ts), which this ' +
+                'vitest project does not list in `globalSetup`'
+        );
+    }
+    return { dir: TEST_DB_DIR, template: TEST_DB_TEMPLATE };
+}
 
 /**
  * Reset the runtime with `resetRuntime()`, then copy the migrated template to
@@ -80,9 +92,10 @@ const TEST_DB_TEMPLATE = inject('testDbTemplate');
  * Returns the Kysely handle (already the active `getDb()` instance).
  */
 export async function createTestDb(): Promise<Db> {
+    const { dir, template } = testDbPaths();
     resetRuntime();
-    const file = path.join(TEST_DB_DIR, `${crypto.randomUUID()}.db`);
-    await fs.copyFile(TEST_DB_TEMPLATE, file);
+    const file = path.join(dir, `${crypto.randomUUID()}.db`);
+    await fs.copyFile(template, file);
     const driver = libsql({ url: `file:${file}` });
     setDb(driver.getInstance());
     setDatabaseDriver(driver);
@@ -96,7 +109,7 @@ export async function createTestDb(): Promise<Db> {
  */
 export function createTestStorage(options: { urlPrefix?: string } = {}): StorageDriver {
     return filesystem({
-        dir: path.join(TEST_DB_DIR, `storage-${crypto.randomUUID()}`),
+        dir: path.join(testDbPaths().dir, `storage-${crypto.randomUUID()}`),
         ...options,
     });
 }
