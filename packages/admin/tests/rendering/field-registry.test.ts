@@ -5,9 +5,12 @@ import { getFieldComponent, registerField } from '@/admin/rendering/field-regist
 
 describe('field-registry', () => {
     it('returns a registered component', () => {
+        // A type of its own: the registry is shared by every file in the worker,
+        // so registering over `text` would replace the real input for them.
+        const type = `probe-${crypto.randomUUID()}`;
         const component: FieldComponent = () => React.createElement('input');
-        registerField('text', component);
-        expect(getFieldComponent('text')).toBe(component);
+        registerField(type, component);
+        expect(getFieldComponent(type)).toBe(component);
     });
 
     it('returns undefined for an unregistered type', () => {
