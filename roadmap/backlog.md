@@ -109,6 +109,7 @@ not be re-derived.
 ### Test harness follow-ups
 
 - [ ] The test run leaks its temp database directory when it is killed. `packages/astromech/tests/_support/global-setup.ts` removes it in its teardown, which never runs on SIGKILL, so every interrupted run strands an `astromech-test-*` directory (template plus one database per test) under `tmpdir()`. Sweep stale `astromech-test-*` directories when global setup starts.
+- [ ] Local `typecheck` can miss an error a module augmentation causes in an unchanged file: core's `tsconfig.test.json` is `incremental`, and with a cached build info a new `declare module 'astromech'` in a test file did not re-report TS2322 in `packages/astromech/src/plugins/define-hook.ts` (seen 2026-10-02; `--incremental false` showed it). CI starts with no cache, so it catches these. Decide whether the local gate should drop `incremental` or clear the cache.
 
 ### Permissions follow-ups
 
