@@ -505,7 +505,11 @@ export function createContentRepository<
         return conditions;
     }
 
-    /** The guard's `scheduledFor`: still scheduled, for the time it names. */
+    /**
+     * The guard's `scheduledFor`: still scheduled, for the time it names.
+     * Compared as an instant, so a row that stores the same time in another
+     * ISO spelling (no milliseconds, an offset) still matches.
+     */
     function scheduleConditions(
         eb: Parameters<JoinedWhere>[0],
         guard: WriteGuard
@@ -516,7 +520,11 @@ export function createContentRepository<
         });
         return [
             eb(`${contentKey}.status`, '=', 'scheduled'),
-            eb(`${contentKey}.publishedAt`, '=', encoded['publishedAt']),
+            eb(
+                eb.fn('julianday', [eb.ref(`${contentKey}.publishedAt`)]),
+                '=',
+                eb.fn('julianday', [eb.val(encoded['publishedAt'])])
+            ),
         ];
     }
 

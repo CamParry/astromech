@@ -233,7 +233,7 @@ export function getPluginRawRoutes(): RegisteredRawRoute[] {
 function makeLogger(name: string): PluginLogger {
     const tag = `[plugin:${name}]`;
     return {
-        debug: (message) => console.debug(`${tag} ${message}`),
+        debug: (message) => console.error(`${tag} ${message}`),
         info: (message) => console.info(`${tag} ${message}`),
         warn: (message) => console.warn(`${tag} ${message}`),
         error: (message, error) => console.error(`${tag} ${message}`, error ?? ''),

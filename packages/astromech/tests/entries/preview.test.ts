@@ -9,7 +9,7 @@
  */
 
 import { createTestDb, makeTestConfig, setupTestConfig } from '@tests/harness';
-import { beforeEach, describe, expect, it } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { currentServices } from '@/app-context/services';
 import {
     DEFAULT_PREVIEW_TOKEN_TTL_MS,
@@ -17,7 +17,7 @@ import {
 } from '@/entries/internal/preview';
 import { entryRepository } from '@/entries/repository/entries-table';
 import { CapabilityError } from '@/errors/capability';
-import { ResourceConflictError } from '@/errors/resource';
+import { ResourceConflictError, ResourceNotFoundError } from '@/errors/resource';
 
 const api = currentServices.entries;
 
@@ -60,6 +60,23 @@ describe('issuePreviewToken', () => {
         await expect(refused).rejects.toBeInstanceOf(ResourceConflictError);
         await expect(refused).rejects.toMatchObject({ details: { reason: 'trashed' } });
         expect(await isValid(e.id, token, new Date())).toBe(true);
+    });
+
+    it('answers 404 for an entry deleted between the read and the write', async () => {
+        const e = await api.create({ type: 'post', data: { title: 'X', slug: 'x' } });
+        const findAnyLocale = entryRepository.findAnyLocale.bind(entryRepository);
+        vi.spyOn(entryRepository, 'findAnyLocale').mockImplementationOnce(
+            async (ref, options) => {
+                const row = await findAnyLocale(ref, options);
+                await api.delete({ type: 'post', id: e.id });
+                return row;
+            }
+        );
+
+        const refused = api.issuePreviewToken({ type: 'post', id: e.id });
+
+        await expect(refused).rejects.toBeInstanceOf(ResourceNotFoundError);
+        expect(await api.get({ type: 'post', id: e.id, full: true })).toBeNull();
     });
 
     it('replaces the previous token (one active token per entry)', async () => {

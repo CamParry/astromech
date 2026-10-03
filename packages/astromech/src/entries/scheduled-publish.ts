@@ -10,8 +10,8 @@ import { updateEntryBatch } from './internal/update-batch';
 
 /**
  * Publishes the locale, keeping `publishedAt`, so the update hooks fire. Throws
- * `ResourceConflictError` (`not-scheduled`, or `trashed`) when the row changed
- * after the job read it, with nothing written.
+ * `ResourceConflictError` (`not-scheduled`, `trashed`) when the row changed after
+ * the job read it, or `ResourceNotFoundError` when it is gone; nothing is written.
  */
 export async function publishScheduledEntry(
     ctx: AppContext,

@@ -637,6 +637,27 @@ describe('trash / restore / delete / emptyTrash', () => {
         expect(second.slug).toBe('same');
     });
 
+    it("gives a new entry the slug of a trashed entry's other locale", async () => {
+        const first = await api.create({
+            type: 'post',
+            data: { title: 'Same', locale: 'en' },
+        });
+        await api.update({
+            type: 'post',
+            id: first.id,
+            locale: 'de',
+            data: { title: 'Same' },
+        });
+        await api.trash({ type: 'post', id: first.id });
+
+        const second = await api.create({
+            type: 'post',
+            data: { title: 'Same', locale: 'de' },
+        });
+
+        expect(second.slug).toBe('same');
+    });
+
     it('re-slugs each locale whose slug was taken while the entry was in the trash', async () => {
         const first = await api.create({
             type: 'post',
@@ -864,10 +885,8 @@ describe('the trash is read-only', () => {
         expect(await readTrashed()).toMatchObject({ id: entry.id, title: 'A' });
     });
 
-    it('refuses a restore whose entry left the trash after the restore read it', async () => {
+    it('keeps the republish of a competing restore that ran inside the restore', async () => {
         const resolved = setupTestConfig();
-        // The competing call restores and republishes, which the outer
-        // restore's unpublish must not undo.
         registerTestPlugins(
             [
                 onceBeforeUpdate(async (id) => {
@@ -883,12 +902,34 @@ describe('the trash is read-only', () => {
         });
         await api.trash({ type: 'post', id: entry.id });
 
-        const refused = api.restore({ type: 'post', id: entry.id });
+        const restored = await api.restore({ type: 'post', id: entry.id });
 
-        await expect(refused).rejects.toBeInstanceOf(ResourceConflictError);
-        await expect(refused).rejects.toMatchObject({
-            details: { reason: 'not-trashed' },
+        expect(restored).toMatchObject({ status: 'published', deletedAt: null });
+        const live = await api.get({ type: 'post', id: entry.id, full: true });
+        expect(live).toMatchObject({ status: 'published', deletedAt: null });
+    });
+
+    it('keeps the republish of a competing restore that ran before its first write', async () => {
+        const entry = await api.create({
+            type: 'post',
+            data: { title: 'A', status: 'published' },
         });
+        await api.trash({ type: 'post', id: entry.id });
+        const findRows = entryRepository.findContentRowsByEntry.bind(entryRepository);
+        // The restore reads the rows it will unpublish, then a competing call
+        // restores and republishes the entry before the first write.
+        vi.spyOn(entryRepository, 'findContentRowsByEntry').mockImplementationOnce(
+            async (id) => {
+                const rows = await findRows(id);
+                await api.restore({ type: 'post', id });
+                await api.publish({ type: 'post', id });
+                return rows;
+            }
+        );
+
+        const restored = await api.restore({ type: 'post', id: entry.id });
+
+        expect(restored).toMatchObject({ status: 'published', deletedAt: null });
         const live = await api.get({ type: 'post', id: entry.id, full: true });
         expect(live).toMatchObject({ status: 'published', deletedAt: null });
     });

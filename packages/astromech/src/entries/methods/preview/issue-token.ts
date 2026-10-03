@@ -1,5 +1,5 @@
 import { z } from '@hono/zod-openapi';
-import { ResourceConflictError } from '@/errors/resource';
+import { ResourceConflictError, ResourceNotFoundError } from '@/errors/resource';
 import { defineServiceMethod } from '@/services/define-service-method';
 import { entryAccess } from '../../internal/access';
 import {
@@ -47,7 +47,9 @@ export const issuePreviewToken = defineServiceMethod({
                 ? new Date(Date.now() + DEFAULT_PREVIEW_TOKEN_TTL_MS)
                 : expiresAt;
 
-        if (!(await entryRepository.previewToken.set(id, hash, expiry))) {
+        const stored = await entryRepository.previewToken.set(id, hash, expiry);
+        if (stored === 'missing') throw new ResourceNotFoundError('entry', { id });
+        if (stored === 'trashed') {
             throw new ResourceConflictError('entry', { id, reason: 'trashed' });
         }
 

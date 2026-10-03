@@ -26,6 +26,7 @@ export const unpublishGlobal = defineServiceMethod({
                 key,
                 locale: params.locale,
                 createMissingLocale: false,
+                method: ctx.method.name,
                 data: { status: 'unpublished' },
             },
             ctx

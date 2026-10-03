@@ -171,11 +171,32 @@ describe('POST /entries/:type/bulk-update', () => {
             failedId: second,
             succeededBefore: [ids[0]],
             reason: 'trashed',
+            id: second,
         });
         const live = await api.query({ type: 'post', full: true });
         expect(live.data.map((entry) => entry.title)).toEqual(['One']);
         const inTrash = await api.query({ type: 'post', full: true, trashed: true });
         expect(inTrash.data.map((entry) => entry.title)).toEqual(['Two']);
+    });
+
+    it('409s an id already in the trash before any write, naming it', async () => {
+        const second = ids[1] ?? '';
+        await api.trash({ type: 'post', id: second });
+
+        const res = await post('/post/bulk-update', { ids, data: { title: 'Renamed' } });
+
+        expect(res.status).toBe(409);
+        const body = (await res.json()) as {
+            error: { code: string; details: Record<string, unknown> };
+        };
+        expect(body.error.code).toBe('CONFLICT');
+        expect(body.error.details).toEqual({
+            reason: 'trashed',
+            id: second,
+            locale: 'en',
+        });
+        const live = await api.query({ type: 'post', full: true });
+        expect(live.data.map((entry) => entry.title)).toEqual(['One']);
     });
 
     it('409s a status change on a type without the statuses capability', async () => {

@@ -25,6 +25,7 @@ export const scheduleGlobal = defineServiceMethod({
                 key,
                 locale: params.locale,
                 createMissingLocale: false,
+                method: ctx.method.name,
                 data: { status: 'scheduled', publishedAt },
             },
             ctx

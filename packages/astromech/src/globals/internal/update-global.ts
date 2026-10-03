@@ -4,7 +4,6 @@ import type {
     AppContext,
     EntryStatus,
     JsonObject,
-    MethodContext,
     ParsedGlobalUpdateData,
     ResolvedConfig,
     ResolvedGlobal,
@@ -42,6 +41,8 @@ export async function updateGlobalLocale(
          * it: a status change addresses a row that must already exist.
          */
         createMissingLocale?: boolean | undefined;
+        /** The caller's name for its error messages: the method, or the job. */
+        method: string;
         /** The patch, as `globals.update` parsed it. */
         data: ParsedGlobalUpdateData;
         /**
@@ -50,7 +51,7 @@ export async function updateGlobalLocale(
          */
         scheduledFor?: Date | undefined;
     },
-    ctx: AppContext & MethodContext
+    ctx: AppContext
 ): Promise<GlobalResource> {
     const { key } = params;
     const { config, user } = ctx;
@@ -94,7 +95,7 @@ export async function updateGlobalLocale(
     });
     // `input` already parsed the caller's `data`, so a failure here is the hook's.
     const data = parseHookOutput(updateGlobalSchema, context.data, 'global:beforeUpdate');
-    assertWritableStatus(global, data, staged, ctx.method.name);
+    assertWritableStatus(global, data, staged, params.method);
 
     const fields = await fieldsToStore({ global, id, locale, current, data, ctx });
     const patchedNames = data.fields ? patchedFieldNames(data.fields) : [];

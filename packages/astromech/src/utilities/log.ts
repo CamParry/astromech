@@ -1,13 +1,13 @@
 /**
- * Astromech's console output. Owns the one `[Astromech]` prefix and writes
- * `info`, `warn` and `error` to stderr, as the MCP server owns stdout; `debug`
- * goes to `console.debug`. Errors carry their origin in their type instead.
+ * Astromech's console output. Owns the one `[Astromech]` prefix and writes every
+ * level to stderr, as stdout belongs to the MCP server and `--json` output.
+ * Errors carry their origin in their type instead.
  */
 const PREFIX = '[Astromech]';
 
 export const log = {
     debug: (message: string, ...rest: unknown[]): void =>
-        console.debug(`${PREFIX} ${message}`, ...rest),
+        console.error(`${PREFIX} ${message}`, ...rest),
     info: (message: string, ...rest: unknown[]): void =>
         console.error(`${PREFIX} ${message}`, ...rest),
     warn: (message: string, ...rest: unknown[]): void =>

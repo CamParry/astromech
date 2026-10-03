@@ -227,9 +227,9 @@ job after its date, as a scheduled entry does
 ([../configuration/scheduler.md](../configuration/scheduler.md)). The job
 publishes each row as an update, so the update hooks fire, and it keeps the
 scheduled date. The write holds only while the row is still scheduled for the
-date the job read: a row unscheduled or rescheduled meanwhile (by an editor, or
-by a `global:beforeUpdate` hook) is skipped, and the skip is logged at debug
-level rather than as an error, since the later change wins. A row the job
+date the job read: a row unscheduled, rescheduled or deleted meanwhile (by an
+editor, or by a `global:beforeUpdate` hook) is skipped, and the skip is logged
+at debug level rather than as an error, since the later change wins. A row the job
 cannot publish, such as one whose fields have since become incomplete, is
 logged as an error and stays scheduled, and the next run tries it again.
 

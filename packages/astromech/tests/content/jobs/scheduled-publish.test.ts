@@ -10,6 +10,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { systemAppContext } from '@/app-context/app-context';
 import { currentServices } from '@/app-context/services';
 import { scheduledPublishJob } from '@/content/jobs/scheduled-publish';
+import { getDb } from '@/database/registry';
 import { globalRepository } from '@/globals/repository';
 import { defineHook } from '@/plugins/define-hook';
 import { makeGlobalsConfig } from '../../globals/globals-config';
@@ -187,15 +188,13 @@ describe('scheduledPublishJob', () => {
                 await currentServices.globals.unpublish({ key: ctx.key });
             }),
         ]);
-        const debug = vi.spyOn(console, 'debug').mockImplementation(() => undefined);
+        expectConsole('error', `entry post/${entry.id} (en) skipped`);
+        expectConsole('error', 'global legal (en) skipped');
 
         await scheduledPublishJob.handler(systemAppContext());
 
         expect(await postStatus(entry.id)).toBe('unpublished');
         expect((await globalRepository.findByKey('legal'))?.status).toBe('unpublished');
-        const logged = debug.mock.calls.map((call) => String(call[0])).join('\n');
-        expect(logged).toContain(`entry post/${entry.id} (en)`);
-        expect(logged).toContain('global legal (en)');
     });
 
     it('skips a row rescheduled for later after the job read it', async () => {
@@ -223,7 +222,8 @@ describe('scheduledPublishJob', () => {
                 });
             }),
         ]);
-        vi.spyOn(console, 'debug').mockImplementation(() => undefined);
+        expectConsole('error', `entry post/${entry.id} (en) skipped`);
+        expectConsole('error', 'global legal (en) skipped');
 
         await scheduledPublishJob.handler(systemAppContext());
 
@@ -238,4 +238,56 @@ describe('scheduledPublishJob', () => {
         expect(global?.status).toBe('scheduled');
         expect(global?.publishedAt?.getTime()).toBe(later.getTime());
     });
+
+    it('skips a row deleted after the job read it, logging at debug', async () => {
+        const past = new Date(Date.now() - 60_000);
+        const entry = await scheduledPost('Due', past);
+        probe([
+            defineHook('entry:beforeUpdate', async (ctx) => {
+                if (ctx.data.status !== 'published') return;
+                await currentServices.entries.delete({ type: 'post', id: ctx.entry.id });
+            }),
+        ]);
+        expectConsole('error', `entry post/${entry.id} (en) skipped`);
+
+        await scheduledPublishJob.handler(systemAppContext());
+
+        expect(
+            await currentServices.entries.get({ type: 'post', id: entry.id, full: true })
+        ).toBeNull();
+    });
+
+    // An import or raw SQL may store the same instant without milliseconds or
+    // with an offset; the job's write compares instants, not spellings.
+    it.each(['2020-01-01T10:00:00Z', '2020-01-01T12:00:00+02:00'])(
+        'publishes a row whose publishedAt is stored as %s',
+        async (stored) => {
+            const due = new Date('2020-01-01T10:00:00.000Z');
+            const entry = await scheduledPost('Due', due);
+            await globalRepository.create(
+                { key: 'legal' },
+                { fields: { terms: 'Terms' }, status: 'scheduled', publishedAt: due }
+            );
+            await getDb()
+                .updateTable('entryContent')
+                .set({ publishedAt: stored })
+                .where('entryId', '=', entry.id)
+                .execute();
+            await getDb()
+                .updateTable('globalContent')
+                .set({ publishedAt: stored })
+                .execute();
+
+            await scheduledPublishJob.handler(systemAppContext());
+
+            const live = await currentServices.entries.get({
+                type: 'post',
+                id: entry.id,
+                full: true,
+            });
+            expect(live?.status).toBe('published');
+            expect(live?.publishedAt?.getTime()).toBe(due.getTime());
+            expect((await globalRepository.findByKey('legal'))?.status).toBe('published');
+        }
+    );
 });

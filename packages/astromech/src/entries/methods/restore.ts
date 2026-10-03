@@ -2,8 +2,9 @@ import type { EntryResource } from '../repository/types';
 import type { AppContext, ParsedEntryUpdateData } from '@/types/index';
 import { z } from '@hono/zod-openapi';
 import { resolveEntryType } from '@/entries/entry-types';
+import { ResourceConflictError } from '@/errors/resource';
 import { defineServiceMethod } from '@/services/define-service-method';
-import { UnknownEntryTypeError } from '../errors';
+import { BulkOperationError, UnknownEntryTypeError } from '../errors';
 import { entryAccess } from '../internal/access';
 import { batchAddress, fromBatch, oneOrMany } from '../internal/from-batch';
 import { updateEntryBatch } from '../internal/update-batch';
@@ -75,21 +76,33 @@ async function restoreEntryBatch(
                 ...(slug !== null && slug !== row.slug ? { slug } : {}),
             };
             if (Object.keys(data).length === 0) continue;
-            await updateEntryBatch(
-                {
-                    type,
-                    ids: [entry.id],
-                    locale: row.locale,
-                    createMissingLocale: false,
-                    data,
-                    trash: 'trashed',
-                },
-                ctx
-            );
+            try {
+                await updateEntryBatch(
+                    {
+                        type,
+                        ids: [entry.id],
+                        locale: row.locale,
+                        createMissingLocale: false,
+                        data,
+                        trash: 'trashed',
+                    },
+                    ctx
+                );
+            } catch (err) {
+                // Another call restored it meanwhile; that call's writes stand.
+                if (leftTheTrash(err)) break;
+                throw err;
+            }
         }
     }
 
     return writeBatch(entries, (entry) =>
         entryRepository.trash.restore(entry.id, userId)
     );
+}
+
+/** True when a write refused the entry because it is no longer in the trash. */
+function leftTheTrash(err: unknown): boolean {
+    const cause = err instanceof BulkOperationError ? err.cause : err;
+    return cause instanceof ResourceConflictError && cause.reason === 'not-trashed';
 }

@@ -1,15 +1,15 @@
 /**
  * Built-in cron job: publishes each scheduled entry and global whose `publishedAt`
  * has passed through the update path, so the update hooks fire and the row keeps
- * its scheduled date. A row changed since the job read it is skipped; a row that
- * fails is logged and stays scheduled for the next run.
+ * its scheduled date. A row changed or deleted since the job read it is skipped;
+ * a row that fails is logged and stays scheduled for the next run.
  */
 
 import type { CronJob } from '@/cron/registry';
 import type { AppContext } from '@/types/index';
 import { entryMaintenanceRepository } from '@/entries/repository/maintenance';
 import { publishScheduledEntry } from '@/entries/scheduled-publish';
-import { ResourceConflictError } from '@/errors/resource';
+import { ResourceConflictError, ResourceNotFoundError } from '@/errors/resource';
 import { globalRepository } from '@/globals/repository';
 import { publishScheduledGlobal } from '@/globals/scheduled-publish';
 
@@ -44,9 +44,12 @@ async function publishOne(
     try {
         await write();
     } catch (err) {
-        // Unscheduled, rescheduled or trashed since the job read it: the later
-        // change wins, so the skip is not a failure.
-        if (err instanceof ResourceConflictError) {
+        // Unscheduled, rescheduled, trashed or deleted since the job read it:
+        // the later change wins, so the skip is not a failure.
+        if (
+            err instanceof ResourceConflictError ||
+            err instanceof ResourceNotFoundError
+        ) {
             ctx.logger.debug(`scheduled-publish: ${label} skipped. ${err.message}`);
             return;
         }

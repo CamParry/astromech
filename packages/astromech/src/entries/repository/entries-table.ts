@@ -438,19 +438,20 @@ function createEntryRepository() {
 
     const previewToken = {
         /**
-         * Store the token's hash while the entry is live; false when it is in
-         * the trash or gone, with nothing written.
+         * Store the token's hash while the entry is live. Otherwise nothing is
+         * written, and the answer says whether the entry is in the trash or gone.
          */
         set: async (
             id: string,
             hash: string,
             expiresAt: Date | null
-        ): Promise<boolean> => {
+        ): Promise<'set' | 'trashed' | 'missing'> => {
             const written = await writePreviewToken(id, hash, expiresAt)
                 .where('deletedAt', 'is', null)
                 .returning('id')
                 .execute();
-            return written.length > 0;
+            if (written.length > 0) return 'set';
+            return (await resourceRows.findOne({ id })) ? 'trashed' : 'missing';
         },
 
         clear: async (id: string): Promise<void> => {

@@ -107,7 +107,8 @@ const CONFLICT_MESSAGES: Record<ConflictReason, string> = {
 
 /**
  * Thrown when a write's condition fails, at the load step or in the write's own
- * `WHERE` (`content/write-guard.ts`). `details.reason` says which condition.
+ * `WHERE` (`content/write-guard.ts`). `details` names the condition (`reason`)
+ * and the row (`id`, `locale`), so a multi-id call says which id it refused.
  */
 export class ResourceConflictError extends ApiError {
     public readonly kind: ResourceType;
@@ -125,6 +126,7 @@ export class ResourceConflictError extends ApiError {
             code: 'CONFLICT',
             details: {
                 reason: args.reason,
+                id: args.id,
                 ...(args.locale === undefined ? {} : { locale: args.locale }),
             },
         });
