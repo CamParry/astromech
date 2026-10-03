@@ -44,7 +44,7 @@ const validationDetailsSchema = z.object({
     form: z.array(z.string()).optional(),
     /** The id a batch write failed on. */
     failedId: z.string().optional(),
-    /** The ids a batch write finished before it failed, all rolled back. */
+    /** The ids a batch write finished before it failed: rolled back, except on D1. */
     succeededBefore: z.array(z.string()).optional(),
 });
 

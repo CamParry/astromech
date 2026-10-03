@@ -53,13 +53,19 @@ reading one teaches the rest. `users/methods/create.ts` and
        `params.locale`; the resolved one is `locale`. One value per line; no
        call nested in a call.
     2. Load and check: read the rows the write needs, then throw not-found or a
-       rule error (`assertKeepsAnAdmin`).
+       rule error (`assertKeepsAnAdmin`, `assertGuardHolds`). A check the write
+       depends on is repeated in the write's own `WHERE`
+       (`content/write-guard.ts`), since another call can change the row before
+       step 5.
     3. Prepare: build what is written (`prepareFields`, slug, hash). Slow work
        stays outside the transaction.
     4. The before hook. A hook that may change the data runs before the
        prepare step instead, with a one-line note saying so.
     5. The writes, in one `transaction` when they touch more than one table,
-       even through one repository call.
+       even through one repository call. The first statement carries the
+       guard, so a write refused there writes nothing, even on D1; a guarded
+       write that matches no row answers 409 (`writeGuarded`). A version is snapshotted
+       here, from the row as stored, never from the copy step 2 loaded.
     6. The after hook.
     7. Return.
        A handler that only forwards (a batch method, a status change) delegates

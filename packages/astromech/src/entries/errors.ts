@@ -20,9 +20,9 @@ export class UnknownEntryTypeError extends ApiError {
 }
 
 /**
- * Thrown when a bulk entry operation fails on a specific id. The transaction
- * rolls the whole batch back; `succeededBefore` reports the ids completed before
- * the failure, which is informational only — those writes are rolled back too.
+ * Thrown when a bulk entry operation fails on a specific id. `succeededBefore`
+ * lists the ids completed before the failure. The transaction rolls them back,
+ * except on a driver with no transactions (D1), where their writes stay.
  */
 export class BulkOperationError extends Error {
     public readonly failedId: string;

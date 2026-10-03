@@ -1404,7 +1404,8 @@ plugin's own layer over it:
   `globals`, `media`, `users` and `notifications`
   ([reaching them](#reaching-the-content-services)), `notify`, `email` and
   `database` ([capability ports](#capability-ports)), `logger` (`debug`,
-  `info`, `warn` and `error`, each line tagged with your plugin), `env`,
+  `info`, `warn` and `error`, each line tagged with your plugin and written to
+  stderr), `env`,
   `runHook`, and `methods`
   ([calling as the caller](#calling-as-the-caller-not-as-the-plugin)).
 - **The plugin layer.** `plugin` (your resolved identity), `storage` (your

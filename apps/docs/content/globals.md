@@ -250,8 +250,9 @@ await app.globals.mergeStaged({ key: 'site', locale: 'en' });
 ```
 
 `createStaged` copies the live locale as it stands and takes no field values;
-edit the copy with `update` and `staged: true`, which validates like any other
-write. `getStaged` reads it, `deleteStaged` discards it. A staged change is never
+a locale that already has a staged change answers 409 `staged_change_exists`,
+also when two calls race. Edit the copy with `update` and `staged: true`, which
+validates like any other write. `getStaged` reads it, `deleteStaged` discards it. A staged change is never
 published, so reading one needs `full: true` and the read permission.
 `getStaged` also answers `diverged: true` when the live version in that locale
 was saved after the staged change was made, so a merge would overwrite that
