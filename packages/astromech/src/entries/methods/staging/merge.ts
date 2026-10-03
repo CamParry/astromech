@@ -62,7 +62,13 @@ export const mergeStagedEntry = defineServiceMethod({
 
         return transaction(async () => {
             if (versioning) {
-                await snapshotVersion('entry', entryRepository.versions, canonical, user);
+                await snapshotVersion(
+                    'entry',
+                    entryRepository,
+                    { contentId: canonical.contentId },
+                    user,
+                    { id, locale }
+                );
             }
             const updated = await entryRepository.update(
                 { id, locale },

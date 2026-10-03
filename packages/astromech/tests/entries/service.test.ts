@@ -851,21 +851,24 @@ describe('the trash is read-only', () => {
         expect(await readTrashed()).toMatchObject({ id: entry.id, title: 'A' });
     });
 
-    // `note` keeps no versions: a versioned type snapshots before the guarded
-    // write, so the snapshot meets the deleted row first.
-    it('answers 404 for an entry deleted between the read and the write', async () => {
-        const resolved = setupTestConfig();
-        registerTestPlugins(
-            [onceBeforeUpdate((id) => api.delete({ type: 'note', id }))],
-            resolved
-        );
-        const entry = await api.create({ type: 'note', data: { title: 'A' } });
+    // `note` keeps no versions; `post` does, so its snapshot meets the deleted
+    // row before the update does.
+    it.each(['note', 'post'])(
+        'answers 404 for a %s deleted between the read and the write',
+        async (type) => {
+            const resolved = setupTestConfig();
+            registerTestPlugins(
+                [onceBeforeUpdate((id) => api.delete({ type, id }))],
+                resolved
+            );
+            const entry = await api.create({ type, data: { title: 'A' } });
 
-        const refused = api.update({ type: 'note', id: entry.id, data: { title: 'B' } });
+            const refused = api.update({ type, id: entry.id, data: { title: 'B' } });
 
-        await expect(refused).rejects.toBeInstanceOf(ResourceNotFoundError);
-        expect(await api.get({ type: 'note', id: entry.id, full: true })).toBeNull();
-    });
+            await expect(refused).rejects.toBeInstanceOf(ResourceNotFoundError);
+            expect(await api.get({ type, id: entry.id, full: true })).toBeNull();
+        }
+    );
 
     it('refuses the same update on a driver with no transactions', async () => {
         const base = await createTestDb();
@@ -883,6 +886,24 @@ describe('the trash is read-only', () => {
 
         await expect(refused).rejects.toMatchObject({ details: { reason: 'trashed' } });
         expect(await readTrashed()).toMatchObject({ id: entry.id, title: 'A' });
+        // With no transaction to roll it back, a version written before the
+        // refused update would stay.
+        expect(await base.selectFrom('entryVersions').selectAll().execute()).toEqual([]);
+    });
+
+    it('refuses to restore a version of a trashed entry', async () => {
+        const entry = await api.create({ type: 'post', data: { title: 'A' } });
+        await api.update({ type: 'post', id: entry.id, data: { title: 'B' } });
+        await api.trash({ type: 'post', id: entry.id });
+
+        const refused = api.restoreVersion({ type: 'post', id: entry.id, version: 1 });
+
+        await expect(refused).rejects.toBeInstanceOf(ResourceConflictError);
+        await expect(refused).rejects.toMatchObject({
+            status: 409,
+            details: { reason: 'trashed' },
+        });
+        expect(await readTrashed()).toMatchObject({ id: entry.id, title: 'B' });
     });
 
     it('keeps the republish of a competing restore that ran inside the restore', async () => {

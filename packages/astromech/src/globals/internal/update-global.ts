@@ -113,10 +113,14 @@ export async function updateGlobalLocale(
         }
         if (
             current &&
+            guard !== null &&
             global.capabilities.versioning &&
             changesVersionedContent('global', current, { fields })
         ) {
-            await snapshotVersion('global', globalRepository.versions, current, user);
+            await snapshotVersion('global', globalRepository, guard, user, {
+                id: key,
+                locale,
+            });
         }
         const row = await writeRow({
             config,

@@ -62,7 +62,13 @@ export const updateMedia = defineServiceMethod({
 
         return transaction(async () => {
             if (current && changesVersionedContent('media', current, next)) {
-                await snapshotVersion('media', mediaRepository.versions, current, user);
+                await snapshotVersion(
+                    'media',
+                    mediaRepository,
+                    { contentId: current.contentId },
+                    user,
+                    { id, locale }
+                );
             }
             const updated = await mediaRepository.update(
                 { id, locale },

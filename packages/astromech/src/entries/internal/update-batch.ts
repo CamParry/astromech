@@ -215,15 +215,17 @@ async function updateOne(params: {
     user: User | null;
     /** True when the write targets the staged change rather than the canonical. */
     staged: boolean;
-    /** The canonical write's conditions, beyond the row it was decided from. */
+    /** The conditions the snapshot and the canonical write carry, beyond the row. */
     guard: Omit<WriteGuard, 'contentId'>;
 }): Promise<EntryResource> {
     const { config, entryType, currentEntry, data, user, staged } = params;
 
     const fields = await fieldsToStore({ config, entryType, currentEntry, data, user });
     const patchedNames = data.fields ? patchedFieldNames(data.fields) : [];
+    const ref = { id: currentEntry.id, locale: currentEntry.locale };
+    const guard = { ...params.guard, contentId: currentEntry.contentId };
 
-    // Snapshot before the slug is uniquified, so the version compares what the caller sent.
+    // Decided before the slug is uniquified, so the version compares what the caller sent.
     if (
         entryType.capabilities.versioning &&
         changesVersionedContent('entry', currentEntry, {
@@ -232,7 +234,7 @@ async function updateOne(params: {
             fields,
         })
     ) {
-        await snapshotVersion('entry', entryRepository.versions, currentEntry, user);
+        await snapshotVersion('entry', entryRepository, guard, user, ref);
     }
 
     const publishedAt = resolvePublishedAt({
@@ -246,7 +248,6 @@ async function updateOne(params: {
         entry: currentEntry,
         slug: data.slug,
     });
-    const ref = { id: currentEntry.id, locale: currentEntry.locale };
     const write = {
         title: data.title,
         slug,
@@ -256,7 +257,6 @@ async function updateOne(params: {
         updatedBy: user?.id ?? null,
     };
 
-    const guard = { ...params.guard, contentId: currentEntry.contentId };
     const entry = staged
         ? await entryRepository.staging.update(ref, write)
         : await writeGuarded({

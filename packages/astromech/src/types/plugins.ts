@@ -82,7 +82,10 @@ export type PluginMethods = {
     tools(options?: { readOnly?: boolean }): ToolDefinition[];
 };
 
-/** Logger that attributes lines to the originating plugin. */
+/**
+ * Logger that attributes lines to the originating plugin. Every level writes to
+ * stderr: stdout belongs to the MCP server and `--json` output.
+ */
 export type PluginLogger = {
     debug: (message: string) => void;
     info: (message: string) => void;

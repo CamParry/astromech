@@ -553,6 +553,50 @@ describe('versions sub-surface', () => {
         expect(got?.title).toBe('V1');
     });
 
+    it('snapshots the content row as stored, numbered after its latest version', async () => {
+        const e = await entryRepository.create({
+            type: 'post',
+            title: 'Stored',
+            slug: 'stored',
+            status: 'published',
+            fields: { body: 'stored' },
+        });
+        await entryRepository.versions.create({
+            contentId: e.contentId,
+            version: 4,
+            title: 'Old',
+            slug: 'old',
+            fields: {},
+            createdBy: null,
+        });
+
+        const written = await entryRepository.versions.snapshot(
+            { contentId: e.contentId },
+            null
+        );
+
+        expect(written).toBe(true);
+        expect(await entryRepository.versions.findOne(e.contentId, 5)).toMatchObject({
+            title: 'Stored',
+            slug: 'stored',
+            fields: { body: 'stored' },
+            createdBy: null,
+        });
+    });
+
+    it('snapshots nothing when the guard fails', async () => {
+        const e = await entryRepository.create({ type: 'post', title: 'V', slug: 'v' });
+        await entryRepository.trash.trash(e.id);
+
+        const written = await entryRepository.versions.snapshot(
+            { contentId: e.contentId, trash: 'live' },
+            null
+        );
+
+        expect(written).toBe(false);
+        expect(await entryRepository.versions.findMany(e.contentId)).toEqual([]);
+    });
+
     it('keeps a separate sequence per locale', async () => {
         const e = await entryRepository.create({ type: 'post', title: 'EN', slug: 'en' });
         const de = await entryRepository.update(

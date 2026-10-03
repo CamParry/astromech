@@ -5,13 +5,20 @@
  * resource's versioned value and snapshot shape is a row in the adapter table.
  */
 
-import type { ResourceType } from '@/types/index';
-import { createTestDb, makeTestConfig, setupTestConfig } from '@tests/harness';
-import { beforeEach, describe, expect, it } from 'vitest';
+import type { PluginHooks, ResolvedConfig, ResourceType } from '@/types/index';
+import {
+    createTestDb,
+    makeTestConfig,
+    registerTestPlugins,
+    setupTestConfig,
+} from '@tests/harness';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { currentServices } from '@/app-context/services';
 import { ResourceNotFoundError } from '@/errors/resource';
 import { mediaRepository } from '@/media/repository';
+import { defineHook } from '@/plugins/define-hook';
 import { RESOURCE_TYPES } from '@/types/domain';
+import { userRepository } from '@/users/repository';
 
 const entriesService = currentServices.entries;
 const globalsService = currentServices.globals;
@@ -47,7 +54,31 @@ type Adapter = {
     snapshot(value: string): object;
     /** How a missing version names the resource. */
     label(id: string): string;
+    /**
+     * Make the next `write` meet a competing write of `value`, landing after
+     * that write read the row and before it writes: from a before-update hook
+     * where the resource has one, else from inside its first read.
+     */
+    interleave(id: string, value: string): void;
 };
+
+/** The resolved config of the current test, for registering a probe plugin. */
+let resolved: ResolvedConfig;
+
+/** Register a probe plugin whose hooks run once each. */
+function probe(hooks: PluginHooks): void {
+    registerTestPlugins([{ package: '@test/probe', hooks }], resolved);
+}
+
+/** Runs `act` on the first call only, so a write it makes does not run it again. */
+function once(act: () => Promise<unknown>): () => Promise<void> {
+    let done = false;
+    return async () => {
+        if (done) return;
+        done = true;
+        await act();
+    };
+}
 
 /** Makes each created user's email unique. */
 let users = 0;
@@ -101,6 +132,10 @@ const ADAPTERS: Record<ResourceType, Adapter> = {
         snapshotValue: (snapshot) => fieldOf(snapshot, 'body'),
         snapshot: (value) => ({ title: 'Post', slug: 'post', fields: { body: value } }),
         label: (id) => `Entry '${id}'`,
+        interleave(id, value) {
+            const write = once(() => ADAPTERS.entry.write(id, value));
+            probe([defineHook('entry:beforeUpdate', write)]);
+        },
     },
     global: {
         async create(value) {
@@ -132,6 +167,10 @@ const ADAPTERS: Record<ResourceType, Adapter> = {
         snapshotValue: (snapshot) => fieldOf(snapshot, 'title'),
         snapshot: (value) => ({ fields: { title: value } }),
         label: (key) => `Global '${key}'`,
+        interleave(key, value) {
+            const write = once(() => ADAPTERS.global.write(key, value));
+            probe([defineHook('global:beforeUpdate', write)]);
+        },
     },
     user: {
         async create(value) {
@@ -161,6 +200,16 @@ const ADAPTERS: Record<ResourceType, Adapter> = {
         snapshotValue: (snapshot) => fieldOf(snapshot, 'bio'),
         snapshot: (value) => ({ fields: { bio: value } }),
         label: (id) => `User '${id}'`,
+        interleave(id, value) {
+            const findOne = userRepository.findOne;
+            vi.spyOn(userRepository, 'findOne').mockImplementationOnce(
+                async (...args) => {
+                    const read = await findOne(...args);
+                    await ADAPTERS.user.write(id, value);
+                    return read;
+                }
+            );
+        },
     },
     media: {
         // Authored through the repository, so the item starts with content but no
@@ -189,12 +238,22 @@ const ADAPTERS: Record<ResourceType, Adapter> = {
         snapshotValue: (snapshot) => (snapshot as { alt?: unknown }).alt,
         snapshot: (value) => ({ title: null, alt: value, caption: null, fields: {} }),
         label: (id) => `Media '${id}'`,
+        interleave(id, value) {
+            const findOne = mediaRepository.findOne;
+            vi.spyOn(mediaRepository, 'findOne').mockImplementationOnce(
+                async (...args) => {
+                    const read = await findOne(...args);
+                    await ADAPTERS.media.write(id, value);
+                    return read;
+                }
+            );
+        },
     },
 };
 
 beforeEach(async () => {
     await createTestDb();
-    setupTestConfig({
+    resolved = setupTestConfig({
         ...makeTestConfig(),
         globals: [
             {
@@ -289,6 +348,18 @@ describe.each(RESOURCE_TYPES)('%s', (kind) => {
             expect(adapter.snapshotValue(enFirst.snapshot)).toBe('EN 1');
             expect(adapter.snapshotValue(deFirst.snapshot)).toBe('DE 1');
             expect(deFirst.locale).toBe('de');
+        });
+
+        it('snapshots the row as the write found it, with a change made after its read', async () => {
+            const id = await adapter.create('one');
+            adapter.interleave(id, 'between');
+
+            await adapter.write(id, 'two');
+
+            const [latest] = await adapter.versions(id);
+            const version = await adapter.getVersion(id, latest?.version ?? 0);
+            expect(adapter.snapshotValue(version.snapshot)).toBe('between');
+            expect(adapter.valueOf(await adapter.read(id))).toBe('two');
         });
 
         it('throws for a locale with no content row', async () => {

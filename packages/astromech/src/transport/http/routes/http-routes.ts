@@ -250,6 +250,7 @@ export const ENTRIES_ROUTE_SPECS = [
         path: '/:type/:id/versions/:version/restore',
         id: 'entries.restoreVersion',
         queryArgs: ['locale'],
+        refusals: ENTRY_TRASHED,
     },
     { verb: 'get', path: '/:type/:id/used-by', id: 'entries.usedBy' },
     {

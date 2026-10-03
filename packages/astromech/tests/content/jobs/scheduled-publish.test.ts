@@ -6,7 +6,7 @@
 import type { PluginHooks } from '@/types/index';
 import { expectConsole } from '@tests/console';
 import { createTestDb, registerTestPlugins, setupTestConfig } from '@tests/harness';
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { systemAppContext } from '@/app-context/app-context';
 import { currentServices } from '@/app-context/services';
 import { scheduledPublishJob } from '@/content/jobs/scheduled-publish';
@@ -18,6 +18,10 @@ import { makeGlobalsConfig } from '../../globals/globals-config';
 beforeEach(async () => {
     await createTestDb();
     setupTestConfig(makeGlobalsConfig());
+});
+
+afterEach(() => {
+    vi.useRealTimers();
 });
 
 /** Register a probe plugin's hooks against the live runtime. */
@@ -287,6 +291,39 @@ describe('scheduledPublishJob', () => {
             });
             expect(live?.status).toBe('published');
             expect(live?.publishedAt?.getTime()).toBe(due.getTime());
+            expect((await globalRepository.findByKey('legal'))?.status).toBe('published');
+        }
+    );
+
+    // Due exactly now, and an hour ago: as strings, both sort after the job's
+    // `now` (`Z` after `.000Z`, `12:00+02:00` after `11:00Z`).
+    it.each(['2020-01-01T11:00:00Z', '2020-01-01T12:00:00+02:00'])(
+        'finds a row due by now whose publishedAt is stored as %s',
+        async (stored) => {
+            vi.useFakeTimers({ toFake: ['Date'] });
+            vi.setSystemTime(new Date('2020-01-01T11:00:00.000Z'));
+            const entry = await scheduledPost('Due', new Date('2019-12-31T00:00:00Z'));
+            await globalRepository.create(
+                { key: 'legal' },
+                {
+                    fields: { terms: 'Terms' },
+                    status: 'scheduled',
+                    publishedAt: new Date('2019-12-31T00:00:00Z'),
+                }
+            );
+            await getDb()
+                .updateTable('entryContent')
+                .set({ publishedAt: stored })
+                .where('entryId', '=', entry.id)
+                .execute();
+            await getDb()
+                .updateTable('globalContent')
+                .set({ publishedAt: stored })
+                .execute();
+
+            await scheduledPublishJob.handler(systemAppContext());
+
+            expect(await postStatus(entry.id)).toBe('published');
             expect((await globalRepository.findByKey('legal'))?.status).toBe('published');
         }
     );

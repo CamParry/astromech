@@ -1,36 +1,29 @@
 /**
- * `snapshotVersion` credits the user it is handed and keeps the resource config's versioned
- * columns. The author is a parameter, so these run with no request, no database
- * and no config.
+ * `snapshotVersion` credits the user it is handed. The author is a parameter,
+ * so these run with no request, no database and no config.
  */
 
-import type {
-    ContentRowId,
-    ContentVersions,
-    NewVersionSnapshot,
-} from '@/content/repository/types';
+import type { ContentRowId } from '@/content/repository/types';
+import type { WriteGuard } from '@/content/write-guard';
 import type { User } from '@/types/index';
 import { describe, expect, it } from 'vitest';
 import { changesVersionedContent, snapshotVersion } from '@/content/versions';
 
 const contentId = 'content-1' as ContentRowId;
 
-/** A versions handle that records what it was asked to write. */
-function recordingVersions(latestNumber = 0): {
-    versions: ContentVersions;
-    written: NewVersionSnapshot[];
-} {
-    const written: NewVersionSnapshot[] = [];
+/** A repository that records each snapshot it is asked to write. */
+function recordingRepository() {
+    const written: { guard: WriteGuard; createdBy: string | null }[] = [];
     return {
         written,
-        versions: {
-            findMany: () => Promise.resolve([]),
-            findOne: () => Promise.resolve(null),
-            create: (snapshot) => {
-                written.push(snapshot);
-                return Promise.resolve();
+        repository: {
+            versions: {
+                snapshot: (guard: WriteGuard, createdBy: string | null) => {
+                    written.push({ guard, createdBy });
+                    return Promise.resolve(true);
+                },
             },
-            latestNumber: () => Promise.resolve(latestNumber),
+            explainConflict: () => Promise.resolve(null),
         },
     };
 }
@@ -49,47 +42,23 @@ const editor: User = {
     updatedAt: new Date(),
 };
 
+const address = { id: 'site', locale: 'en' };
+
 describe('snapshotVersion', () => {
     it('credits the user it is given', async () => {
-        const { versions, written } = recordingVersions(2);
+        const { repository, written } = recordingRepository();
 
-        await snapshotVersion(
-            'global',
-            versions,
-            { contentId, fields: { title: 'Hi' } },
-            editor
-        );
+        await snapshotVersion('global', repository, { contentId }, editor, address);
 
-        expect(written).toHaveLength(1);
-        expect(written[0]).toMatchObject({
-            contentId,
-            version: 3,
-            fields: { title: 'Hi' },
-            createdBy: 'user-1',
-        });
+        expect(written).toEqual([{ guard: { contentId }, createdBy: 'user-1' }]);
     });
 
     it('credits nobody when given null', async () => {
-        const { versions, written } = recordingVersions();
+        const { repository, written } = recordingRepository();
 
-        await snapshotVersion('global', versions, { contentId, fields: {} }, null);
+        await snapshotVersion('global', repository, { contentId }, null, address);
 
         expect(written[0]?.createdBy).toBeNull();
-        expect(written[0]?.version).toBe(1);
-    });
-
-    it('writes the resource config’s versioned columns and no others', async () => {
-        const { versions, written } = recordingVersions();
-
-        await snapshotVersion(
-            'entry',
-            versions,
-            { contentId, fields: {}, title: 'Post', slug: 'post', status: 'published' },
-            editor
-        );
-
-        expect(written[0]).toMatchObject({ title: 'Post', slug: 'post' });
-        expect(written[0]).not.toHaveProperty('status');
     });
 });
 

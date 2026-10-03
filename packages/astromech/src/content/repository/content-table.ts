@@ -29,12 +29,13 @@ import { trashConflict } from '@/content/write-guard';
 import { chunks, MAX_BOUND_PARAMETERS } from '@/database/chunks';
 import {
     decodeWith,
-    encodePatchWith,
     encodeUpdateWith,
+    encodeWith,
     kyselyTableKey,
 } from '@/database/codec';
 import { getDb } from '@/database/registry';
 import { createRepository } from '@/database/repository/create-repository';
+import { compareTimestamps } from '@/database/timestamps';
 import { transaction } from '@/database/transaction';
 import { AstromechError } from '@/errors/astromech-error';
 import { createVersionsRepository } from './versions';
@@ -52,6 +53,15 @@ function resourceAlias(column: string): string {
 
 /** The write keys that are not content columns and never reach a row patch. */
 const NON_COLUMN_KEYS = new Set(['locale']);
+
+/** The versions-table columns a snapshot sets itself; every other one is copied. */
+const VERSION_METADATA = new Set([
+    'id',
+    'contentId',
+    'version',
+    'createdAt',
+    'createdBy',
+]);
 
 export function createContentRepository<
     R extends Resource,
@@ -73,8 +83,19 @@ export function createContentRepository<
     const inheritedColumns = Object.entries(shape.inheritedColumns ?? {});
     const resourceKey = kyselyTableKey(shape.table.name);
     const contentKey = kyselyTableKey(shape.contentTable.name);
+    const versionsKey = kyselyTableKey(shape.versionsTable.name);
     const resourceColumns = Object.keys(shape.table.columns);
     const contentColumns = Object.keys(shape.contentTable.columns);
+    const snapshotColumns = Object.keys(shape.versionsTable.columns).filter(
+        (column) => !VERSION_METADATA.has(column)
+    );
+    for (const column of snapshotColumns) {
+        if (!contentColumns.includes(column)) {
+            throw new AstromechError(
+                `${shape.versionsTable.name}.${column} has no column to copy in ${shape.contentTable.name}`
+            );
+        }
+    }
     const hasStagedFor = contentColumns.includes('stagedFor');
     const resourceHasUpdatedBy = resourceColumns.includes('updatedBy');
     const resourceFilter: ResourceFilter = opts.resourceFilter ?? (() => []);
@@ -515,16 +536,9 @@ export function createContentRepository<
         guard: WriteGuard
     ): Expression<SqlBool>[] {
         if (guard.scheduledFor === undefined) return [];
-        const encoded: Record<string, unknown> = encodePatchWith(shape.contentTable, {
-            publishedAt: guard.scheduledFor,
-        });
         return [
             eb(`${contentKey}.status`, '=', 'scheduled'),
-            eb(
-                eb.fn('julianday', [eb.ref(`${contentKey}.publishedAt`)]),
-                '=',
-                eb.fn('julianday', [eb.val(encoded['publishedAt'])])
-            ),
+            compareTimestamps(`${contentKey}.publishedAt`, '=', guard.scheduledFor),
         ];
     }
 
@@ -541,6 +555,56 @@ export function createContentRepository<
                     inner.and(resourceFilter(inner, { includeTrashed: false }))
                 )
         );
+    }
+
+    /**
+     * Copy the content row the guard names into its next version, numbered in
+     * the same statement, while the guard's conditions hold; false when they do
+     * not, with nothing written.
+     */
+    async function snapshot(
+        guard: WriteGuard,
+        createdBy: string | null
+    ): Promise<boolean> {
+        // The id and `createdAt` come from the columns' app defaults.
+        const stamped = encodeWith(shape.versionsTable, {
+            contentId: guard.contentId,
+            createdBy,
+        }) as Record<string, unknown>;
+        const handle = db();
+        const select = handle
+            .selectFrom(contentKey)
+            .select((eb) => [
+                ...Object.entries(stamped).map(([column, value]) =>
+                    eb.val(value).as(column)
+                ),
+                eb(
+                    eb
+                        .selectFrom(versionsKey)
+                        .select((inner) =>
+                            inner.fn
+                                .coalesce(
+                                    inner.fn.max(`${versionsKey}.version`),
+                                    inner.lit(0)
+                                )
+                                .as('latest')
+                        )
+                        .where(`${versionsKey}.contentId`, '=', guard.contentId),
+                    '+',
+                    1
+                ).as('version'),
+                ...snapshotColumns.map((column) =>
+                    eb.ref(`${contentKey}.${column}`).as(column)
+                ),
+            ])
+            .where((eb) => eb.and(guardConditions(eb, guard)));
+        const inserted = await handle
+            .insertInto(versionsKey)
+            .columns([...Object.keys(stamped), 'version', ...snapshotColumns] as never)
+            .expression(select as never)
+            .returning('id' as never)
+            .execute();
+        return inserted.length > 0;
     }
 
     async function explainConflict(
@@ -737,7 +801,7 @@ export function createContentRepository<
         overlayLocale,
         translatable,
         staging,
-        versions: versionsRepository,
+        versions: { ...versionsRepository, snapshot },
         kysely: () => ({ db: db(), resourceKey, contentKey, joined }),
     };
 }

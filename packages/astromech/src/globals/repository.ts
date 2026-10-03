@@ -13,6 +13,7 @@ import { decodeWith, kyselyTableKey } from '@/database/codec';
 import { getDb } from '@/database/registry';
 import { createRepository } from '@/database/repository/create-repository';
 import { globalContentTable, globalsTable, globalVersionsTable } from '@/database/tables';
+import { compareTimestamps } from '@/database/timestamps';
 
 /** One locale of one global, as the globals service reads it. */
 export type GlobalResource = Resource & {
@@ -110,13 +111,13 @@ function createGlobalRepository() {
             .where((eb) =>
                 eb.and([
                     eb('globalContent.status', '=', 'scheduled'),
-                    eb('globalContent.publishedAt', '<=', now.toISOString()),
+                    compareTimestamps('globalContent.publishedAt', '<=', now),
                     // Canonical rows only: a staged change publishes at its merge.
                     eb('globalContent.stagedFor', 'is', null),
                 ])
             )
             .execute();
-        // `publishedAt <= now` matched no null date; the check narrows the type.
+        // A null date is never due; the check narrows the type.
         return rows.flatMap((row) => {
             const { publishedAt } = decodeWith(globalContentTable, {
                 publishedAt: row.publishedAt,

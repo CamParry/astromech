@@ -61,7 +61,13 @@ export const updateUser = defineServiceMethod({
 
         await transaction(async () => {
             if (current && changesVersionedContent('user', current, { fields })) {
-                await snapshotVersion('user', userRepository.versions, current, user);
+                await snapshotVersion(
+                    'user',
+                    userRepository,
+                    { contentId: current.contentId },
+                    user,
+                    { id, locale }
+                );
             }
             if (name !== undefined || email !== undefined || role !== undefined) {
                 await userRepository.updateUserRow(id, { name, email, role });

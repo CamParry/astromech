@@ -47,7 +47,13 @@ export const mergeStagedGlobal = defineServiceMethod({
 
         return transaction(async () => {
             if (global.capabilities.versioning) {
-                await snapshotVersion('global', globalRepository.versions, current, user);
+                await snapshotVersion(
+                    'global',
+                    globalRepository,
+                    { contentId: current.contentId },
+                    user,
+                    { id: key, locale }
+                );
             }
             const updated = await globalRepository.update(
                 { id, locale },

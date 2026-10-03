@@ -308,6 +308,12 @@ export type ContentVersions<Row = Record<string, unknown>> = {
     create(snapshot: NewVersionSnapshot): Promise<void>;
     /** The highest version number for a content row; 0 when it has none. */
     latestNumber(contentId: ContentRowId): Promise<number>;
+    /**
+     * Save the content row `guard.contentId` names, as stored, as its next
+     * version, while the guard's conditions hold; false when they do not, with
+     * nothing written. One statement reads the row and numbers the version.
+     */
+    snapshot(guard: WriteGuard, createdBy: string | null): Promise<boolean>;
 };
 
 /**

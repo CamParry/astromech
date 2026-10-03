@@ -35,16 +35,19 @@ export const restoreMediaVersion = defineServiceMethod({
 
         return restoreVersion({
             resource: 'media',
-            versions: mediaRepository.versions,
+            repository: mediaRepository,
             current,
             version,
             address: { id },
             user,
-            write: async ({ fields, columns }) => {
+            guard: { contentId: current.contentId },
+            write: async ({ fields, columns }, guard) => {
                 const restored = await mediaRepository.update(
                     { id, locale: current.locale },
-                    { ...columns, fields, updatedBy: userId }
+                    { ...columns, fields, updatedBy: userId },
+                    guard
                 );
+                if (restored === null) return null;
                 await syncMediaRelationships(config, id);
                 return restored;
             },
