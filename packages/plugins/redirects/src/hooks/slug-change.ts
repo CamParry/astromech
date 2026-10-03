@@ -13,6 +13,9 @@ export const slugChangeHook: Hook = defineHook(
     async (event, ctx) => {
         const template = ctx.config.entryTypes[event.type]?.url;
         if (!template) return;
+        // A trashed entry serves no page, and its old path may belong to
+        // another entry by now, as when a restore re-slugs it.
+        if (event.entry.deletedAt !== null) return;
 
         const from = resolveEntryPath(template, event.entry);
         const to = resolveEntryPath(template, {

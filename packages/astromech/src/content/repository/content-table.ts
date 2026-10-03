@@ -62,7 +62,7 @@ export function createContentRepository<
             ? opts.defaultLocale()
             : (opts.defaultLocale ?? getDefaultContentLocale());
     const { resourceIdColumn } = shape;
-    const inheritedColumns = shape.inheritedColumns ?? [];
+    const inheritedColumns = Object.entries(shape.inheritedColumns ?? {});
     const resourceKey = kyselyTableKey(shape.table.name);
     const contentKey = kyselyTableKey(shape.contentTable.name);
     const resourceColumns = Object.keys(shape.table.columns);
@@ -108,8 +108,8 @@ export function createContentRepository<
             updatedBy: params.data.updatedBy ?? null,
         };
         if (hasStagedFor) values['stagedFor'] = params.stagedFor;
-        for (const column of inheritedColumns) {
-            values[column] = params.resourceRow[column];
+        for (const [column, derive] of inheritedColumns) {
+            values[column] = derive(params.resourceRow);
         }
         for (const [key, value] of Object.entries(params.data)) {
             if (NON_COLUMN_KEYS.has(key) || value === undefined) continue;

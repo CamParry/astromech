@@ -55,6 +55,10 @@ export const restoreEntryVersion = defineServiceMethod({
                         updatedBy: userId,
                     }
                 );
+                await entryRepository.updateStagedSlug(
+                    { id, locale: current.locale },
+                    { from: current.slug, to: restored.slug }
+                );
                 await syncEntryRelationships(config, restored, type);
                 return restored;
             },

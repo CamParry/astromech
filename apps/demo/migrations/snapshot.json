@@ -427,6 +427,15 @@
           "primaryKey": false
         },
         {
+          "key": "trashed",
+          "name": "trashed",
+          "kind": "boolean",
+          "type": "integer",
+          "notNull": true,
+          "primaryKey": false,
+          "default": 0
+        },
+        {
           "key": "createdAt",
           "name": "created_at",
           "kind": "timestamp",
@@ -526,7 +535,7 @@
             "slug"
           ],
           "unique": true,
-          "where": "staged_for IS NULL"
+          "where": "staged_for IS NULL AND trashed = 0"
         }
       ]
     },

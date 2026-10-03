@@ -15,7 +15,7 @@ import { useTranslation } from 'react-i18next';
 import adminConfig from 'virtual:astromech/admin-config';
 import { useAiContext } from '../../context/ai-context';
 import { useAuthorNames } from '../../hooks/author-names';
-import { entryMutations } from '../../hooks/entries';
+import { entryMutations, useRestoreEntries } from '../../hooks/entries';
 import { useAdminEntryType } from '../../hooks/use-admin-entry-type';
 import { useAdminMutation } from '../../hooks/use-admin-mutation';
 import { useIsMobile } from '../../hooks/use-is-mobile';
@@ -119,7 +119,11 @@ function EntriesListBody({
     const mutations = entryMutations(type, config.single);
     const trash = useAdminMutation(mutations.trash);
     const remove = useAdminMutation(mutations.delete);
-    const restore = useAdminMutation(mutations.restore);
+    const { restore, bulkRestore } = useRestoreEntries(type, {
+        name: config.single,
+        statuses: capabilities.statuses,
+        translatable: capabilities.translatable,
+    });
     const duplicate = useAdminMutation(mutations.duplicate, {
         onSuccess: (entry) => openEntry(entry),
     });
@@ -128,7 +132,7 @@ function EntriesListBody({
         unpublish: useAdminMutation(mutations.bulkUnpublish),
         trash: useAdminMutation(mutations.bulkTrash),
         delete: useAdminMutation(mutations.bulkDelete),
-        restore: useAdminMutation(mutations.bulkRestore),
+        restore: bulkRestore,
     };
 
     // The trash or force-delete the modal is confirming.

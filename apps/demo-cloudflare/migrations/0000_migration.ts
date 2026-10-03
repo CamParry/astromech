@@ -57,6 +57,7 @@ export async function up(db: Kysely<unknown>): Promise<void> {
             \`status\` text DEFAULT 'unpublished' NOT NULL CHECK (\`status\` IN ('unpublished', 'published', 'scheduled')),
             \`published_at\` text,
             \`staged_for\` text,
+            \`trashed\` integer DEFAULT 0 NOT NULL,
             \`created_at\` text NOT NULL,
             \`updated_at\` text NOT NULL,
             \`created_by\` text,
@@ -79,7 +80,7 @@ export async function up(db: Kysely<unknown>): Promise<void> {
     await sql`CREATE UNIQUE INDEX \`entry_content_entry_locale_unique\` ON \`entry_content\` (\`entry_id\`,\`locale\`) WHERE staged_for IS NULL`.execute(
         db
     );
-    await sql`CREATE UNIQUE INDEX \`entry_content_type_locale_slug_unique\` ON \`entry_content\` (\`type\`,\`locale\`,\`slug\`) WHERE staged_for IS NULL`.execute(
+    await sql`CREATE UNIQUE INDEX \`entry_content_type_locale_slug_unique\` ON \`entry_content\` (\`type\`,\`locale\`,\`slug\`) WHERE staged_for IS NULL AND trashed = 0`.execute(
         db
     );
     await sql`

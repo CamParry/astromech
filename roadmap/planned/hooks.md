@@ -87,7 +87,11 @@ as forms does.
 - [ ] **Entry coverage.** Staged writes fire the staged events, not the update
       ones (a staged slug edit probably records a live redirect today: test it
       first); add `mergeStaged`, `restoreVersion`, `restore`, `emptyTrash`, and
-      update hooks for each further locale of `duplicate`.
+      update hooks for each further locale of `duplicate`. `mergeStaged` firing
+      the update hooks is also what makes the redirects plugin record a merged
+      slug change. That plugin also builds the new path from the requested
+      `data.slug`, not the stored one `uniqueSlug` may have changed, because
+      `entry:afterUpdate` gets the row as it was before the write.
 - [ ] **Globals.** The same payload, the staged events, `mergeStaged` and
       `restoreVersion`.
 - [ ] **Scheduler.** Publish through the update path (the item in

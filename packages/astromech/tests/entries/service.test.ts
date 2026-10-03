@@ -621,9 +621,92 @@ describe('trash / restore / delete / emptyTrash', () => {
 
         const restored = await api.restore({ type: 'post', id: e.id });
         expect(restored.deletedAt).toBeNull();
-        // After restore, a published entry should appear in the public query
+        // A restore unpublishes, so the entry is back but not live.
+        expect(restored.status).toBe('unpublished');
+        expect(restored.publishedAt).toBeNull();
         const live = await api.query({ type: 'post' });
-        expect(live.data.map((x) => x.id)).toContain(e.id);
+        expect(live.data.map((x) => x.id)).not.toContain(e.id);
+    });
+
+    it("gives a new entry a trashed entry's slug", async () => {
+        const first = await api.create({ type: 'post', data: { title: 'Same' } });
+        await api.trash({ type: 'post', id: first.id });
+
+        const second = await api.create({ type: 'post', data: { title: 'Same' } });
+
+        expect(second.slug).toBe('same');
+    });
+
+    it('frees the slug of a translation added while the entry is in the trash', async () => {
+        const first = await api.create({ type: 'post', data: { title: 'Same' } });
+        await api.trash({ type: 'post', id: first.id });
+        await api.update({
+            type: 'post',
+            id: first.id,
+            locale: 'de',
+            data: { title: 'Same' },
+        });
+
+        const second = await api.create({
+            type: 'post',
+            data: { title: 'Same', locale: 'de' },
+        });
+
+        expect(second.slug).toBe('same');
+    });
+
+    it('re-slugs each locale whose slug was taken while the entry was in the trash', async () => {
+        const first = await api.create({
+            type: 'post',
+            data: { title: 'Same', locale: 'en', status: 'published' },
+        });
+        await api.update({
+            type: 'post',
+            id: first.id,
+            locale: 'de',
+            data: { title: 'Same' },
+        });
+        await api.trash({ type: 'post', id: first.id });
+        const second = await api.create({
+            type: 'post',
+            data: { title: 'Same', locale: 'en' },
+        });
+
+        const restored = await api.restore({ type: 'post', id: first.id });
+
+        expect(restored.slug).toBe('same-2');
+        expect(restored.status).toBe('unpublished');
+        const de = await api.get({
+            type: 'post',
+            id: first.id,
+            locale: 'de',
+            full: true,
+        });
+        expect(de?.slug).toBe('same');
+        const kept = await api.get({ type: 'post', id: second.id, full: true });
+        expect(kept?.slug).toBe('same');
+    });
+
+    it('gives each entry of a restored batch its own slug', async () => {
+        const first = await api.create({ type: 'post', data: { title: 'Same' } });
+        await api.trash({ type: 'post', id: first.id });
+        const second = await api.create({ type: 'post', data: { title: 'Same' } });
+        await api.trash({ type: 'post', id: second.id });
+
+        const restored = await api.restore({ type: 'post', ids: [first.id, second.id] });
+
+        expect(restored.map((entry) => entry.slug)).toEqual(['same', 'same-2']);
+    });
+
+    it('leaves an entry that is not in the trash as it is', async () => {
+        const e = await api.create({
+            type: 'post',
+            data: { title: 'Live', status: 'published' },
+        });
+
+        const restored = await api.restore({ type: 'post', id: e.id });
+
+        expect(restored.status).toBe('published');
     });
 
     it('delete removes the row and its relationship rows', async () => {
@@ -1114,6 +1197,29 @@ describe('hooks', () => {
         expect(seen.before).toBe('Hooked');
         expect(seen.afterId).toBe(e.id);
         expect(seen.afterTitle).toBe('Hooked');
+    });
+
+    it('fires the update hooks when a restore unpublishes', async () => {
+        const seen: unknown[] = [];
+        const resolved = setupTestConfig();
+        const probe: PluginDefinition = {
+            package: '@test/probe',
+            hooks: [
+                defineHook('entry:afterUpdate', (ctx) => {
+                    seen.push(ctx.data);
+                }),
+            ],
+        };
+        registerTestPlugins([probe], resolved);
+        const e = await api.create({
+            type: 'post',
+            data: { title: 'Hooked', status: 'published' },
+        });
+        await api.trash({ type: 'post', id: e.id });
+
+        await api.restore({ type: 'post', id: e.id });
+
+        expect(seen).toEqual([{ status: 'unpublished' }]);
     });
 
     it('fires one beforeCreate/afterCreate pair for a duplicate, with the first locale', async () => {

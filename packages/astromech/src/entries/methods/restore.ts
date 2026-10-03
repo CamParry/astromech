@@ -1,18 +1,23 @@
 import type { EntryResource } from '../repository/types';
-import type { AppContext } from '@/types/index';
+import type { AppContext, ParsedEntryUpdateData } from '@/types/index';
 import { z } from '@hono/zod-openapi';
+import { resolveEntryType } from '@/entries/entry-types';
 import { defineServiceMethod } from '@/services/define-service-method';
+import { UnknownEntryTypeError } from '../errors';
 import { entryAccess } from '../internal/access';
 import { batchAddress, fromBatch, oneOrMany } from '../internal/from-batch';
+import { updateEntryBatch } from '../internal/update-batch';
 import { writeBatch } from '../internal/write-batch';
 import { getEntryResources } from '../read-entry';
 import { entryRepository } from '../repository/entries-table';
 import { entrySchema } from '../schema';
 
 /**
- * Takes one `id` or a list of `ids`, restored atomically with every locale, and
- * answers each one's default-locale row. No hooks fire, since there is no
- * restore hook event.
+ * Takes one `id` or a list of `ids` and answers each one's default-locale row.
+ * Each locale is first set `unpublished` through the update path, firing the
+ * update hooks, and takes the next free slug if its own was taken meanwhile.
+ * Those writes commit one by one while the entries are still in the trash; one
+ * transaction then takes the whole batch out, so nothing goes live before it.
  */
 export const restoreEntries = defineServiceMethod({
     summary: 'Restore a trashed entry.',
@@ -34,10 +39,54 @@ async function restoreEntryBatch(
     ctx: AppContext
 ): Promise<EntryResource[]> {
     const { type, ids } = params;
-    const { user } = ctx;
+    const { config, user } = ctx;
     const userId = user?.id ?? null;
+    const entryType = resolveEntryType(config, type);
+    if (!entryType) throw new UnknownEntryTypeError(type);
+    const { statuses, slug: hasSlug } = entryType.capabilities;
 
     const entries = await getEntryResources(type, ids);
+
+    // Slugs given to an earlier entry of this batch, per locale, which the
+    // database cannot see until the batch leaves the trash.
+    const claimed = new Map<string, Set<string>>();
+    for (const entry of entries) {
+        if (entry.deletedAt === null) continue;
+        const rows = await entryRepository.findContentRowsByEntry(entry.id);
+        for (const row of rows) {
+            if (row.stagedFor !== null) continue;
+            const reserved = claimed.get(row.locale) ?? new Set<string>();
+            claimed.set(row.locale, reserved);
+            const slug =
+                hasSlug && row.slug !== null
+                    ? await entryRepository.uniqueSlug(
+                          type,
+                          row.locale,
+                          row.slug,
+                          entry.id,
+                          reserved
+                      )
+                    : null;
+            if (slug !== null) reserved.add(slug);
+            const data: ParsedEntryUpdateData = {
+                ...(statuses && row.status !== 'unpublished'
+                    ? { status: 'unpublished' }
+                    : {}),
+                ...(slug !== null && slug !== row.slug ? { slug } : {}),
+            };
+            if (Object.keys(data).length === 0) continue;
+            await updateEntryBatch(
+                {
+                    type,
+                    ids: [entry.id],
+                    locale: row.locale,
+                    createMissingLocale: false,
+                    data,
+                },
+                ctx
+            );
+        }
+    }
 
     return writeBatch(entries, (entry) =>
         entryRepository.trash.restore(entry.id, userId)

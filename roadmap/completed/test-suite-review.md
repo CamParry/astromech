@@ -362,7 +362,7 @@ harness and eight test files and every later stage runs faster for it.
       a failure can be reproduced, and print it if Vitest does not. Vitest
       prints the seed on every run. Shuffling also found
       `entries-capabilities` sharing one database per file, and a product
-      defect: [trashed-entry-slug-collision](../planned/trashed-entry-slug-collision.md).
+      defect: [trashed-entry-slug-collision](trashed-entry-slug-collision.md).
 - [x] Fail a test on an unexpected `console.error` or `console.warn`; an
       expected one is asserted. `tests/_support/console-guard.ts`, with
       `expectConsole` to declare output. A passing run prints no console
@@ -490,7 +490,7 @@ harness and eight test files and every later stage runs faster for it.
 - [x] Property tests where they pay: `capIdentifier`, `renderLiteral`,
       `diffSnapshots`, `readChatRequest`, slug handling. Defects found:
       [schema-engine-defects](../planned/schema-engine-defects.md) and
-      [trashed-entry-slug-collision](../planned/trashed-entry-slug-collision.md).
+      [trashed-entry-slug-collision](trashed-entry-slug-collision.md).
 - [x] Try mutation testing (Stryker, incremental) on one core directory, and
       keep it as an occasional check only if it finds assertions that miss.
       Tried on `src/utilities/` (Stryker 10, 12 minutes): 17 of 31 surviving

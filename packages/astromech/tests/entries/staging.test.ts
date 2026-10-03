@@ -237,7 +237,7 @@ describe('the entry row stamp and divergence', () => {
 });
 
 describe('mergeStaged', () => {
-    it('merges staged content + relations into the canonical, preserving id/slug/status', async () => {
+    it('merges staged content + relations into the canonical, preserving id/status', async () => {
         const target = await api.create({
             type: 'post',
             data: { title: 'T', slug: 't' },
@@ -264,13 +264,89 @@ describe('mergeStaged', () => {
         expect(merged.id).toBe(canonical.id); // id preserved → external refs stable
         expect(merged.title).toBe('Updated');
         expect(merged.fields.body).toBe('v2');
-        expect(merged.slug).toBe('orig'); // slug NOT copied
+        expect(merged.slug).toBe('orig'); // the staged slug, copied and unchanged
         expect(merged.status).toBe('published'); // status preserved, not forced
 
         // The staged row is gone and the canonical carries its relations.
         expect(await api.getStaged({ type: 'post', id: canonical.id })).toBeNull();
         expect(await relationTargets(canonical.id)).toEqual([target.id]);
         expect(await relationStagedFlags(canonical.id)).toEqual([false]);
+    });
+
+    it('carries a slug changed on the staged change', async () => {
+        const canonical = await api.create({
+            type: 'post',
+            data: { title: 'Orig', slug: 'orig' },
+        });
+        await api.createStaged({ type: 'post', id: canonical.id });
+        await api.update({
+            type: 'post',
+            id: canonical.id,
+            staged: true,
+            data: { slug: 'renamed' },
+        });
+
+        const merged = await api.mergeStaged({ type: 'post', id: canonical.id });
+
+        expect(merged.slug).toBe('renamed');
+    });
+
+    it('takes the next free slug when a live entry took the staged one meanwhile', async () => {
+        const canonical = await api.create({
+            type: 'post',
+            data: { title: 'Orig', slug: 'orig' },
+        });
+        await api.createStaged({ type: 'post', id: canonical.id });
+        await api.update({
+            type: 'post',
+            id: canonical.id,
+            staged: true,
+            data: { slug: 'fresh' },
+        });
+        await api.create({ type: 'post', data: { title: 'Other', slug: 'fresh' } });
+
+        const merged = await api.mergeStaged({ type: 'post', id: canonical.id });
+
+        expect(merged.slug).toBe('fresh-2');
+    });
+
+    it('keeps a live slug change made after the staged change', async () => {
+        const canonical = await api.create({
+            type: 'post',
+            data: { title: 'Orig', slug: 'a' },
+        });
+        await api.createStaged({ type: 'post', id: canonical.id });
+        await api.update({ type: 'post', id: canonical.id, data: { slug: 'b' } });
+
+        const merged = await api.mergeStaged({ type: 'post', id: canonical.id });
+
+        expect(merged.slug).toBe('b');
+    });
+
+    it('keeps a slug a version restore brought back', async () => {
+        const canonical = await api.create({
+            type: 'post',
+            data: { title: 'Orig', slug: 'a' },
+        });
+        await api.update({ type: 'post', id: canonical.id, data: { slug: 'b' } });
+        await api.createStaged({ type: 'post', id: canonical.id });
+        await api.restoreVersion({ type: 'post', id: canonical.id, version: 1 });
+
+        const merged = await api.mergeStaged({ type: 'post', id: canonical.id });
+
+        expect(merged.slug).toBe('a');
+    });
+
+    it('keeps the slug a restore gave the entry', async () => {
+        const canonical = await api.create({ type: 'post', data: { title: 'Same' } });
+        await api.createStaged({ type: 'post', id: canonical.id });
+        await api.trash({ type: 'post', id: canonical.id });
+        await api.create({ type: 'post', data: { title: 'Same' } });
+        await api.restore({ type: 'post', id: canonical.id });
+
+        const merged = await api.mergeStaged({ type: 'post', id: canonical.id });
+
+        expect(merged.slug).toBe('same-2');
     });
 
     it('leaves an unpublished canonical unpublished (merge is content-only)', async () => {
