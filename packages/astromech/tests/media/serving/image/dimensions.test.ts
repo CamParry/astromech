@@ -409,6 +409,8 @@ describe('readImageDimensions for HEIF and TIFF files', () => {
         });
     });
 
+    // Written by macOS's sips (`sips -s format tiff -s formatOptions lzw`) from a
+    // 6x4 image; Apple's encoder writes big-endian ("MM") TIFFs.
     it('reads a big-endian TIFF', async () => {
         expect(readImageDimensions(await fixture('big-endian-6x4.tiff'))).toEqual({
             width: 6,
@@ -424,5 +426,190 @@ describe('readImageDimensions for HEIF and TIFF files', () => {
     it('returns null for a TIFF cut off before its first IFD', async () => {
         const tiff = await fixture('big-endian-6x4.tiff');
         expect(readImageDimensions(tiff.slice(0, 64))).toBeNull();
+    });
+});
+
+/** A 40x20 grey image in `format`, tagged with EXIF `orientation` when one is given. */
+async function greyImage(
+    format: 'png' | 'webp',
+    orientation?: number
+): Promise<Uint8Array> {
+    const image = sharpLib({
+        create: { width: 40, height: 20, channels: 3, background: '#808080' },
+    }).toFormat(format);
+    if (orientation !== undefined) image.withMetadata({ orientation });
+    return new Uint8Array(await image.toBuffer());
+}
+
+/** The dimensions of the upright variant sharp makes from `bytes`. */
+async function variantDimensions(
+    bytes: Uint8Array
+): Promise<{ width: number; height: number }> {
+    const { info } = await sharpLib(bytes).rotate().toBuffer({ resolveWithObject: true });
+    return { width: info.width, height: info.height };
+}
+
+describe('readImageDimensions ignores an orientation sharp ignores', () => {
+    it('ignores a PNG eXIf chunk after the image data', async () => {
+        const plain = await greyImage('png');
+        const tagged = await greyImage('png', 6);
+        const exif = pngChunk(tagged, 'eXIf');
+        const iend = plain.length - 12;
+        const late = new Uint8Array([
+            ...plain.subarray(0, iend),
+            ...exif,
+            ...plain.subarray(iend),
+        ]);
+
+        expect(readImageDimensions(late)).toEqual(await variantDimensions(late));
+        expect(readImageDimensions(late)).toEqual({ width: 40, height: 20 });
+    });
+
+    it('ignores a WebP EXIF chunk when the VP8X EXIF flag is clear', async () => {
+        const webp = await greyImage('webp', 6);
+        webp[20] = (webp[20] ?? 0) & ~0x08;
+
+        expect(readImageDimensions(webp)).toEqual(await variantDimensions(webp));
+        expect(readImageDimensions(webp)).toEqual({ width: 40, height: 20 });
+    });
+});
+
+/** The whole chunk (length, type, data and CRC) of the first `type` chunk in a PNG. */
+function pngChunk(png: Uint8Array, type: string): Uint8Array {
+    const view = new DataView(png.buffer, png.byteOffset, png.byteLength);
+    for (let offset = 8; offset + 8 <= png.length; ) {
+        const length = view.getUint32(offset);
+        const chunk = png.subarray(offset, offset + 12 + length);
+        if (String.fromCharCode(...png.subarray(offset + 4, offset + 8)) === type)
+            return chunk;
+        offset += 12 + length;
+    }
+    throw new Error(`no ${type} chunk`);
+}
+
+const ascii = (text: string): number[] => [...text].map((c) => c.charCodeAt(0));
+const u16 = (value: number): number[] => [value >> 8, value & 0xff];
+const u32 = (value: number): number[] => [
+    (value >>> 24) & 0xff,
+    (value >>> 16) & 0xff,
+    (value >>> 8) & 0xff,
+    value & 0xff,
+];
+const box = (type: string, payload: number[]): number[] => [
+    ...u32(8 + payload.length),
+    ...ascii(type),
+    ...payload,
+];
+const fullBox = (type: string, version: number, payload: number[]): number[] =>
+    box(type, [version, 0, 0, 0, ...payload]);
+const ftyp = box('ftyp', [...ascii('heic'), 0, 0, 0, 0, ...ascii('mif1')]);
+const ispe = (width: number, height: number): number[] =>
+    fullBox('ispe', 0, [...u32(width), ...u32(height)]);
+const irot = (quarterTurns: number): number[] => box('irot', [quarterTurns]);
+const clap = (
+    widthN: number,
+    widthD: number,
+    heightN: number,
+    heightD: number
+): number[] =>
+    box('clap', [
+        ...u32(widthN),
+        ...u32(widthD),
+        ...u32(heightN),
+        ...u32(heightD),
+        ...u32(0),
+        ...u32(1),
+        ...u32(0),
+        ...u32(1),
+    ]);
+
+/** The payload of a `meta` box whose primary item 1 has `properties`. */
+function metaPayload(properties: number[][]): number[] {
+    const ipma = fullBox('ipma', 0, [
+        ...u32(1),
+        ...u16(1),
+        properties.length,
+        ...properties.map((_, index) => index + 1),
+    ]);
+    return [
+        0,
+        0,
+        0,
+        0,
+        ...fullBox('pitm', 0, u16(1)),
+        ...box('iprp', [...box('ipco', properties.flat()), ...ipma]),
+    ];
+}
+
+/** A hand-built HEIF file: `ftyp`, then `before`, then a `meta` box for `properties`. */
+function heif(properties: number[][], before: number[] = []): Uint8Array {
+    return new Uint8Array([...ftyp, ...before, ...box('meta', metaPayload(properties))]);
+}
+
+describe('readImageDimensions for hand-built HEIF files', () => {
+    it('reads the primary item size', () => {
+        expect(readImageDimensions(heif([ispe(1000, 800)]))).toEqual({
+            width: 1000,
+            height: 800,
+        });
+    });
+
+    // libheif reports a clean aperture's width and height rounded half up.
+    it('applies the clean aperture before the rotation', () => {
+        const cropped = [ispe(1000, 800), clap(3997, 4, 1201, 2), irot(1)];
+        expect(readImageDimensions(heif(cropped))).toEqual({ width: 601, height: 999 });
+    });
+
+    it('ignores a clean aperture with a zero denominator', () => {
+        const broken = [ispe(1000, 800), clap(999, 0, 601, 1)];
+        expect(readImageDimensions(heif(broken))).toEqual({ width: 1000, height: 800 });
+    });
+
+    it('reads a meta box whose size 0 runs it to the end of the file', () => {
+        const meta = metaPayload([ispe(300, 200)]);
+        const file = new Uint8Array([...ftyp, ...u32(0), ...ascii('meta'), ...meta]);
+        expect(readImageDimensions(file)).toEqual({ width: 300, height: 200 });
+    });
+
+    it('reads a meta box whose size 1 gives a 64-bit size', () => {
+        const meta = metaPayload([ispe(300, 200)]);
+        const file = new Uint8Array([
+            ...ftyp,
+            ...u32(1),
+            ...ascii('meta'),
+            ...u32(0),
+            ...u32(16 + meta.length),
+            ...meta,
+        ]);
+        expect(readImageDimensions(file)).toEqual({ width: 300, height: 200 });
+    });
+
+    // Found by the property test: version 1 stores a 4-byte item id.
+    it('returns null for a version 1 pitm too short for its item id, at the end of the file', () => {
+        const meta = [
+            0,
+            0,
+            0,
+            0,
+            ...box('iprp', box('ipco', ispe(10, 10))),
+            ...fullBox('pitm', 1, u16(1)),
+        ];
+        expect(
+            readImageDimensions(new Uint8Array([...ftyp, ...box('meta', meta)]))
+        ).toBeNull();
+    });
+
+    it('finds meta after a few boxes', () => {
+        const frees = Array.from({ length: 10 }, () => box('free', [])).flat();
+        expect(readImageDimensions(heif([ispe(30, 20)], frees))).toEqual({
+            width: 30,
+            height: 20,
+        });
+    });
+
+    // A file of tiny boxes costs a walk over every one of them, so the walk stops early.
+    it('stops looking for meta after 64 boxes', () => {
+        const frees = Array.from({ length: 64 }, () => box('free', [])).flat();
+        expect(readImageDimensions(heif([ispe(30, 20)], frees))).toBeNull();
     });
 });

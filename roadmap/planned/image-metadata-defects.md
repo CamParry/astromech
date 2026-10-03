@@ -63,3 +63,13 @@ decoded image, which is what the variants are made from.
 - [ ] `size` from the stored bytes.
 - [ ] Tests: a rotated JPEG fixture stores upright dimensions; an uploaded
       original with GPS data is served without it.
+
+## Left open
+
+- **HEIC variants fall back to the original.** The prebuilt sharp cannot decode
+  HEVC, so a HEIC upload records its dimensions but gets no resized variants.
+- **Rows uploaded before this work keep swapped dimensions** until their file
+  is replaced: nothing rereads the stored originals.
+- **Core sets no upload size limit.** An image is buffered whole to read its
+  header, so the largest upload is bounded only by the runtime's memory and the
+  host's request limit.

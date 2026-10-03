@@ -106,6 +106,23 @@ describe('mediaService.upload', () => {
         });
     });
 
+    it('records the dimensions of a GIF, which it does not optimise', async () => {
+        const gif = await sharpLib({
+            create: { width: 30, height: 10, channels: 3, background: '#808080' },
+        })
+            .gif()
+            .toBuffer();
+
+        const media = await mediaService.upload({
+            file: new File([new Uint8Array(gif)], 'banner.gif', { type: 'image/gif' }),
+        });
+
+        expect({ width: media.width, height: media.height }).toEqual({
+            width: 30,
+            height: 10,
+        });
+    });
+
     it('mints a ULID id, not a UUID', async () => {
         const media = await mediaService.upload({
             file: new File([jpegBytes() as BlobPart], 'photo.jpg', {

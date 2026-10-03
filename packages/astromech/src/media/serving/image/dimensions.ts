@@ -4,6 +4,23 @@
  * Node Buffer APIs), so it runs on Cloudflare Workers.
  */
 
+import type { Box, Tiff } from './header';
+import {
+    boxType,
+    detectImageFormat,
+    findBox,
+    firstIfdOffset,
+    fourCC,
+    isExifIdentifier,
+    readBoxes,
+    readIfdEntries,
+    readIfdNumber,
+    readJpegSegments,
+    readPngChunks,
+    readTiffHeader,
+    readWebpChunks,
+} from './header';
+
 type Dimensions = { width: number; height: number };
 
 /** EXIF and TIFF tag numbers this reader uses. */
@@ -11,9 +28,19 @@ const TAG_IMAGE_WIDTH = 0x0100;
 const TAG_IMAGE_LENGTH = 0x0101;
 const TAG_ORIENTATION = 0x0112;
 
+/** HEIF box types this reader uses. */
+const META = boxType('meta');
+const PITM = boxType('pitm');
+const IPRP = boxType('iprp');
+const IPCO = boxType('ipco');
+const IPMA = boxType('ipma');
+const ISPE = boxType('ispe');
+const CLAP = boxType('clap');
+const IROT = boxType('irot');
+
 /** True only for raster bitmap types we can optimise (transform). Excludes svg, gif, video, pdf, etc. */
 export function isOptimisableImage(mimeType: string): boolean {
-    const normalised = (mimeType.split(';')[0] ?? '').trim().toLowerCase();
+    const normalised = normaliseMimeType(mimeType);
     return (
         normalised === 'image/jpeg' ||
         normalised === 'image/png' ||
@@ -25,143 +52,83 @@ export function isOptimisableImage(mimeType: string): boolean {
     );
 }
 
+/** True for the image types whose dimensions `readImageDimensions` reads: the optimisable ones and GIF. */
+export function isReadableImage(mimeType: string): boolean {
+    return isOptimisableImage(mimeType) || normaliseMimeType(mimeType) === 'image/gif';
+}
+
 /**
  * Read an image's pixel dimensions as displayed, from its header bytes: an
  * orientation that turns the image a quarter turn (EXIF, or a HEIF `irot`)
  * swaps the stored width and height, as an upright variant does. Reads PNG,
  * GIF, JPEG, WebP, TIFF, and HEIF (HEIC and AVIF). Returns null if the format
- * is unrecognised or the header is too short to determine size.
+ * is unrecognised, the header is too short to determine size, or it is malformed.
  */
 export function readImageDimensions(bytes: Uint8Array): Dimensions | null {
-    if (bytes.length < 8) return null;
-
     const view = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength);
-
-    // PNG: signature 89 50 4E 47 0D 0A 1A 0A
-    if (
-        bytes[0] === 0x89 &&
-        bytes[1] === 0x50 &&
-        bytes[2] === 0x4e &&
-        bytes[3] === 0x47 &&
-        bytes[4] === 0x0d &&
-        bytes[5] === 0x0a &&
-        bytes[6] === 0x1a &&
-        bytes[7] === 0x0a
-    ) {
-        return readPng(view);
+    // The bytes are an untrusted upload: a read the checks below miss gives null, not a throw.
+    try {
+        switch (detectImageFormat(bytes)) {
+            case 'png':
+                return readPng(view);
+            case 'gif':
+                return readGif(view);
+            case 'jpeg':
+                return readJpeg(view);
+            case 'webp':
+                return readWebp(view);
+            case 'tiff':
+                return readTiff(view);
+            case 'heif':
+                return readHeif(view);
+            case null:
+                return null;
+        }
+    } catch {
+        return null;
     }
+}
 
-    // GIF: GIF87a or GIF89a
-    if (
-        bytes[0] === 0x47 &&
-        bytes[1] === 0x49 &&
-        bytes[2] === 0x46 &&
-        bytes[3] === 0x38 &&
-        (bytes[4] === 0x37 || bytes[4] === 0x39) &&
-        bytes[5] === 0x61
-    ) {
-        return readGif(view);
-    }
-
-    // JPEG: FF D8
-    if (bytes[0] === 0xff && bytes[1] === 0xd8) {
-        return readJpeg(view);
-    }
-
-    // WebP: RIFF....WEBP
-    if (
-        bytes[0] === 0x52 &&
-        bytes[1] === 0x49 &&
-        bytes[2] === 0x46 &&
-        bytes[3] === 0x46 &&
-        bytes[8] === 0x57 &&
-        bytes[9] === 0x45 &&
-        bytes[10] === 0x42 &&
-        bytes[11] === 0x50
-    ) {
-        return readWebp(view);
-    }
-
-    // TIFF: II*\0 (little-endian) or MM\0* (big-endian)
-    if (
-        (bytes[0] === 0x49 && bytes[1] === 0x49 && bytes[2] === 0x2a && bytes[3] === 0) ||
-        (bytes[0] === 0x4d && bytes[1] === 0x4d && bytes[2] === 0 && bytes[3] === 0x2a)
-    ) {
-        return readTiff(view);
-    }
-
-    // HEIF (HEIC, AVIF): an ISO base media file opening with an ftyp box
-    if (fourCC(view, 4) === 'ftyp') {
-        return readHeif(view);
-    }
-
-    return null;
+function normaliseMimeType(mimeType: string): string {
+    return (mimeType.split(';')[0] ?? '').trim().toLowerCase();
 }
 
 /** The dimensions shown once EXIF `orientation` is applied: 5 to 8 turn the image a quarter turn. */
-function upright(
+function applyOrientation(
     width: number,
     height: number,
     orientation: number | undefined
 ): Dimensions {
-    return orientation != null && orientation >= 5 && orientation <= 8
+    return orientation !== undefined && orientation >= 5 && orientation <= 8
         ? { width: height, height: width }
         : { width, height };
 }
 
-/** The four ASCII characters at `offset`. */
-function fourCC(view: DataView, offset: number): string {
-    return String.fromCharCode(
-        view.getUint8(offset),
-        view.getUint8(offset + 1),
-        view.getUint8(offset + 2),
-        view.getUint8(offset + 3)
-    );
-}
-
-/** Whether the six bytes at `offset` are the EXIF identifier `Exif\0\0`. */
-function isExifIdentifier(view: DataView, offset: number): boolean {
-    return (
-        offset + 6 <= view.byteLength &&
-        fourCC(view, offset) === 'Exif' &&
-        view.getUint16(offset + 4) === 0
-    );
-}
-
 /**
- * The single-valued SHORT and LONG tags of the first IFD in the TIFF structure
- * at `start` (a TIFF file, or the EXIF block inside a JPEG, PNG or WebP).
+ * The single-valued SHORT and LONG tags of the first IFD in a TIFF structure.
  * Returns an empty map when the structure is malformed.
  */
-function readTiffTags(view: DataView, start: number): Map<number, number> {
+function readTiffTags(view: DataView, tiff: Tiff): Map<number, number> {
     const tags = new Map<number, number>();
-    if (start + 8 > view.byteLength) return tags;
-    const order = view.getUint16(start);
-    if (order !== 0x4949 && order !== 0x4d4d) return tags;
-    const le = order === 0x4949;
-    if (view.getUint16(start + 2, le) !== 42) return tags;
-
-    const ifd = start + view.getUint32(start + 4, le);
-    if (ifd + 2 > view.byteLength) return tags;
-    const count = view.getUint16(ifd, le);
-    for (let i = 0; i < count; i++) {
-        const entry = ifd + 2 + i * 12;
-        if (entry + 12 > view.byteLength) break;
-        const type = view.getUint16(entry + 2, le);
-        if (view.getUint32(entry + 4, le) !== 1) continue;
-        // SHORT is 3 and LONG is 4; a single value sits in the entry itself.
-        if (type === 3)
-            tags.set(view.getUint16(entry, le), view.getUint16(entry + 8, le));
-        if (type === 4)
-            tags.set(view.getUint16(entry, le), view.getUint32(entry + 8, le));
+    for (const entry of readIfdEntries(view, tiff, firstIfdOffset(view, tiff))) {
+        const value = readIfdNumber(view, tiff, entry);
+        if (value !== undefined) tags.set(entry.tag, value);
     }
     return tags;
 }
 
-/** The orientation in an EXIF block at `start`, which may open with `Exif\0\0`. */
-function readExifOrientation(view: DataView, start: number): number | undefined {
-    const tiff = isExifIdentifier(view, start) ? start + 6 : start;
-    return readTiffTags(view, tiff).get(TAG_ORIENTATION);
+/** The orientation in an EXIF block between `start` and `end`, which may open with `Exif\0\0`. */
+function readExifOrientation(
+    view: DataView,
+    start: number,
+    end: number
+): number | undefined {
+    const tiff = readTiffHeader(
+        view,
+        isExifIdentifier(view, start) ? start + 6 : start,
+        end
+    );
+    return tiff ? readTiffTags(view, tiff).get(TAG_ORIENTATION) : undefined;
 }
 
 function readPng(view: DataView): Dimensions | null {
@@ -170,17 +137,16 @@ function readPng(view: DataView): Dimensions | null {
     const width = view.getUint32(16, false);
     const height = view.getUint32(20, false);
 
-    // Chunks follow IHDR: length (4), type (4), data, CRC (4). EXIF lives in eXIf.
+    // EXIF lives in eXIf. One after the image data is ignored, as sharp ignores it.
     let orientation: number | undefined;
-    let offset = 8;
-    while (offset + 8 <= view.byteLength) {
-        const length = view.getUint32(offset);
-        const type = fourCC(view, offset + 4);
-        if (type === 'eXIf') orientation = readExifOrientation(view, offset + 8);
-        if (type === 'IEND' || type === 'eXIf') break;
-        offset += 12 + length;
+    for (const chunk of readPngChunks(view)) {
+        if (chunk.type === 'IDAT') break;
+        if (chunk.type === 'eXIf') {
+            orientation = readExifOrientation(view, chunk.start, chunk.end);
+            break;
+        }
     }
-    return upright(width, height, orientation);
+    return applyOrientation(width, height, orientation);
 }
 
 function readGif(view: DataView): Dimensions | null {
@@ -192,24 +158,8 @@ function readGif(view: DataView): Dimensions | null {
 }
 
 function readJpeg(view: DataView): Dimensions | null {
-    let offset = 2; // skip FF D8
     let orientation: number | undefined;
-
-    while (offset + 3 < view.byteLength) {
-        // Skip padding FF bytes
-        if (view.getUint8(offset) !== 0xff) return null;
-        offset += 1;
-
-        let marker = view.getUint8(offset);
-        offset += 1;
-
-        // Skip any additional padding FF bytes
-        while (marker === 0xff) {
-            if (offset >= view.byteLength) return null;
-            marker = view.getUint8(offset);
-            offset += 1;
-        }
-
+    for (const { marker, start, end } of readJpegSegments(view)) {
         // SOF markers: C0–CF except C4 (DHT), C8 (JPEGext), CC (DAC)
         if (
             marker >= 0xc0 &&
@@ -218,25 +168,17 @@ function readJpeg(view: DataView): Dimensions | null {
             marker !== 0xc8 &&
             marker !== 0xcc
         ) {
-            // offset points right after the marker byte: segment length (2 bytes),
-            // precision (1 byte), height (2 bytes), then width (2 bytes)
-            if (offset + 7 > view.byteLength) return null;
-            const height = view.getUint16(offset + 3, false);
-            const width = view.getUint16(offset + 5, false);
-            return upright(width, height, orientation);
+            // The payload holds precision (1 byte), height (2 bytes), then width (2 bytes).
+            if (start + 5 > view.byteLength) return null;
+            const height = view.getUint16(start + 1, false);
+            const width = view.getUint16(start + 3, false);
+            return applyOrientation(width, height, orientation);
         }
-
-        // Read segment length to skip (length includes the 2 length bytes itself)
-        if (offset + 1 >= view.byteLength) return null;
-        const segLength = view.getUint16(offset, false);
-        if (segLength < 2) return null;
         // APP1 holds EXIF, after the identifier `Exif\0\0`.
-        if (marker === 0xe1 && isExifIdentifier(view, offset + 2)) {
-            orientation = readExifOrientation(view, offset + 2);
+        if (marker === 0xe1 && isExifIdentifier(view, start)) {
+            orientation = readExifOrientation(view, start, end);
         }
-        offset += segLength;
     }
-
     return null;
 }
 
@@ -244,21 +186,18 @@ function readWebp(view: DataView): Dimensions | null {
     if (view.byteLength < 16) return null;
 
     // Chunk fourCC at offset 12
-    const c0 = view.getUint8(12);
-    const c1 = view.getUint8(13);
-    const c2 = view.getUint8(14);
-    const c3 = view.getUint8(15);
+    const chunk = fourCC(view, 12);
 
-    // VP8 (lossy): 'VP8 ' = 56 50 38 20
-    if (c0 === 0x56 && c1 === 0x50 && c2 === 0x38 && c3 === 0x20) {
+    // VP8 (lossy)
+    if (chunk === 'VP8 ') {
         if (view.byteLength < 30) return null;
         const width = view.getUint16(26, true) & 0x3fff;
         const height = view.getUint16(28, true) & 0x3fff;
         return { width, height };
     }
 
-    // VP8L (lossless): 'VP8L' = 56 50 38 4C
-    if (c0 === 0x56 && c1 === 0x50 && c2 === 0x38 && c3 === 0x4c) {
+    // VP8L (lossless)
+    if (chunk === 'VP8L') {
         if (view.byteLength < 25) return null;
         const bits = view.getUint32(21, true);
         const width = (bits & 0x3fff) + 1;
@@ -266,15 +205,18 @@ function readWebp(view: DataView): Dimensions | null {
         return { width, height };
     }
 
-    // VP8X (extended): 'VP8X' = 56 50 38 58
-    if (c0 === 0x56 && c1 === 0x50 && c2 === 0x38 && c3 === 0x58) {
+    // VP8X (extended)
+    if (chunk === 'VP8X') {
         if (view.byteLength < 30) return null;
         // LE uint24 at offset 24 and 27
         const width =
             view.getUint8(24) | (view.getUint8(25) << 8) | (view.getUint8(26) << 16);
         const height =
             view.getUint8(27) | (view.getUint8(28) << 8) | (view.getUint8(29) << 16);
-        return upright(width + 1, height + 1, readWebpOrientation(view));
+        // An EXIF chunk counts only when the VP8X flags announce it, as sharp reads it.
+        const hasExif = (view.getUint8(20) & 0x08) !== 0;
+        const orientation = hasExif ? readWebpOrientation(view) : undefined;
+        return applyOrientation(width + 1, height + 1, orientation);
     }
 
     return null;
@@ -282,94 +224,96 @@ function readWebp(view: DataView): Dimensions | null {
 
 /** The orientation in an extended WebP's EXIF chunk, which follows the image data. */
 function readWebpOrientation(view: DataView): number | undefined {
-    // Chunks from offset 12: fourCC (4), size (4, LE), data padded to an even length.
-    let offset = 12;
-    while (offset + 8 <= view.byteLength) {
-        const size = view.getUint32(offset + 4, true);
-        if (fourCC(view, offset) === 'EXIF') return readExifOrientation(view, offset + 8);
-        offset += 8 + size + (size % 2);
+    for (const chunk of readWebpChunks(view)) {
+        if (chunk.type === 'EXIF')
+            return readExifOrientation(view, chunk.start, chunk.end);
     }
     return undefined;
 }
 
 function readTiff(view: DataView): Dimensions | null {
-    const tags = readTiffTags(view, 0);
+    const tiff = readTiffHeader(view, 0, view.byteLength);
+    if (!tiff) return null;
+    const tags = readTiffTags(view, tiff);
     const width = tags.get(TAG_IMAGE_WIDTH);
     const height = tags.get(TAG_IMAGE_LENGTH);
-    if (width == null || height == null) return null;
-    return upright(width, height, tags.get(TAG_ORIENTATION));
-}
-
-/** One ISO base media box: its type and where its payload starts and ends. */
-type Box = { type: string; start: number; end: number };
-
-/** The boxes laid end to end between `start` and `end`. */
-function readBoxes(view: DataView, start: number, end: number): Box[] {
-    const boxes: Box[] = [];
-    let offset = start;
-    while (offset + 8 <= end) {
-        let size = view.getUint32(offset);
-        let header = 8;
-        if (size === 1) {
-            // A 64-bit size follows the type.
-            if (offset + 16 > end) break;
-            size = view.getUint32(offset + 8) * 2 ** 32 + view.getUint32(offset + 12);
-            header = 16;
-        } else if (size === 0) {
-            size = end - offset;
-        }
-        if (size < header || offset + size > end) break;
-        boxes.push({
-            type: fourCC(view, offset + 4),
-            start: offset + header,
-            end: offset + size,
-        });
-        offset += size;
-    }
-    return boxes;
-}
-
-/** The first box of `type` among `boxes`. */
-function findBox(boxes: Box[], type: string): Box | undefined {
-    return boxes.find((box) => box.type === type);
+    if (width === undefined || height === undefined) return null;
+    return applyOrientation(width, height, tags.get(TAG_ORIENTATION));
 }
 
 /**
- * A HEIF file's primary image dimensions: its `ispe` property, turned by its
- * `irot` property. The primary item's own properties count, not the first
- * `ispe`, because a phone's HEIC stores a grid image over 512px tiles.
+ * A HEIF file's primary image dimensions: its `ispe` property, cropped by its
+ * `clap` property and turned by its `irot` property. The primary item's own
+ * properties count, not the first `ispe`, because a phone's HEIC stores a grid
+ * image over 512px tiles.
  */
 function readHeif(view: DataView): Dimensions | null {
-    const meta = findBox(readBoxes(view, 0, view.byteLength), 'meta');
-    // meta, pitm, ipma, ispe and irot are full boxes: a version byte and 3 flag bytes first.
+    const meta = findBox(view, 0, view.byteLength, META);
+    // meta, pitm, ipma and ispe are full boxes: a version byte and 3 flag bytes first.
     if (!meta || meta.start + 4 > meta.end) return null;
-    const metaBoxes = readBoxes(view, meta.start + 4, meta.end);
-    const pitm = findBox(metaBoxes, 'pitm');
-    const iprp = findBox(metaBoxes, 'iprp');
-    if (!pitm || !iprp || pitm.start + 6 > pitm.end) return null;
+    const pitm = findBox(view, meta.start + 4, meta.end, PITM);
+    const iprp = findBox(view, meta.start + 4, meta.end, IPRP);
+    if (!pitm || !iprp || pitm.start + 4 > pitm.end) return null;
+    // Version 0 stores the primary item id in 2 bytes, later versions in 4.
+    const version = view.getUint8(pitm.start);
+    if (pitm.start + (version === 0 ? 6 : 8) > pitm.end) return null;
     const primary =
-        view.getUint8(pitm.start) === 0
-            ? view.getUint16(pitm.start + 4)
-            : view.getUint32(pitm.start + 4);
+        version === 0 ? view.getUint16(pitm.start + 4) : view.getUint32(pitm.start + 4);
 
-    const iprpBoxes = readBoxes(view, iprp.start, iprp.end);
-    const ipco = findBox(iprpBoxes, 'ipco');
+    const ipco = findBox(view, iprp.start, iprp.end, IPCO);
     if (!ipco) return null;
-    const properties = readBoxes(view, ipco.start, ipco.end);
-    const associated = iprpBoxes
-        .filter((box) => box.type === 'ipma')
-        .flatMap((ipma) => readPropertyIndexes(view, ipma, primary))
-        .map((index) => properties[index - 1]);
+    const indexes: number[] = [];
+    for (const box of readBoxes(view, iprp.start, iprp.end)) {
+        if (box.type === IPMA) indexes.push(...readPropertyIndexes(view, box, primary));
+    }
+    const properties = readAssociatedProperties(view, ipco, indexes);
 
-    const ispe = associated.find((box) => box?.type === 'ispe');
+    const ispe = properties.find((box) => box.type === ISPE);
     if (!ispe || ispe.start + 12 > ispe.end) return null;
-    const width = view.getUint32(ispe.start + 4);
-    const height = view.getUint32(ispe.start + 8);
-    const irot = associated.find((box) => box?.type === 'irot');
+    let width = view.getUint32(ispe.start + 4);
+    let height = view.getUint32(ispe.start + 8);
+    const clap = properties.find((box) => box.type === CLAP);
+    if (clap && clap.start + 16 <= clap.end) {
+        const cropped = {
+            width: cleanApertureSize(view, clap.start, width),
+            height: cleanApertureSize(view, clap.start + 8, height),
+        };
+        // A zero denominator makes the box invalid, so libheif ignores all of it.
+        if (cropped.width !== null && cropped.height !== null) {
+            width = cropped.width;
+            height = cropped.height;
+        }
+    }
+    const irot = properties.find((box) => box.type === IROT);
     // irot's low two bits count quarter turns anticlockwise; an odd count swaps the axes.
     const quarterTurns =
         irot && irot.start < irot.end ? view.getUint8(irot.start) & 0x03 : 0;
     return quarterTurns % 2 === 1 ? { width: height, height: width } : { width, height };
+}
+
+/**
+ * The clean aperture size whose fraction is at `offset`, rounded half up as
+ * libheif rounds it and no larger than `size`, or null when its denominator is 0.
+ */
+function cleanApertureSize(view: DataView, offset: number, size: number): number | null {
+    const numerator = view.getUint32(offset);
+    const denominator = view.getUint32(offset + 4);
+    if (denominator === 0) return null;
+    const rounded = Math.floor((numerator + Math.floor(denominator / 2)) / denominator);
+    return Math.min(Math.max(rounded, 1), size);
+}
+
+/** The `ipco` properties at the 1-based `indexes`, read no further than the last of them. */
+function readAssociatedProperties(view: DataView, ipco: Box, indexes: number[]): Box[] {
+    if (indexes.length === 0) return [];
+    const wanted = new Set(indexes);
+    const properties: Box[] = [];
+    let index = 0;
+    for (const box of readBoxes(view, ipco.start, ipco.end, Math.max(...wanted))) {
+        index += 1;
+        if (wanted.has(index)) properties.push(box);
+    }
+    return properties;
 }
 
 /** The 1-based `ipco` indexes an `ipma` box associates with item `itemId`. */
