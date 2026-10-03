@@ -250,6 +250,8 @@ Plugins are the exception. A plugin reaches the database only through `ctx.db`, 
 
 **Form notifications are one `notifications` blocks field, and spam protection is an open `SpamProvider` contract** with `turnstile()` and `recaptcha()` factories. An `{{email}}` merge tag in `to` picks the recipient. Rejected: a repeater, which cannot vary its shape per kind, and an internal-only spam registry.
 
+**No GraphQL, multi-site, newsletters or memberships before 1.0** (decided 2026-10-03, from a comparison with ten other CMSs). GraphQL would be a second query language to keep in step with permissions, when an Astro site calls Astromech in process and the typed client (`astromech/fetch`) serves everyone else. Multi-site and multi-tenant change every table's scope and wait until after 1.0. Newsletters and memberships, which Ghost builds in, are products of their own that hosted services already provide. Rejected for 1.0: GraphQL (Payload, Directus, Contentful), multi-site (WordPress Multisite, Craft) and Ghost's newsletters and memberships.
+
 ## Toolchain
 
 **The Node floor is 22.13**, in every published package's `engines`, and CI tests the floor and the Active LTS. Rejected: an unverified `>=20`, and inheriting the floor from peer dependencies.

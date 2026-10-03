@@ -79,7 +79,6 @@ not be re-derived.
 
 ### `@astromech/forms` follow-ups
 
-- [ ] No trustworthy connecting address on a self-hosted Node deployment, so the submission rate limit meters nothing there. `cf-connecting-ip` is safe only because Cloudflare rewrites it; `x-forwarded-for` is client-settable on a direct connection, and Astro's `clientAddress` derives from it by default under `@astrojs/node`. Needs a trusted-proxy config option or the socket address plumbed through from the adapter — the same port would serve any other per-client limit
 - [ ] File-upload fields — needs a multipart `rawRoute` (raw routes are streaming-only) plus media ingest for the uploaded file
 - [ ] CSV export of submissions
 - [ ] A frontend form component/helper. v1 deliberately exposes data only (`forms.get`) and lets the site author own the markup, following the redirects precedent — revisit if hand-rendering proves tedious in practice
@@ -91,7 +90,6 @@ not be re-derived.
 
 - [ ] Turso / remote-libsql dump support — `VACUUM INTO` requires a local file; needs an alternative path for remote connections
 - [ ] D1 dump/restore — Time Travel / export-to-R2 (gated on D1 driver landing)
-- [ ] Postgres dump/restore — `pg_dump`/`pg_restore` (gated on Postgres driver, Phase 23)
 - [ ] Admin-editable backup **schedule** (retention is editable via the plugin's `/settings` page): the cron schedule is consumed once at boot when the job is registered, so a settings override needs runtime cron re-registration — a feature, not a wiring fix
 - [ ] Encryption at rest for backup artifacts
 - [ ] Multi-instance run-now lock — reuse the `_astromech_cron` lock so a concurrent scheduled + manual run across processes is guarded (v1 uses an in-process flag only)
