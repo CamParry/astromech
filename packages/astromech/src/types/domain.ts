@@ -49,6 +49,11 @@ export const ENTRY_STATUSES = ['unpublished', 'published', 'scheduled'] as const
 /** One of {@link ENTRY_STATUSES}. */
 export type EntryStatus = (typeof ENTRY_STATUSES)[number];
 
+/** Whether a value is one of {@link ENTRY_STATUSES}. */
+export function isEntryStatus(value: unknown): value is EntryStatus {
+    return ENTRY_STATUSES.some((status) => status === value);
+}
+
 /** One locale of an entry of any type. Documented key by key on `entrySchema`. */
 export type Entry = z.output<typeof entrySchema>;
 

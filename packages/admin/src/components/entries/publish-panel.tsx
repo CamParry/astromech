@@ -6,7 +6,7 @@
  */
 
 import type { EntryStatus } from 'astromech';
-import { ENTRY_STATUSES } from 'astromech/shared';
+import { ENTRY_STATUSES, isEntryStatus } from 'astromech/shared';
 import React from 'react';
 import { useTranslation } from 'react-i18next';
 import { formatDatetime } from '../../utilities/dates';
@@ -51,9 +51,9 @@ export function PublishPanel({
                     <label className="am-field-label">{t('entries.statusField')}</label>
                     <Select
                         value={status}
-                        onValueChange={(v) =>
-                            onStatusChange((v ?? 'unpublished') as EntryStatus)
-                        }
+                        onValueChange={(v) => {
+                            if (isEntryStatus(v)) onStatusChange(v);
+                        }}
                         options={statusOptions}
                         disabled={readOnly}
                     />

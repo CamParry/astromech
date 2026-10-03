@@ -5,6 +5,7 @@
  */
 
 import type { BackupRunRow } from './tables/runs';
+import type { BackupRunTrigger } from './types';
 import type { PluginContext } from 'astromech';
 import { Readable } from 'node:stream';
 import { createGzip } from 'node:zlib';
@@ -26,7 +27,7 @@ export function isBackupRunning(): boolean {
  */
 export async function performBackup(
     ctx: PluginContext,
-    trigger: BackupRunRow['trigger'],
+    trigger: BackupRunTrigger,
     opts: { keep: number }
 ): Promise<BackupRunRow> {
     const runs = createBackupRunsRepository(ctx.db);

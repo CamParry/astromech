@@ -4,6 +4,7 @@
  * decoding, so nothing above this file spells the table name or a codec.
  */
 import type { BackupRunRow } from './tables/runs';
+import type { BackupRunTrigger } from './types';
 import type { Patch, PluginContext } from 'astromech';
 import { createRepository } from 'astromech';
 import { backupRunsTable } from './tables/runs';
@@ -44,7 +45,7 @@ export function createBackupRunsRepository(db: PluginContext['db']) {
      * Open a run. The table fills `id` (a ULID) and `startedAt`, so the id
      * is read back off the returned row rather than minted here.
      */
-    async function create(trigger: BackupRunRow['trigger']): Promise<BackupRunRow> {
+    async function create(trigger: BackupRunTrigger): Promise<BackupRunRow> {
         return repository.create({ status: 'running', trigger });
     }
 
