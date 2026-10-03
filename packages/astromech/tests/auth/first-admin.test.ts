@@ -8,7 +8,7 @@
 import type { DB } from '@/database/types';
 import type { Kysely } from 'kysely';
 import { invalid } from '@tests/fixtures';
-import { createTestDb, setupTestConfig } from '@tests/harness';
+import { createTestDb, makeTestConfig, setupTestConfig } from '@tests/harness';
 import { sql } from 'kysely';
 import { beforeEach, describe, expect, it } from 'vitest';
 import { currentServices } from '@/app-context/services';
@@ -99,6 +99,38 @@ describe('first-run setup', () => {
 
         expect(rows).toHaveLength(1);
         expect(rows[0]?.locale).toBe(getDefaultContentLocale());
+    });
+
+    it('fills the default of a user field', async () => {
+        setupTestConfig({
+            ...makeTestConfig(),
+            users: {
+                fields: [
+                    { name: 'team', type: 'text', label: 'Team', defaultValue: 'Ops' },
+                ],
+            },
+        });
+
+        await createFirstAdmin(ADMIN);
+
+        const [admin] = (await usersService.query({ limit: 'all' })).data;
+        expect(admin?.fields).toEqual({ team: 'Ops' });
+    });
+
+    it('refuses setup, writing nothing, while a required user field has no default', async () => {
+        setupTestConfig({
+            ...makeTestConfig(),
+            users: {
+                fields: [{ name: 'team', type: 'text', label: 'Team', required: true }],
+            },
+        });
+
+        await expect(createFirstAdmin(ADMIN)).rejects.toMatchObject({
+            name: 'ValidationError',
+            fields: { team: ['This field is required'] },
+        });
+        expect(await rowCount('users')).toBe(0);
+        expect(await rowCount('accounts')).toBe(0);
     });
 
     it('answers closed for a second setup, writing no user or account row', async () => {

@@ -8,6 +8,7 @@ import type { MountedRoute, ResponseEnvelope } from '@/transport/http/routes/htt
 import type {
     EntriesService,
     GlobalsService,
+    JsonObject,
     Media,
     MediaService,
     NotificationsService,
@@ -287,10 +288,12 @@ const entriesService: EntriesService = createEntriesService('/entries', 'full');
 /**
  * A multipart upload — the two media routes with no row in the table, because a
  * `File` has no JSON representation and so no schema either side could state.
+ * `fields` travel as a JSON-encoded form part.
  */
-async function uploadFile(path: string, file: File): Promise<Media> {
+async function uploadFile(path: string, file: File, fields?: JsonObject): Promise<Media> {
     const formData = new FormData();
     formData.append('file', file);
+    if (fields !== undefined) formData.append('fields', JSON.stringify(fields));
 
     const response = await fetch(`${apiBase}${path}`, {
         method: 'POST',
@@ -305,7 +308,10 @@ async function uploadFile(path: string, file: File): Promise<Media> {
 }
 
 const mediaService = restService<MediaService>('media', callRoute, {
-    upload: (params) => uploadFile('/media', (params as { file: File }).file),
+    upload: (params) => {
+        const { file, fields } = params as { file: File; fields?: JsonObject };
+        return uploadFile('/media', file, fields);
+    },
     replace: (params) => {
         const { id, file } = params as { id: string; file: File };
         return uploadFile(`/media/${id}/replace`, file);

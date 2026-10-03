@@ -362,6 +362,7 @@ describe('PUT /media/:id — invalid field value', () => {
     it('422s with details.fields', async () => {
         const item = await mediaService.upload({
             file: new File(['hello' as BlobPart], 'doc.txt', { type: 'text/plain' }),
+            fields: { caption: 'A caption' },
         });
 
         const app = mountedApp();

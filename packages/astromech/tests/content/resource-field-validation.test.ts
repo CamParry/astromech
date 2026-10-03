@@ -97,12 +97,11 @@ const ADAPTERS: Record<ResourceType, Adapter> = {
         },
     },
     media: {
-        // An upload carries no fields, so the first write of them is an update.
-        async save(fields) {
-            const file = new File(['hello'], 'doc.txt', { type: 'text/plain' });
-            const uploaded = await mediaService.upload({ file });
-            return mediaService.update({ id: uploaded.id, data: { fields } });
-        },
+        save: (fields) =>
+            mediaService.upload({
+                file: new File(['hello'], 'doc.txt', { type: 'text/plain' }),
+                fields,
+            }),
         update: (id, fields) => mediaService.update({ id, data: { fields } }),
         updateWithoutFields: {
             write: (id) => mediaService.update({ id, data: { alt: 'Described' } }),
@@ -178,10 +177,7 @@ describe.each(RESOURCE_TYPES)('%s', (kind) => {
     });
 
     describe('a default value', () => {
-        // Fails on media until an upload runs the field pipeline:
-        // `roadmap/planned/create-skips-field-pipeline.md`
-        const fillsDefault = kind === 'media' ? it.fails : it;
-        fillsDefault('fills a field the first write leaves out', async () => {
+        it('fills a field the first write leaves out', async () => {
             const saved = await adapter.save({ headline: 'Hi' });
             expect(saved.fields['tier']).toBe('free');
         });
