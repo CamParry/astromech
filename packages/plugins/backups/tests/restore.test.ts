@@ -7,6 +7,7 @@
 import type { PluginTestApp } from '@tests/plugin-app';
 import type { Migration, MigrationProvider } from 'kysely/migration';
 import { gzipSync } from 'node:zlib';
+import { expectConsole } from '@tests/console';
 import { makeUser, roleWith } from '@tests/fixtures';
 import { testMigrationProvider } from '@tests/test-db';
 import { sql } from 'kysely';
@@ -227,6 +228,26 @@ describe('POST /plugins/backups/runs/:id/restore', () => {
             error: 'the backup is not a SQLite database',
             details: { fields: { _: ['the backup is not a SQLite database'] } },
         });
+        expect(
+            (await app.entries.get({ type: 'note', id: note.id, full: true }))?.title
+        ).toBe('Original');
+    });
+
+    it('answers 500, logs the failure and changes nothing when the stored backup cannot be read', async () => {
+        expectConsole('error', 'Restore failed');
+        const note = await app.entries.create({
+            type: 'note',
+            data: { title: 'Original' },
+        });
+        const run = await takeBackup(app);
+        await app
+            .context()
+            .storage.put(artifactKey(run), new TextEncoder().encode('not gzip'));
+
+        const res = await restore(run.id);
+
+        expect(res.status).toBe(500);
+        expect(await res.json()).toEqual({ error: expect.any(String) });
         expect(
             (await app.entries.get({ type: 'note', id: note.id, full: true }))?.title
         ).toBe('Original');
