@@ -135,7 +135,11 @@ export type ResourceFilter = (
 ) => Expression<SqlBool>[];
 
 /** The reads and writes a resource's own repository composes over. */
-export type ContentRepository<R extends Resource, V extends Table = Table> = {
+export type ContentRepository<
+    R extends Resource,
+    O extends Table = Table,
+    V extends Table = Table,
+> = {
     /**
      * One item in one locale, read from its canonical (non-staged) content row,
      * or null. No fallback to another locale.
@@ -159,6 +163,24 @@ export type ContentRepository<R extends Resource, V extends Table = Table> = {
     }): Promise<R[]>;
     /** `COUNT(*)` over the join under `where`. */
     count(where: JoinedWhere): Promise<number>;
+    /**
+     * `conditions` over the default locale's canonical rows, one per resource:
+     * the rows a list reads before `findMany` reads each in its own locale.
+     * The default locale resolves when this is called.
+     */
+    whereDefaultLocale(
+        conditions: (eb: Parameters<JoinedWhere>[0]) => Expression<SqlBool>[]
+    ): JoinedWhere;
+    /**
+     * Every content row written in `locale`, staged rows included. Skips the
+     * resource filter, so for entries it would return trashed rows too.
+     */
+    findByLocale(locale: string): Promise<R[]>;
+    /**
+     * The resource rows for `ids`, in slices small enough for one `IN (…)` each.
+     * Skips the resource filter, so for entries it would return trashed rows too.
+     */
+    findResourceRows(ids: Iterable<string>): Promise<TableSelect<O>[]>;
     /** Insert the resource row and its first content row. */
     create(resourceRow: Record<string, unknown>, content: ContentWrite): Promise<R>;
     /**

@@ -20,7 +20,6 @@ import { buildOrderBy } from '@/content/list';
 import { createContentRepository } from '@/content/repository/content-table';
 import { relationshipRepository } from '@/content/repository/relationships';
 import { sortableColumns } from '@/content/resources';
-import { chunks } from '@/database/chunks';
 import { kyselyTableKey } from '@/database/codec';
 import { createRepository } from '@/database/repository/create-repository';
 import { mediaContentTable, mediaTable, mediaVersionsTable } from '@/database/tables';
@@ -137,7 +136,6 @@ function createMediaRepository() {
     );
 
     const resourceKey = kyselyTableKey(mediaTable.name);
-    const contentKey = kyselyTableKey(mediaContentTable.name);
 
     /**
      * The library list predicate. Rows and count share it so the two cannot
@@ -146,18 +144,15 @@ function createMediaRepository() {
      */
     function filter(params: MediaListParams): JoinedWhere {
         const { search } = params;
-        const defaultLocale = getDefaultContentLocale();
-        return (eb) => {
-            const conditions: Expression<SqlBool>[] = [
-                eb(`${contentKey}.locale`, '=', defaultLocale),
-            ];
+        return content.whereDefaultLocale((eb) => {
+            const conditions: Expression<SqlBool>[] = [];
             if (search) {
                 conditions.push(eb(`${resourceKey}.filename`, 'like', `%${search}%`));
             }
             const bucket = mimeBucket(eb, resourceKey, params.where?.mimeType);
             if (bucket) conditions.push(bucket);
-            return eb.and(conditions);
-        };
+            return conditions;
+        });
     }
 
     /**
@@ -180,19 +175,10 @@ function createMediaRepository() {
         return content.count(filter(params));
     }
 
-    /** Every content row written in `locale`, for the stored-content validation report. */
-    async function findByLocale(locale: string): Promise<MediaResource[]> {
-        const raw = await content
-            .kysely()
-            .joined()
-            .where((eb) => eb(`${contentKey}.locale`, '=', locale))
-            .execute();
-        return content.decodeRows(raw);
-    }
-
     /**
-     * One media item in `locale` (the default when absent). With
-     * `fallbackLocale`, a miss reads that locale instead.
+     * One media item in `locale` (the default when absent). With `fallbackLocale`,
+     * a miss reads that locale instead. Kept per resource: a user's read then
+     * falls back to any locale too.
      */
     async function findOne(
         id: string,
@@ -205,15 +191,6 @@ function createMediaRepository() {
             return found;
         }
         return content.findOne({ id, locale: fallbackLocale });
-    }
-
-    /** The file rows for `ids`, in slices small enough for one `IN (…)` each. */
-    async function findFiles(ids: Iterable<string>): Promise<MediaTableRow[]> {
-        const rows: MediaTableRow[] = [];
-        for (const chunk of chunks(ids)) {
-            rows.push(...(await resourceRows.findMany({ where: { id: { in: chunk } } })));
-        }
-        return rows;
     }
 
     async function create(
@@ -229,23 +206,30 @@ function createMediaRepository() {
      * item that is gone.
      */
     async function del(id: string): Promise<void> {
+        // Not in `content.delete`: entries drop theirs in their services instead.
         await relationshipRepository.deleteByResource(id, 'media');
         await content.delete(id);
     }
 
+    // Hand-picked, never spread (`DECISIONS.md`, "Resource repositories do not
+    // extend a base"), so a content-repository change reaches no resource unasked.
     return {
         findOne,
         findAnyLocale: content.findAnyLocale,
         findMany,
         count,
-        findByLocale,
+        findByLocale: content.findByLocale,
         /** The file row alone, with no authored content, or null. */
         findFile: (id: string): Promise<MediaTableRow | null> =>
             resourceRows.findOne({ id }),
-        findFiles,
+        /** The file rows for `ids`. */
+        findFiles: content.findResourceRows,
         create,
         update: content.update,
-        /** Write the file-row columns, whatever the locale. */
+        /**
+         * Write the file-row columns, whatever the locale. Kept per resource: the
+         * patch type names this table's columns.
+         */
         updateFile: async (id: string, patch: MediaFilePatch): Promise<void> => {
             await resourceRows.update(id, patch);
         },

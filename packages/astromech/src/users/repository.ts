@@ -8,14 +8,12 @@ import type { NewUserTableRow, UserContentRow, UserTableRow } from './tables';
 import type { ContentWrite, JoinedWhere, Resource } from '@/content/repository/types';
 import type { Patch } from '@/database/repository/create-repository';
 import type { JsonObject, SortOption } from '@/types/index';
-import type { Expression, SqlBool } from 'kysely';
 import { sql } from 'kysely';
 import { getDefaultContentLocale } from '@/config/content-locale';
 import { buildOrderBy } from '@/content/list';
 import { createContentRepository } from '@/content/repository/content-table';
 import { relationshipRepository } from '@/content/repository/relationships';
 import { sortableColumns } from '@/content/resources';
-import { chunks } from '@/database/chunks';
 import { encodeWith, kyselyTableKey } from '@/database/codec';
 import { createRepository } from '@/database/repository/create-repository';
 import {
@@ -93,7 +91,6 @@ function createUserRepository() {
     );
 
     const resourceKey = kyselyTableKey(usersTable.name);
-    const contentKey = kyselyTableKey(userContentTable.name);
 
     /**
      * The list predicate. Rows and count share it so the two cannot drift; the
@@ -101,21 +98,16 @@ function createUserRepository() {
      */
     function filter(params: UserListParams): JoinedWhere {
         const { search } = params;
-        const defaultLocale = getDefaultContentLocale();
-        return (eb) => {
-            const conditions: Expression<SqlBool>[] = [
-                eb(`${contentKey}.locale`, '=', defaultLocale),
-            ];
-            if (search) {
-                conditions.push(
-                    eb.or([
-                        eb(`${resourceKey}.name`, 'like', `%${search}%`),
-                        eb(`${resourceKey}.email`, 'like', `%${search}%`),
-                    ])
-                );
-            }
-            return eb.and(conditions);
-        };
+        return content.whereDefaultLocale((eb) =>
+            search
+                ? [
+                      eb.or([
+                          eb(`${resourceKey}.name`, 'like', `%${search}%`),
+                          eb(`${resourceKey}.email`, 'like', `%${search}%`),
+                      ]),
+                  ]
+                : []
+        );
     }
 
     /**
@@ -138,20 +130,10 @@ function createUserRepository() {
         return content.count(filter(params));
     }
 
-    /** Every content row written in `locale`, for the stored-content validation report. */
-    async function findByLocale(locale: string): Promise<UserResource[]> {
-        const raw = await content
-            .kysely()
-            .joined()
-            .where((eb) => eb(`${contentKey}.locale`, '=', locale))
-            .execute();
-        return content.decodeRows(raw);
-    }
-
     /**
      * One user in `locale` (the default when absent). With `fallbackLocale`, a
-     * miss reads that locale, then any locale the user has; a user with no
-     * content row reads as null.
+     * miss reads that locale, then any locale the user has (media stops at the
+     * fallback, so each keeps its own); a user with no content row reads null.
      */
     async function findOne(
         id: string,
@@ -166,15 +148,6 @@ function createUserRepository() {
             if (fallback) return fallback;
         }
         return content.findAnyLocale(id);
-    }
-
-    /** The `users` rows for `ids`, in slices small enough for one `IN (…)` each. */
-    async function findUserRows(ids: Iterable<string>): Promise<UserTableRow[]> {
-        const rows: UserTableRow[] = [];
-        for (const chunk of chunks(ids)) {
-            rows.push(...(await resourceRows.findMany({ where: { id: { in: chunk } } })));
-        }
-        return rows;
     }
 
     async function create(
@@ -234,20 +207,24 @@ function createUserRepository() {
      */
     async function del(id: string): Promise<void> {
         // Relationship rows first: deleting the user row is what orphans them.
+        // Not in `content.delete`: entries drop theirs in their services instead.
         await relationshipRepository.deleteByResource(id, 'user');
         await content.delete(id);
     }
 
+    // Hand-picked, never spread (`DECISIONS.md`, "Resource repositories do not
+    // extend a base"), so a content-repository change reaches no resource unasked.
     return {
         findOne,
         findAnyLocale: content.findAnyLocale,
         findMany,
         count,
-        findByLocale,
+        findByLocale: content.findByLocale,
         /** The `users` row alone, the one better-auth writes, or null. */
         findUserRow: (id: string): Promise<UserTableRow | null> =>
             resourceRows.findOne({ id }),
-        findUserRows,
+        /** The `users` rows for `ids`. */
+        findUserRows: content.findResourceRows,
         /** Every user's id. */
         findIds: (): Promise<string[]> => resourceRows.pluck('id'),
         /** The ids of the users holding `role`. */
@@ -259,7 +236,10 @@ function createUserRepository() {
         createIfEmpty,
         createCredentialAccount,
         update: content.update,
-        /** Write the `users` row columns, whatever the locale. */
+        /**
+         * Write the `users` row columns, whatever the locale. Kept per resource: the
+         * patch type names this table's columns.
+         */
         updateUserRow: async (id: string, patch: UserRowPatch): Promise<void> => {
             await resourceRows.update(id, patch);
         },
