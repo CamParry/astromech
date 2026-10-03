@@ -8,15 +8,15 @@ The user has asked for a **retrospective**. You are suggesting improvements to t
 
 ## Steps
 
-1. Call the Skill tool with `writing-for-agents` for the writing style guide.
+1. Write in plain English, as `AGENTS.md` ("Documentation") and the user's own instructions ask: short sentences, the established word, no em dashes.
 
-2. Read the primary sources for the session the user specifies. This may mean searching through session logs on this machine. If the user doesn't specify a session, default to the current one.
+2. Read the primary sources for the session the user specifies. Session logs are the `.jsonl` files under `~/.claude/projects/-Users-cam-Documents-Projects-Astromech/`; the memory notes beside them record lessons already learned. If the user doesn't specify a session, default to the current one.
 
 3. Look for candidates for improvement in these categories.
 
 - **Navigation**: how easy was it for the agent to find the right files? Are there hidden dependencies between files? Would a **navigation pointer** make it easier? _Use when_ the session took a long time to find a piece of information.
-- **Automated checks**: are there automated checks that could catch errors the agent made? Linting, typing, tests, filesystem linters? Read the repo's own check command first (its `package.json`/build-tool `lint`/`check` scripts, its CI workflow), so a check that already exists but sits unwired or silently broken is the finding, not a reinvention. A repo with no **guardrail** (no pre-commit hook and no CI job running its lint/typecheck/test command) is itself a finding: an un-linted repo is a standing missed opportunity, not a neutral default. _Use when_ the agent made a mistake an automated check could have caught, or the repo has no guardrail at all.
-- **Coding standards**: should the **reviewer agent** be given a new rule to enforce? Should an existing rule be removed or clarified? Classify the violation first: a **mechanical** one (a fixed syntactic pattern, a banned API, an import shape, a file-location rule) gets a deterministic check, full stop: a custom rule in the repo's own linter, a new pre-commit hook, or a new CI job, whichever the repo's language and existing guardrail make cheapest. Default to building the check over writing the rule. Reserve `CODING_STANDARDS.md` for genuine **judgement calls** (cross-file consistency, "matches the surrounding style," anything no guardrail could ever substitute for). _Use when_ the reviewer agent failed to catch a mistake.
+- **Automated checks**: are there automated checks that could catch errors the agent made? Linting, typing, tests, filesystem linters? Read the repo's own checks first (the table in `AGENTS.md`, the scripts in `package.json` and `scripts/`, the pre-commit hook, and `.github/workflows/ci.yml`), so a check that already exists but sits unwired or silently broken is the finding, not a reinvention. A repo with no **guardrail** (no pre-commit hook and no CI job running its lint/typecheck/test command) is itself a finding: an un-linted repo is a standing missed opportunity, not a neutral default. _Use when_ the agent made a mistake an automated check could have caught, or the repo has no guardrail at all.
+- **Coding standards**: should the review (the `review` skill, and the `audit` brief in `.claude/_agents/audit.md`) enforce a new rule? Should an existing rule be removed or clarified? Classify the violation first: a **mechanical** one (a fixed syntactic pattern, a banned API, an import shape, a file-location rule) gets a deterministic check, full stop: a custom rule in `eslint.config.js`, a script under `scripts/`, the pre-commit hook, or a CI job, whichever is cheapest. Default to building the check over writing the rule. Reserve the `code`, `api` and `testing` skills for genuine **judgement calls** (cross-file consistency, "matches the surrounding style," anything no guardrail could ever substitute for). _Use when_ the review failed to catch a mistake.
 - **Global AGENTS.md**: are there any steering instructions that should be moved to coding standards (or automated checks) instead? _Use when_ the AGENTS.md file is particularly large - in the repo OR the user's global scope.
 - **Tool economy**: did the agent make expensive tool calls that could be streamlined? Is there any custom tooling (CLI's, MCP's) that is particularly token-inefficient? _Use when_ the agent made an expensive tool call.
 - **No-ops**: look for instructions in steering files that don't modify the agent's behavior. _Use when_ the steering files are large and unwieldy.
@@ -38,7 +38,8 @@ This means that the review agent should be responsible for imposing coding stand
 
 You have access to several files in the repo:
 
-- `CLAUDE.md`/`AGENTS.md`: these files are pushed to the context window of any agent working in this repo. They should be used incredibly sparingly, usually only for **navigation pointers** to other files.
-- `CODING_STANDARDS.md`: this file is read during review, not implementation. Add **navigation pointers** to docs folders if the standards file gets more than 1,000 lines long.
-- Docs: use docs as references files, pointed to by other files. Look for existing docs before writing new ones.
-- Skills: use skills for docs (since their description goes into the agent's context window), or for user-invoked commands. Follow the advice in the `writing-for-agents` skill.
+- `AGENTS.md` and the nested `AGENTS.md` files: these are pushed to the context window of any agent working in this repo. Use them sparingly, mostly for **navigation pointers** to other files.
+- The standards skills (`code`, `api`, `testing` under `.claude/skills/`): read by the review as well as during implementation. The `css`, `docs` and `ui` skills are parked under `.claude/_skills/` on purpose; revive one only as goals with reasons, never as a list of rules.
+- Docs: `ARCHITECTURE.md`, `TERMINOLOGY.md`, `DECISIONS.md` and `roadmap/`, pointed to by other files. A fact lives in one file. Look for an existing doc before writing a new one.
+- Skills: use a skill for reference docs (its description goes into the agent's context window) or for a user-invoked command.
+- Memory notes: a lesson that keeps recurring there is a candidate for a check or a hook instead.

@@ -6,11 +6,12 @@ From a comparison with Matt Pocock's course-video-manager
 unless they start with a top-level folder; line numbers were taken on
 2026-10-01 and may have drifted.
 
-## Waits for
+## Next
 
-Another session was rewriting `.claude/` on 2026-10-02 (the `review` and
-`retro` skills, `_agents/audit.md`). Once that lands, check which of items 20,
-21 and 26 still hold, then move this file to `planned/`.
+The `.claude/` rewrite another session was doing landed on 2026-10-03: the
+`audit` brief (`.claude/_agents/audit.md`, replacing `reviewer`) and the
+`retro` and `review` skills. Check which items below still hold, then move
+this file to `planned/`.
 
 ## The work
 
@@ -56,7 +57,7 @@ Another session was rewriting `.claude/` on 2026-10-02 (the `review` and
 - [ ] **Refresh the Matt Pocock skills.** `grilling` is the old
       one-question-at-a-time version. `ubiquitous-language` was removed
       upstream but `.claude/commands/plan.md:28` still recommends it. Link
-      `retro`, `diagnosing-bugs`, `pr` and `writing-for-agents`. Add a note to
+      `diagnosing-bugs`, `pr` and `writing-for-agents`. Add a note to
       `AGENTS.md` mapping his `GLOSSARY.md`, ADRs and specs to
       `TERMINOLOGY.md`, `DECISIONS.md` and `roadmap/`, so `code-review` finds
       them.
