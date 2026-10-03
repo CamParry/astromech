@@ -1,9 +1,10 @@
 /**
  * Every resource answers the shared behaviour the same way: a read is its public
  * shape, a missing one is a 404, a locale it cannot hold is refused, a version
- * round-trips, a canonical write stamps the resource row's `updatedAt`, its
- * references reach `usedBy`, and an unknown sort answers 400. How each resource
- * is called differs, and that difference is the adapter table below.
+ * holds the columns its config names and round-trips, a canonical write stamps
+ * the resource row's `updatedAt`, its references reach `usedBy`, and an unknown
+ * sort answers 400. How each resource is called differs, and that difference is
+ * the adapter table below.
  */
 
 import type { JsonObject, ResourceType } from '@/types/index';
@@ -12,6 +13,12 @@ import { createTestDb, makeTestConfig, setupTestConfig } from '@tests/harness';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { currentServices } from '@/app-context/services';
 import { RESOURCE_CONFIG } from '@/content/resources';
+import {
+    entryVersionsTable,
+    globalVersionsTable,
+    mediaVersionsTable,
+    userVersionsTable,
+} from '@/database/tables';
 import { mediaRepository } from '@/media/repository';
 import { RESOURCE_TYPES } from '@/types/domain';
 
@@ -42,6 +49,14 @@ type Adapter = {
     /** A list sorted by `sort`; absent for a resource with no list. */
     list?: (sort: Record<string, 'asc' | 'desc'>) => Promise<unknown>;
 };
+
+/** Each resource's versions table, which a snapshot copies its columns into. */
+const VERSIONS_TABLES = {
+    entry: entryVersionsTable,
+    global: globalVersionsTable,
+    user: userVersionsTable,
+    media: mediaVersionsTable,
+} as const satisfies Record<ResourceType, { columns: object }>;
 
 /** Each resource declares a `title` text field and a `logo` media field. */
 const FIELDS = [
@@ -188,6 +203,15 @@ describe.each(RESOURCE_TYPES)('%s', (kind) => {
         await expect(adapter.update(id, { title: 'Eins' }, 'de')).rejects.toMatchObject({
             name: 'ResourceValidationError',
         });
+    });
+
+    it('versions the columns its versions table holds, beside the fields', () => {
+        const metadata = ['id', 'contentId', 'version', 'createdAt', 'createdBy'];
+        const copied = Object.keys(VERSIONS_TABLES[kind].columns).filter(
+            (column) => !metadata.includes(column) && column !== 'fields'
+        );
+
+        expect(copied.sort()).toEqual([...RESOURCE_CONFIG[kind].versionedColumns].sort());
     });
 
     it('round-trips a version', async () => {

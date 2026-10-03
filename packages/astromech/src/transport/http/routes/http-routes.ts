@@ -276,6 +276,7 @@ export const ENTRIES_ROUTE_SPECS = [
         path: '/:type/:id/staged/merge',
         id: 'entries.mergeStaged',
         queryArgs: ['locale'],
+        refusals: ENTRY_TRASHED,
     },
     {
         verb: 'delete',

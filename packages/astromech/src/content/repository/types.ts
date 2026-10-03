@@ -231,9 +231,9 @@ export type ContentRepository<
             values: JsonObject
         ): Promise<void>;
         /**
-         * Add the locale `ref` names, copied from the content row the guard
-         * names with `data` over it, and stamp the resource row, while the
-         * guard's conditions hold; null when they do not, with nothing written.
+         * Entries only: add the locale `ref` names, copied from the content row
+         * the guard names with `data` over it, and stamp the resource row, while
+         * the guard's conditions hold; null when they do not, with nothing written.
          */
         create(ref: ContentRef, data: ContentWrite, guard: WriteGuard): Promise<R | null>;
     };

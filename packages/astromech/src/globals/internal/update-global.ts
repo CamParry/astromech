@@ -8,6 +8,7 @@ import type {
     ResolvedConfig,
     ResolvedGlobal,
 } from '@/types/index';
+import type { MethodContext } from '@/types/methods';
 import { assertCapability } from '@/content/capabilities';
 import { resolveResourceLocale } from '@/content/locale';
 import { patchedFieldNames } from '@/content/prepare-fields';
@@ -159,6 +160,30 @@ export async function updateGlobalLocale(
     });
 
     return updated;
+}
+
+/**
+ * Moves one locale of a global to `status`, for the status methods: an update of
+ * the status alone, so the update hooks fire, on a row that must already exist.
+ * `publishedAt` is a schedule's time; publish and unpublish derive it.
+ */
+export function changeGlobalStatus(
+    params: { key: string; locale?: string | undefined; publishedAt?: Date | undefined },
+    status: EntryStatus,
+    ctx: AppContext & MethodContext
+): Promise<GlobalResource> {
+    const { key, publishedAt } = params;
+
+    return updateGlobalLocale(
+        {
+            key,
+            locale: params.locale,
+            createMissingLocale: false,
+            method: ctx.method.name,
+            data: { status, ...(publishedAt === undefined ? {} : { publishedAt }) },
+        },
+        ctx
+    );
 }
 
 /**

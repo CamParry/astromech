@@ -5,11 +5,14 @@
  * resource's versioned value and snapshot shape is a row in the adapter table.
  */
 
+import type { Db } from '@/database/types';
 import type { PluginHooks, ResolvedConfig, ResourceType } from '@/types/index';
 import {
     createTestDb,
+    createTestUser,
     makeTestConfig,
     registerTestPlugins,
+    runAsUser,
     setupTestConfig,
 } from '@tests/harness';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
@@ -26,7 +29,7 @@ const mediaService = currentServices.media;
 const usersService = currentServices.users;
 
 /** One saved version's metadata, as `versions` lists it. */
-type VersionItem = { version: number; locale: string };
+type VersionItem = { version: number; locale: string; createdBy: string | null };
 
 /** One version read back, as `getVersion` answers it. */
 type VersionRead = VersionItem & { snapshot: object };
@@ -64,6 +67,9 @@ type Adapter = {
 
 /** The resolved config of the current test, for registering a probe plugin. */
 let resolved: ResolvedConfig;
+
+/** The current test's database, for creating an acting user. */
+let db: Db;
 
 /** Register a probe plugin whose hooks run once each. */
 function probe(hooks: PluginHooks): void {
@@ -252,7 +258,7 @@ const ADAPTERS: Record<ResourceType, Adapter> = {
 };
 
 beforeEach(async () => {
-    await createTestDb();
+    db = await createTestDb();
     resolved = setupTestConfig({
         ...makeTestConfig(),
         globals: [
@@ -360,6 +366,19 @@ describe.each(RESOURCE_TYPES)('%s', (kind) => {
             const version = await adapter.getVersion(id, latest?.version ?? 0);
             expect(adapter.snapshotValue(version.snapshot)).toBe('between');
             expect(adapter.valueOf(await adapter.read(id))).toBe('two');
+        });
+
+        it('credits a version to the acting user, and to nobody outside a request', async () => {
+            const editor = await createTestUser(db, { name: 'Editor' });
+            const id = await adapter.create('one');
+            await runAsUser(editor, () => adapter.write(id, 'two'));
+            await adapter.write(id, 'three');
+
+            const versions = await adapter.versions(id);
+            expect(versions.map((v) => [v.version, v.createdBy])).toEqual([
+                [2, null],
+                [1, editor.id],
+            ]);
         });
 
         it('throws for a locale with no content row', async () => {

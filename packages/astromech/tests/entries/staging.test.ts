@@ -265,6 +265,61 @@ describe('the entry row stamp and divergence', () => {
 });
 
 describe('mergeStaged', () => {
+    it('refuses to merge a staged change into a trashed entry', async () => {
+        const entry = await api.create({ type: 'post', data: { title: 'Live' } });
+        await api.createStaged({ type: 'post', id: entry.id });
+        await api.update({
+            type: 'post',
+            id: entry.id,
+            staged: true,
+            data: { title: 'Staged' },
+        });
+        await api.trash({ type: 'post', id: entry.id });
+
+        const refused = await api
+            .mergeStaged({ type: 'post', id: entry.id })
+            .catch((err: unknown) => err);
+
+        expect(refused).toBeInstanceOf(ResourceConflictError);
+        expect(refused).toMatchObject({
+            status: 409,
+            code: 'CONFLICT',
+            details: { reason: 'trashed' },
+        });
+        const trashed = await api.query({ type: 'post', full: true, trashed: true });
+        expect(trashed.data.map((row) => row.title)).toEqual(['Live']);
+        expect(await stagedTitles(entry.id)).toEqual(['Staged']);
+    });
+
+    it('refuses a merge when the entry is trashed between the read and the write', async () => {
+        const entry = await api.create({ type: 'post', data: { title: 'Live' } });
+        await api.createStaged({ type: 'post', id: entry.id });
+        await api.update({
+            type: 'post',
+            id: entry.id,
+            staged: true,
+            data: { title: 'Staged' },
+        });
+        const findStaged = entryRepository.staging.findOne.bind(entryRepository.staging);
+        // The merge reads the staged change, then a competing call trashes the entry.
+        vi.spyOn(entryRepository.staging, 'findOne').mockImplementationOnce(
+            async (ref) => {
+                const row = await findStaged(ref);
+                await api.trash({ type: 'post', id: entry.id });
+                return row;
+            }
+        );
+
+        const refused = api.mergeStaged({ type: 'post', id: entry.id });
+
+        await expect(refused).rejects.toBeInstanceOf(ResourceConflictError);
+        await expect(refused).rejects.toMatchObject({ details: { reason: 'trashed' } });
+        const trashed = await api.query({ type: 'post', full: true, trashed: true });
+        expect(trashed.data.map((row) => row.title)).toEqual(['Live']);
+        expect(await stagedTitles(entry.id)).toEqual(['Staged']);
+        expect(await api.versions({ type: 'post', id: entry.id })).toEqual([]);
+    });
+
     it('merges staged content + relations into the canonical, preserving id/status', async () => {
         const target = await api.create({
             type: 'post',

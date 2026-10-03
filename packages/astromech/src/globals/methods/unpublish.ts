@@ -1,7 +1,7 @@
 import type { GlobalResource } from '../repository';
 import { defineServiceMethod } from '@/services/define-service-method';
 import { globalAccess } from '../internal/access';
-import { updateGlobalLocale } from '../internal/update-global';
+import { changeGlobalStatus } from '../internal/update-global';
 import { globalSchema, localised } from '../schema';
 
 /**
@@ -19,17 +19,6 @@ export const unpublishGlobal = defineServiceMethod({
     destructive: true,
     idempotent: true,
     handler(params, ctx): Promise<GlobalResource> {
-        const { key } = params;
-
-        return updateGlobalLocale(
-            {
-                key,
-                locale: params.locale,
-                createMissingLocale: false,
-                method: ctx.method.name,
-                data: { status: 'unpublished' },
-            },
-            ctx
-        );
+        return changeGlobalStatus(params, 'unpublished', ctx);
     },
 });

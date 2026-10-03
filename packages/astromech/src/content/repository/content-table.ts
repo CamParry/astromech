@@ -23,7 +23,7 @@ import type { GuardFailure, WriteGuard } from '@/content/write-guard';
 import type { Table, TableSelect } from '@/database/define-table';
 import type { GenericDb } from '@/database/repository/create-repository';
 import type { JsonObject } from '@/types/index';
-import type { Expression, ExpressionWrapper, SqlBool } from 'kysely';
+import type { AliasableExpression, Expression, ExpressionWrapper, SqlBool } from 'kysely';
 import { getDefaultContentLocale } from '@/config/content-locale';
 import { stagedConflict, trashConflict } from '@/content/write-guard';
 import { chunks, MAX_BOUND_PARAMETERS } from '@/database/chunks';
@@ -593,40 +593,30 @@ export function createContentRepository<
             contentId: guard.contentId,
             createdBy,
         }) as Record<string, unknown>;
-        const handle = db();
-        const select = handle
-            .selectFrom(contentKey)
-            .select((eb) => [
-                ...Object.entries(stamped).map(([column, value]) =>
-                    eb.val(value).as(column)
-                ),
-                eb(
-                    eb
-                        .selectFrom(versionsKey)
-                        .select((inner) =>
-                            inner.fn
-                                .coalesce(
-                                    inner.fn.max(`${versionsKey}.version`),
-                                    inner.lit(0)
-                                )
-                                .as('latest')
-                        )
-                        .where(`${versionsKey}.contentId`, '=', guard.contentId),
-                    '+',
-                    1
-                ).as('version'),
-                ...snapshotColumns.map((column) =>
-                    eb.ref(`${contentKey}.${column}`).as(column)
-                ),
-            ])
-            .where((eb) => eb.and(guardConditions(eb, guard)));
-        const inserted = await handle
-            .insertInto(versionsKey)
-            .columns([...Object.keys(stamped), 'version', ...snapshotColumns] as never)
-            .expression(select as never)
-            .returning('id' as never)
-            .execute();
-        return inserted.length > 0;
+        return insertCopy({
+            into: versionsKey,
+            columns: [...Object.keys(stamped), 'version', ...snapshotColumns],
+            values: stamped,
+            computed: {
+                version: (eb) =>
+                    eb(
+                        eb
+                            .selectFrom(versionsKey)
+                            .select((inner) =>
+                                inner.fn
+                                    .coalesce(
+                                        inner.fn.max(`${versionsKey}.version`),
+                                        inner.lit(0)
+                                    )
+                                    .as('latest')
+                            )
+                            .where(`${versionsKey}.contentId`, '=', guard.contentId),
+                        '+',
+                        1
+                    ),
+            },
+            guard,
+        });
     }
 
     async function explainConflict(guard: WriteGuard): Promise<GuardFailure | null> {
@@ -649,8 +639,8 @@ export function createContentRepository<
 
     /**
      * Insert a content row copied from the row the guard names, with `values`
-     * over its columns, while the guard's conditions hold: one
-     * `INSERT ... SELECT`. The new row's id, or null with nothing written.
+     * over its columns, while the guard's conditions hold. The new row's id,
+     * or null with nothing written.
      */
     async function insertFrom(
         guard: WriteGuard,
@@ -658,24 +648,52 @@ export function createContentRepository<
     ): Promise<ContentRowId | null> {
         // The id and timestamps come from the columns' app defaults.
         const encoded = encodeWith(shape.contentTable, values) as Record<string, unknown>;
+        const written = await insertCopy({
+            into: contentKey,
+            columns: contentColumns,
+            values: encoded,
+            guard,
+        });
+        return written ? (String(encoded['id']) as ContentRowId) : null;
+    }
+
+    /**
+     * Insert one row into `into`, copied from the content row the guard names,
+     * while the guard's conditions hold: one `INSERT ... SELECT`. A column takes
+     * its encoded `values` entry, else its `computed` expression, else the
+     * content row's column of the same name. False when nothing was written.
+     */
+    async function insertCopy(params: {
+        into: string;
+        columns: readonly string[];
+        values: Record<string, unknown>;
+        computed?: Record<
+            string,
+            (eb: Parameters<JoinedWhere>[0]) => AliasableExpression<unknown>
+        >;
+        guard: WriteGuard;
+    }): Promise<boolean> {
+        const { into, columns, values, guard } = params;
+        const computed = params.computed ?? {};
         const handle = db();
         const select = handle
             .selectFrom(contentKey)
             .select((eb) =>
-                contentColumns.map((column) =>
-                    column in encoded
-                        ? eb.val(encoded[column]).as(column)
-                        : eb.ref(`${contentKey}.${column}`).as(column)
-                )
+                columns.map((column) => {
+                    if (column in values) return eb.val(values[column]).as(column);
+                    const expression = computed[column];
+                    if (expression !== undefined) return expression(eb).as(column);
+                    return eb.ref(`${contentKey}.${column}`).as(column);
+                })
             )
             .where((eb) => eb.and(guardConditions(eb, guard)));
         const inserted = await handle
-            .insertInto(contentKey)
-            .columns(contentColumns as never)
+            .insertInto(into)
+            .columns(columns as never)
             .expression(select as never)
             .returning('id' as never)
             .execute();
-        return inserted.length > 0 ? (String(encoded['id']) as ContentRowId) : null;
+        return inserted.length > 0;
     }
 
     /** One content row by its own id, staged or not, joined to its resource row. */
