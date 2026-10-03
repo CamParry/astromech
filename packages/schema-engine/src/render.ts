@@ -32,10 +32,10 @@ export function renderOpStatements(op: TableOp, dialect: SqlDialect): string[] {
             return [`DROP INDEX \`${op.name}\``];
         case 'createIndex':
             return [renderCreateIndex(op.table, op.index)];
-        case 'addColumn':
-            return [
-                `ALTER TABLE \`${op.table}\` ADD COLUMN ${renderColumnClause(op.column)}`,
-            ];
+        case 'addColumn': {
+            const clause = renderColumnClause(op.column, { table: op.table });
+            return [`ALTER TABLE \`${op.table}\` ADD COLUMN ${clause}`];
+        }
         case 'rebuildTable': {
             const tmpName = `__new_${op.table.name}`;
             const statements: string[] = [
@@ -49,11 +49,11 @@ export function renderOpStatements(op: TableOp, dialect: SqlDialect): string[] {
             if (op.copy.length > 0) {
                 const columns = op.copy.map((c) => `\`${c.column}\``).join(', ');
                 const selects = op.copy
-                    .map((c) =>
-                        c.coalesceDefault !== undefined
-                            ? `COALESCE(\`${c.column}\`, ${renderLiteral(c.coalesceDefault)})`
-                            : `\`${c.column}\``
-                    )
+                    .map((c) => {
+                        if (c.coalesceDefault === undefined) return `\`${c.column}\``;
+                        const subject = `the default of \`${op.table.name}\`.\`${c.column}\``;
+                        return `COALESCE(\`${c.column}\`, ${renderLiteral(c.coalesceDefault, subject)})`;
+                    })
                     .join(', ');
                 statements.push(
                     `INSERT INTO \`${tmpName}\` (${columns}) SELECT ${selects} FROM \`${op.table.name}\``
@@ -90,20 +90,43 @@ export function renderStatementLine(statement: string): string {
     return `    await sql\`\n${indented}\n    \`.execute(db);`;
 }
 
-/** Render a complete generated migration module — every op's statements, in
- *  order, as one `up(db)` function. No `down()` (forward-only). */
+/**
+ * Render a complete generated migration module: every op's statements, in
+ * order, as one `up(db)` function, and no `down()` (forward-only). A
+ * migration with a rebuild ends with {@link FOREIGN_KEY_CHECK}.
+ */
 export function renderMigrationFile(ops: TableOp[], dialect: SqlDialect): string {
     const statements = ops.flatMap((op) => renderOpStatements(op, dialect));
-    const body =
-        statements.length > 0
-            ? statements.map(renderStatementLine).join('\n')
-            : '    // no-op';
+    const rebuilds = ops.some((op) => op.kind === 'rebuildTable');
+    const lines = statements.map(renderStatementLine);
+    if (rebuilds) {
+        lines.push(
+            '    await assertForeignKeys(db);',
+            renderStatementLine('PRAGMA defer_foreign_keys = false')
+        );
+    }
     return [
         "import { sql, type Kysely } from 'kysely';",
         '',
         'export async function up(db: Kysely<unknown>): Promise<void> {',
-        body,
+        lines.length > 0 ? lines.join('\n') : '    // no-op',
         '}',
         '',
+        ...(rebuilds ? [FOREIGN_KEY_CHECK, ''] : []),
     ].join('\n');
 }
+
+/**
+ * Run after a migration's last statement: turning `defer_foreign_keys` off
+ * then clears the violations a rebuild's `DROP TABLE` counted (the `RENAME`
+ * does not take them back), so the commit goes through once the check passes.
+ */
+const FOREIGN_KEY_CHECK = [
+    '/** Throw, naming the rows, if a row points at a row that does not exist. */',
+    'async function assertForeignKeys(db: Kysely<unknown>): Promise<void> {',
+    '    const { rows } = await sql`PRAGMA foreign_key_check`.execute(db);',
+    '    if (rows.length > 0) {',
+    '        throw new Error(`foreign key check failed: ${JSON.stringify(rows)}`);',
+    '    }',
+    '}',
+].join('\n');

@@ -5,7 +5,9 @@
  */
 
 import type { PluginTestApp } from '@tests/plugin-app';
+import { expectConsole } from '@tests/console';
 import { makeUser, roleWith } from '@tests/fixtures';
+import { sql } from 'kysely';
 import { beforeEach, describe, expect, it } from 'vitest';
 import { backups } from '../src/index';
 import { createBackupsApp, takeBackup } from './_support/backups-app';
@@ -66,6 +68,35 @@ describe('POST /plugins/backups/runs/:id/restore', () => {
             ['manual', 'success'],
         ]);
         expect(runs.slice(1).map((run) => run.id)).toEqual([laterId, backupId]);
+    });
+
+    it('refuses a backup from another schema version and changes nothing', async () => {
+        const note = await app.entries.create({
+            type: 'note',
+            data: { title: 'Original' },
+        });
+        const backupId = (await takeBackup(app)).id;
+        await sql`INSERT INTO kysely_migration (name, timestamp) VALUES ('9999_later', '2026-10-03T00:00:00.000Z')`.execute(
+            app.db
+        );
+        await app.entries.update({
+            type: 'note',
+            id: note.id,
+            data: { title: 'Changed' },
+        });
+        expectConsole('error', 'Restore failed');
+
+        const res = await restore(backupId);
+
+        expect(res.status).toBe(500);
+        expect(await res.json()).toEqual({
+            error:
+                'the backup is from another schema version than the database ' +
+                '(migrations only in the database: 9999_later)',
+        });
+        expect(
+            (await app.entries.get({ type: 'note', id: note.id, full: true }))?.title
+        ).toBe('Changed');
     });
 
     it('answers 404 for a run that does not exist', async () => {

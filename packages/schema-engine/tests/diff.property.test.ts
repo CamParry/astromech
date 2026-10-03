@@ -6,20 +6,25 @@
  * add-column, index and rebuild paths. The strongest property is the parity
  * the README promises: build `a` in SQLite, apply the ops `diffSnapshots(a, b)`
  * returns, and the schema and the rows seeded into `a` match `b` built fresh
- * with the same rows. Two defects it found are kept as failing cases at the
- * end.
+ * with the same rows. Column order is not part of that contract
+ * (`DECISIONS.md`), so the schemas are compared without it. The defects it
+ * found are kept as cases at the end, the open one as an expected failure.
  */
 import type { TableOp } from '../src/diff';
 import type { Snapshot, SnapshotColumn, SnapshotTable } from '../src/model';
+import { mkdtemp, rm, writeFile } from 'node:fs/promises';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
+import { pathToFileURL } from 'node:url';
 import { createClient } from '@libsql/client';
 import { LibsqlDialect } from '@libsql/kysely-libsql';
 import fc from 'fast-check';
 import { Kysely, sql } from 'kysely';
-import { describe, expect, it } from 'vitest';
+import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { renderTableStatements } from '../src/ddl';
 import { diffSnapshots } from '../src/diff';
 import { dumpSchema } from '../src/oracle';
-import { renderOpStatements } from '../src/render';
+import { renderMigrationFile } from '../src/render';
 import { col, fk, index, snap, table } from './_support/tables';
 
 const TABLE_NAMES = ['alpha', 'beta', 'gamma'] as const;
@@ -51,7 +56,24 @@ const columnArb: fc.Arbitrary<SnapshotColumn> = fc
         }
     });
 
-function tableArb(name: string): fc.Arbitrary<SnapshotTable> {
+/**
+ * Only `c1` references, and only the `id` of a table earlier in `TABLE_NAMES`,
+ * so keys form chains (`gamma` → `beta` → `alpha`) but no cycle. A key prefers
+ * the table just before its own and brings its `c1` column, so a chain of
+ * keys is common enough for the drop-order cases to come up.
+ */
+function tableArb(name: (typeof TABLE_NAMES)[number]): fc.Arbitrary<SnapshotTable> {
+    const [nearest, ...further] = TABLE_NAMES.slice(
+        0,
+        TABLE_NAMES.indexOf(name)
+    ).reverse();
+    const target =
+        nearest === undefined
+            ? fc.constant(null)
+            : fc.oneof(
+                  { weight: 2, arbitrary: fc.constant(nearest) },
+                  { weight: 1, arbitrary: fc.constantFrom(null, ...further) }
+              );
     return fc
         .record({
             columns: fc.uniqueArray(columnArb, {
@@ -61,15 +83,17 @@ function tableArb(name: string): fc.Arbitrary<SnapshotTable> {
             indexed: fc.subarray([...COLUMN_NAMES]),
             uniqueIndexes: fc.boolean(),
             onDelete: fc.option(fc.constantFrom('no action', 'cascade', 'set null')),
+            target,
         })
-        .map(({ columns, indexed, uniqueIndexes, onDelete }) => {
+        .map(({ columns: generated, indexed, uniqueIndexes, onDelete, target }) => {
+            const keyed = onDelete !== null && target !== null;
+            const columns =
+                keyed && !generated.some((c) => c.name === 'c1')
+                    ? [col.text('c1'), ...generated]
+                    : generated;
             const names = new Set(columns.map((c) => c.name));
             return table(name, [col.id(), ...columns], {
-                // Only `c1` references, and only another table's `id`.
-                fks:
-                    onDelete !== null && names.has('c1') && name !== 'alpha'
-                        ? [fk('c1', 'alpha', onDelete)]
-                        : [],
+                fks: keyed ? [fk('c1', target, onDelete)] : [],
                 indexes: indexed
                     .filter((c) => names.has(c))
                     .map((c) =>
@@ -80,14 +104,20 @@ function tableArb(name: string): fc.Arbitrary<SnapshotTable> {
 }
 
 /** A foreign key needs its target in the database (a rebuild fails with "no
- *  such table" otherwise), so a table keeps its key only when `alpha` exists. */
+ *  such table" otherwise), so a table keeps a key only when its target exists. */
 function toSnapshot(tables: SnapshotTable[]): Snapshot {
-    const hasAlpha = tables.some((t) => t.name === 'alpha');
-    return snap(...tables.map((t) => (hasAlpha ? t : { ...t, fks: [] })));
+    const names = new Set(tables.map((t) => t.name));
+    return snap(
+        ...tables.map((t) => ({
+            ...t,
+            fks: t.fks.filter((f) => names.has(f.targetTable)),
+        }))
+    );
 }
 
+/** Every table half the time, so chains of keys run their full length. */
 const snapshotArb: fc.Arbitrary<Snapshot> = fc
-    .subarray([...TABLE_NAMES])
+    .oneof(fc.constant([...TABLE_NAMES]), fc.subarray([...TABLE_NAMES]))
     .chain((names) => fc.tuple(...names.map(tableArb)))
     .map(toSnapshot);
 
@@ -139,7 +169,8 @@ const snapshotPairArb: fc.Arbitrary<[Snapshot, Snapshot]> = snapshotArb.chain((a
                 return fc.oneof(
                     { weight: 3, arbitrary: fc.constant(prev) },
                     { weight: 3, arbitrary: editTable(prev) },
-                    { weight: 1, arbitrary: fresh }
+                    { weight: 1, arbitrary: fresh },
+                    { weight: 2, arbitrary: fc.constant(null) }
                 );
             })
         )
@@ -148,24 +179,6 @@ const snapshotPairArb: fc.Arbitrary<[Snapshot, Snapshot]> = snapshotArb.chain((a
             toSnapshot(tables.filter((t): t is SnapshotTable => t !== null)),
         ])
 );
-
-/** Whether a table the ops do not rebuild ends up in another column order
- *  than `b`'s. SQLite appends an added column, and a column moved without
- *  any other change makes no op at all, so see the failing cases below. */
-function reordersWithoutRebuild(ops: TableOp[], a: Snapshot, b: Snapshot): boolean {
-    const rebuilt = new Set(
-        ops.flatMap((op) => (op.kind === 'rebuildTable' ? [op.table.name] : []))
-    );
-    return Object.values(b.tables).some((next) => {
-        const prev = a.tables[next.name];
-        if (prev === undefined || rebuilt.has(next.name)) return false;
-        const added = ops.flatMap((op) =>
-            op.kind === 'addColumn' && op.table === next.name ? [op.column.name] : []
-        );
-        const migrated = [...prev.columns.map((c) => c.name), ...added];
-        return migrated.join() !== next.columns.map((c) => c.name).join();
-    });
-}
 
 function makeDb(): Kysely<unknown> {
     const client = createClient({ url: ':memory:' });
@@ -182,9 +195,32 @@ async function emit(db: Kysely<unknown>, snapshot: Snapshot): Promise<void> {
     await run(db, Object.values(snapshot.tables).flatMap(renderTableStatements));
 }
 
-/** Build `a`, seed it, apply `diffSnapshots(a, b)` to it in one transaction
- *  (as Kysely's `Migrator` does, which `defer_foreign_keys` relies on), build
- *  `b` fresh beside it, and hand both databases to `check`. */
+let migrationsDir: string;
+let migrationCount = 0;
+
+beforeAll(async () => {
+    migrationsDir = await mkdtemp(join(tmpdir(), 'schema-engine-parity-'));
+});
+
+afterAll(async () => {
+    await rm(migrationsDir, { recursive: true, force: true });
+});
+
+/** Render `ops` as the generated migration file a site gets, and import it. */
+async function importMigration(
+    ops: TableOp[]
+): Promise<{ up: (db: Kysely<unknown>) => Promise<void> }> {
+    migrationCount += 1;
+    const file = join(migrationsDir, `${migrationCount}.ts`);
+    await writeFile(file, renderMigrationFile(ops, 'sqlite'));
+    return (await import(pathToFileURL(file).href)) as {
+        up: (db: Kysely<unknown>) => Promise<void>;
+    };
+}
+
+/** Build `a`, seed it, run the migration generated from `diffSnapshots(a, b)`
+ *  on it in one transaction, as core's libsql migrator does, build `b` fresh
+ *  beside it, and hand both databases to `check`. */
 async function migrateAndEmit(
     a: Snapshot,
     b: Snapshot,
@@ -197,10 +233,8 @@ async function migrateAndEmit(
         await emit(migrated, a);
         await emit(fresh, b);
         await seed?.(migrated, fresh);
-        const statements = diffSnapshots(a, b).ops.flatMap((op) =>
-            renderOpStatements(op, 'sqlite')
-        );
-        await migrated.transaction().execute((trx) => run(trx, statements));
+        const migration = await importMigration(diffSnapshots(a, b).ops);
+        await migrated.transaction().execute((trx) => migration.up(trx));
         await check(migrated, fresh);
     } finally {
         await migrated.destroy();
@@ -221,7 +255,7 @@ async function insert(db: Kysely<unknown>, name: string, row: Row): Promise<void
  * Two rows for a table of `a`. Every value is `"b'c"` or `'a'`, which every
  * column kind stores as-is and the enum CHECK accepts, so a copy across a type
  * or kind change keeps it. The rows differ in every column (no unique index
- * trips), the ids match `alpha`'s for the foreign keys, and the second row
+ * trips), every table has the same two ids for the foreign keys, and the second row
  * leaves each nullable column NULL, so a rebuild's `COALESCE` has work to do.
  */
 function seedRows(t: SnapshotTable): Row[] {
@@ -239,12 +273,12 @@ function seedRows(t: SnapshotTable): Row[] {
  * reason that lies in the data rather than the migration. A table is left
  * empty when:
  *
- * - it points at a table the ops drop or rebuild: either fails at commit once
- *   a row points there (see the failing case below);
- * - `b` gives it a key with no `alpha` in `a`, so the key would point at an
- *   empty new table;
+ * - its key has a delete action and points at a table the ops rebuild, whose
+ *   `DROP TABLE` fires that action on the rows (see the failing case below);
+ * - `b` gives it a key whose target is not in `a`, so the key would point at
+ *   an empty new table;
  * - `b` gives a key column a default the rows take (a new column, or NULL
- *   made NOT NULL), and the default is no `alpha` id;
+ *   made NOT NULL), and the default is no id of the target;
  * - the ops add a NOT NULL `real` column and then an enum column. SQLite
  *   3.45's `quick_check` reads the old rows' `1.5` default as NULL, and an
  *   `ADD COLUMN` with a CHECK runs that check, so the second add fails.
@@ -255,14 +289,13 @@ function canSeed(
     a: Snapshot,
     ops: TableOp[]
 ): boolean {
-    const replaced = new Set(
-        ops.flatMap((op) => {
-            if (op.kind === 'dropTable') return [op.name];
-            if (op.kind === 'rebuildTable') return [op.table.name];
-            return [];
-        })
+    const rebuilt = new Set(
+        ops.flatMap((op) => (op.kind === 'rebuildTable' ? [op.table.name] : []))
     );
-    if (prev.fks.some((f) => replaced.has(f.targetTable))) return false;
+    const firesAction = prev.fks.some(
+        (f) => f.onDelete !== 'no action' && rebuilt.has(f.targetTable)
+    );
+    if (firesAction) return false;
     const added = ops.flatMap((op) =>
         op.kind === 'addColumn' && op.table === prev.name ? [op.column] : []
     );
@@ -271,7 +304,7 @@ function canSeed(
         return false;
     }
     if (next === undefined || next.fks.length === 0) return true;
-    if (!('alpha' in a.tables)) return false;
+    if (next.fks.some((f) => !(f.targetTable in a.tables))) return false;
     return next.fks.every((f) => {
         const before = prev.columns.find((c) => c.name === f.column);
         const after = next.columns.find((c) => c.name === f.column);
@@ -286,7 +319,7 @@ function canSeed(
  * with a NULL that `b` makes NOT NULL replaced by `b`'s default (the rebuild's
  * `COALESCE`). A unique index in `b` on a column new to its table would see
  * that column's default in every row, so then every table gets only the row
- * of NULLs, whose ids and key values still match `alpha`'s.
+ * of NULLs, whose ids and key values still match each other.
  */
 function seedBoth(a: Snapshot, b: Snapshot) {
     const { ops } = diffSnapshots(a, b);
@@ -297,9 +330,15 @@ function seedBoth(a: Snapshot, b: Snapshot) {
         );
     });
     return async (migrated: Kysely<unknown>, fresh: Kysely<unknown>): Promise<void> => {
+        const filled = new Set<string>();
         for (const prev of Object.values(a.tables)) {
             const next = b.tables[prev.name];
             if (!canSeed(prev, next, a, ops)) continue;
+            // A key points at an earlier table, and a row's key, in `a` or in
+            // `b`, needs that table's rows.
+            const keys = [...prev.fks, ...(next?.fks ?? [])];
+            if (keys.some((f) => !filled.has(f.targetTable))) continue;
+            filled.add(prev.name);
             const seeded = seedRows(prev);
             for (const row of oneRow ? seeded.slice(1) : seeded) {
                 await insert(migrated, prev.name, row);
@@ -337,10 +376,9 @@ async function rows(db: Kysely<unknown>, query: string): Promise<unknown[]> {
 }
 
 /**
- * The schema as SQLite reports it: each table's columns in order, its foreign
- * keys, its CHECK clauses and its index statements. Read through the PRAGMAs
- * rather than `sqlite_master` text, which `ALTER TABLE ADD COLUMN` formats
- * differently from a fresh `CREATE TABLE` (see the failing case below).
+ * The schema as SQLite reports it: each table's columns by name, its foreign
+ * keys, its CHECK clauses and its index statements. Read through the PRAGMAs,
+ * a second view beside the oracle's `sqlite_master` text.
  */
 async function describeSchema(db: Kysely<unknown>): Promise<unknown> {
     const tables = (await rows(
@@ -353,13 +391,13 @@ async function describeSchema(db: Kysely<unknown>): Promise<unknown> {
             name,
             columns: await rows(
                 db,
-                `SELECT name, type, "notnull", dflt_value, pk FROM pragma_table_info('${name}') ORDER BY cid`
+                `SELECT name, type, "notnull", dflt_value, pk FROM pragma_table_info('${name}') ORDER BY name`
             ),
             fks: await rows(
                 db,
                 `SELECT "from", "table", "to", on_delete FROM pragma_foreign_key_list('${name}') ORDER BY "from"`
             ),
-            checks: createSql.match(/CHECK \([^)]*\)\)/g) ?? [],
+            checks: (createSql.match(/CHECK \([^)]*\)\)/g) ?? []).sort(),
             indexes: await rows(
                 db,
                 `SELECT name, sql FROM sqlite_master WHERE type = 'index' AND tbl_name = '${name}' AND sql IS NOT NULL ORDER BY name`
@@ -408,13 +446,48 @@ describe('diffSnapshots properties', () => {
                 const dropped = ops.flatMap((op) =>
                     op.kind === 'dropTable' ? [op.name] : []
                 );
+                // Drops follow the foreign keys rather than snapshot order;
+                // the next property checks that order.
                 expect(
-                    { created, dropped },
+                    { created, dropped: new Set(dropped) },
                     'property: table-level ops follow the table sets'
                 ).toEqual({
                     created: Object.keys(b.tables).filter((n) => !(n in a.tables)),
-                    dropped: Object.keys(a.tables).filter((n) => !(n in b.tables)),
+                    dropped: new Set(
+                        Object.keys(a.tables).filter((n) => !(n in b.tables))
+                    ),
                 });
+            })
+        );
+    });
+
+    it('drops no table before a table that points at it', () => {
+        fc.assert(
+            fc.property(snapshotPairArb, ([a, b]) => {
+                const { ops } = diffSnapshots(a, b);
+                const dropAt = (name: string): number =>
+                    ops.findIndex((op) => op.kind === 'dropTable' && op.name === name);
+                // A table that points at a dropped table is dropped too, or
+                // rebuilt without the key; either op must come first.
+                const removesKeyAt = (name: string): number =>
+                    ops.findIndex(
+                        (op) =>
+                            (op.kind === 'dropTable' && op.name === name) ||
+                            (op.kind === 'rebuildTable' && op.table.name === name)
+                    );
+                const early = Object.values(a.tables).flatMap((from) =>
+                    from.fks.flatMap(({ targetTable: to }) => {
+                        if (to === from.name || to in b.tables) return [];
+                        const before = removesKeyAt(from.name);
+                        return before !== -1 && before < dropAt(to)
+                            ? []
+                            : [`"${to}" is dropped before "${from.name}" lets go of it`];
+                    })
+                );
+                expect(
+                    early,
+                    'property: no table is dropped before a table that points at it'
+                ).toEqual([]);
             })
         );
     });
@@ -422,20 +495,7 @@ describe('diffSnapshots properties', () => {
     it('migrates a database built from a, and its rows, to the schema b builds fresh', async () => {
         await fc.assert(
             fc.asyncProperty(snapshotPairArb, async ([a, b]) => {
-                const { ops, errors } = diffSnapshots(a, b);
-                fc.pre(errors.length === 0 && !reordersWithoutRebuild(ops, a, b));
-                // `dumpSchema` text matches only where no fast-path add landed
-                // on a table without a table-level constraint (see below).
-                const spliced = new Set(
-                    ops.flatMap((op) => {
-                        if (op.kind !== 'addColumn') return [];
-                        const t = b.tables[op.table];
-                        return t?.fks.length === 0 && t.primaryKey === undefined
-                            ? [op.table]
-                            : [];
-                    })
-                );
-                const dumped = Object.keys(b.tables).filter((n) => !spliced.has(n));
+                fc.pre(diffSnapshots(a, b).errors.length === 0);
                 await migrateAndEmit(
                     a,
                     b,
@@ -445,9 +505,9 @@ describe('diffSnapshots properties', () => {
                             'property: applying diff(a, b) to a yields b'
                         ).toEqual(await describeSchema(fresh));
                         expect(
-                            await dumpSchema(migrated, { tables: dumped }),
-                            'property: the oracle dump matches off the spliced tables'
-                        ).toEqual(await dumpSchema(fresh, { tables: dumped }));
+                            await dumpSchema(migrated),
+                            'property: the oracle dump matches'
+                        ).toEqual(await dumpSchema(fresh));
                         expect(
                             await dumpRows(migrated),
                             'property: the rows of a survive the migration'
@@ -459,14 +519,13 @@ describe('diffSnapshots properties', () => {
         );
     });
 
-    // Found by the parity property above, kept as a plain case. `dumpSchema` is
+    // Found by the parity property above, kept as plain cases. `dumpSchema` is
     // documented as the parity primitive (README, "The oracle") and is core's
     // drift gate (`packages/astromech/tests/database/baseline-ddl-parity.test.ts`).
     // SQLite records `ALTER TABLE ADD COLUMN` by splicing `, <column>` in before
     // the table's first table-level constraint (a foreign key or composite key),
-    // or else before the closing `)`. Only that last case differs from a fresh
-    // emit: `… NOT NULL , \`c1\` text)` against `… NOT NULL, \`c1\` text )`.
-    // The parity property compares the dumps of every other table.
+    // or else before the closing `)`, which leaves
+    // `… NOT NULL , \`c1\` text)` where a fresh emit has `… NOT NULL, \`c1\` text )`.
     it('adds a column on the fast path to the same columns as a fresh emit', async () => {
         const a = snap(table('widgets', [col.id()]));
         const b = snap(table('widgets', [col.id(), col.text('c1')]));
@@ -476,7 +535,7 @@ describe('diffSnapshots properties', () => {
         });
     });
 
-    it.fails('dumps a fast-path added column the same as a fresh emit', async () => {
+    it('dumps a fast-path added column the same as a fresh emit', async () => {
         const a = snap(table('widgets', [col.id()]));
         const b = snap(table('widgets', [col.id(), col.text('c1')]));
         await migrateAndEmit(a, b, async (migrated, fresh) => {
@@ -486,9 +545,9 @@ describe('diffSnapshots properties', () => {
 
     // Found by the parity property, kept as plain cases. A new nullable column
     // takes the `ALTER TABLE ADD COLUMN` fast path wherever it sits in the
-    // snapshot, but SQLite appends it; and a column moved with no other change
-    // makes no op at all. The README makes column order part of the contract.
-    // The differ could rebuild the table instead when the order changes.
+    // snapshot, and SQLite appends it; a column moved with no other change
+    // makes no op at all. Column order is not part of the schema contract
+    // (`DECISIONS.md`), so both migrate to a schema the oracle calls equal.
     const reorders = [
         {
             change: 'a column is added mid-list',
@@ -518,38 +577,41 @@ describe('diffSnapshots properties', () => {
         }
     );
 
-    it.fails.each(reorders)(
-        'keeps snapshot column order when $change',
+    it.each(reorders)(
+        'migrates to a schema the oracle matches with a fresh emit when $change',
         async ({ a, b }) => {
             await migrateAndEmit(a, b, async (migrated, fresh) => {
                 expect(await describeSchema(migrated)).toEqual(
                     await describeSchema(fresh)
                 );
+                expect(await dumpSchema(migrated)).toEqual(await dumpSchema(fresh));
             });
         }
     );
 
-    // Found by seeding the parity property, kept as plain cases. With foreign
-    // keys on, as core requires, dropping a table counts each row that points
-    // at it as a violation, and `defer_foreign_keys` only moves the check to
-    // the commit. A rebuild's `RENAME` brings the rows back under the old name
-    // but does not clear that count, so the commit fails. A dropped table whose
-    // reference goes in the same change fails too: the `DROP TABLE` comes
-    // before the rebuild that removes the key, and before any deferral.
+    // Found by seeding the parity property. With foreign keys on, as core
+    // requires, dropping a table that rows point at either fails at once or,
+    // under `defer_foreign_keys`, counts each such row as a violation for the
+    // commit. So a dropped table goes after the tables that point at it: after
+    // the rebuild that removes their key, or after their own `DROP TABLE`.
     const alpha = table('alpha', [col.id(), col.text('c1')]);
     const child = table('beta', [col.id(), col.text('c1')], { fks: [fk('c1', 'alpha')] });
-    const referenced = [
-        {
-            change: 'rebuilds a table another table points at',
-            a: snap(alpha, child),
-            b: snap(table('alpha', [col.id()]), child),
-        },
-        {
-            change: 'drops a table along with the key pointing at it',
-            a: snap(alpha, child),
-            b: snap(table('beta', [col.id(), col.text('c1')])),
-        },
-    ];
+    const rebuildsReferenced = {
+        change: 'rebuilds a table another table points at',
+        a: snap(alpha, child),
+        b: snap(table('alpha', [col.id()]), child),
+    };
+    const dropsWithKey = {
+        change: 'drops a table along with the key pointing at it',
+        a: snap(alpha, child),
+        b: snap(table('beta', [col.id(), col.text('c1')])),
+    };
+    const dropsWithTable = {
+        change: 'drops a table along with the table pointing at it',
+        a: snap(alpha, child),
+        b: snap(),
+    };
+    const referenced = [rebuildsReferenced, dropsWithKey, dropsWithTable];
     async function seedReference(migrated: Kysely<unknown>): Promise<void> {
         await insert(migrated, 'alpha', { id: 'a', c1: null });
         await insert(migrated, 'beta', { id: 'b', c1: 'a' });
@@ -567,8 +629,106 @@ describe('diffSnapshots properties', () => {
         }
     );
 
-    it.fails.each(referenced)(
-        'keeps the rows when it $change and a row points there',
+    it.each([
+        { ...dropsWithKey, kept: { beta: [{ id: 'b', c1: 'a' }] } },
+        { ...dropsWithTable, kept: {} },
+    ])(
+        'keeps the other rows when it $change and a row points there',
+        async ({ a, b, kept }) => {
+            await migrateAndEmit(
+                a,
+                b,
+                async (migrated, fresh) => {
+                    expect(await describeSchema(migrated)).toEqual(
+                        await describeSchema(fresh)
+                    );
+                    expect(await dumpRows(migrated)).toEqual(kept);
+                },
+                seedReference
+            );
+        }
+    );
+
+    // A dropped table that a kept table points at waits for the rebuilds, and
+    // so does every dropped table it points at: dropping `alpha` first would
+    // cascade through `beta` into `gamma`'s rows before `gamma`'s rebuild
+    // removes its key.
+    it('keeps the rows of a table whose key it removes when it drops the chain of tables the key points at', async () => {
+        const a = snap(
+            alpha,
+            table('beta', [col.id(), col.text('c1')], {
+                fks: [fk('c1', 'alpha', 'cascade')],
+            }),
+            table('gamma', [col.id(), col.text('c1')], {
+                fks: [fk('c1', 'beta', 'cascade')],
+            })
+        );
+        const b = snap(table('gamma', [col.id(), col.text('c1')]));
+        expect(diffSnapshots(a, b).errors).toEqual([]);
+        await migrateAndEmit(
+            a,
+            b,
+            async (migrated) => {
+                expect(await dumpRows(migrated)).toEqual({
+                    gamma: [{ id: 'g', c1: 'b' }],
+                });
+            },
+            async (migrated) => {
+                await insert(migrated, 'alpha', { id: 'a', c1: null });
+                await insert(migrated, 'beta', { id: 'b', c1: 'a' });
+                await insert(migrated, 'gamma', { id: 'g', c1: 'b' });
+            }
+        );
+    });
+
+    // The rebuild's `RENAME` brings the rows' target back under the old name
+    // but leaves the `DROP TABLE`'s violations on the count. The migration's
+    // closing check turns `defer_foreign_keys` off, which clears it.
+    it('keeps the rows when it rebuilds a table another table points at and a row points there', async () => {
+        const { a, b } = rebuildsReferenced;
+        await migrateAndEmit(
+            a,
+            b,
+            async (migrated) => {
+                expect(await rows(migrated, 'SELECT id, c1 FROM beta')).toEqual([
+                    { id: 'b', c1: 'a' },
+                ]);
+            },
+            seedReference
+        );
+    });
+
+    // Found by seeding the parity property. The differ refuses a rebuild of a
+    // table whose children keep an `ON DELETE` action in `b`, but not when the
+    // child is rebuilt too: the parent's rebuild comes first, so its `DROP
+    // TABLE` fires the action on the old child rows before the child's rebuild
+    // removes the key (`roadmap/planned/schema-engine-defects.md`).
+    const actionDropped = (onDelete: string) => ({
+        onDelete,
+        a: snap(
+            alpha,
+            table('beta', [col.id(), col.text('c1')], {
+                fks: [fk('c1', 'alpha', onDelete)],
+            })
+        ),
+        b: snap(table('alpha', [col.id()]), table('beta', [col.id(), col.text('c1')])),
+    });
+    const actionsDropped = [actionDropped('cascade'), actionDropped('set null')];
+
+    it.each(actionsDropped)(
+        'migrates when it rebuilds a parent and drops a child key ON DELETE $onDelete, with no rows',
+        async ({ a, b }) => {
+            expect(diffSnapshots(a, b).errors).toEqual([]);
+            await migrateAndEmit(a, b, async (migrated, fresh) => {
+                expect(await describeSchema(migrated)).toEqual(
+                    await describeSchema(fresh)
+                );
+            });
+        }
+    );
+
+    it.fails.each(actionsDropped)(
+        'keeps the child rows when it rebuilds a parent and drops a child key ON DELETE $onDelete',
         async ({ a, b }) => {
             await migrateAndEmit(
                 a,
@@ -582,4 +742,34 @@ describe('diffSnapshots properties', () => {
             );
         }
     );
+
+    it('rolls back a rebuild that leaves a row pointing at nothing', async () => {
+        const a = snap(alpha, table('beta', [col.id(), col.text('c1')]));
+        const migrated = makeDb();
+        try {
+            await emit(migrated, a);
+            await insert(migrated, 'beta', { id: 'b', c1: 'missing' });
+            const migration = await importMigration(
+                diffSnapshots(a, snap(alpha, child)).ops
+            );
+
+            await expect(
+                migrated.transaction().execute((trx) => migration.up(trx))
+            ).rejects.toThrow('foreign key check failed: [{"table":"beta"');
+            expect(
+                await rows(
+                    migrated,
+                    "SELECT name FROM sqlite_master WHERE type = 'table' ORDER BY name"
+                )
+            ).toEqual([{ name: 'alpha' }, { name: 'beta' }]);
+            expect(
+                await rows(migrated, "SELECT * FROM pragma_foreign_key_list('beta')")
+            ).toEqual([]);
+            expect(await rows(migrated, 'SELECT id, c1 FROM beta')).toEqual([
+                { id: 'b', c1: 'missing' },
+            ]);
+        } finally {
+            await migrated.destroy();
+        }
+    });
 });

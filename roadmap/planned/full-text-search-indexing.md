@@ -34,7 +34,9 @@ Migrations own the schema, so the `astromech` CLI's D1 export exports every
 table but the search ones as data only, and its restore runs the migrations on
 a fresh database, imports the data and rebuilds the index. Site owners never
 run `wrangler d1 export` by hand. D1's own backup, Time Travel, is unaffected
-by virtual tables.
+by virtual tables. Column order is not part of the schema contract, so the
+restore must name each table's columns when it imports the data, or rely on
+`wrangler d1 export` writing them.
 
 ## Design, from a planning pass on 2026-09-15
 

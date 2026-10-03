@@ -102,7 +102,8 @@ async function restoreFromBackup(
         return Response.json({ data: { restored: row.id } });
     } catch (err) {
         ctx.logger.error('[backups] Restore failed', err);
-        return Response.json({ error: String(err) }, { status: 500 });
+        const message = err instanceof Error ? err.message : String(err);
+        return Response.json({ error: message }, { status: 500 });
     }
 }
 

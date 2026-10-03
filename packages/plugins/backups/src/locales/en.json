@@ -34,7 +34,7 @@
             "dialogBody": "This will replace all content, settings, and users with the backup from {{date}}. A safety backup is taken automatically first so this can be undone — backup history and schedule are preserved. Any unsaved edits will be lost and you may need to refresh or sign in again.",
             "confirmLabel": "Restore",
             "success": "Restore complete. A page refresh is recommended.",
-            "failed": "Restore failed."
+            "failed": "Restore failed: {{reason}}"
         },
         "delete": {
             "dialogTitle": "Delete this backup?",

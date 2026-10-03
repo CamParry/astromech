@@ -4,7 +4,7 @@
  * Exercises the exact rebuild statement sequence (PRAGMA → CREATE __new_ →
  * INSERT…SELECT with COALESCE → DROP → RENAME → indexes), the empty-copy
  * skip, `addColumn`'s CHECK rendering for enum columns, and
- * `renderMigrationFile`'s backtick-escaping + overall shape.
+ * `renderMigrationFile`'s backtick-escaping, foreign key check and shape.
  */
 
 import type { TableOp } from '../src/diff';
@@ -96,6 +96,27 @@ describe('renderOpStatements', () => {
         ]);
     });
 
+    it('names the real table when refusing a default, on addColumn and on a rebuild', () => {
+        const ratio: SnapshotTable['columns'][number] = {
+            name: 'ratio',
+            type: 'real',
+            notNull: false,
+            primaryKey: false,
+            default: Number.NaN,
+        };
+        const addColumn: TableOp = { kind: 'addColumn', table: 'widgets', column: ratio };
+        const rebuild: TableOp = {
+            kind: 'rebuildTable',
+            table: { ...widgets, columns: [...widgets.columns, ratio] },
+            copy: [{ column: 'id' }],
+        };
+        for (const op of [addColumn, rebuild]) {
+            expect(() => renderOpStatements(op, 'sqlite')).toThrow(
+                'cannot render the default of `widgets`.`ratio` as SQL: NaN '
+            );
+        }
+    });
+
     it('createTable renders the CREATE TABLE then its indexes', () => {
         const op: TableOp = { kind: 'createTable', table: widgets };
         const statements = renderOpStatements(op, 'sqlite');
@@ -152,6 +173,28 @@ describe('renderMigrationFile', () => {
         const source = renderMigrationFile(ops, 'sqlite');
         expect(source).toContain('    await sql`\n        CREATE TABLE');
         expect(source).toContain('    await sql`DROP TABLE \\`gadgets\\``.execute(db);');
+    });
+
+    it('ends a migration that rebuilds a table with the foreign key check, then turns deferral off', () => {
+        const source = renderMigrationFile(
+            [{ kind: 'rebuildTable', table: widgets, copy: [{ column: 'id' }] }],
+            'sqlite'
+        );
+        expect(source).toContain(
+            '    await assertForeignKeys(db);\n' +
+                '    await sql`PRAGMA defer_foreign_keys = false`.execute(db);\n}\n'
+        );
+        expect(source).toContain(
+            '    const { rows } = await sql`PRAGMA foreign_key_check`.execute(db);'
+        );
+    });
+
+    it('leaves the foreign key check out of a migration with no rebuild', () => {
+        const source = renderMigrationFile(
+            [{ kind: 'createTable', table: widgets }],
+            'sqlite'
+        );
+        expect(source).not.toContain('foreign_key');
     });
 
     it('renders "// no-op" body for an empty op list', () => {

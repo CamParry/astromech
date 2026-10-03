@@ -22,9 +22,9 @@ export const FIRST_PARTY_PLUGIN_MIGRATIONS = [
 ] as const;
 
 /**
- * A Kysely instance over `client`, set up the way the libsql driver sets up a
- * site's. The template needs its own client because the driver has no way to
- * close one. Destroying it does not close `client`; the caller does that.
+ * A Kysely instance over `client` with the libsql driver's plugins, but Kysely's
+ * own adapter, so `Migrator` opens no transaction (the driver's opens one). The
+ * caller closes `client`, which the driver has no way to do.
  */
 export function openTestDb(client: Client): Kysely<DB> {
     return new Kysely<DB>({

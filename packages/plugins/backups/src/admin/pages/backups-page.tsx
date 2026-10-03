@@ -131,8 +131,11 @@ export default function BackupsPage(): React.ReactElement {
             toast({ message: t('backups.restore.success'), variant: 'success' });
             void queryClient.invalidateQueries({ queryKey: runsKey });
         },
-        onError: () => {
-            toast({ message: t('backups.restore.failed'), variant: 'error' });
+        onError: (error: Error) => {
+            toast({
+                message: t('backups.restore.failed', { reason: error.message }),
+                variant: 'error',
+            });
         },
         onSettled: () => {
             setConfirmState(null);

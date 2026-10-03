@@ -52,10 +52,15 @@ generate spurious migrations if you include them.
 `key` and `kind` are opaque caller tags. The engine compares them for equality —
 a change forces a table rebuild — but never interprets them.
 
-Table order, column order, and index order in a snapshot are preserved verbatim:
-column order is what a rebuild's `INSERT…SELECT` mapping is built from, so it is
-part of the contract, not an accident. `serializeSnapshot` is a plain stable
-`JSON.stringify(snapshot, null, 2)`.
+Table order, column order, and index order in a snapshot are preserved verbatim,
+and a fresh build creates columns in snapshot order. Column order is **not** part
+of the schema contract, though: a fast-path `ADD COLUMN` appends the column
+wherever the snapshot puts it, a column moved with no other change produces no
+ops, and a rebuild's `INSERT…SELECT` names every column. A migrated database can
+hold a table's columns in another order than a fresh build, so read and copy
+columns by name, never by position. `serializeSnapshot` is a plain stable
+`JSON.stringify(snapshot, null, 2)`, and throws for a NaN or infinite default,
+which JSON would write as `null`.
 
 ## Locked policies
 
@@ -80,10 +85,32 @@ INSERT INTO `__new_x` (…) SELECT … FROM `x`      -- COALESCE-backfilling nul
 DROP TABLE `x`
 ALTER TABLE `__new_x` RENAME TO `x`
 CREATE INDEX …                                    -- every index recreated
+…                                                 -- the migration's other ops
+PRAGMA foreign_key_check                          -- any row: throw, naming the rows
+PRAGMA defer_foreign_keys = false
 ```
 
-No self-managed `BEGIN`/`COMMIT`: Kysely's `Migrator` already wraps each
-migration in a transaction, and `defer_foreign_keys` is transaction-scoped.
+A migration with a rebuild ends with the last two steps, once, after its other
+ops. The `DROP TABLE` counts every row that points at `x` as a foreign key
+violation, and the `RENAME` does not take the count back, so the commit would
+fail; turning `defer_foreign_keys` off clears the count, after
+`foreign_key_check` has confirmed that no row points at nothing.
+
+No self-managed `BEGIN`/`COMMIT`. All of this needs the migration to run inside
+a transaction, because `defer_foreign_keys` lasts only until the transaction
+ends, and Kysely's `Migrator` opens one only when the dialect's adapter reports
+transactional DDL. `SqliteAdapter` does not, so `migrateToLatest` on a plain
+SQLite dialect runs each statement on its own, and rebuilding a table that rows
+point at fails at its `DROP TABLE`. Astromech's libsql driver reports
+transactional DDL, so a run there is one transaction, rolled back whole on a
+failure. Its D1 driver cannot: D1 has no interactive transactions, so rebuilding
+a referenced table on D1 still fails.
+
+A dropped table goes after the tables that point at it: after their own drop,
+or after the rebuild that removes their key. A dropped table that waits for a
+rebuild holds back every dropped table it points at, directly or through other
+dropped tables, so no drop cascades into a kept table's rows.
+
 Purely additive changes (a nullable column, or a NOT NULL column with a literal
 default, that is not a primary key) fast-path to native `ALTER TABLE ADD COLUMN`
 / `CREATE INDEX` / `DROP INDEX` instead.
@@ -105,9 +132,10 @@ engine never prints.
 
 ## The oracle
 
-`dumpSchema(db, { tables? })` returns a whitespace-normalized `sqlite_master`
+`dumpSchema(db, { tables? })` returns a comment-free, whitespace-normalized `sqlite_master`
 dump ordered by `(type, tblName, name)`, excluding internal `sqlite_*` and
-implicit-index rows. It is the parity primitive: two databases built by
+implicit-index rows. Each `CREATE TABLE` lists its columns by name, then its
+table constraints, so column order does not count. It is the parity primitive: two databases built by
 different routes — an applied migration chain versus a direct
 `renderTableStatements` emit — are equivalent iff their `dumpSchema` output
 matches. Use it as a drift gate in CI.

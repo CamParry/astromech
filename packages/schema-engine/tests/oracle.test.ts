@@ -1,9 +1,9 @@
 /**
  * Tests for the schema oracle (`src/oracle.ts`).
  *
- * Covers whitespace normalization, the optional table filter (including quote
- * escaping in the generated `IN (…)` list), and exclusion of SQLite's internal
- * and implicit rows.
+ * Covers whitespace normalization, the canonical column order, the optional
+ * table filter (including quote escaping in the generated `IN (…)` list), and
+ * exclusion of SQLite's internal and implicit rows.
  */
 
 import { createClient } from '@libsql/client';
@@ -40,9 +40,74 @@ describe('dumpSchema', () => {
 
         const widgets = rows.find((r) => r.name === 'widgets');
         expect(widgets?.sql).toBe(
-            'CREATE TABLE `widgets` ( `id` text PRIMARY KEY NOT NULL, `name` text )'
+            'CREATE TABLE `widgets` (`id` text PRIMARY KEY NOT NULL, `name` text)'
         );
     });
+
+    it('lists columns by name, then table constraints in their own order', async () => {
+        const db = await makeDb([
+            'CREATE TABLE `parents` (`id` text PRIMARY KEY NOT NULL)',
+            'CREATE TABLE `widgets` (\n    `zeta` text,\n    `id` text NOT NULL,\n' +
+                '    `parent` text,\n    PRIMARY KEY (`id`, `zeta`),\n' +
+                '    CONSTRAINT `widgets_parent_fkey` FOREIGN KEY (`parent`) REFERENCES `parents`(`id`)\n' +
+                ') WITHOUT ROWID',
+        ]);
+
+        const [, widgets] = await dumpSchema(db);
+        expect(widgets?.sql).toBe(
+            'CREATE TABLE `widgets` (`id` text NOT NULL, `parent` text, `zeta` text, ' +
+                'PRIMARY KEY (`id`, `zeta`), ' +
+                'CONSTRAINT `widgets_parent_fkey` FOREIGN KEY (`parent`) REFERENCES `parents`(`id`)' +
+                ') WITHOUT ROWID'
+        );
+    });
+
+    it('keeps a comma or parenthesis inside a literal or quoted name in its column', async () => {
+        const db = await makeDb([
+            "CREATE TABLE `widgets` (`b` text DEFAULT ',)', \"a,(\" text, [c] text, d text CHECK (d IN ('x', 'y')))",
+        ]);
+
+        const [row] = await dumpSchema(db);
+        expect(row?.sql).toBe(
+            'CREATE TABLE `widgets` ("a,(" text, `b` text DEFAULT \',)\', ' +
+                "[c] text, d text CHECK (d IN ('x', 'y')))"
+        );
+    });
+
+    it('drops comments, so a column after one sorts by its own name', async () => {
+        const db = await makeDb([
+            'CREATE TABLE `t` (\n    `z` text,\n    -- c, d\n    y text,\n' +
+                '    /* b, c */ `a` text\n)',
+        ]);
+
+        const [row] = await dumpSchema(db);
+        expect(row?.sql).toBe('CREATE TABLE `t` (`a` text, y text, `z` text)');
+    });
+
+    // `ALTER TABLE ADD COLUMN` appends the column before the closing `)` with
+    // its own spacing, or before the first table constraint.
+    const fk = 'CONSTRAINT `t_p_fkey` FOREIGN KEY (`p`) REFERENCES `t`(`id`)';
+    it.each([
+        { shape: 'no table constraint', fresh: ['`id`', '`p`', '`c1`'], constraints: [] },
+        { shape: 'a foreign key', fresh: ['`id`', '`p`', '`c1`'], constraints: [fk] },
+        { shape: 'the column mid-list', fresh: ['`id`', '`c1`', '`p`'], constraints: [] },
+    ])(
+        'dumps a table with an added column like a fresh build with $shape',
+        async ({ fresh, constraints }) => {
+            const create = (columns: string[]): string =>
+                'CREATE TABLE `t` (\n    ' +
+                [...columns.map((c) => `${c} text`), ...constraints].join(',\n    ') +
+                '\n)';
+            const migrated = await makeDb([
+                create(['`id`', '`p`']),
+                'ALTER TABLE `t` ADD COLUMN `c1` text',
+            ]);
+
+            expect(await dumpSchema(migrated)).toEqual(
+                await dumpSchema(await makeDb([create(fresh)]))
+            );
+        }
+    );
 
     it('filters to the requested tables', async () => {
         const db = await makeDb([
@@ -80,6 +145,34 @@ describe('dumpSchema', () => {
 
         const [row] = await dumpSchema(db);
         expect(row?.sql).toContain("'a\"b'");
+    });
+
+    // Found by `oracle.property.test.ts`.
+    it('keeps whitespace and a double-quoted word inside a literal byte for byte', async () => {
+        const db = await makeDb([
+            "CREATE TABLE `widgets` (`a` text DEFAULT 'x  y', `b` text DEFAULT '\"ab\"')",
+        ]);
+
+        const [row] = await dumpSchema(db);
+        expect(row?.sql).toBe(
+            "CREATE TABLE `widgets` (`a` text DEFAULT 'x  y', `b` text DEFAULT '\"ab\"')"
+        );
+    });
+
+    it('sorts by the whole name when a quoted name holds a doubled quote', async () => {
+        const db = await makeDb(['CREATE TABLE `t` ("a""c" text, "a""b" text)']);
+
+        const [row] = await dumpSchema(db);
+        expect(row?.sql).toBe('CREATE TABLE `t` ("a""b" text, "a""c" text)');
+    });
+
+    it('leaves the argument order of a virtual table alone', async () => {
+        const db = await makeDb(['CREATE VIRTUAL TABLE `notes` USING fts5(title, body)']);
+
+        const rows = await dumpSchema(db, { tables: ['notes'] });
+        expect(rows.find((r) => r.name === 'notes')?.sql).toBe(
+            'CREATE VIRTUAL TABLE `notes` USING fts5(title, body)'
+        );
     });
 
     it('excludes internal sqlite_* rows and implicit (NULL-sql) indexes', async () => {

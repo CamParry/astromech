@@ -98,10 +98,10 @@ export default defineConfig({
                 },
                 'src/cron/**': { lines: 89, functions: 94, branches: 71, statements: 89 },
                 'src/database/**': {
-                    lines: 82,
-                    functions: 88,
-                    branches: 76,
-                    statements: 82,
+                    lines: 92,
+                    functions: 92,
+                    branches: 81,
+                    statements: 90,
                 },
                 'src/email/**': {
                     lines: 43,

@@ -270,6 +270,50 @@ function cascadeRebuildErrors(
     return errors;
 }
 
+/**
+ * The dropped tables, split around the rebuilds. With foreign keys on, a
+ * `DROP TABLE` fails while rows point at the table, or fires the keys' delete
+ * actions on them, so each table is dropped after the tables that point at it:
+ * after another dropped table's own drop, or, for a table that stays, after
+ * the rebuild that removes its key. A dropped table that waits for the
+ * rebuilds holds back every dropped table it points at, directly or through
+ * other dropped tables, since dropping one of those earlier would cascade
+ * through it into the kept table's rows. A cycle of keys keeps snapshot order.
+ */
+function dropTableOps(
+    prevTables: Record<string, SnapshotTable>,
+    nextTables: Record<string, SnapshotTable>
+): { beforeRebuilds: TableOp[]; afterRebuilds: TableOp[] } {
+    const pointsAt = (from: string, to: string): boolean =>
+        from !== to && (prevTables[from]?.fks.some((f) => f.targetTable === to) ?? false);
+    const dropped = Object.keys(prevTables).filter((name) => !(name in nextTables));
+    // A set visits the members added while it is iterated, so this follows
+    // the keys to the end of each chain.
+    const late = new Set(
+        dropped.filter((name) =>
+            Object.keys(nextTables).some((other) => pointsAt(other, name))
+        )
+    );
+    for (const from of late) {
+        for (const to of dropped) if (pointsAt(from, to)) late.add(to);
+    }
+    const pending = [...dropped];
+    const beforeRebuilds: TableOp[] = [];
+    const afterRebuilds: TableOp[] = [];
+    while (pending.length > 0) {
+        const free = pending.findIndex(
+            (name) => !pending.some((other) => pointsAt(other, name))
+        );
+        const [name] = pending.splice(Math.max(free, 0), 1);
+        if (name === undefined) break;
+        (late.has(name) ? afterRebuilds : beforeRebuilds).push({
+            kind: 'dropTable',
+            name,
+        });
+    }
+    return { beforeRebuilds, afterRebuilds };
+}
+
 /** Comma-joined, double-quoted table names for an error message. */
 function quoteNames(names: string[]): string {
     return names.map((name) => `"${name}"`).join(', ');
@@ -281,7 +325,6 @@ function quoteNames(names: string[]): string {
 export function diffSnapshots(prev: Snapshot | null, next: Snapshot): DiffResult {
     const errors: string[] = [];
     const warnings: string[] = [];
-    const dropTableOps: TableOp[] = [];
     const createTableOps: TableOp[] = [];
     const acc: Accumulators = {
         errors,
@@ -321,7 +364,6 @@ export function diffSnapshots(prev: Snapshot | null, next: Snapshot): DiffResult
 
     for (const name of Object.keys(prevTables)) {
         if (nextTables[name] === undefined) {
-            dropTableOps.push({ kind: 'dropTable', name });
             warnings.push(
                 `dropping table "${name}" — this drops its data; table removal is treated as intent`
             );
@@ -376,14 +418,16 @@ export function diffSnapshots(prev: Snapshot | null, next: Snapshot): DiffResult
     }
 
     errors.push(...cascadeRebuildErrors(acc.rebuildOps, nextTables));
+    const drops = dropTableOps(prevTables, nextTables);
 
     return {
         ops: [
             ...acc.dropIndexOps,
-            ...dropTableOps,
+            ...drops.beforeRebuilds,
             ...createTableOps,
             ...acc.addColumnOps,
             ...acc.rebuildOps,
+            ...drops.afterRebuilds,
             ...acc.createIndexOps,
         ],
         errors,
