@@ -17,10 +17,10 @@ import { join } from 'node:path';
 import { Readable } from 'node:stream';
 import { pipeline } from 'node:stream/promises';
 import { migrateToLatest } from '@astromech/schema-engine';
-import { createClient } from '@libsql/client';
+import { createClient, LibsqlError } from '@libsql/client';
 import { LibsqlDialect } from '@libsql/kysely-libsql';
 import { CamelCasePlugin, Kysely, SqliteAdapter } from 'kysely';
-import { RestoreRefusedError } from '@/database/errors';
+import { InvalidBackupError, RestoreRefusedError } from '@/database/errors';
 import { resolveEnv } from '@/env';
 import { AstromechError } from '@/errors/astromech-error';
 
@@ -62,7 +62,7 @@ async function prepareBackup(
         await assertIntact(client);
         const recorded = await migrationNames(client, 'main');
         if (recorded.length === 0) {
-            throw new AstromechError(
+            throw new InvalidBackupError(
                 'the backup records no migrations, so it is not an Astromech database'
             );
         }
@@ -88,13 +88,32 @@ async function prepareBackup(
 }
 
 async function assertIntact(client: Client): Promise<void> {
-    const { rows } = await client.execute('PRAGMA quick_check');
+    const rows = await quickCheck(client);
     const [first] = rows;
     const ok =
         rows.length === 1 &&
         first !== undefined &&
         String(firstValue(first)).toLowerCase() === 'ok';
-    if (!ok) throw new AstromechError('the backup failed its integrity check');
+    if (!ok) throw new InvalidBackupError('the backup failed its integrity check');
+}
+
+/**
+ * The rows `PRAGMA quick_check` reports. SQLite fails the query itself for a
+ * file that is not a database or is too damaged to walk, and those are faults
+ * in the backup too.
+ */
+async function quickCheck(client: Client): Promise<Row[]> {
+    try {
+        return (await client.execute('PRAGMA quick_check')).rows;
+    } catch (error) {
+        if (error instanceof LibsqlError && error.code === 'SQLITE_NOTADB') {
+            throw new InvalidBackupError('the backup is not a SQLite database');
+        }
+        if (error instanceof LibsqlError && error.code === 'SQLITE_CORRUPT') {
+            throw new InvalidBackupError('the backup failed its integrity check');
+        }
+        throw error;
+    }
 }
 
 /** The site's migration chain, read once so every check and the run see the same one. */

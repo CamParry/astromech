@@ -142,9 +142,12 @@ keeps the installed-plugin records. It refuses, changing nothing, a backup
 holding a migration the site does not have (a newer backup, or one from a plugin
 since removed), and any restore while the database itself does not match the
 site's migrations (a removed plugin awaiting `astromech plugin:purge`, or
-migrations `astromech db:init` has not applied yet). The route answers a refusal
-with 409 and the driver's message, and any other failure, such as a migration
-that fails on the backup, with 500. The admin shows either message.
+migrations `astromech db:init` has not applied yet). The route answers these
+with 409. It answers 422 for a backup that is not a site's database: not
+SQLite, failing its integrity check, or recording no migrations. Neither is
+logged, since nothing changed and the message names the cause. Any other
+failure, such as a migration that fails on the backup, answers 500 and is
+logged. The admin shows the message in each case.
 
 ## Admin surface
 

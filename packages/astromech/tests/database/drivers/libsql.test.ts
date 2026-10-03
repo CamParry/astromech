@@ -21,7 +21,7 @@ import { sql } from 'kysely';
 import { afterEach, describe, expect, it } from 'vitest';
 import { getDatabaseDriverOrThrow } from '@/database/driver-registry';
 import { libsql } from '@/database/drivers/libsql';
-import { RestoreRefusedError } from '@/database/errors';
+import { InvalidBackupError, RestoreRefusedError } from '@/database/errors';
 
 const originalUrl = process.env.DATABASE_URL;
 
@@ -459,6 +459,69 @@ describe('libsql restore', () => {
         expect(await recordedMigrations(db, '999%')).toEqual([]);
     });
 
+    /** The backup's bytes as one stream, after `change` has edited them. */
+    async function edited(
+        backup: DbDump,
+        change: (bytes: Uint8Array) => void
+    ): Promise<ReadableStream<Uint8Array>> {
+        const bytes = new Uint8Array(await new Response(backup.stream).arrayBuffer());
+        await backup.cleanup();
+        change(bytes);
+        return new ReadableStream<Uint8Array>({
+            start(controller) {
+                controller.enqueue(bytes);
+                controller.close();
+            },
+        });
+    }
+
+    // A backup that cannot be read as a site's database is the caller's bad
+    // input, so it answers 422 rather than a server failure's 500.
+    it.each([
+        {
+            backup: 'is not a SQLite database',
+            // Overwrites the file header SQLite opens a database by.
+            change: (bytes: Uint8Array) => bytes.fill(0x20, 0, 100),
+            message: 'the backup is not a SQLite database',
+        },
+        {
+            backup: 'fails its integrity check',
+            // Overwrites the header of the third page, which SQLite reports
+            // from the check without failing the query.
+            change: (bytes: Uint8Array) => bytes.fill(0xff, 8192, 8292),
+            message: 'the backup failed its integrity check',
+        },
+        {
+            backup: 'is too damaged to check',
+            // Overwrites the header of every page after the first, which fails
+            // the integrity check's own query.
+            change: (bytes: Uint8Array) => {
+                for (let page = 4096; page < bytes.length; page += 4096) {
+                    bytes.fill(0xff, page, page + 100);
+                }
+            },
+            message: 'the backup failed its integrity check',
+        },
+    ])('refuses a backup that $backup, changing nothing', async ({ change, message }) => {
+        const db = await createTestDb();
+        const driver = getDatabaseDriverOrThrow();
+        await sql.raw(`CREATE TABLE items (id TEXT PRIMARY KEY, name TEXT)`).execute(db);
+        await sql.raw(`INSERT INTO items VALUES ('1', 'alpha')`).execute(db);
+        const source = await edited(await driver.dump!(), change);
+        await sql.raw(`UPDATE items SET name = 'later'`).execute(db);
+
+        const error = await driver.restore!(source, {
+            preserve: [],
+            empty: [],
+            migrations: testMigrationProvider,
+        }).catch((thrown: unknown) => thrown);
+
+        expect(error).toBeInstanceOf(InvalidBackupError);
+        expect(error).toMatchObject({ message, status: 422, code: 'VALIDATION_FAILED' });
+        const { rows } = await sql.raw(`SELECT name FROM items`).execute(db);
+        expect(rows).toEqual([{ name: 'later' }]);
+    });
+
     it('refuses a backup that records no migrations', async () => {
         const file = join(tmpdir(), `astromech-libsql-test-${randomUUID()}.db`);
         const driver = libsql({ url: `file:${file}` });
@@ -468,16 +531,21 @@ describe('libsql restore', () => {
             await sql.raw(`INSERT INTO items VALUES ('1')`).execute(db);
             const backup = await driver.dump();
 
-            await expect(
-                driver.restore(backup.stream, {
+            const error = await driver
+                .restore(backup.stream, {
                     preserve: [],
                     empty: [],
                     migrations: testMigrationProvider,
                 })
-            ).rejects.toThrow(
-                'the backup records no migrations, so it is not an Astromech database'
-            );
+                .catch((thrown: unknown) => thrown);
             await backup.cleanup();
+
+            expect(error).toBeInstanceOf(InvalidBackupError);
+            expect(error).toMatchObject({
+                message:
+                    'the backup records no migrations, so it is not an Astromech database',
+                status: 422,
+            });
 
             const { rows } = await sql.raw(`SELECT id FROM items`).execute(db);
             expect(rows).toEqual([{ id: '1' }]);

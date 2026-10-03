@@ -60,7 +60,9 @@ migration restores into the current schema. It refuses a backup that holds a
 migration the site does not have, such as one taken by newer code or with a
 plugin since removed, and refuses any restore while the database records other
 migrations than the site's: run `astromech plugin:purge` for a removed plugin or
-`astromech db:init` for pending migrations first. It empties sessions and
+`astromech db:init` for pending migrations first. It refuses a backup that is
+not a site's database: not SQLite, failing SQLite's integrity check, or
+recording no migrations. It empties sessions and
 verification tokens rather than restoring them, so everyone is signed out. A
 backup recording the same migrations as the database restores as it is. Any
 other needs the migration files: the serving process loads them from

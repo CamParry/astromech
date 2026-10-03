@@ -6,6 +6,7 @@
 
 import type { PluginTestApp } from '@tests/plugin-app';
 import type { Migration, MigrationProvider } from 'kysely/migration';
+import { gzipSync } from 'node:zlib';
 import { makeUser, roleWith } from '@tests/fixtures';
 import { testMigrationProvider } from '@tests/test-db';
 import { sql } from 'kysely';
@@ -13,7 +14,7 @@ import { Migrator } from 'kysely/migration';
 import { beforeEach, describe, expect, it } from 'vitest';
 import { setMigrationProvider } from '@/database/migration-registry';
 import { backups } from '../src/index';
-import { createBackupsApp, takeBackup } from './_support/backups-app';
+import { artifactKey, createBackupsApp, takeBackup } from './_support/backups-app';
 
 let app: PluginTestApp<'backups'>;
 
@@ -202,6 +203,33 @@ describe('POST /plugins/backups/runs/:id/restore', () => {
                 app.db
             );
         expect(rows).toEqual([{ name: 'plugin_forms_0000_baseline' }]);
+    });
+
+    // The backup is the caller's choice, so a stored file that is not a site's
+    // database is refused as their bad input rather than logged as a failure.
+    it('answers 422 for a backup that is not a SQLite database, and changes nothing', async () => {
+        const note = await app.entries.create({
+            type: 'note',
+            data: { title: 'Original' },
+        });
+        const run = await takeBackup(app);
+        await app
+            .context()
+            .storage.put(
+                artifactKey(run),
+                gzipSync(new TextEncoder().encode('not a database'))
+            );
+
+        const res = await restore(run.id);
+
+        expect(res.status).toBe(422);
+        expect(await res.json()).toEqual({
+            error: 'the backup is not a SQLite database',
+            details: { fields: { _: ['the backup is not a SQLite database'] } },
+        });
+        expect(
+            (await app.entries.get({ type: 'note', id: note.id, full: true }))?.title
+        ).toBe('Original');
     });
 
     it('answers 404 for a run that does not exist', async () => {

@@ -1145,7 +1145,9 @@ depend on the site's database driver, so check for them rather than switching on
 schema before it replaces the live tables, leaves the tables named in `preserve`
 as they are, and signs everyone out. When the backup and the database cannot be
 reconciled it throws `RestoreRefusedError` (from `astromech`), a 409 that changed
-nothing:
+nothing. A backup that is not a site's database (not SQLite, failing its
+integrity check, or recording no migrations) throws `InvalidBackupError`, a 422
+that changed nothing:
 
 ```ts
 if (!ctx.database.dump) throw new Error('This database cannot be dumped');
