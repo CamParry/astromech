@@ -6,6 +6,7 @@
 
 import type { ImageFormat } from './url';
 import { normaliseWidths } from '@/media/image-widths';
+import { extOf } from '../../internal/keys';
 import { isOptimisableImage } from './dimensions';
 import { buildMediaUrl, buildVariantUrl } from './url';
 
@@ -41,11 +42,6 @@ export type ImageAttrs = {
     blurhash?: string | null;
 };
 
-function extFromFilename(filename: string): string {
-    const dot = filename.lastIndexOf('.');
-    return dot >= 0 ? filename.slice(dot + 1) : '';
-}
-
 function makeImg(
     src: string,
     width: number | null | undefined,
@@ -64,7 +60,7 @@ export function buildImageAttrs(
     options: ImageAttrsOptions,
     ctx: ImageAttrsContext
 ): ImageAttrs {
-    const ext = extFromFilename(input.filename);
+    const ext = extOf(input.filename);
     const sizes = options.sizes ?? '100vw';
     // The bare <img> src is the original, so it honours the access mode: use the
     // already-resolved `Media.url` when the caller passed one.

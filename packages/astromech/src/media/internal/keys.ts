@@ -7,8 +7,11 @@ export function originalKey(id: string, filename: string): string {
     return ext ? `${id}.${ext}` : id;
 }
 
-/** The file extension, without the dot, or '' when the filename has none. */
+/**
+ * The file extension in lower case, without the dot, or '' when the filename has
+ * none. Lower case because `a.JPG` and `b.jpg` are one file on a case-insensitive disk.
+ */
 export function extOf(filename: string): string {
     const i = filename.lastIndexOf('.');
-    return i >= 0 ? filename.slice(i + 1) : '';
+    return i >= 0 ? filename.slice(i + 1).toLowerCase() : '';
 }

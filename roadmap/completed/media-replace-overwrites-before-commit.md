@@ -18,9 +18,15 @@ shape.
       make the row update fail (`failWritesTo` in the harness), and read the
       stored original back.
 - [x] Keep the old original safe until the row commits. The key stays
-      `<id>.<ext>` so the URL does not change: a same-extension replace copies
-      the old file to a `tmp/` key first and puts it back if the write or the
-      row update fails; a different extension leaves the old key untouched
-      until after the commit, and a failure deletes the new file. Variants
-      already wait for the commit. `DECISIONS.md` ("A media replace keeps the
-      original's key") records why a new key per replace lost.
+      `<id>.<ext>` so the URL does not change: a same-key replace copies the
+      old file to a `tmp/` key first and puts it back if the write or the row
+      update fails, unless another write changed the row first; a different
+      key leaves the old original untouched until after the commit, and a
+      failure deletes the new file. A failed replace also purges the item's
+      variants, since one built from the new bytes in between is stored under
+      the old version. `DECISIONS.md` ("A media replace keeps the original's
+      key") records why a new key per replace lost.
+- [x] Lower-case the extension in the key (`extOf` in
+      `media/internal/keys.ts`, now the only copy in core): `a.JPG` and `b.jpg`
+      are one file on a case-insensitive disk, so a replace between them
+      deleted the file it had just written.
