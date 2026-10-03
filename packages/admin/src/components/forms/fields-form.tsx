@@ -33,19 +33,38 @@ export type FieldsFormProps = {
 /** Main column left, sidebar right, under the form's validation providers. */
 export function FieldsForm({ form, main, sidebar }: FieldsFormProps): React.ReactElement {
     return (
+        <FieldsFormProvider form={form}>
+            <FormLayout>
+                <FormLayoutContent>
+                    <Stack gap={8}>{main ?? <FieldColumn form={form} />}</Stack>
+                    <Stack gap={8}>{sidebar}</Stack>
+                </FormLayoutContent>
+            </FormLayout>
+        </FieldsFormProvider>
+    );
+}
+
+export type FieldsFormProviderProps = {
+    /** What `useFieldsForm` returned. */
+    form: AnyFieldsForm;
+    children: React.ReactNode;
+};
+
+/**
+ * The form-level errors banner and the validation providers a `FieldColumn`
+ * reads, without `FieldsForm`'s layout, for a form laid out by its own page.
+ */
+export function FieldsFormProvider({
+    form,
+    children,
+}: FieldsFormProviderProps): React.ReactElement {
+    return (
         <EntryNamespaceProvider namespace={form.namespace}>
             <FormErrors messages={form.formErrors} />
             <FieldValidationProvider value={form.fieldValidation}>
                 <FieldErrorsProvider value={form.fieldErrors}>
                     <FieldWarningsProvider value={form.fieldWarnings}>
-                        <FormLayout>
-                            <FormLayoutContent>
-                                <Stack gap={8}>
-                                    {main ?? <FieldColumn form={form} />}
-                                </Stack>
-                                <Stack gap={8}>{sidebar}</Stack>
-                            </FormLayoutContent>
-                        </FormLayout>
+                        {children}
                     </FieldWarningsProvider>
                 </FieldErrorsProvider>
             </FieldValidationProvider>

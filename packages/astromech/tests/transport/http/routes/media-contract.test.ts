@@ -159,11 +159,11 @@ describe('POST /media', () => {
     async function upload(
         role: Role = adminRole,
         file?: File,
-        fields?: string
+        data?: string | File
     ): Promise<Response> {
         const formData = new FormData();
         if (file !== undefined) formData.append('file', file);
-        if (fields !== undefined) formData.append('fields', fields);
+        if (data !== undefined) formData.append('data', data);
         return app(role).request('/media', { method: 'POST', body: formData });
     }
 
@@ -180,7 +180,7 @@ describe('POST /media', () => {
         expect(await mediaService.get({ id: body.data.id })).not.toBeNull();
     });
 
-    it('stores the fields a JSON-encoded fields part carries', async () => {
+    it('stores the fields a JSON-encoded data part carries', async () => {
         setupTestConfig({
             ...makeTestConfig(),
             media: { fields: [{ name: 'credit', type: 'text', label: 'Credit' }] },
@@ -189,7 +189,7 @@ describe('POST /media', () => {
         const res = await upload(
             adminRole,
             new File(['bytes' as BlobPart], 'new.jpg', { type: 'image/jpeg' }),
-            JSON.stringify({ credit: 'Ann' })
+            JSON.stringify({ fields: { credit: 'Ann' } })
         );
 
         expect(res.status).toBe(201);
@@ -199,16 +199,23 @@ describe('POST /media', () => {
         });
     });
 
-    it('400s a fields part that is not JSON', async () => {
+    it.each([
+        ['is not JSON', '{fields'],
+        ['is a JSON array', '[]'],
+        [
+            'is a file',
+            new File(['{}' as BlobPart], 'data.json', { type: 'application/json' }),
+        ],
+    ])('400s a data part that %s', async (_case, data) => {
         const res = await upload(
             adminRole,
             new File(['bytes' as BlobPart], 'new.jpg', { type: 'image/jpeg' }),
-            '{credit'
+            data
         );
         expect(res.status).toBe(400);
         const body = (await res.json()) as { error: { code: string; message: string } };
         expect(body.error.code).toBe('BAD_REQUEST');
-        expect(body.error.message).toBe('The fields part must be a JSON object');
+        expect(body.error.message).toBe('The data part must be a JSON object');
     });
 
     it('400s a request with no file part', async () => {

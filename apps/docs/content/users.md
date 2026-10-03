@@ -24,8 +24,9 @@ export default defineConfig({
 });
 ```
 
-`users.validate` is a whole-resource validator. It runs on `create` and on
-`update`, after every field has been processed, so it sees the coerced values:
+`users.validate` is a whole-resource validator. It runs on `create`, on
+`update` and on first-run setup, after every field has been processed, so it
+sees the coerced values:
 
 ```ts
 users: {
@@ -37,6 +38,14 @@ users: {
     },
 }
 ```
+
+## The first admin
+
+First-run setup creates the first admin the way `create` creates a user: a
+field's `defaultValue` fills an absent value, a `required` field with no value
+refuses the setup, and `users.validate` runs. When a required user field has
+no default, the admin's setup screen shows the user fields beside the name,
+email and password, so the first admin can fill them in.
 
 ## Reading users from your site
 

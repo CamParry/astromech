@@ -180,6 +180,13 @@ describe('POST /setup', () => {
         password: 'password123',
     };
 
+    const requiredTeam = {
+        name: 'team',
+        type: 'text',
+        label: 'Team',
+        required: true,
+    } as const;
+
     it('creates the first admin with no session', async () => {
         const app = await freshApp();
 
@@ -203,6 +210,45 @@ describe('POST /setup', () => {
         expect(body.error).toMatchObject({ code: 'SIGN_UP_CLOSED', status: 403 });
         const users = await usersService.query({ limit: 'all' });
         expect(users.data.map((user) => user.email)).toEqual(['taken@test.dev']);
+    });
+
+    it('answers 403 SIGN_UP_CLOSED once a user exists, whatever the user fields require', async () => {
+        const app = await freshApp();
+        await usersService.create({ data: { email: 'taken@test.dev', name: 'Taken' } });
+        setupTestConfig({ ...makeTestConfig(), users: { fields: [requiredTeam] } });
+
+        const res = await setup(app, firstAdmin);
+
+        expect(res.status).toBe(403);
+        const body = (await res.json()) as { error: { code: string } };
+        expect(body.error.code).toBe('SIGN_UP_CLOSED');
+    });
+
+    it('answers 422 with details.fields for a required user field left empty', async () => {
+        const app = await freshApp();
+        setupTestConfig({ ...makeTestConfig(), users: { fields: [requiredTeam] } });
+
+        const res = await setup(app, { ...firstAdmin, data: { fields: {} } });
+
+        expect(res.status).toBe(422);
+        const body = (await res.json()) as { error: { details: { fields: object } } };
+        expect(body.error.details.fields).toEqual({ team: ['This field is required'] });
+        const users = await usersService.query({ limit: 'all' });
+        expect(users.data).toEqual([]);
+    });
+
+    it('creates the first admin with the user fields its data carries', async () => {
+        const app = await freshApp();
+        setupTestConfig({ ...makeTestConfig(), users: { fields: [requiredTeam] } });
+
+        const res = await setup(app, {
+            ...firstAdmin,
+            data: { fields: { team: 'Ops' } },
+        });
+
+        expect(res.status).toBe(200);
+        const users = await usersService.query({ limit: 'all' });
+        expect(users.data.map((user) => user.fields)).toEqual([{ team: 'Ops' }]);
     });
 
     it('answers 422 for a password under eight characters', async () => {

@@ -37,7 +37,7 @@ codegen                                              generation
 policies                                             who may call what
 entries · globals · media · users ·                  the content modules, and content, what four of them share
   notifications · content
-auth                                                 beside them: the better-auth wiring; it may import users and content
+auth                                                 beside them: the better-auth wiring, and it may import users
 plugins · config · database · storage · fields ·     the modules those build on
   permissions · hooks · request-scope · email ·
   ai · cron
@@ -51,7 +51,7 @@ types · services · utilities · errors ·              pure leaves
 - **`codegen/`** generates the site's entry types, the method manifest and the plugin client manifest.
 - **`transport/`** is every way a call arrives: Hono routes in `http/` (the auth middleware puts the request's `AppContext` on `c.var.ctx`), the CLI, the dev-only MCP server, and `tools/`, the tool surface MCP and the AI tool-loop share. `cli/` and `mcp/` boot the application themselves, so they sit above the composition root; the CLI's `db:*` and codegen commands only load the config, and the rest call methods through `callMethod` as a trusted caller. Transports hold no business logic.
 - **`policies/`** decides what a role may call. The scoped handle, `createServices(ctx, { overrideAccess: false })`, wraps the context's services and every plugin method in the checks in `policies/scoped-services.ts`, built once per context, and refuses a call `ctx.role` lacks; every untrusted caller (REST, RPC, plugin RPC, the AI tool-loop) goes through it. Trusted paths (SSR, hooks, `ctx.plugins`, the CLI, MCP) use the raw services. A caller that names a method by manifest id goes through `callMethod`; REST and plugin RPC call the scoped handle directly.
-- **`auth/`** holds the better-auth wiring, session resolution, first-run setup and better-auth's own tables. It imports `users` to read the user a session names, and `content` for the field pipeline setup runs on the first admin's fields; neither imports `auth`.
+- **`auth/`** holds the better-auth wiring, session resolution, first-run setup and better-auth's own tables. It imports `users` to read the user a session names and to write the first admin; `users` never imports `auth`.
 - **The modules below them** hold no business logic. `plugins/` here means the `define*` authoring API and every `runtime/` file except `plugin-runtime.ts`.
 - **Leaves** import only other leaves and third-party packages. A small pure file (a constant, a type, a function over its arguments) may sit inside any module and still be imported from any layer. `types/` also imports a module's schemas type-only, which erases at runtime: `types/domain.ts` infers the public types from the output schemas in each module's `schema.ts`.
 

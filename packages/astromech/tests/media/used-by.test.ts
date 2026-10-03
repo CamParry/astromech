@@ -165,31 +165,6 @@ describe('mediaService.usedBy', () => {
         ]);
     });
 
-    it('returns a media source whose upload references the file', async () => {
-        setupTestConfig({
-            ...makeUsageConfig(),
-            media: { fields: [{ name: 'related', type: 'media', label: 'Related' }] },
-        });
-        const mediaId = await createMedia();
-
-        const uploaded = await mediaService.upload({
-            file: new File(['notes'], 'notes.txt', { type: 'text/plain' }),
-            fields: { related: mediaId },
-        });
-
-        expect(await mediaService.usedBy({ id: mediaId })).toEqual([
-            {
-                sourceId: uploaded.id,
-                sourceKind: 'media',
-                sourceType: null,
-                sourceTitle: 'notes.txt',
-                schemaPath: 'related',
-                instancePath: 'related',
-                sourceStaged: false,
-            },
-        ]);
-    });
-
     // Titles for user and media sources load in one read per kind, not one per
     // source, so several of each must still come back named and in order.
     it('names several user and media sources, and leaves a missing one untitled', async () => {

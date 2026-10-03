@@ -125,7 +125,10 @@ describe('mediaService.upload', () => {
         });
 
         await expect(
-            mediaService.upload({ file: textFile('notes.txt', 'hello'), fields: {} })
+            mediaService.upload({
+                file: textFile('notes.txt', 'hello'),
+                data: { fields: {} },
+            })
         ).rejects.toMatchObject({
             name: 'ValidationError',
             fields: { credit: ['This field is required'] },

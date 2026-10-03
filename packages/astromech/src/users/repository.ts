@@ -225,6 +225,8 @@ function createUserRepository() {
             resourceRows.findOne({ id }),
         /** The `users` rows for `ids`. */
         findUserRows: content.findResourceRows,
+        /** How many `users` rows exist, whether or not they have a content row. */
+        countUserRows: (): Promise<number> => resourceRows.count(),
         /** Every user's id. */
         findIds: (): Promise<string[]> => resourceRows.pluck('id'),
         /** The ids of the users holding `role`. */

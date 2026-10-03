@@ -43,18 +43,22 @@ media: {
 
 ## Uploading
 
-`upload` takes the file and, optionally, `fields` for the default-locale
+`upload` takes the file and, optionally, `data.fields` for the default-locale
 content:
 
 ```ts
-const image = await app.media.upload({ file, fields: { photographer: 'Ann' } });
+const image = await app.media.upload({
+    file,
+    data: { fields: { photographer: 'Ann' } },
+});
 ```
 
 The fields are checked as a create: a field's `defaultValue` fills an absent
 value, and a `required` field with no value and no default refuses the upload.
 They are checked before the file is written, so a refused upload stores
-nothing. Over HTTP, `POST /api/media` takes a multipart body with a `file` part
-and an optional `fields` part holding the fields as a JSON object.
+nothing, and a write that fails after it removes the file again. Over HTTP,
+`POST /api/media` takes a multipart body with a `file` part and an optional
+`data` part holding `data` as JSON, such as `{"fields":{"photographer":"Ann"}}`.
 
 ## Reading media from your site
 

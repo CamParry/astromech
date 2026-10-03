@@ -100,7 +100,7 @@ const ADAPTERS: Record<ResourceType, Adapter> = {
         save: (fields) =>
             mediaService.upload({
                 file: new File(['hello'], 'doc.txt', { type: 'text/plain' }),
-                fields,
+                data: { fields },
             }),
         update: (id, fields) => mediaService.update({ id, data: { fields } }),
         updateWithoutFields: {

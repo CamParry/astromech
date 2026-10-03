@@ -42,4 +42,5 @@ export const isolatedTests = [
     'tests/forgot-password-form.test.tsx',
     'tests/login-setup-redirect.test.ts',
     'tests/query-client.test.tsx',
+    'tests/setup-form.test.tsx',
 ];

@@ -27,19 +27,23 @@ alone). Strapi has no custom media fields.
 ## Decided (2026-10-02)
 
 - **`required` is enforced on upload**, as on every other resource.
-- **`uploadMedia` takes optional `fields` beside `file`**, written to the
-  default-locale row. The admin's upload dialog shows the media fields only
+- **`uploadMedia` takes optional `data: { fields }` beside `file`**, written to
+  the default-locale row. `data` follows the method-signature rule and leaves
+  room for `alt` and `title`; over HTTP it is a JSON-encoded `data` form part. The admin's upload dialog shows the media fields only
   when a required one has no default, as Payload's per-file form does. Rejected:
   refusing, at config load, a required media field with no `defaultValue`.
 - **Fields are validated before the file is stored**, so a refused upload leaves
   nothing in storage. The reverse of `media-delete-removes-files-first.md`:
   a file write ahead of a row write that can still fail.
 - **`replace` leaves the fields untouched** and runs no pipeline.
+- **First-run setup enforces `required` too.** Its screen collects the user
+  fields when a required one has no default, as Payload's create-first-user
+  form renders the user collection's fields.
 
 ## The work
 
-- [ ] `uploadMedia` runs the field pipeline in create mode on optional `fields`,
-      before `storeFile`. The CLI and MCP get the same argument from the method's
+- [ ] `uploadMedia` runs the field pipeline in create mode on optional
+      `data.fields`, before `storeFile`. The CLI and MCP get the same argument from the method's
       input schema.
 - [ ] The admin's upload dialog collects media fields when a required one has
       no default.

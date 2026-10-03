@@ -24,8 +24,8 @@ mountRestRoutes(router, {
 
 // POST /media — bespoke
 // Not in the table: `binaryInput`. The body is multipart and a `File` has no
-// JSON representation, so no contract schema can validate the call. Optional
-// `fields` travel as a JSON-encoded form part.
+// JSON representation, so no contract schema can validate the call. The
+// optional `data` travels as a JSON-encoded form part.
 router.post('/', async (c) => {
     const permissions = permissionsFor(c.var.ctx.role);
     if (!permissions.allowsMethod(mediaDefinition.catalogue.upload)) return forbidden(c);
@@ -36,14 +36,14 @@ router.post('/', async (c) => {
     if (!(file instanceof File)) {
         return badRequest(c, 'A file field is required');
     }
-    const fields = readFieldsPart(formData.get('fields'));
-    if (fields === null) {
-        return badRequest(c, 'The fields part must be a JSON object');
+    const data = readJsonPart(formData.get('data'));
+    if (data === null) {
+        return badRequest(c, 'The data part must be a JSON object');
     }
 
     const media = await c.var.ctx.media.upload({
         file,
-        ...(fields !== undefined ? { fields } : {}),
+        ...(data !== undefined ? { data } : {}),
     });
     return c.json({ data: media }, 201);
 });
@@ -73,10 +73,10 @@ router.post('/:id/replace', async (c) => {
 export { router as mediaRouter };
 
 /**
- * The `fields` form part: `undefined` when absent, `null` when it is not a JSON
- * object, else the object.
+ * A JSON-encoded form part: `undefined` when absent, `null` when it is not a
+ * JSON object, else the object.
  */
-function readFieldsPart(part: FormDataEntryValue | null): JsonObject | null | undefined {
+function readJsonPart(part: FormDataEntryValue | null): JsonObject | null | undefined {
     if (part === null) return undefined;
     if (typeof part !== 'string') return null;
     let value: unknown;

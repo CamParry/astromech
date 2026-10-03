@@ -9,8 +9,10 @@
  */
 
 import type { Table } from '@/database/define-table';
+import type { StorageDriver } from '@/types/index';
 import {
     createTestDb,
+    createTestStorage,
     failWritesTo,
     makeTestConfig,
     setupTestConfig,
@@ -21,11 +23,15 @@ import { getDb } from '@/database/registry';
 import { createRepository } from '@/database/repository/create-repository';
 import { entriesTable, relationshipsTable } from '@/database/tables';
 import { mediaRepository } from '@/media/repository';
+import { listAll } from '@/storage/prefix';
 import { usersTable } from '@/users/tables';
 
 const entriesService = currentServices.entries;
 const mediaService = currentServices.media;
 const usersService = currentServices.users;
+
+/** The storage the config's driver writes to, so a check can list what it holds. */
+let storage: StorageDriver;
 
 /** One write that must be atomic. */
 type AtomicWrite = {
@@ -171,6 +177,26 @@ const WRITES: AtomicWrite[] = [
                         id: canonical.id,
                     });
                     expect(staged?.id).toBe(canonical.id);
+                },
+            };
+        },
+    },
+    {
+        // The file is stored before the row is written, so a failed write
+        // must remove it too.
+        name: 'media.upload',
+        failing: 'insert',
+        async arrange() {
+            const target = await post();
+            return {
+                act: () =>
+                    mediaService.upload({
+                        file: new File(['bytes'], 'photo.txt', { type: 'text/plain' }),
+                        data: { fields: { credit: 'credit', cover: target } },
+                    }),
+                async expectUnchanged() {
+                    expect((await mediaService.query({})).data).toEqual([]);
+                    expect(await listAll(storage, '')).toEqual([]);
                 },
             };
         },
@@ -350,9 +376,11 @@ async function ann(favourite: string | null = null): Promise<string> {
 
 beforeEach(async () => {
     await createTestDb();
+    storage = createTestStorage();
     const base = makeTestConfig();
     setupTestConfig({
         ...base,
+        storage,
         entries: {
             ...base.entries,
             post: {
