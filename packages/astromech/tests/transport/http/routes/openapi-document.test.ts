@@ -539,6 +539,13 @@ describe('the documented error statuses', () => {
             'Conflict: the body sets `status` or `publishedAt` on a type without ' +
                 '`statuses`, or `slug` on one without `slug` (`capability_not_supported`).'
         );
+        expect(
+            paths['/entries/{type}/{id}/publish']?.['post']?.responses['409']?.description
+        ).toBe(
+            'Conflict: the entry type does not declare `statuses` ' +
+                '(`capability_not_supported`); the entry is in the trash ' +
+                '(`CONFLICT`, reason `trashed`).'
+        );
         // A read with neither answers none.
         expect(statuses(paths['/entries/{type}/{id}']?.['get'])).not.toContain('409');
     });

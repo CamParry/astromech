@@ -18,13 +18,16 @@ import type {
     StoredRows,
 } from './types';
 import type { SortClause } from '@/content/list';
+import type { WriteGuard } from '@/content/write-guard';
 import type { Table, TableSelect } from '@/database/define-table';
 import type { GenericDb } from '@/database/repository/create-repository';
+import type { ConflictReason } from '@/errors/resource';
 import type { JsonObject } from '@/types/index';
-import type { Expression, SqlBool } from 'kysely';
+import type { Expression, ExpressionWrapper, SqlBool } from 'kysely';
 import { getDefaultContentLocale } from '@/config/content-locale';
+import { trashConflict } from '@/content/write-guard';
 import { chunks, MAX_BOUND_PARAMETERS } from '@/database/chunks';
-import { decodeWith, kyselyTableKey } from '@/database/codec';
+import { decodeWith, encodeUpdateWith, kyselyTableKey } from '@/database/codec';
 import { getDb } from '@/database/registry';
 import { createRepository } from '@/database/repository/create-repository';
 import { transaction } from '@/database/transaction';
@@ -436,11 +439,23 @@ export function createContentRepository<
 
     /**
      * Write one locale's content row and stamp the resource row. A locale with
-     * no row yet gets one, the write that makes a translation.
+     * no row yet gets one, the write that makes a translation. With a guard, the
+     * content-row write carries it and comes first, so a refusal writes nothing.
      */
-    async function update(ref: ContentRef, data: ContentWrite): Promise<R> {
+    function update(ref: ContentRef, data: ContentWrite): Promise<R>;
+    function update(
+        ref: ContentRef,
+        data: ContentWrite,
+        guard: WriteGuard
+    ): Promise<R | null>;
+    async function update(
+        ref: ContentRef,
+        data: ContentWrite,
+        guard?: WriteGuard
+    ): Promise<R | null> {
         return transaction(async () => {
-            await writeCanonical(ref, data);
+            if (guard === undefined) await writeCanonical(ref, data);
+            else if (!(await writeGuardedRow(guard, data))) return null;
             await touch(ref.id, data.updatedBy);
             return required(
                 await findOne(
@@ -450,6 +465,65 @@ export function createContentRepository<
                 ref.id
             );
         });
+    }
+
+    /**
+     * Patch the content row the guard names while its conditions hold; false
+     * when they do not.
+     */
+    async function writeGuardedRow(
+        guard: WriteGuard,
+        data: ContentWrite
+    ): Promise<boolean> {
+        const changed = await db()
+            .updateTable(contentKey)
+            .set(encodeUpdateWith(shape.contentTable, patchValues(data)) as never)
+            .where((eb) => eb.and(guardConditions(eb, guard)))
+            .returning('id')
+            .execute();
+        return changed.length > 0;
+    }
+
+    /** The guard as `WHERE` conditions on the content row. */
+    function guardConditions(
+        eb: Parameters<JoinedWhere>[0],
+        guard: WriteGuard
+    ): Expression<SqlBool>[] {
+        const conditions: Expression<SqlBool>[] = [
+            eb(`${contentKey}.id`, '=', guard.contentId),
+        ];
+        if (guard.trash !== undefined) {
+            const live = isLive(eb);
+            conditions.push(guard.trash === 'live' ? live : eb.not(live));
+        }
+        return conditions;
+    }
+
+    /** True when the content row's resource row passes the resource filter. */
+    function isLive(
+        eb: Parameters<JoinedWhere>[0]
+    ): ExpressionWrapper<Record<string, Record<string, unknown>>, string, SqlBool> {
+        return eb.exists(
+            eb
+                .selectFrom(resourceKey)
+                .select(`${resourceKey}.id`)
+                .whereRef(`${resourceKey}.id`, '=', `${contentKey}.${resourceIdColumn}`)
+                .where((inner) =>
+                    inner.and(resourceFilter(inner, { includeTrashed: false }))
+                )
+        );
+    }
+
+    async function explainConflict(
+        guard: WriteGuard
+    ): Promise<ConflictReason | 'gone' | null> {
+        const row = await db()
+            .selectFrom(contentKey)
+            .select((eb) => isLive(eb).as('live'))
+            .where(`${contentKey}.id`, '=', guard.contentId)
+            .executeTakeFirst();
+        if (!row) return 'gone';
+        return trashConflict(guard, !row['live']);
     }
 
     /** The content-row half of `update`: insert the locale's row, or patch it. */
@@ -620,6 +694,7 @@ export function createContentRepository<
         create,
         createContentRow,
         update,
+        explainConflict,
         delete: del,
         locales,
         findStoredRows,

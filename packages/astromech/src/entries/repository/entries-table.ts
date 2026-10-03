@@ -12,6 +12,7 @@ import type {
     PreviewTokenRecord,
 } from './types';
 import type { ContentRowId, JoinedWhere } from '@/content/repository/types';
+import type { WriteGuard } from '@/content/write-guard';
 import type { Where } from '@/database/repository/where';
 import type { EntryContentRow, EntryTableRow } from '@/entries/tables';
 import type { JsonObject, ReferencesFilter, SortOption } from '@/types/index';
@@ -318,6 +319,23 @@ function createEntryRepository() {
         );
     }
 
+    /** `content.update` over the entry's own write shape. */
+    function update(ref: EntryRef, data: EntryWrite): Promise<EntryResource>;
+    function update(
+        ref: EntryRef,
+        data: EntryWrite,
+        guard: WriteGuard
+    ): Promise<EntryResource | null>;
+    function update(
+        ref: EntryRef,
+        data: EntryWrite,
+        guard?: WriteGuard
+    ): Promise<EntryResource | null> {
+        return guard === undefined
+            ? content.update(ref, data)
+            : content.update(ref, data, guard);
+    }
+
     const trash = {
         trash: async (id: string, actor?: string | null): Promise<void> => {
             const row = await resourceRows.findOne({ id });
@@ -406,12 +424,8 @@ function createEntryRepository() {
      * Raw rather than `resourceRows.update`, which stamps `updatedAt`: a preview
      * token is access to the entry, not a change to it.
      */
-    async function writePreviewToken(
-        id: string,
-        hash: string | null,
-        expiresAt: Date | null
-    ): Promise<void> {
-        await getDb()
+    function writePreviewToken(id: string, hash: string | null, expiresAt: Date | null) {
+        return getDb()
             .updateTable('entries')
             .set(
                 encodePatchWith(entriesTable, {
@@ -419,15 +433,29 @@ function createEntryRepository() {
                     previewTokenExpiresAt: expiresAt,
                 })
             )
-            .where('id', '=', id)
-            .execute();
+            .where('id', '=', id);
     }
 
     const previewToken = {
-        set: (id: string, hash: string, expiresAt: Date | null): Promise<void> =>
-            writePreviewToken(id, hash, expiresAt),
+        /**
+         * Store the token's hash while the entry is live; false when it is in
+         * the trash or gone, with nothing written.
+         */
+        set: async (
+            id: string,
+            hash: string,
+            expiresAt: Date | null
+        ): Promise<boolean> => {
+            const written = await writePreviewToken(id, hash, expiresAt)
+                .where('deletedAt', 'is', null)
+                .returning('id')
+                .execute();
+            return written.length > 0;
+        },
 
-        clear: (id: string): Promise<void> => writePreviewToken(id, null, null),
+        clear: async (id: string): Promise<void> => {
+            await writePreviewToken(id, null, null).execute();
+        },
 
         findByHash: async (hash: string): Promise<PreviewTokenRecord | null> => {
             const row = await resourceRows.findOne({ previewToken: hash });
@@ -449,8 +477,8 @@ function createEntryRepository() {
             options?: { includeTrashed?: boolean }
         ) => ofType(await content.findAnyLocale(ref.id, options), ref.type),
         create,
-        update: (ref: EntryRef, data: EntryWrite): Promise<EntryResource> =>
-            content.update(ref, data),
+        update,
+        explainConflict: content.explainConflict,
         delete: content.delete,
         trash,
         versions: content.versions,

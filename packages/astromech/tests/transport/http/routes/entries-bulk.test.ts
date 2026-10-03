@@ -8,10 +8,16 @@
 
 import type { AstromechConfig, Entry } from '@/types/index';
 import { adminRole } from '@tests/fixtures';
-import { createTestDb, makeTestConfig, setupTestConfig } from '@tests/harness';
+import {
+    createTestDb,
+    makeTestConfig,
+    registerTestPlugins,
+    setupTestConfig,
+} from '@tests/harness';
 import { mountRouter, seedTestUser } from '@tests/mount-router';
 import { beforeEach, describe, expect, it } from 'vitest';
 import { currentServices } from '@/app-context/services';
+import { defineHook } from '@/plugins/define-hook';
 import { onError } from '@/transport/http/middleware/errors';
 import { createEntriesRouter } from '@/transport/http/routes/entries';
 
@@ -129,6 +135,47 @@ describe('POST /entries/:type/bulk-update', () => {
         expect(after.data.every((entry) => entry.fields?.['contact'] === undefined)).toBe(
             true
         );
+    });
+
+    it('409s when an id is trashed between the read and the write, naming it', async () => {
+        const resolved = setupTestConfig(makeTestConfig());
+        const second = ids[1] ?? '';
+        let trashed = false;
+        registerTestPlugins(
+            [
+                {
+                    package: '@test/probe',
+                    hooks: [
+                        defineHook('entry:beforeUpdate', async () => {
+                            if (trashed) return;
+                            trashed = true;
+                            await api.trash({ type: 'post', id: second });
+                        }),
+                    ],
+                },
+            ],
+            resolved
+        );
+
+        const res = await post('/post/bulk-update', { ids, data: { title: 'Renamed' } });
+
+        expect(res.status).toBe(409);
+        const body = (await res.json()) as {
+            error: {
+                code: string;
+                details: { failedId: string; succeededBefore: string[]; reason: string };
+            };
+        };
+        expect(body.error.code).toBe('CONFLICT');
+        expect(body.error.details).toMatchObject({
+            failedId: second,
+            succeededBefore: [ids[0]],
+            reason: 'trashed',
+        });
+        const live = await api.query({ type: 'post', full: true });
+        expect(live.data.map((entry) => entry.title)).toEqual(['One']);
+        const inTrash = await api.query({ type: 'post', full: true, trashed: true });
+        expect(inTrash.data.map((entry) => entry.title)).toEqual(['Two']);
     });
 
     it('409s a status change on a type without the statuses capability', async () => {

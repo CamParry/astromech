@@ -63,7 +63,9 @@ The same applies to `Astromech.users.update()` and `Astromech.media.update()`.
 `Astromech.entries.trash()` moves an entry to the trash with every locale, and
 `restore()` brings it back. A trashed entry gives up its slug: a new entry
 titled "Same" takes `same` even while an older "Same" is in the trash.
-Restoring sets every locale `unpublished`, through the same update path as any
+A trashed entry is read-only until it is restored: an update, a status change,
+a new locale or a preview token answers 409 `CONFLICT` with `details.reason`
+`trashed`, including when the entry is trashed while the write runs. Restoring sets every locale `unpublished`, through the same update path as any
 status change, so the update hooks fire. A locale whose slug another entry took
 meanwhile gets the next free one (`same-2`). The admin's restore message says the
 entry is unpublished and names any new slug. Emptying the trash deletes its entries for good.

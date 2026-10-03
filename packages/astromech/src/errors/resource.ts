@@ -1,7 +1,7 @@
 /**
- * The not-found and validation errors every resource throws: one class each,
- * carrying which kind of resource the call addressed, so a transport maps them
- * without knowing entries, globals, media or users exist.
+ * The not-found, validation and conflict errors every resource throws: one class
+ * each, carrying which kind of resource the call addressed, so a transport maps
+ * them without knowing entries, globals, media or users exist.
  */
 
 import type { ResourceType } from '@/types/domain';
@@ -87,6 +87,50 @@ export class StagedChangeExistsError extends ApiError {
         this.kind = kind;
         this.id = args.id;
         this.locale = args.locale;
+    }
+}
+
+/**
+ * Why a write was refused with a 409: the row it was decided from no longer
+ * holds the condition the write depends on. `trashed`: the entry is in the
+ * trash, which only `restore` writes to. `not-trashed`: a restore found it live.
+ */
+export type ConflictReason = 'trashed' | 'not-trashed';
+
+/** How a conflict message words each reason, after the resource's name. */
+const CONFLICT_MESSAGES: Record<ConflictReason, string> = {
+    trashed: 'is in the trash; restore it before changing it',
+    'not-trashed': 'is not in the trash',
+};
+
+/**
+ * Thrown when a write's condition fails, at the load step or in the write's own
+ * `WHERE` (`content/write-guard.ts`). `details.reason` says which condition.
+ */
+export class ResourceConflictError extends ApiError {
+    public readonly kind: ResourceType;
+    /** The resource id, or a global's key. */
+    public readonly id: string;
+    public readonly locale: string | undefined;
+    public readonly reason: ConflictReason;
+
+    constructor(
+        kind: ResourceType,
+        args: { id: string; locale?: string | undefined; reason: ConflictReason }
+    ) {
+        super(`${LABELS[kind]} '${args.id}' ${CONFLICT_MESSAGES[args.reason]}`, {
+            status: 409,
+            code: 'CONFLICT',
+            details: {
+                reason: args.reason,
+                ...(args.locale === undefined ? {} : { locale: args.locale }),
+            },
+        });
+        this.name = 'ResourceConflictError';
+        this.kind = kind;
+        this.id = args.id;
+        this.locale = args.locale;
+        this.reason = args.reason;
     }
 }
 

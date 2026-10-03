@@ -15,6 +15,7 @@ import { resolvePublishedAt } from '@/content/published-at';
 import { requireStagedChange } from '@/content/staging';
 import { propagateSharedFields } from '@/content/translatable';
 import { changesVersionedContent, snapshotVersion } from '@/content/versions';
+import { assertGuardHolds, writeGuarded } from '@/content/write-guard';
 import { resolveEntryType } from '@/entries/entry-types';
 import { ResourceNotFoundError } from '@/errors/resource';
 import { parseInput } from '@/errors/validation';
@@ -32,9 +33,9 @@ import { uniqueSlugIfChanged } from './slug';
 import { writeBatch } from './write-batch';
 
 /**
- * Writes one locale of each entry in a batch, atomically, firing the entry write
- * hooks around it, for `update` and the status methods. A locale with no row is
- * created unless `createMissingLocale` is false; `staged` writes the staged change.
+ * Writes one locale of each entry in a batch, atomically, firing the write hooks,
+ * for `update`, the status methods and `restore`. A locale with no row is created
+ * unless `createMissingLocale` is false; `staged` writes the staged change.
  */
 export async function updateEntryBatch(
     params: {
@@ -50,12 +51,18 @@ export async function updateEntryBatch(
         createMissingLocale?: boolean | undefined;
         /** The patch, as `entries.update` parsed it. */
         data: ParsedEntryUpdateData;
+        /**
+         * Whether each entry must be live (the default) or still in the trash,
+         * which only `restore` writes to. Checked at load and again in the write.
+         */
+        trash?: 'live' | 'trashed' | undefined;
     },
     ctx: AppContext
 ): Promise<EntryResource[]> {
     const { type, ids } = params;
     const { config, user } = ctx;
     const staged = params.staged === true;
+    const trash = params.trash ?? 'live';
     const entryType = resolveEntryType(config, type);
     if (!entryType) throw new UnknownEntryTypeError(type);
     const schema = updateEntrySchema({ titled: entryType.titleField !== false });
@@ -84,6 +91,14 @@ export async function updateEntryBatch(
         if (!record && params.createMissingLocale === false) {
             throw new ResourceNotFoundError('entry', { id, locale });
         }
+        // A new translation is checked against the row it copies.
+        const source = record ?? (await getEntryOfType(entryType.id, id));
+        assertGuardHolds(
+            'entry',
+            { canonical: source },
+            { contentId: source.contentId, trash },
+            { id, locale }
+        );
         plans.push(
             record
                 ? { kind: 'update', id, record }
@@ -93,7 +108,7 @@ export async function updateEntryBatch(
                       write: await planTranslation({
                           config,
                           entryType,
-                          id,
+                          source,
                           locale,
                           data,
                           user,
@@ -135,6 +150,7 @@ export async function updateEntryBatch(
                   data: written,
                   user,
                   staged,
+                  trash,
               })
             : writeTranslation({
                   config,
@@ -192,8 +208,9 @@ async function updateOne(params: {
     user: User | null;
     /** True when the write targets the staged change rather than the canonical. */
     staged: boolean;
+    trash: 'live' | 'trashed';
 }): Promise<EntryResource> {
-    const { config, entryType, currentEntry, data, user, staged } = params;
+    const { config, entryType, currentEntry, data, user, staged, trash } = params;
 
     const fields = await fieldsToStore({ config, entryType, currentEntry, data, user });
     const patchedNames = data.fields ? patchedFieldNames(data.fields) : [];
@@ -231,9 +248,16 @@ async function updateOne(params: {
         updatedBy: user?.id ?? null,
     };
 
+    const guard = { contentId: currentEntry.contentId, trash };
     const entry = staged
         ? await entryRepository.staging.update(ref, write)
-        : await entryRepository.update(ref, write);
+        : await writeGuarded({
+              kind: 'entry',
+              address: ref,
+              guard,
+              repository: entryRepository,
+              write: () => entryRepository.update(ref, write, guard),
+          });
     if (!staged && slug !== undefined && slug !== currentEntry.slug) {
         await entryRepository.updateStagedSlug(ref, {
             from: currentEntry.slug,
@@ -297,20 +321,18 @@ function completes(
 
 /**
  * The row a missing locale gets: the default-locale row's columns with the
- * caller's patch over them, prepared as `create` prepares a row. Throws when the
- * entry itself is absent.
+ * caller's patch over them, prepared as `create` prepares a row.
  */
 async function planTranslation(params: {
     config: ResolvedConfig;
     entryType: ResolvedEntryType;
-    id: string;
+    /** The entry's default-locale row. */
+    source: EntryResource;
     locale: string;
     data: ParsedEntryUpdateData;
     user: User | null;
 }): Promise<EntryRowWrite> {
-    const { config, entryType, id, locale, data, user } = params;
-
-    const source = await getEntryOfType(entryType.id, id);
+    const { config, entryType, source, locale, data, user } = params;
 
     // The source row is the current one, so a translation of a scheduled entry
     // keeps its schedule.
@@ -318,7 +340,7 @@ async function planTranslation(params: {
         config,
         entryType,
         locale,
-        entryId: id,
+        entryId: source.id,
         data: {
             title: data.title ?? source.title,
             slug: data.slug ?? source.slug ?? undefined,

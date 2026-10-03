@@ -82,6 +82,7 @@ async function restoreEntryBatch(
                     locale: row.locale,
                     createMissingLocale: false,
                     data,
+                    trash: 'trashed',
                 },
                 ctx
             );

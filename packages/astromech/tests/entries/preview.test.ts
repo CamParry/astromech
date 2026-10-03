@@ -17,6 +17,7 @@ import {
 } from '@/entries/internal/preview';
 import { entryRepository } from '@/entries/repository/entries-table';
 import { CapabilityError } from '@/errors/capability';
+import { ResourceConflictError } from '@/errors/resource';
 
 const api = currentServices.entries;
 
@@ -47,6 +48,18 @@ describe('issuePreviewToken', () => {
         await expect(
             api.issuePreviewToken({ type: 'card', id: card.id })
         ).rejects.toBeInstanceOf(CapabilityError);
+    });
+
+    it('refuses a token for a trashed entry and keeps the one it had', async () => {
+        const e = await api.create({ type: 'post', data: { title: 'X', slug: 'x' } });
+        const { token } = await api.issuePreviewToken({ type: 'post', id: e.id });
+        await api.trash({ type: 'post', id: e.id });
+
+        const refused = api.issuePreviewToken({ type: 'post', id: e.id });
+
+        await expect(refused).rejects.toBeInstanceOf(ResourceConflictError);
+        await expect(refused).rejects.toMatchObject({ details: { reason: 'trashed' } });
+        expect(await isValid(e.id, token, new Date())).toBe(true);
     });
 
     it('replaces the previous token (one active token per entry)', async () => {

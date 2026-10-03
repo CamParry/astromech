@@ -10,9 +10,11 @@
  */
 
 import type { SortClause } from '@/content/list';
+import type { WriteGuard } from '@/content/write-guard';
 import type { Table, TableSelect } from '@/database/define-table';
 import type { GenericDb } from '@/database/repository/create-repository';
 import type { Db } from '@/database/types';
+import type { ConflictReason } from '@/errors/resource';
 import type { EntryStatus, JsonObject } from '@/types/index';
 import type { Expression, ExpressionBuilder, SqlBool } from 'kysely';
 
@@ -199,6 +201,13 @@ export type ContentRepository<
      * stamp the resource row's `updatedAt` (and `updatedBy`, where it has one).
      */
     update(ref: ContentRef, data: ContentWrite): Promise<R>;
+    /**
+     * Write the content row `guard.contentId` names, only while the guard's
+     * conditions hold; null when they do not, with nothing written.
+     */
+    update(ref: ContentRef, data: ContentWrite, guard: WriteGuard): Promise<R | null>;
+    /** Why a guarded write changed nothing: see `GuardedRepository`. */
+    explainConflict(guard: WriteGuard): Promise<ConflictReason | 'gone' | null>;
     /** Hard-delete the resource row; content rows and versions cascade. */
     delete(id: string): Promise<void>;
     /** The canonical locales of each id, sorted. */

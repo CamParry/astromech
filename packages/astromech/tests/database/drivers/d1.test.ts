@@ -31,6 +31,7 @@ type TestSchema = {
     meta_test: { id: string; name: string; count: number };
     binding_test: { id: string; label: string };
     migration_test: { id: string; label: string };
+    guard_test: { id: string; name: string; count: number };
 };
 
 function makeFakeD1(client: Client): D1DatabaseLike {
@@ -186,6 +187,46 @@ describe('d1()', () => {
             .where('id', '=', 'm1')
             .executeTakeFirst();
         expect(deleteResult?.numDeletedRows).toBe(1n);
+    });
+
+    // A conditional write reads its refusal from `RETURNING`, so an empty result
+    // must come back as no rows rather than as a count the driver may omit.
+    it('returns no rows from a conditional write whose condition fails', async () => {
+        const db = d1({
+            database: fakeDb,
+        }).getInstance() as unknown as Kysely<TestSchema>;
+        await sql`CREATE TABLE guard_test (id TEXT PRIMARY KEY, name TEXT NOT NULL, count INTEGER NOT NULL)`.execute(
+            db
+        );
+        await db
+            .insertInto('guard_test')
+            .values({ id: 'g1', name: 'kept', count: 1 })
+            .execute();
+
+        const updated = await db
+            .updateTable('guard_test')
+            .set({ name: 'changed' })
+            .where('id', '=', 'g1')
+            .where('count', '=', 2)
+            .returning('id')
+            .execute();
+        const inserted = await db
+            .insertInto('guard_test')
+            .columns(['id', 'name', 'count'])
+            .expression((eb) =>
+                eb
+                    .selectFrom('guard_test')
+                    .select([sql<string>`'g2'`.as('id'), 'name', 'count'])
+                    .where(sql<boolean>`0`)
+            )
+            .returning('id')
+            .execute();
+
+        expect(updated).toEqual([]);
+        expect(inserted).toEqual([]);
+        expect(await db.selectFrom('guard_test').selectAll().execute()).toEqual([
+            { id: 'g1', name: 'kept', count: 1 },
+        ]);
     });
 
     it('rejects db.transaction() with the branded no-interactive-transactions error', async () => {

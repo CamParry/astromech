@@ -16,7 +16,7 @@ import type { Db } from '@/database/types';
 import type { Kysely, SelectQueryBuilder } from 'kysely';
 import {
     decodeWith,
-    encodePatchWith,
+    encodeUpdateWith,
     encodeWith,
     kyselyTableKey,
 } from '@/database/codec';
@@ -207,18 +207,9 @@ export function createRepository<D extends Table>(table: D, db?: Db): Repository
 
     // writes
 
-    /**
-     * Patch → encoded cells. `encodePatchWith` never injects defaults, so the
-     * `onUpdate` stamp is the wrapper's job — every `col.timestamp({ onUpdate })`
-     * column the caller did not supply is stamped `now`.
-     */
+    /** Patch → encoded cells, each `onUpdate` column left out stamped `now`. */
     function encodeUpdate(patch: object): Record<string, unknown> {
-        const values: Record<string, unknown> = { ...asRecord(patch) };
-        const now = new Date();
-        for (const [key, col] of Object.entries(columns)) {
-            if (col.onUpdate && values[key] === undefined) values[key] = now;
-        }
-        return encodePatchWith(table, values);
+        return encodeUpdateWith(table, asRecord(patch));
     }
 
     // surface
