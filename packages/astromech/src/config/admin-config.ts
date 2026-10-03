@@ -79,7 +79,10 @@ export function buildAdminConfig(
         }),
         basePath: resolvedConfig.basePath,
         mediaRoute: resolvedConfig.mediaRoute,
-        media: { translatable: resolvedConfig.media.translatable },
+        media: {
+            translatable: resolvedConfig.media.translatable,
+            fields: resolvedConfig.media.fields ?? [],
+        },
         users: {
             translatable: resolvedConfig.users.translatable,
             fields: resolvedConfig.users.fields,

@@ -5,7 +5,7 @@
  */
 
 import type { UseMutationResult } from '@tanstack/react-query';
-import type { MediaQueryParams } from 'astromech';
+import type { JsonObject, MediaQueryParams } from 'astromech';
 import { mutationOptions, queryOptions, useQuery } from '@tanstack/react-query';
 import { astromechUntypedClient } from 'astromech/fetch';
 import { useTranslation } from 'react-i18next';
@@ -125,12 +125,28 @@ export function mediaMutations() {
             },
             meta: { invalidates, errorMessage: 'media.deleteFailed' },
         }),
-        /** Upload in order; the caller reports how many went. */
+        /**
+         * Upload in order, each file with `fields` when given; the caller
+         * reports how many went.
+         */
         upload: mutationOptions({
             mutationKey: ['media', 'upload'],
-            mutationFn: async (files: File[]) => {
+            mutationFn: async ({
+                files,
+                fields,
+            }: {
+                files: File[];
+                fields?: JsonObject;
+            }) => {
                 const uploaded = [];
-                for (const file of files) uploaded.push(await media.upload({ file }));
+                for (const file of files) {
+                    uploaded.push(
+                        await media.upload({
+                            file,
+                            ...(fields !== undefined ? { data: { fields } } : {}),
+                        })
+                    );
+                }
                 return uploaded;
             },
             meta: { invalidates, errorMessage: 'media.uploadFailed' },

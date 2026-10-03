@@ -25,6 +25,7 @@ export const isolatedTests = [
     'tests/components/media/media-detail-modal-replace.test.tsx',
     'tests/components/media/media-detail-modal.test.tsx',
     'tests/components/media/media-picker.test.tsx',
+    'tests/components/media/media-upload-dialog.test.tsx',
     'tests/components/media/media-versions-panel.test.tsx',
     'tests/components/users/user-edit-page.test.tsx',
     'tests/components/users/users-list-page.test.tsx',

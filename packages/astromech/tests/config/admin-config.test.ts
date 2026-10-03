@@ -145,6 +145,17 @@ describe('buildAdminConfig', () => {
         expect(adminConfig.defaultLocale).toBe('en');
     });
 
+    it('carries the media and user field trees, empty when none are declared', () => {
+        const credit: Field = { name: 'credit', type: 'text', label: 'Credit' };
+        const config = baseConfig([], { media: { fields: [credit] } });
+        const adminConfig = buildAdminConfig(config, resolveConfig(config));
+        const bare = buildAdminConfig(baseConfig(), resolveConfig(baseConfig()));
+
+        expect(adminConfig.media.fields).toEqual([credit]);
+        expect(bare.media.fields).toEqual([]);
+        expect(bare.users.fields).toEqual([]);
+    });
+
     it('produces roles array with slug and name', () => {
         const config = baseConfig([], {
             roles: {

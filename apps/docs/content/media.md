@@ -60,6 +60,9 @@ nothing, and a write that fails after it removes the file again. Over HTTP,
 `POST /api/media` takes a multipart body with a `file` part and an optional
 `data` part holding `data` as JSON, such as `{"fields":{"photographer":"Ann"}}`.
 
+In the admin, an upload asks for the media fields only when a required one has
+no default. One form covers the whole upload, and every file takes its values.
+
 ## Reading media from your site
 
 ```astro
