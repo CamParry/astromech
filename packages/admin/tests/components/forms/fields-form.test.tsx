@@ -4,13 +4,15 @@
  * `useFieldsForm` and `<FieldsForm>` over a flat record: a submit hands the
  * values to the caller's write, a 422 lands on the named field or in the
  * banner, a read-only form disables every field and submits nothing, the
- * unsaved-changes guard holds only while the form is dirty, and Cmd+S saves
- * from anywhere but a modal dialog.
+ * unsaved-changes guard holds the tab and in-app links only while the form is
+ * dirty, and Cmd+S saves from anywhere but a modal dialog.
  */
 
+import type { RenderAdminResult } from '../../_support/render-admin';
 import type { Field } from '@/types/index';
 import { Popover } from '@base-ui/react/popover';
-import { screen, waitFor } from '@testing-library/react';
+import { Link, useNavigate } from '@tanstack/react-router';
+import { screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import React, { useState } from 'react';
 import { describe, expect, it, vi } from 'vitest';
@@ -18,7 +20,7 @@ import { FieldsForm } from '@/admin/components/forms/fields-form';
 import { Modal } from '@/admin/components/ui/modal';
 import { useFieldsForm } from '@/admin/hooks/use-fields-form';
 import { AstromechApiError } from '@/transport/http/client';
-import { renderWithProviders } from '../../_support/render-admin';
+import { renderAdmin } from '../../_support/render-admin';
 
 /** A redirect, as a plugin would declare it. */
 const FIELDS: Field[] = [
@@ -28,36 +30,64 @@ const FIELDS: Field[] = [
 
 type Write = (values: { fields: Record<string, unknown> }) => Promise<unknown>;
 
+/** A create form, with a link away and, when `redirect` is set, a redirect once saved. */
 function RedirectForm({
     onSubmit,
     readOnly,
     to,
+    redirect,
 }: {
     onSubmit: Write;
     readOnly: boolean;
     to: string;
+    redirect: string | undefined;
 }): React.ReactElement {
+    const navigate = useNavigate();
     const form = useFieldsForm({
         fieldDefinitions: FIELDS,
         operation: 'create',
         defaultValues: { fields: { from: '/old', to } },
         onSubmit,
+        onSuccess: () => {
+            if (redirect !== undefined) void navigate({ to: redirect });
+        },
         readOnly,
     });
     return (
         <FieldsForm
             form={form}
             sidebar={
-                <button type="button" onClick={() => form.handleSubmit()}>
-                    Save
-                </button>
+                <>
+                    <button type="button" onClick={() => form.handleSubmit()}>
+                        Save
+                    </button>
+                    <Link to="/users">Leave</Link>
+                </>
             }
         />
     );
 }
 
-function mount(onSubmit: Write, { readOnly = false, to = '' } = {}): void {
-    renderWithProviders(<RedirectForm onSubmit={onSubmit} readOnly={readOnly} to={to} />);
+/** Render the form at `/`, once its fields are on screen. */
+async function mount(
+    onSubmit: Write,
+    { readOnly = false, to = '', redirect = undefined as string | undefined } = {}
+): Promise<RenderAdminResult> {
+    const page = renderAdmin(
+        <RedirectForm
+            onSubmit={onSubmit}
+            readOnly={readOnly}
+            to={to}
+            redirect={redirect}
+        />
+    );
+    await waitFor(() => inputNamed('to'));
+    return page;
+}
+
+/** The unsaved-changes dialog, once it is open. */
+function discardDialog(): Promise<HTMLElement> {
+    return screen.findByRole('alertdialog', { name: 'Discard unsaved changes?' });
 }
 
 function inputNamed(name: string): HTMLInputElement {
@@ -127,7 +157,7 @@ function unloadIsBlocked(): boolean {
 describe('FieldsForm', () => {
     it('hands the values to the write on submit', async () => {
         const onSubmit = vi.fn<Write>(async () => ({ id: 'r1' }));
-        mount(onSubmit);
+        await mount(onSubmit);
 
         await userEvent.type(inputNamed('to'), '/new');
         await userEvent.click(screen.getByRole('button', { name: 'Save' }));
@@ -140,7 +170,7 @@ describe('FieldsForm', () => {
 
     it('stops a submit the field pipeline rejects', async () => {
         const onSubmit = vi.fn<Write>(async () => ({ id: 'r1' }));
-        mount(onSubmit);
+        await mount(onSubmit);
 
         await userEvent.click(screen.getByRole('button', { name: 'Save' }));
 
@@ -155,7 +185,7 @@ describe('FieldsForm', () => {
         const onSubmit = vi.fn<Write>(async () => {
             throw unprocessable({ fields: { from: ['A redirect from /old exists'] } });
         });
-        mount(onSubmit);
+        await mount(onSubmit);
 
         await userEvent.type(inputNamed('to'), '/new');
         await userEvent.click(screen.getByRole('button', { name: 'Save' }));
@@ -169,7 +199,7 @@ describe('FieldsForm', () => {
         const onSubmit = vi.fn<Write>(async () => {
             throw unprocessable({ form: ['The redirect points at itself'] });
         });
-        mount(onSubmit);
+        await mount(onSubmit);
 
         await userEvent.type(inputNamed('to'), '/new');
         await userEvent.click(screen.getByRole('button', { name: 'Save' }));
@@ -181,7 +211,7 @@ describe('FieldsForm', () => {
     it('disables every field and submits nothing when read-only', async () => {
         const onSubmit = vi.fn<Write>(async () => ({ id: 'r1' }));
         // Valid values, so only the read-only flag stands between a click and a write.
-        mount(onSubmit, { readOnly: true, to: '/new' });
+        await mount(onSubmit, { readOnly: true, to: '/new' });
 
         expect(inputNamed('from').disabled).toBe(true);
         expect(inputNamed('to').disabled).toBe(true);
@@ -193,7 +223,7 @@ describe('FieldsForm', () => {
     });
 
     it('guards the tab only while there are unsaved changes', async () => {
-        mount(async () => ({ id: 'r1' }));
+        await mount(async () => ({ id: 'r1' }));
 
         expect(unloadIsBlocked()).toBe(false);
 
@@ -203,7 +233,7 @@ describe('FieldsForm', () => {
 
     it('clears the guard once a save succeeds', async () => {
         const onSubmit = vi.fn<Write>(async () => ({ id: 'r1' }));
-        mount(onSubmit);
+        await mount(onSubmit);
 
         await userEvent.type(inputNamed('to'), '/new');
         await userEvent.click(screen.getByRole('button', { name: 'Save' }));
@@ -212,9 +242,57 @@ describe('FieldsForm', () => {
         await waitFor(() => expect(unloadIsBlocked()).toBe(false));
     });
 
+    it('asks before a link leaves a dirty form, and staying keeps the edits', async () => {
+        const page = await mount(async () => ({ id: 'r1' }));
+
+        await page.user.type(inputNamed('to'), '/new');
+        await page.user.click(screen.getByRole('link', { name: 'Leave' }));
+        const dialog = await discardDialog();
+        await page.user.click(
+            within(dialog).getByRole('button', { name: 'Keep editing' })
+        );
+
+        await waitFor(() => expect(dialog.isConnected).toBe(false));
+        expect(page.pathname()).toBe('/');
+        expect(inputNamed('to').value).toBe('/new');
+    });
+
+    it('leaves a dirty form once the editor discards the changes', async () => {
+        const page = await mount(async () => ({ id: 'r1' }));
+
+        await page.user.type(inputNamed('to'), '/new');
+        await page.user.click(screen.getByRole('link', { name: 'Leave' }));
+        const dialog = await discardDialog();
+        await page.user.click(
+            within(dialog).getByRole('button', { name: 'Discard changes' })
+        );
+
+        await waitFor(() => expect(page.pathname()).toBe('/users'));
+    });
+
+    it('leaves a clean form without asking', async () => {
+        const page = await mount(async () => ({ id: 'r1' }), { to: '/new' });
+
+        await page.user.click(screen.getByRole('link', { name: 'Leave' }));
+
+        await waitFor(() => expect(page.pathname()).toBe('/users'));
+        expect(screen.queryByRole('alertdialog')).toBeNull();
+    });
+
+    it('redirects after a save without asking', async () => {
+        const onSubmit = vi.fn<Write>(async () => ({ id: 'r1' }));
+        const page = await mount(onSubmit, { redirect: '/saved' });
+
+        await page.user.type(inputNamed('to'), '/new');
+        await page.user.click(screen.getByRole('button', { name: 'Save' }));
+
+        await waitFor(() => expect(page.pathname()).toBe('/saved'));
+        expect(screen.queryByRole('alertdialog')).toBeNull();
+    });
+
     it('saves on Cmd+S while focus is in a field', async () => {
         const onSubmit = vi.fn<Write>(async () => ({ id: 'r1' }));
-        mount(onSubmit);
+        await mount(onSubmit);
 
         await userEvent.type(inputNamed('to'), '/new');
         await userEvent.keyboard(SAVE_KEYS);
@@ -227,7 +305,7 @@ describe('FieldsForm', () => {
 
     it('saves on Cmd+S from a button inside a popover', async () => {
         const onSubmit = vi.fn<Write>(async () => ({ id: 'r1' }));
-        renderWithProviders(<FormUnderOverlay onSubmit={onSubmit} overlay="popover" />);
+        renderAdmin(<FormUnderOverlay onSubmit={onSubmit} overlay="popover" />);
 
         (await screen.findByRole('button', { name: 'Inside' })).focus();
         await userEvent.keyboard(SAVE_KEYS);
@@ -237,7 +315,7 @@ describe('FieldsForm', () => {
 
     it('leaves Cmd+S in a modal dialog to the dialog', async () => {
         const onSubmit = vi.fn<Write>(async () => ({ id: 'r1' }));
-        renderWithProviders(<FormUnderOverlay onSubmit={onSubmit} overlay="modal" />);
+        renderAdmin(<FormUnderOverlay onSubmit={onSubmit} overlay="modal" />);
 
         const dialog = await screen.findByRole('dialog', { name: 'Pick a page' });
         screen.getByRole('button', { name: 'Inside' }).focus();

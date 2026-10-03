@@ -23,7 +23,7 @@ import React from 'react';
 import { describe, expect, it, vi } from 'vitest';
 import { EntryFieldColumn } from '@/admin/components/entries/entry-fields-renderer';
 import { useEntryForm } from '@/admin/hooks/use-entry-form';
-import { renderWithProviders } from '../../_support/render-admin';
+import { renderAdmin } from '../../_support/render-admin';
 
 type UseEntryFormResult = ReturnType<typeof useEntryForm<Entry>>;
 
@@ -58,7 +58,11 @@ type Harness = {
  * Mount the entry edit page's composition — `useEntryForm` above a field tree
  * that does not exist until the fetch lands (`entry-edit-page.tsx:300`).
  */
-function mountEditPage({ main, sidebar = [], fields }: MountOptions): Harness {
+async function mountEditPage({
+    main,
+    sidebar = [],
+    fields,
+}: MountOptions): Promise<Harness> {
     const saveFn = vi.fn(async () => ({ id: 'e1' }) as Entry);
     const publishFn = vi.fn(async () => ({ id: 'e1' }) as Entry);
     const seen: unknown[] = [];
@@ -113,7 +117,9 @@ function mountEditPage({ main, sidebar = [], fields }: MountOptions): Harness {
         );
     }
 
-    renderWithProviders(<Probe />);
+    renderAdmin(<Probe />);
+    // The router renders its route on a later tick.
+    await waitFor(() => expect(latest).toBeDefined());
 
     return {
         handle: () => {
@@ -144,8 +150,8 @@ function control(selector: string): HTMLElement {
 // A — the fact the rest of this file rests on
 
 describe('the field tree and the TanStack default-value copy', () => {
-    it('renders once against an empty `fields` before the copy lands', () => {
-        const h = mountEditPage({
+    it('renders once against an empty `fields` before the copy lands', async () => {
+        const h = await mountEditPage({
             main: [SEO_GROUP],
             fields: { seo: { title: 'Stored title', description: 'Stored description' } },
         });
@@ -166,8 +172,8 @@ describe('the field tree and the TanStack default-value copy', () => {
 describe('key-value on a fetched entry', () => {
     const META: Field = { name: 'meta', type: 'key-value', label: 'Meta' };
 
-    it('renders the stored pairs', () => {
-        const h = mountEditPage({
+    it('renders the stored pairs', async () => {
+        const h = await mountEditPage({
             main: [META],
             fields: { meta: { alpha: '1', beta: '2' } },
         });
@@ -185,7 +191,7 @@ describe('key-value on a fetched entry', () => {
 
     it('keeps the stored pairs when the author adds another', async () => {
         const user = userEvent.setup();
-        const h = mountEditPage({
+        const h = await mountEditPage({
             main: [META],
             fields: { meta: { alpha: '1', beta: '2' } },
         });
@@ -219,7 +225,7 @@ describe('key-value on a fetched entry', () => {
 describe('group on a fetched entry', () => {
     it('keeps the untouched sibling when one sub-field is edited', async () => {
         const user = userEvent.setup();
-        const h = mountEditPage({
+        const h = await mountEditPage({
             main: [{ name: 'excerpt', type: 'textarea', label: 'Excerpt' }],
             sidebar: [SEO_GROUP],
             fields: {

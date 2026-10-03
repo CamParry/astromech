@@ -229,27 +229,37 @@ export function useEditController<TRecord extends EditRecord, TAddress>(
         },
     });
 
+    // Each write below either follows the editor's agreement to drop unsaved
+    // changes or removes the row on screen, so its navigation skips the guard.
     const createStaged = useAdminMutation(resource.createStaged, {
-        onSuccess: () => void navigate({ to: paths.staged }),
+        onSuccess: () => void navigate({ to: paths.staged, ignoreBlocker: true }),
     });
     const mergeStaged = useAdminMutation(resource.mergeStaged, {
-        onSuccess: () => void navigate({ to: paths.canonical }),
+        onSuccess: () => void navigate({ to: paths.canonical, ignoreBlocker: true }),
     });
     const deleteStaged = useAdminMutation(resource.deleteStaged, {
-        onSuccess: () => void navigate({ to: paths.canonical }),
+        onSuccess: () => void navigate({ to: paths.canonical, ignoreBlocker: true }),
     });
 
+    /** Ask before staging, since the staged copy starts from the saved row. */
+    function handleCreateStaged(): void {
+        form.confirmDiscard(() => createStaged.mutate(resource.address));
+    }
+
+    /** A merge takes the saved staged row, so unsaved edits are dropped first. */
     function handleMerge(): void {
-        confirm({
-            title: t('staging.confirmMergeTitle'),
-            description:
-                stagedChange.data?.diverged === true
-                    ? t('staging.confirmMergeDivergedMessage')
-                    : t('staging.confirmMergeMessage'),
-            variant: 'primary',
-            confirmLabel: t('staging.merge'),
-            onConfirm: () => mergeStaged.mutate(resource.address),
-        });
+        form.confirmDiscard(() =>
+            confirm({
+                title: t('staging.confirmMergeTitle'),
+                description:
+                    stagedChange.data?.diverged === true
+                        ? t('staging.confirmMergeDivergedMessage')
+                        : t('staging.confirmMergeMessage'),
+                variant: 'primary',
+                confirmLabel: t('staging.merge'),
+                onConfirm: () => mergeStaged.mutate(resource.address),
+            })
+        );
     }
 
     function handleDiscard(): void {
@@ -275,7 +285,7 @@ export function useEditController<TRecord extends EditRecord, TAddress>(
         staging: {
             enabled: hasStaging,
             stagedChange: stagedChange.data ?? null,
-            create: () => createStaged.mutate(resource.address),
+            create: handleCreateStaged,
             isCreating: createStaged.isPending,
             handleMerge,
             isMerging: mergeStaged.isPending,

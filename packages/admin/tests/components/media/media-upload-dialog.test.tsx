@@ -14,7 +14,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { MediaPicker } from '@/admin/components/media/media-picker';
 import { useFieldsForm } from '@/admin/hooks/use-fields-form';
 import { AstromechApiError } from '@/transport/http/client';
-import { renderWithProviders } from '../../_support/render-admin';
+import { renderAdmin } from '../../_support/render-admin';
 
 const { adminConfig, mediaQuery, uploadMedia } = vi.hoisted(() => ({
     adminConfig: {
@@ -56,7 +56,7 @@ afterEach(() => {
 
 /** Render the picker for a viewer who may upload, beside `page` when given. */
 function renderPicker(page?: React.ReactElement): UserEvent {
-    const { user } = renderWithProviders(
+    const { user } = renderAdmin(
         <>
             {page}
             <MediaPicker

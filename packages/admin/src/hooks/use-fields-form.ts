@@ -9,7 +9,7 @@ import type { Field, FieldErrors, ValidationMode } from 'astromech';
 import { useForm, useStore } from '@tanstack/react-form';
 import { useMutation } from '@tanstack/react-query';
 import { AstromechApiError } from 'astromech/fetch';
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
     fieldErrorNames,
@@ -20,6 +20,7 @@ import { labelNamespace } from '../i18n/entry-namespace';
 import { resolveLabel } from '../i18n/labels';
 import { useFieldValidation } from './use-field-validation';
 import { useHotkeys } from './use-hotkeys';
+import { useUnsavedChangesGuard } from './use-unsaved-changes-guard';
 
 /**
  * What the form holds: the declared fields' values under `fields`, and the
@@ -217,16 +218,9 @@ export function useFieldsForm<
         { enabled: saveHotkey }
     );
 
-    // Warn on closing the tab with unsaved changes. `form` is stable, and its
-    // `state` getter reads the live value when the event fires.
-    useEffect(() => {
-        function handleBeforeUnload(event: BeforeUnloadEvent): void {
-            if (!form.state.isDirty) return;
-            event.preventDefault();
-        }
-        window.addEventListener('beforeunload', handleBeforeUnload);
-        return () => window.removeEventListener('beforeunload', handleBeforeUnload);
-    }, []);
+    // `form` is stable, and its `state` getter reads the live value when asked.
+    // A save resets the form before `onSuccess`, so its redirect leaves freely.
+    const { confirmDiscard } = useUnsavedChangesGuard(() => form.state.isDirty);
 
     // Stable identity: this object is handed straight to a context provider.
     const fieldValidation = useMemo(
@@ -243,6 +237,7 @@ export function useFieldsForm<
         handleSubmit,
         showError,
         isDirty,
+        confirmDiscard,
         readOnly,
         fieldDefinitions,
         namespace,

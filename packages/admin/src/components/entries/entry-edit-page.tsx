@@ -112,8 +112,9 @@ function EntryEditBody({
     );
 
     const mutations = entryMutations(type, config.single);
+    // The entry is gone, so its unsaved edits are not worth asking about.
     const trashEntry = useAdminMutation(mutations.trash, {
-        onSuccess: () => void navigate({ to: basePath }),
+        onSuccess: () => void navigate({ to: basePath, ignoreBlocker: true }),
     });
     const duplicateEntry = useAdminMutation(mutations.duplicate, {
         onSuccess: (copy) =>

@@ -3,14 +3,18 @@
  *
  * The Save button read `form.state.isDirty` — a plain getter that never
  * re-renders — so it stayed disabled and no media edit could ever be saved.
+ * Closing the modal or switching its locale with unsaved edits asks first.
  */
 
+import type { RenderAdminResult } from '../../_support/render-admin';
+import type { MediaDetailModalProps } from '@/admin/components/media/media-detail-modal';
 import type { Media } from '@/types/index';
 import type { UserEvent } from '@testing-library/user-event';
-import { screen, waitFor } from '@testing-library/react';
+import { useNavigate, useSearch } from '@tanstack/react-router';
+import { screen, waitFor, within } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { MediaDetailModal } from '@/admin/components/media/media-detail-modal';
-import { renderWithProviders } from '../../_support/render-admin';
+import { renderAdmin } from '../../_support/render-admin';
 
 const { media, adminConfig } = vi.hoisted(() => ({
     media: {
@@ -69,6 +73,24 @@ afterEach(() => {
     adminConfig.media.translatable = false;
 });
 
+/** The library as the media page renders it: `?item=` opens the modal, closing drops it. */
+function Library(
+    permissions: Pick<MediaDetailModalProps, 'canUpdate' | 'canDelete'>
+): React.ReactElement {
+    const navigate = useNavigate();
+    const search = useSearch({ strict: false }) as { item?: string };
+    return (
+        <MediaDetailModal
+            mediaId={search.item ?? null}
+            onClose={() => void navigate({ to: '/media', replace: true })}
+            onDeleted={() =>
+                void navigate({ to: '/media', replace: true, ignoreBlocker: true })
+            }
+            {...permissions}
+        />
+    );
+}
+
 /**
  * Open the modal on the fixed item with the permission flags under test, once
  * the item has loaded.
@@ -77,6 +99,13 @@ async function openModal(permissions?: {
     canUpdate?: boolean;
     canDelete?: boolean;
 }): Promise<UserEvent> {
+    return (await openLibrary(permissions)).user;
+}
+
+/** `openModal`, returning the page so a test can read where the router went. */
+async function openLibrary(
+    permissions: { canUpdate?: boolean; canDelete?: boolean } = {}
+): Promise<RenderAdminResult> {
     media.get.mockImplementation(async (params: { locale?: string }) => {
         requestedLocale.current = params.locale;
         // The item has an `en` row alone, so every read falls back to it.
@@ -85,16 +114,11 @@ async function openModal(permissions?: {
     media.usedBy.mockResolvedValue([]);
     media.versions.mockResolvedValue([]);
     media.update.mockResolvedValue(ITEM);
-    const { user } = renderWithProviders(
-        <MediaDetailModal
-            mediaId={ITEM.id}
-            onClose={vi.fn()}
-            onDeleted={vi.fn()}
-            {...permissions}
-        />
-    );
+    const page = renderAdmin(<Library {...permissions} />, {
+        url: `/media?item=${ITEM.id}`,
+    });
     await screen.findByText('cat.png');
-    return user;
+    return page;
 }
 
 /** The Save button, which only exists when the viewer may update. */
@@ -207,5 +231,70 @@ describe('MediaDetailModal locales', () => {
                 data: { alt: 'Un chat', title: '', caption: '' },
             });
         });
+    });
+});
+
+/** The unsaved-changes dialog, once it is open. */
+function discardDialog(): Promise<HTMLElement> {
+    return screen.findByRole('alertdialog', { name: 'Discard unsaved changes?' });
+}
+
+describe('MediaDetailModal unsaved changes', () => {
+    it('asks before closing with unsaved edits, and staying keeps them', async () => {
+        const page = await openLibrary();
+
+        await page.user.type(screen.getByLabelText('Alt text'), 'A cat');
+        await page.user.click(screen.getByRole('button', { name: 'Cancel' }));
+        const dialog = await discardDialog();
+        await page.user.click(
+            within(dialog).getByRole('button', { name: 'Keep editing' })
+        );
+
+        await waitFor(() => expect(dialog.isConnected).toBe(false));
+        expect(page.location()).toBe(`/media?item=${ITEM.id}`);
+        expect((screen.getByLabelText('Alt text') as HTMLInputElement).value).toBe(
+            'A cat'
+        );
+    });
+
+    it('closes once the editor discards the edits', async () => {
+        const page = await openLibrary();
+
+        await page.user.type(screen.getByLabelText('Alt text'), 'A cat');
+        await page.user.click(screen.getByRole('button', { name: 'Cancel' }));
+        const dialog = await discardDialog();
+        await page.user.click(
+            within(dialog).getByRole('button', { name: 'Discard changes' })
+        );
+
+        await waitFor(() => expect(page.location()).toBe('/media'));
+        expect(media.update).not.toHaveBeenCalled();
+    });
+
+    it('closes without asking when nothing changed', async () => {
+        const page = await openLibrary();
+
+        await page.user.click(screen.getByRole('button', { name: 'Cancel' }));
+
+        await waitFor(() => expect(page.location()).toBe('/media'));
+        expect(screen.queryByRole('alertdialog')).toBeNull();
+    });
+
+    it('asks before a locale switch drops unsaved edits', async () => {
+        adminConfig.media.translatable = true;
+        const page = await openLibrary();
+
+        await page.user.type(screen.getByLabelText('Alt text'), 'A cat');
+        await pickLocale(page.user, 'Add FR');
+        const dialog = await discardDialog();
+        await page.user.click(
+            within(dialog).getByRole('button', { name: 'Keep editing' })
+        );
+
+        await waitFor(() => expect(dialog.isConnected).toBe(false));
+        expect(requestedLocale.current).toBe('en');
+        expect((screen.getByLabelText('Alt text') as HTMLInputElement).value).toBe(
+            'A cat'
+        );
     });
 });

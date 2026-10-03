@@ -11,6 +11,7 @@ import { useTranslation } from 'react-i18next';
 import adminConfig from 'virtual:astromech/admin-config';
 import { mediaMutations, useMediaItem, useMediaUsage } from '../../hooks/media';
 import { useAdminMutation } from '../../hooks/use-admin-mutation';
+import { useUnsavedChangesGuard } from '../../hooks/use-unsaved-changes-guard';
 import { formatBytes } from '../../utilities/bytes';
 import { defaultContentLocale, localeOptions } from '../../utilities/content-locale';
 import { formatDatetime } from '../../utilities/dates';
@@ -28,7 +29,9 @@ import { MediaVersionsPanel } from './media-versions-panel';
 
 export type MediaDetailModalProps = {
     mediaId: string | null;
+    /** Close by navigating, so the unsaved-changes guard can hold the modal open. */
     onClose: () => void;
+    /** Close once the item is deleted, passing `ignoreBlocker` since nothing is left to save. */
     onDeleted: () => void;
     canDelete?: boolean;
     canUpdate?: boolean;
@@ -148,6 +151,10 @@ function MediaDetailBody({
     // change, which left the submit button permanently disabled.
     const isDirty = useStore(form.store, (state) => state.isDirty);
 
+    // Closing the modal is a navigation (it drops `?item=`), so the guard's
+    // blocker covers it; the locale switch remounts this body without navigating.
+    const { confirmDiscard } = useUnsavedChangesGuard(() => form.state.isDirty);
+
     function requestDelete(): void {
         confirm({
             title: t('media.deleteConfirmLabel'),
@@ -229,7 +236,8 @@ function MediaDetailBody({
                             <Select
                                 value={locale}
                                 onValueChange={(value) => {
-                                    if (value !== null) onLocaleChange(value);
+                                    if (value === null) return;
+                                    confirmDiscard(() => onLocaleChange(value));
                                 }}
                                 options={localeOptions(item.locales)}
                             />

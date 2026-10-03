@@ -104,8 +104,9 @@ function AdminResourceEditBody({
     const mutations = adminResourceMutations(target);
     // The form reports a failed save, a 422 onto its fields.
     const updateMutation = useAdminMutation(mutations.update, { toastError: false });
+    // The row is gone, so its unsaved edits are not worth asking about.
     const deleteMutation = useAdminMutation(mutations.delete, {
-        onSuccess: () => void navigate({ to: basePath }),
+        onSuccess: () => void navigate({ to: basePath, ignoreBlocker: true }),
     });
 
     const { id, ...values } = row;

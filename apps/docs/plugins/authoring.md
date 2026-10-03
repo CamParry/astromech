@@ -478,9 +478,18 @@ banner above the form; any other failure is a toast, or goes to your `onError`
 instead. The hook returns `showError(error)`, which shows an error you hold
 the same way, such as a refusal from before the form opened. The form saves on
 Cmd+S (Ctrl+S outside macOS), from a field too, but not while a modal dialog is
-open, and asks before a tab with unsaved changes closes. Only a page's main form
-keeps the shortcut: any other form, such as one in a dialog, passes
-`saveHotkey: false`, so one key press saves one form.
+open. Only a page's main form keeps the shortcut: any other form, such as one in
+a dialog, passes `saveHotkey: false`, so one key press saves one form.
+
+While the form has unsaved changes it asks before they are lost: the browser
+asks before the tab closes, and the admin's confirm dialog asks before any
+in-app navigation, from a link, Back or your own `navigate`. A save resets the
+form before your `onSuccess` runs, so a redirect from `onSuccess` leaves without
+asking. A navigation that follows a write which leaves nothing to save, such as
+a delete, passes TanStack Router's `ignoreBlocker: true`. A switch that drops
+the form without navigating, such as a locale held in state that remounts it,
+goes through the returned `confirmDiscard(action)`, which runs `action` at once
+on a clean form and only after the editor agrees otherwise.
 
 ```tsx
 // admin/pages/redirect-form.tsx
