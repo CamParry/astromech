@@ -139,6 +139,29 @@ export async function loadMergedProvider(
     );
 }
 
+/**
+ * The merged chain as a provider that loads it on each read, so boot can
+ * register it without loading files a bundled runtime may not ship.
+ */
+export function createMergedProvider(
+    plugins: PluginDefinition[],
+    migrationsDir: string
+): MigrationProvider {
+    return {
+        async getMigrations() {
+            let provider: MigrationProvider;
+            try {
+                provider = await loadMergedProvider(plugins, migrationsDir);
+            } catch (error) {
+                throw new AstromechError(
+                    `could not load the migrations from ${migrationsDir}: ${describe(error)}`
+                );
+            }
+            return provider.getMigrations();
+        },
+    };
+}
+
 function describe(error: unknown): string {
     return error instanceof Error ? error.message : String(error);
 }

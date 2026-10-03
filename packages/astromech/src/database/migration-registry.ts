@@ -1,0 +1,16 @@
+/**
+ * The migration chain this site runs: the app's own merged with each plugin's.
+ * Boot registers it, and a restore reads it to bring a backup up to this schema.
+ */
+
+import type { MigrationProvider } from 'kysely/migration';
+import { createRegistry } from '@/registry';
+
+const migrationProvider = createRegistry<MigrationProvider>('migrationProvider', {
+    hint: 'Boot registers it from the config, and the test harness from its own chain.',
+});
+
+export const setMigrationProvider = migrationProvider.set;
+
+/** The registered migration chain. Throws when unset. */
+export const getMigrationProvider = migrationProvider.getOrThrow;

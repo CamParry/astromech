@@ -4,7 +4,11 @@
  */
 
 import type { AppContext, Role } from '@/types/index';
+import { migrateToLatest } from '@astromech/schema-engine';
 import { makeUser } from '@tests/fixtures';
+import { contextAs, createTestDb, createTestUser, setupTestConfig } from '@tests/harness';
+import { testMigrationProvider } from '@tests/test-db';
+import { sql } from 'kysely';
 import { describe, expect, it, vi } from 'vitest';
 import {
     createAppContext,
@@ -12,6 +16,8 @@ import {
     systemAppContext,
 } from '@/app-context/app-context';
 import { createServices, currentServices } from '@/app-context/services';
+import { setMigrationProvider } from '@/database/migration-registry';
+import { createMergedProvider } from '@/database/migrations';
 import { PermissionDeniedError } from '@/errors/permission';
 import { createPluginContext } from '@/plugins/runtime/plugin-runtime';
 import { runInRequestScope } from '@/request-scope/request-scope';
@@ -216,5 +222,102 @@ describe('createAppContext', () => {
         expect(app.users).not.toBe(other.users);
         expect(app.media).toBe(app.media);
         expect(app.media).not.toBe(other.media);
+    });
+});
+
+describe('database.restore', () => {
+    it('empties sessions and verification tokens rather than restoring them', async () => {
+        const db = await createTestDb();
+        setupTestConfig();
+        const user = await createTestUser(db, { email: 'kept@test.dev' });
+        const addSession = (token: string) =>
+            sql`INSERT INTO sessions (id, expires_at, token, created_at, updated_at, user_id)
+                VALUES (${crypto.randomUUID()}, '2099-01-01T00:00:00.000Z', ${token},
+                        '2026-10-03T00:00:00.000Z', '2026-10-03T00:00:00.000Z', ${user.id})`.execute(
+                db
+            );
+        await addSession('in-backup');
+        await sql`INSERT INTO verifications (id, identifier, value, expires_at)
+            VALUES (${crypto.randomUUID()}, 'reset', 'in-backup', '2099-01-01T00:00:00.000Z')`.execute(
+            db
+        );
+        const { database } = contextAs(null);
+        if (database.dump === undefined || database.restore === undefined) {
+            throw new Error('the harness database cannot dump and restore');
+        }
+        const backup = await database.dump();
+        await addSession('after-backup');
+
+        await database.restore(backup.stream, { preserve: [] });
+        await backup.cleanup();
+
+        const { rows: sessions } = await sql`SELECT token FROM sessions`.execute(db);
+        expect(sessions).toEqual([]);
+        const { rows: verifications } =
+            await sql`SELECT value FROM verifications`.execute(db);
+        expect(verifications).toEqual([]);
+        const { rows: users } = await sql`SELECT email FROM users`.execute(db);
+        expect(users).toEqual([{ email: 'kept@test.dev' }]);
+    });
+
+    // `plugin:purge` reads it to find a removed plugin's tables, which a
+    // restore leaves in place.
+    it('keeps the installed-plugin records as they are', async () => {
+        const db = await createTestDb();
+        setupTestConfig();
+        const { database } = contextAs(null);
+        if (database.dump === undefined || database.restore === undefined) {
+            throw new Error('the harness database cannot dump and restore');
+        }
+        const backup = await database.dump();
+        await sql`INSERT INTO _astromech_plugins (package, namespace, version, installed_at)
+            VALUES ('@example/later', 'later', '1.0.0', '2026-10-03T00:00:00.000Z')`.execute(
+            db
+        );
+
+        await database.restore(backup.stream, { preserve: [] });
+        await backup.cleanup();
+
+        const { rows } =
+            await sql`SELECT package FROM _astromech_plugins WHERE package = '@example/later'`.execute(
+                db
+            );
+        expect(rows).toEqual([{ package: '@example/later' }]);
+    });
+
+    it('needs the migration files to restore a backup from another schema version', async () => {
+        const db = await createTestDb();
+        setupTestConfig();
+        const { database } = contextAs(null);
+        if (database.dump === undefined || database.restore === undefined) {
+            throw new Error('the harness database cannot dump and restore');
+        }
+        const backup = await database.dump();
+        await migrateToLatest(
+            db,
+            {
+                async getMigrations() {
+                    return {
+                        ...(await testMigrationProvider.getMigrations()),
+                        '9999_later': {
+                            async up(migrating) {
+                                await sql`CREATE TABLE later (id TEXT)`.execute(
+                                    migrating
+                                );
+                            },
+                        },
+                    };
+                },
+            },
+            { allowUnorderedMigrations: true }
+        );
+        setMigrationProvider(createMergedProvider([], '/no/such/migrations'));
+
+        await expect(database.restore(backup.stream, { preserve: [] })).rejects.toThrow(
+            "the site's migration files are needed to restore a backup taken at " +
+                'another schema version, and they could not be loaded: could not load ' +
+                'the migrations from /no/such/migrations'
+        );
+        await backup.cleanup();
     });
 });

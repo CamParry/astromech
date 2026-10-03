@@ -48,33 +48,42 @@ export function openPlainDb(client: Client): Kysely<unknown> {
 }
 
 /**
- * Apply the full migration chain a site with the first-party plugins gets:
+ * The full migration chain a site with the first-party plugins gets:
  * `apps/demo/migrations` merged with each plugin's own chain. Running the real
  * chain (rather than a test-only schema) means every harness-based test also
- * exercises the generated `migrationProvider`.
+ * exercises the generated `migrationProvider`. It loads on each read.
  *
  * The migration providers live outside this package's rootDir, so they are
  * imported dynamically by URL (vitest resolves the .ts) to keep `apps/demo` and
  * the plugins out of the tsconfig project.
  */
+export const testMigrationProvider: MigrationProvider = {
+    async getMigrations() {
+        const { migrationProvider } = await import(
+            new URL('../../../../apps/demo/migrations/index.ts', import.meta.url).href
+        );
+        // The first-party plugins own their tables, so the app chain alone does
+        // not create them. This is the merged provider a real boot applies.
+        const plugins = await Promise.all(
+            FIRST_PARTY_PLUGIN_MIGRATIONS.map(async (alias) => {
+                const mod = await import(
+                    new URL(
+                        `../../../plugins/${alias}/migrations/index.ts`,
+                        import.meta.url
+                    ).href
+                );
+                return { alias, provider: mod.migrationProvider as MigrationProvider };
+            })
+        );
+        return mergeMigrationProviders(migrationProvider, plugins).getMigrations();
+    },
+};
+
+/**
+ * Apply `testMigrationProvider`. `allowUnorderedMigrations` mirrors
+ * `database/migrations.ts`, because plugin migrations interleave with the app's
+ * in one `kysely_migration` table.
+ */
 export async function migrateTestDb(db: Kysely<DB>): Promise<void> {
-    const { migrationProvider } = await import(
-        new URL('../../../../apps/demo/migrations/index.ts', import.meta.url).href
-    );
-    // The first-party plugins own their tables, so the app chain alone does not
-    // create them. Apply exactly what a real boot applies: the merged provider.
-    // `allowUnorderedMigrations` mirrors `database/migrations.ts`, because plugin
-    // migrations interleave with the app's in one `kysely_migration` table.
-    const plugins = await Promise.all(
-        FIRST_PARTY_PLUGIN_MIGRATIONS.map(async (alias) => {
-            const mod = await import(
-                new URL(`../../../plugins/${alias}/migrations/index.ts`, import.meta.url)
-                    .href
-            );
-            return { alias, provider: mod.migrationProvider as MigrationProvider };
-        })
-    );
-    await migrateToLatest(db, mergeMigrationProviders(migrationProvider, plugins), {
-        allowUnorderedMigrations: true,
-    });
+    await migrateToLatest(db, testMigrationProvider, { allowUnorderedMigrations: true });
 }

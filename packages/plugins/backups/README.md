@@ -133,10 +133,21 @@ Two endpoints stream, so they are `rawRoutes` rather than service methods:
 
 Restore takes a safety snapshot of the current database **before** overwriting
 it, so the operation is reversible, and preserves the plugin's own run table
-and the cron table across the restore — otherwise a restore would erase the
-record of itself. The libsql driver refuses a backup whose recorded migrations
-differ from the database's, or whose tables or columns differ, and changes
-nothing; the route answers 500 with the driver's message, which the admin shows.
+and the cron table across the restore. Otherwise a restore would erase the
+record of itself. The libsql driver runs the site's migrations forward on a copy
+of the backup, so an older backup restores into the current schema, then
+swaps the copy's tables in within one transaction. It empties sessions and
+verification tokens rather than restoring them, so everyone is signed out, and
+keeps the installed-plugin records. It refuses, changing nothing, a backup
+holding a migration the site does not have (a newer backup, or one from a plugin
+since removed), and any restore while the database itself does not match the
+site's migrations (a removed plugin awaiting `astromech plugin:purge`, or
+migrations `astromech db:init` has not applied yet). The route answers these
+with 409. It answers 422 for a backup that is not a site's database: not
+SQLite, failing its integrity check, or recording no migrations. Neither is
+logged, since nothing changed and the message names the cause. Any other
+failure, such as a migration that fails on the backup, answers 500 and is
+logged. The admin shows the message in each case.
 
 ## Admin surface
 

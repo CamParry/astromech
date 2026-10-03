@@ -54,6 +54,21 @@ are supported for **local file databases only**. They use `VACUUM INTO`, which
 needs a local file, so a remote Turso URL is rejected with an explicit error
 rather than silently producing a broken backup.
 
+`restore()` runs the site's migrations forward on a copy of the backup, then
+swaps the copy's tables in within one transaction, so a backup taken before a
+migration restores into the current schema. It refuses a backup that holds a
+migration the site does not have, such as one taken by newer code or with a
+plugin since removed, and refuses any restore while the database records other
+migrations than the site's: run `astromech plugin:purge` for a removed plugin or
+`astromech db:init` for pending migrations first. It refuses a backup that is
+not a site's database: not SQLite, failing SQLite's integrity check, or
+recording no migrations. It empties sessions and
+verification tokens rather than restoring them, so everyone is signed out. A
+backup recording the same migrations as the database restores as it is. Any
+other needs the migration files: the serving process loads them from
+`migrationsDir` at the time of the restore, so deploy that folder with the site
+and start the server from the project root.
+
 ### Where `file:./database.db` points
 
 Relative paths in your config resolve against the **working directory**, so run

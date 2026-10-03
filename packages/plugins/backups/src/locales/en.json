@@ -31,9 +31,9 @@
         "sizeExpired": "—",
         "restore": {
             "dialogTitle": "Restore this backup?",
-            "dialogBody": "This will replace all content, settings, and users with the backup from {{date}}. A safety backup is taken automatically first so this can be undone — backup history and schedule are preserved. Any unsaved edits will be lost and you may need to refresh or sign in again.",
+            "dialogBody": "This will replace all content, settings, and users with the backup from {{date}}, updated to this site's current database schema. A safety backup is taken automatically first so this can be undone, and backup history and schedule are kept. Everyone is signed out, you included, and any unsaved edits are lost.",
             "confirmLabel": "Restore",
-            "success": "Restore complete. A page refresh is recommended.",
+            "success": "Restore complete. Everyone has been signed out, so sign in again to continue.",
             "failed": "Restore failed: {{reason}}"
         },
         "delete": {

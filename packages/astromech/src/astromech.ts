@@ -22,7 +22,8 @@ import { resolveConfig } from '@/config/resolve';
 import { scheduledPublishJob } from '@/content/jobs/scheduled-publish';
 import { getSchedulerDriver, registerCronJob } from '@/cron/registry';
 import { onTick } from '@/cron/runner';
-import { checkMigrationDrift } from '@/database/migrations';
+import { setMigrationProvider } from '@/database/migration-registry';
+import { checkMigrationDrift, createMergedProvider } from '@/database/migrations';
 import { entryJobs } from '@/entries/jobs/entry-jobs';
 import { AstromechError } from '@/errors/astromech-error';
 import { bootPlugins, registerPlugins } from '@/plugins/runtime/plugin-runtime';
@@ -119,6 +120,7 @@ async function build(config: AstromechConfig): Promise<Astromech> {
 
     // Verify the schema before anything boots against it
     await checkMigrationDrift(db, plugins, resolved.migrationsDir);
+    setMigrationProvider(createMergedProvider(plugins, resolved.migrationsDir));
 
     // Built-in cron jobs
     registerBuiltInJobs();

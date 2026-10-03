@@ -13,6 +13,7 @@ import type {
 import type { BackupRunStatus } from '../../types';
 import type { BadgeVariant } from 'astromech/ui';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { AstromechApiError } from 'astromech/fetch';
 import {
     Badge,
     Button,
@@ -55,6 +56,23 @@ function rawFetch(plugin: string, path: string, init?: RequestInit): Promise<Res
         credentials: 'include',
         ...init,
     });
+}
+
+/**
+ * The error a failed restore throws. A body in the API's error shape (the 401
+ * or 403 the route's access check answers) becomes the `AstromechApiError` the
+ * service client throws, so the admin's query client signs the user out on a
+ * 401. The route's own `{ error }` body becomes an `Error` with its message.
+ */
+async function restoreError(res: Response): Promise<Error> {
+    const body = (await res.json().catch(() => null)) as { error?: unknown } | null;
+    const error = body?.error;
+    if (typeof error === 'object' && error !== null && 'code' in error) {
+        return new AstromechApiError(
+            error as ConstructorParameters<typeof AstromechApiError>[0]
+        );
+    }
+    return new Error(typeof error === 'string' ? error : `HTTP ${res.status}`);
 }
 
 const STATUS_VARIANTS: Record<BackupRunStatus, BadgeVariant> = {
@@ -121,12 +139,7 @@ export default function BackupsPage(): React.ReactElement {
             const res = await rawFetch(serviceKey, `/runs/${id}/restore`, {
                 method: 'POST',
             });
-            if (!res.ok) {
-                const body = (await res.json().catch(() => null)) as {
-                    error?: string;
-                } | null;
-                throw new Error(body?.error ?? `HTTP ${res.status}`);
-            }
+            if (!res.ok) throw await restoreError(res);
         },
         onSuccess: () => {
             toast({ message: t('backups.restore.success'), variant: 'success' });

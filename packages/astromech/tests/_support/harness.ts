@@ -50,6 +50,7 @@ import type { Kysely } from 'kysely';
 import * as fs from 'node:fs/promises';
 import * as path from 'node:path';
 import { noopStorage } from '@tests/fixtures';
+import { testMigrationProvider } from '@tests/test-db';
 import { sql } from 'kysely';
 import { inject } from 'vitest';
 import { createAppContext } from '@/app-context/app-context';
@@ -58,6 +59,7 @@ import { resolveConfig } from '@/config/resolve';
 import { decodeWith, encodeWith } from '@/database/codec';
 import { getDatabaseDriver, setDatabaseDriver } from '@/database/driver-registry';
 import { libsql } from '@/database/drivers/libsql';
+import { setMigrationProvider } from '@/database/migration-registry';
 import { getDb, setDb } from '@/database/registry';
 import { userContentTable, usersTable } from '@/database/tables';
 import { DEFAULT_ROLE_SLUG } from '@/permissions/roles';
@@ -88,8 +90,8 @@ function testDbPaths(): { dir: string; template: string } {
 
 /**
  * Reset the runtime with `resetRuntime()`, then copy the migrated template to
- * a new file, open it through the `libsql` driver, and register it globally.
- * Returns the Kysely handle (already the active `getDb()` instance).
+ * a new file, open it through the `libsql` driver, and register it globally,
+ * with the migration chain the template was built from. Returns the Kysely handle (already the active `getDb()` instance).
  */
 export async function createTestDb(): Promise<Db> {
     const { dir, template } = testDbPaths();
@@ -99,6 +101,7 @@ export async function createTestDb(): Promise<Db> {
     const driver = libsql({ url: `file:${file}` });
     setDb(driver.getInstance());
     setDatabaseDriver(driver);
+    setMigrationProvider(testMigrationProvider);
     return driver.getInstance();
 }
 

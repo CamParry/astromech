@@ -9,6 +9,8 @@ import type { RenderAdminResult } from '../../../../admin/tests/_support/render-
 import type { BackupRun, ListRunsResult } from '../../src/service/backups';
 import { screen, waitFor, within } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
+import { sessionQueryOptions } from '../../../../admin/src/context/auth';
+import { createAppQueryClient } from '../../../../admin/src/query-client';
 import { renderPluginPage } from '../../../../admin/tests/_support/render-admin';
 import BackupsPage from '../../src/admin/pages/backups-page';
 import en from '../../src/locales/en.json';
@@ -185,7 +187,9 @@ describe('BackupsPage', () => {
         await user.click(within(dialog).getByRole('button', { name: 'Restore' }));
 
         expect(
-            await screen.findByText('Restore complete. A page refresh is recommended.')
+            await screen.findByText(
+                'Restore complete. Everyone has been signed out, so sign in again to continue.'
+            )
         ).not.toBeNull();
         expect(fetch.mock.calls).toEqual([
             [restoreUrl, { credentials: 'include', method: 'POST' }],
@@ -200,8 +204,8 @@ describe('BackupsPage', () => {
     it('shows why a restore failed', async () => {
         backups.list.mockResolvedValue(listing([backupRun({ id: 'run_1' })]));
         const reason =
-            'the backup is from another schema version than the database ' +
-            '(migrations only in the database: 9999_later)';
+            'the backup records a migration this site does not have (9999_later): ' +
+            'restore it with the code and plugins that wrote it';
         vi.stubGlobal(
             'fetch',
             vi.fn<typeof globalThis.fetch>(async () =>
@@ -218,5 +222,50 @@ describe('BackupsPage', () => {
         await user.click(within(dialog).getByRole('button', { name: 'Restore' }));
 
         expect(await screen.findByText(`Restore failed: ${reason}`)).not.toBeNull();
+    });
+
+    // A restore empties the sessions table, and a session revoked elsewhere
+    // answers the same 401, so the admin's query client must see it.
+    it('signs the user out when the restore answers 401', async () => {
+        backups.list.mockResolvedValue(listing([backupRun({ id: 'run_1' })]));
+        vi.stubGlobal(
+            'fetch',
+            vi.fn<typeof globalThis.fetch>(async () =>
+                Response.json(
+                    {
+                        error: {
+                            id: 'err-1',
+                            code: 'UNAUTHORIZED',
+                            message: 'Authentication required',
+                            status: 401,
+                        },
+                    },
+                    { status: 401 }
+                )
+            )
+        );
+        const onUnauthorized = vi.fn<() => void>();
+        const queryClient = createAppQueryClient({ onUnauthorized });
+        const { user } = renderPluginPage(<BackupsPage />, {
+            plugin: {
+                namespace: 'backups',
+                serviceKey: 'backups',
+                permissionNamespace: 'backups',
+            },
+            translations: en,
+            queryClient,
+        });
+
+        const row = await findRow('Scheduled');
+        await user.click(within(row).getByRole('button', { name: 'Restore' }));
+        const dialog = await screen.findByRole('alertdialog', {
+            name: 'Restore this backup?',
+        });
+        await user.click(within(dialog).getByRole('button', { name: 'Restore' }));
+
+        await waitFor(() => {
+            expect(onUnauthorized).toHaveBeenCalledTimes(1);
+        });
+        expect(queryClient.getQueryData(sessionQueryOptions.queryKey)).toBeNull();
     });
 });

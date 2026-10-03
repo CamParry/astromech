@@ -86,15 +86,13 @@ item 8 proposed, would protect libsql only.
       the change to `apps/demo-cloudflare`'s migration and snapshot. Map the
       violation to 409 by index name, since SQLite's message names the index
       for an expression or partial index.
-- [ ] **Backup restore.** Replace `assertSameMigrations` in
-      `database/drivers/libsql.ts` with the set comparison, run the migrator
-      on the temporary copy, then keep today's column-checked copy as the swap,
-      and empty sessions and verification tokens. Check first whether the
-      serving process ships migration files; if not, restoring an older backup
-      runs through the CLI rather than the admin. Check each migration for
-      reads outside the database (environment, config, files, clock), which a
-      later forward run would not reproduce. Test a plugin removed without
-      `plugin:purge` end to end. D1 restores through Time Travel.
+- [x] **Backup restore.** Done 2026-10-03: libsql restore compares migration
+      names as sets, migrates a copy and swaps it in, refusing (409) a live
+      database whose migrations differ from the copy's and (422) an unusable
+      backup. Migrations read nothing outside the database. A same-version
+      restore needs no migration files; an older one needs them on the server
+      (`apps/docs/configuration/database.md`). D1 stays on Time Travel
+      (`backlog.md`).
 - [ ] **Caller errors.** The bulk `slug` 422 in `update-batch.ts`; typed errors
       for `entries/methods/preview/issue-token.ts` and the `missing` (404) and
       `noStaged` (409) `AstromechError`s in
