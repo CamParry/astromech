@@ -14,9 +14,13 @@ shape.
 
 ## The work
 
-- [ ] Write a failing test: replace an item with a file of the same extension,
+- [x] Write a failing test: replace an item with a file of the same extension,
       make the row update fail (`failWritesTo` in the harness), and read the
       stored original back.
-- [ ] Write the new original (and variants) under a new key, update the row to
-      point at it, then remove the old files after the commit, as delete now
-      does. Check what the key scheme in `media/internal/store-file.ts` allows.
+- [x] Keep the old original safe until the row commits. The key stays
+      `<id>.<ext>` so the URL does not change: a same-extension replace copies
+      the old file to a `tmp/` key first and puts it back if the write or the
+      row update fails; a different extension leaves the old key untouched
+      until after the commit, and a failure deletes the new file. Variants
+      already wait for the commit. `DECISIONS.md` ("A media replace keeps the
+      original's key") records why a new key per replace lost.

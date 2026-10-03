@@ -1,5 +1,6 @@
 import type { StorageDriver } from '@/types/index';
 import type { MockInstance } from 'vitest';
+import { expectConsole } from '@tests/console';
 import {
     createTestDb,
     createTestStorage,
@@ -10,6 +11,7 @@ import {
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { currentServices } from '@/app-context/services';
 import { mediaTable } from '@/database/tables';
+import { listAll } from '@/storage/prefix';
 
 const mediaService = currentServices.media;
 
@@ -27,6 +29,13 @@ let storage: StorageDriver;
 /** Whether `storage` holds `key`. */
 async function stored(key: string): Promise<boolean> {
     return (await storage.stat(key)) !== null;
+}
+
+/** The text `storage` holds under `key`. */
+async function readStored(key: string): Promise<string> {
+    const object = await storage.get(key);
+    if (!object) throw new Error(`expected ${key} in storage`);
+    return new Response(object.body).text();
 }
 
 /** Whether the last `put` was handed a stream rather than buffered bytes. */
@@ -149,5 +158,89 @@ describe('mediaService.replace', () => {
 
         expect((await mediaService.get({ id: m.id }))?.filename).toBe('photo.jpg');
         expect(await stored(`${m.id}.jpg`)).toBe(true);
+        expect(await stored(`${m.id}.png`)).toBe(false);
+    });
+
+    it('keeps the old bytes and metadata when a same-extension replace fails', async () => {
+        const m = await mediaService.upload({
+            file: new File(['old notes' as BlobPart], 'notes.txt', {
+                type: 'text/plain',
+            }),
+        });
+        const stopFailing = await failWritesTo(mediaTable, 'update');
+
+        await expect(
+            mediaService.replace({
+                id: m.id,
+                file: new File(['a longer replacement' as BlobPart], 'draft.txt', {
+                    type: 'text/plain',
+                }),
+            })
+        ).rejects.toThrow('boom');
+        await stopFailing();
+
+        const after = await mediaService.get({ id: m.id });
+        expect(after?.filename).toBe('notes.txt');
+        expect(after?.size).toBe(9);
+        expect(await readStored(`${m.id}.txt`)).toBe('old notes');
+        expect(await listAll(storage, '')).toEqual([`${m.id}.txt`]);
+    });
+
+    it('logs and keeps the copy of the old original when it cannot be restored', async () => {
+        const m = await mediaService.upload({
+            file: new File(['old notes' as BlobPart], 'notes.txt', {
+                type: 'text/plain',
+            }),
+        });
+        const stopFailing = await failWritesTo(mediaTable, 'update');
+        // Storage reads the original but not the copy, so the restore fails.
+        const get = storage.get.bind(storage);
+        vi.spyOn(storage, 'get').mockImplementation((key, opts) =>
+            key === `${m.id}.txt`
+                ? get(key, opts)
+                : Promise.reject(new Error('storage down'))
+        );
+        expectConsole(
+            'error',
+            new RegExp(
+                `Could not restore the stored original of media ${m.id} after a failed replace; ` +
+                    `the previous file is kept at \\S+: storage down`
+            )
+        );
+
+        await expect(
+            mediaService.replace({
+                id: m.id,
+                file: new File(['a longer replacement' as BlobPart], 'draft.txt', {
+                    type: 'text/plain',
+                }),
+            })
+        ).rejects.toThrow('boom');
+        await stopFailing();
+        vi.mocked(storage.get).mockRestore();
+
+        const copies = (await listAll(storage, '')).filter(
+            (key) => key !== `${m.id}.txt`
+        );
+        expect(copies).toHaveLength(1);
+        expect(await readStored(copies[0] ?? '')).toBe('old notes');
+    });
+
+    it('leaves only the new original after a same-extension replace', async () => {
+        const m = await mediaService.upload({
+            file: new File(['old notes' as BlobPart], 'notes.txt', {
+                type: 'text/plain',
+            }),
+        });
+
+        await mediaService.replace({
+            id: m.id,
+            file: new File(['a longer replacement' as BlobPart], 'draft.txt', {
+                type: 'text/plain',
+            }),
+        });
+
+        expect(await readStored(`${m.id}.txt`)).toBe('a longer replacement');
+        expect(await listAll(storage, '')).toEqual([`${m.id}.txt`]);
     });
 });
