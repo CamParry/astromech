@@ -93,6 +93,8 @@ not be re-derived.
 - [ ] Admin-editable backup **schedule** (retention is editable via the plugin's `/settings` page): the cron schedule is consumed once at boot when the job is registered, so a settings override needs runtime cron re-registration — a feature, not a wiring fix
 - [ ] Encryption at rest for backup artifacts
 - [ ] Multi-instance run-now lock — reuse the `_astromech_cron` lock so a concurrent scheduled + manual run across processes is guarded (v1 uses an in-process flag only)
+- [ ] A stored backup that is not valid gzip answers 500 from the restore route's gunzip stream; it is an unusable backup like the ones `InvalidBackupError` answers 422 for
+- [ ] The assistant's chat posts with a raw `fetch` (`packages/plugins/assistant/src/admin/use-chat.ts`), so a 401 there shows an inline error instead of signing the user out through the admin's query client
 
 ### AI context follow-ups (P6, 2026-08-03)
 
