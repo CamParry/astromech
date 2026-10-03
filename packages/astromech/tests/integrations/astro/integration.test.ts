@@ -2,6 +2,7 @@
  * `astromech()`, the Astro integration: its two config hooks, driven with
  * recording fakes against a temp project root.
  */
+import type { VirtualModulePlugin } from '@/integrations/astro/virtual-module';
 import type { HookParameters } from 'astro';
 import { mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
@@ -23,7 +24,11 @@ type Recorded = {
 type ViteUpdate = {
     resolve: { alias: Record<string, string> };
     define: Record<string, string>;
+    plugins: unknown[];
 };
+
+/** Astro's `security.allowedDomains`, as a site writes it. */
+type AllowedDomains = { hostname?: string; protocol?: string; port?: string }[];
 
 const packageSource = fileURLToPath(new URL('../../../src', import.meta.url));
 
@@ -132,6 +137,44 @@ describe('astromech()', () => {
             expect(recorded.injectTypes[0]?.content).toContain('post');
         });
 
+        it.each([
+            [[], false],
+            [[{ hostname: 'example.com' }], true],
+        ] satisfies [AllowedDomains, boolean][])(
+            'serves astroReadsForwardedFor for security.allowedDomains %j as %s',
+            async (allowedDomains, expected) => {
+                const { integration, recorded, done } = await runSetup(undefined, {
+                    allowedDomains,
+                });
+                await integration.hooks['astro:config:done']?.(done);
+
+                expect(loadConfigModule(recorded)).toContain(
+                    `export const astroReadsForwardedFor = ${String(expected)};`
+                );
+            }
+        );
+
+        it('warns when Astro may read x-forwarded-for and trustProxy is unset', async () => {
+            const { integration, recorded, done } = await runSetup(undefined, {
+                allowedDomains: [{ hostname: 'example.com' }],
+            });
+            await integration.hooks['astro:config:done']?.(done);
+
+            expect(recorded.warnings).toEqual([
+                expect.stringContaining('Set `security.trustProxy`'),
+            ]);
+        });
+
+        it('does not warn on the Cloudflare adapter, which reads cf-connecting-ip', async () => {
+            const { integration, recorded, done } = await runSetup(undefined, {
+                allowedDomains: [{ hostname: 'example.com' }],
+                adapter: '@astrojs/cloudflare',
+            });
+            await integration.hooks['astro:config:done']?.(done);
+
+            expect(recorded.warnings).toEqual([]);
+        });
+
         it('writes the method manifest into the project .astro directory', async () => {
             const { integration, recorded, done } = await runSetup();
             await integration.hooks['astro:config:done']?.(done);
@@ -147,15 +190,21 @@ describe('astromech()', () => {
     });
 });
 
-async function runSetup(integrations?: { name: string }[]) {
+async function runSetup(integrations?: { name: string }[], site: Site = {}) {
     const integration = astromech();
-    const fakes = createFakes(integrations);
+    const fakes = createFakes(integrations, site);
     await integration.hooks['astro:config:setup']?.(fakes.setup);
     return { integration, ...fakes };
 }
 
+/** The Astro config a fake site sets beyond its integrations. */
+type Site = { allowedDomains?: AllowedDomains; adapter?: string };
+
 /** Recording fakes for both hooks, for a site whose integrations are `integrations`. */
-function createFakes(integrations: { name: string }[] = [{ name: 'astromech' }]) {
+function createFakes(
+    integrations: { name: string }[] = [{ name: 'astromech' }],
+    site: Site = {}
+) {
     const recorded: Recorded = {
         updateConfig: [],
         injectRoute: [],
@@ -169,7 +218,12 @@ function createFakes(integrations: { name: string }[] = [{ name: 'astromech' }])
         error: () => undefined,
         debug: () => undefined,
     };
-    const config = { root: pathToFileURL(`${root}/`), integrations };
+    const config = {
+        root: pathToFileURL(`${root}/`),
+        integrations,
+        security: { allowedDomains: site.allowedDomains ?? [] },
+        adapter: site.adapter === undefined ? undefined : { name: site.adapter },
+    };
 
     const setup = {
         config,
@@ -190,4 +244,15 @@ function createFakes(integrations: { name: string }[] = [{ name: 'astromech' }])
     } as unknown as HookParameters<'astro:config:done'>;
 
     return { recorded, setup, done };
+}
+
+/** The source the recorded Vite config serves for `virtual:astromech/config`. */
+function loadConfigModule(recorded: Recorded): string | undefined {
+    const plugin = recorded.updateConfig[0]?.vite.plugins.find(
+        (candidate): candidate is VirtualModulePlugin =>
+            (candidate as { name?: unknown }).name === 'virtual:astromech/config'
+    );
+    if (plugin === undefined) throw new Error('no virtual:astromech/config plugin');
+    const resolvedId = plugin.resolveId('virtual:astromech/config');
+    return resolvedId === undefined ? undefined : plugin.load(resolvedId);
 }

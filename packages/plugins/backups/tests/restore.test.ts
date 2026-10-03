@@ -14,6 +14,7 @@ import { sql } from 'kysely';
 import { Migrator } from 'kysely/migration';
 import { beforeEach, describe, expect, it } from 'vitest';
 import { setMigrationProvider } from '@/database/migration-registry';
+import { purgePlugin } from '@/transport/cli/commands/plugin-purge';
 import { backups } from '../src/index';
 import { artifactKey, createBackupsApp, takeBackup } from './_support/backups-app';
 
@@ -46,12 +47,20 @@ function chainWithout(prefix: string): MigrationProvider {
     };
 }
 
-/** Remove the forms plugin's table and ledger rows, as `plugin:purge` does. */
-async function dropFormsPlugin(): Promise<void> {
-    await sql`DROP TABLE plugin_forms_submissions`.execute(app.db);
-    await sql`DELETE FROM kysely_migration WHERE name LIKE 'plugin_forms_%'`.execute(
-        app.db
-    );
+/** The prefix the merged chain gives every forms plugin migration. */
+const FORMS_PREFIX = 'plugin_forms_';
+
+/** The forms plugin's migration names in the harness chain, sorted. */
+async function formsMigrationNames(): Promise<string[]> {
+    const all = await testMigrationProvider.getMigrations();
+    return Object.keys(all)
+        .filter((name) => name.startsWith(FORMS_PREFIX))
+        .sort();
+}
+
+/** Remove the forms plugin's tables and ledger rows with `plugin:purge`. */
+async function purgeFormsPlugin(): Promise<void> {
+    await purgePlugin(app.db, '@astromech/forms');
 }
 
 function restore(id: string): Promise<Response> {
@@ -148,17 +157,19 @@ describe('POST /plugins/backups/runs/:id/restore', () => {
             id: note.id,
             data: { title: 'Changed' },
         });
-        await dropFormsPlugin();
-        setMigrationProvider(chainWithout('plugin_forms_'));
+        await purgeFormsPlugin();
+        setMigrationProvider(chainWithout(FORMS_PREFIX));
+        const forms = await formsMigrationNames();
 
         const res = await restore(backupId);
 
         expect(res.status).toBe(409);
         expect(await res.json()).toEqual({
             error:
-                'the backup records a migration this site does not have ' +
-                '(plugin_forms_0000_baseline): restore it with the code and plugins that wrote it',
-            details: { onlyInBackup: ['plugin_forms_0000_baseline'] },
+                `the backup records ${forms.length === 1 ? 'a migration' : 'migrations'} ` +
+                `this site does not have (${forms.join(', ')}): restore it with the ` +
+                'code and plugins that wrote it',
+            details: { onlyInBackup: forms },
         });
         expect(
             (await app.entries.get({ type: 'note', id: note.id, full: true }))?.title
@@ -168,7 +179,7 @@ describe('POST /plugins/backups/runs/:id/restore', () => {
     // The plugin's tables and ledger rows stay in the database until
     // `plugin:purge`, and a backup from before it was installed lacks them.
     it('refuses a backup from before a plugin was installed while that plugin awaits its purge', async () => {
-        await dropFormsPlugin();
+        await purgeFormsPlugin();
         const note = await app.entries.create({
             type: 'note',
             data: { title: 'Original' },
@@ -185,7 +196,8 @@ describe('POST /plugins/backups/runs/:id/restore', () => {
             id: note.id,
             data: { title: 'Changed' },
         });
-        setMigrationProvider(chainWithout('plugin_forms_'));
+        setMigrationProvider(chainWithout(FORMS_PREFIX));
+        const forms = await formsMigrationNames();
 
         const res = await restore(backupId);
 
@@ -193,17 +205,16 @@ describe('POST /plugins/backups/runs/:id/restore', () => {
         expect(await res.json()).toEqual({
             error:
                 "the database does not match this site's migrations (only in the " +
-                'database: plugin_forms_0000_baseline, run `astromech plugin:purge`)',
-            details: { onlyInDatabase: ['plugin_forms_0000_baseline'] },
+                `database: ${forms.join(', ')}, run \`astromech plugin:purge\`)`,
+            details: { onlyInDatabase: forms },
         });
         expect(
             (await app.entries.get({ type: 'note', id: note.id, full: true }))?.title
         ).toBe('Changed');
-        const { rows } =
-            await sql`SELECT name FROM kysely_migration WHERE name LIKE 'plugin_forms_%'`.execute(
-                app.db
-            );
-        expect(rows).toEqual([{ name: 'plugin_forms_0000_baseline' }]);
+        const { rows } = await sql<{ name: string }>`
+            SELECT name FROM kysely_migration WHERE name LIKE ${`${FORMS_PREFIX}%`} ORDER BY name
+        `.execute(app.db);
+        expect(rows.map((row) => row.name)).toEqual(forms);
     });
 
     // The backup is the caller's choice, so a stored file that is not a site's

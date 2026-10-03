@@ -36,6 +36,11 @@ export {
     globalPermission,
     globalPermissions,
 } from '@/permissions/global-permission';
+/**
+ * The key a plugin's per-client rate limit counts `ctx.clientAddress` under,
+ * grouped the way core's sign-in limits group addresses.
+ */
+export { rateLimitKey } from '@/transport/http/client-address';
 export { withDefaults } from '@/utilities/options';
 export { resolveEntryUrl, resolveEntryPath } from '@/entries/entry-url';
 export type { UrlEntry } from '@/entries/entry-url';

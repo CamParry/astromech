@@ -1,77 +1,30 @@
 /**
- * Fixed-window rate limit for `submit`, held in process. Counters are capped:
- * at `MAX_KEYS` the oldest window is dropped to make room. Multi-instance
- * deployments are not guarded: each instance counts its own traffic.
+ * Fixed-window rate limit for `submit`, counted in the plugin's own table per
+ * address key (`rateLimitKey`) and form, so every process and Workers isolate
+ * on the database shares one count.
  */
+
+import type { PluginContext } from 'astromech';
+import { createRateLimitsRepository } from '../repository';
 
 export type RateLimitOptions = { limit: number; windowMs: number };
 
-type Window = { startedAt: number; count: number };
-
-type RateLimitState = { windows: Map<string, Window>; prunedAt: number };
-
-// A globalThis registry rather than a module-level Map: tsup emits several entry
-// chunks and a module-level singleton duplicates across them.
-declare global {
-    var __astromechFormsRateLimit: RateLimitState | undefined;
-}
-
-/** Elapsed windows are swept once the map passes this size. */
-const PRUNE_ABOVE = 1000;
-
-/** Hard cap on live counters, since the sweep alone cannot bound a map of live keys. */
-const MAX_KEYS = 10_000;
-
 /**
- * Record one hit for `key` and answer whether it is within the limit. The
- * window starts at the first hit and resets whole once it has elapsed.
+ * Record one submission from `address` to the form `formId` and answer whether
+ * it is within the limit. The window starts at the first submission and resets
+ * whole once it has elapsed; starting one also deletes every elapsed count. A
+ * refused submission writes nothing.
  */
-export function consumeRateLimit(key: string, options: RateLimitOptions): boolean {
-    const state = (globalThis.__astromechFormsRateLimit ??= {
-        windows: new Map(),
-        prunedAt: 0,
-    });
-    const { windows } = state;
+export async function consumeRateLimit(
+    db: PluginContext['db'],
+    key: { address: string; formId: string },
+    options: RateLimitOptions
+): Promise<boolean> {
+    const rateLimits = createRateLimitsRepository(db);
     const now = Date.now();
 
-    // At most one sweep per window: it walks every counter, and a busy site
-    // would otherwise pay that walk on every request.
-    if (windows.size > PRUNE_ABOVE && now - state.prunedAt >= options.windowMs) {
-        prune(windows, now, options.windowMs);
-        state.prunedAt = now;
-    }
-    if (windows.size >= MAX_KEYS && !windows.has(key)) evictOldest(windows);
+    const count = await rateLimits.consume(key, now, options);
+    if (count === 1) await rateLimits.deleteExpired(now - options.windowMs);
 
-    const current = windows.get(key);
-    if (current === undefined || now - current.startedAt >= options.windowMs) {
-        // Re-inserted rather than overwritten so insertion order stays window
-        // start order, which is what `evictOldest` reads.
-        windows.delete(key);
-        windows.set(key, { startedAt: now, count: 1 });
-        return options.limit >= 1;
-    }
-
-    current.count += 1;
-    return current.count <= options.limit;
-}
-
-/** Drop the counters whose window has elapsed. */
-function prune(windows: Map<string, Window>, now: number, windowMs: number): void {
-    for (const [key, window] of windows) {
-        if (now - window.startedAt >= windowMs) windows.delete(key);
-    }
-}
-
-/** Drop the counter whose window started longest ago. */
-function evictOldest(windows: Map<string, Window>): void {
-    const oldest = windows.keys().next();
-    if (oldest.done !== true) windows.delete(oldest.value);
-}
-
-/**
- * Clear every counter. For tests: nothing in the plugin calls it.
- * @internal
- */
-export function resetRateLimit(): void {
-    globalThis.__astromechFormsRateLimit = undefined;
+    return count !== null && count <= options.limit;
 }

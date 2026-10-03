@@ -6,13 +6,14 @@
  */
 
 import type { AuthVariables } from './middleware/auth';
+import type { ServerBindings } from '@/transport/http/client-address';
 import type { ResolvedConfig } from '@/types/index';
 import { swaggerUI } from '@hono/swagger-ui';
 import { OpenAPIHono, z } from '@hono/zod-openapi';
 import { cors } from 'hono/cors';
 import { secureHeaders } from 'hono/secure-headers';
 import { currentServices } from '@/app-context/services';
-import { getAuth } from '@/auth/better-auth';
+import { handleAuthRequest } from '@/auth/better-auth';
 import { meSchema } from '@/auth/schema';
 import { createFirstAdmin, firstAdminSchema, SIGN_UP_CLOSED } from '@/auth/setup';
 import { resolveNodeEnv } from '@/env';
@@ -34,7 +35,7 @@ import { createPluginsRouter } from './routes/plugins';
 import { rpcRouter } from './routes/rpc';
 import { usersRouter } from './routes/users';
 
-type AppEnv = { Variables: AuthVariables };
+type AppEnv = { Bindings: ServerBindings; Variables: AuthVariables };
 
 /**
  * Compose the API surface under `${config.basePath}/api`. Hono runs matching
@@ -165,7 +166,9 @@ export function createHttpApp(config: ResolvedConfig): OpenAPIHono<AppEnv> {
     // A catch-all because Better Auth owns its route surface, so core does not
     // list its routes. Built per request: at construction it would open a
     // dialect in the CLI and MCP.
-    app.on(['GET', 'POST'], `${api}/auth/*`, (c) => getAuth().handler(c.req.raw));
+    app.on(['GET', 'POST'], `${api}/auth/*`, (c) =>
+        handleAuthRequest(c.req.raw, getClientAddress(c))
+    );
 
     // Plugin RPC + raw routes enforce access per-method (incl. public), so
     // they mount before the API-wide requireAuth. So does the one route over

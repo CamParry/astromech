@@ -19,7 +19,7 @@ export default pluginVitestConfig({
         },
         'src/permissions/**': { lines: 99, functions: 99, branches: 99, statements: 99 },
         'src/resources/**': { lines: 99, functions: 99, branches: 99, statements: 99 },
-        'src/service/**': { lines: 97, functions: 99, branches: 87, statements: 96 },
+        'src/service/**': { lines: 97, functions: 99, branches: 88, statements: 97 },
         'src/spam/**': { lines: 94, functions: 99, branches: 87, statements: 93 },
         'src/tables/**': { lines: 99, functions: 99, branches: 99, statements: 99 },
         'src/utilities/**': { lines: 95, functions: 99, branches: 90, statements: 93 },

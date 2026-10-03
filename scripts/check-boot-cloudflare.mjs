@@ -28,7 +28,13 @@ import { mkdtemp, rm, writeFile } from 'node:fs/promises';
 import { constants, tmpdir } from 'node:os';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { expectStatus, freePort, request, sleep } from './check-helpers.mjs';
+import {
+    expectStatus,
+    freePort,
+    request,
+    REQUEST_TIMEOUT_MS,
+    sleep,
+} from './check-helpers.mjs';
 import { stopProcessGroup } from './process-group.mjs';
 import { requireFreshDist } from './require-fresh-dist.mjs';
 
@@ -95,6 +101,7 @@ async function main() {
         401,
         'the API rejects an anonymous read'
     );
+    await expectSignInLimited(base);
     // The endpoint wrangler exposes to fire `scheduled()` by hand. A 200 means
     // the Worker entry exported the handler and the tick reached the cron
     // table, which is the whole of the Cron Trigger path.
@@ -103,6 +110,52 @@ async function main() {
         200,
         'the Cron Trigger runs a tick'
     );
+}
+
+/**
+ * Four sign-ins with a password nobody has, from one address: three refused
+ * passwords (401), then the limit (429). The fourth proves Better Auth's limiter
+ * runs on workerd with `NODE_ENV` unset and counts in D1; a 500 is the request
+ * copy or the count failing there.
+ */
+async function expectSignInLimited(base) {
+    const url = `${base}/cms/api/auth/sign-in/email`;
+    // Wrangler's local proxy keeps a `CF-Connecting-IP` the client sends, where
+    // Cloudflare overwrites it. A fresh /64 per run keeps a count left in
+    // `.wrangler/state` by a run in the last minute from carrying over.
+    const address = `2001:db8:${randomGroup()}:${randomGroup()}::1`;
+    const statuses = [];
+    for (let attempt = 0; attempt < 4; attempt++) {
+        const response = await fetch(url, {
+            method: 'POST',
+            // Better Auth refuses a sign-in without an `Origin` it trusts. With
+            // no `BETTER_AUTH_URL` here, it trusts the origin the request came to.
+            headers: {
+                'Content-Type': 'application/json',
+                Origin: base,
+                'CF-Connecting-IP': address,
+            },
+            body: JSON.stringify({
+                email: 'nobody@example.com',
+                password: 'not-a-password',
+            }),
+            redirect: 'manual',
+            signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
+        });
+        statuses.push(response.status);
+    }
+    const expected = [401, 401, 401, 429];
+    if (statuses.join() !== expected.join()) {
+        throw new Error(
+            `${url} returned ${statuses.join(', ')}, expected ${expected.join(', ')} — sign-ins are counted and limited`
+        );
+    }
+    console.log(`  ok  ${statuses.join(', ')} ${url} — sign-ins are counted and limited`);
+}
+
+/** A random 16-bit IPv6 group, in hex. */
+function randomGroup() {
+    return Math.floor(Math.random() * 0x10000).toString(16);
 }
 
 function step(message) {

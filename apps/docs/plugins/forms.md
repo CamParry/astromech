@@ -18,34 +18,43 @@ export default defineConfig({
 });
 ```
 
-| Option      | Default                          | What it does                                                                       |
-| ----------- | -------------------------------- | ---------------------------------------------------------------------------------- |
-| `spam`      | none                             | A spam provider such as `turnstile(...)`, or your own.                             |
-| `storeMeta` | `true`                           | Store the `ip` / `userAgent` / `referer` a caller sends alongside each submission. |
-| `rateLimit` | `{ limit: 20, windowMs: 60000 }` | Submissions allowed per connecting address per window. `false` turns it off.       |
+| Option      | Default                          | What it does                                                                          |
+| ----------- | -------------------------------- | ------------------------------------------------------------------------------------- |
+| `spam`      | none                             | A spam provider such as `turnstile(...)`, or your own.                                |
+| `storeMeta` | `true`                           | Store the `ip` / `userAgent` / `referer` a caller sends alongside each submission.    |
+| `rateLimit` | `{ limit: 20, windowMs: 60000 }` | Submissions allowed per connecting address and form per window. `false` turns it off. |
 
 ## The submission rate limit
 
 `forms.submit` is a public method, so it is rate-limited by default: 20
-submissions per connecting address per minute, counted before the form is
-loaded and before the spam gate runs. Set `rateLimit` to your own `limit` and
-`windowMs`, or to `false` to turn the limit off.
+submissions per connecting address per form per minute, counted once the form is
+found and before its fields are checked or the spam gate runs. Set `rateLimit` to
+your own `limit` and `windowMs`, or to `false` to turn the limit off. A window
+starts at the first submission and resets whole once `windowMs` has passed.
 
 The key is the **connecting address**, which the HTTP transport derives only
 from sources the client cannot set: `cf-connecting-ip` on Cloudflare Workers,
-and `x-forwarded-for` when the site declares the proxy in front of it with
-`security.trustProxy` — see
+`x-forwarded-for` when the site declares the proxy in front of it with
+`security.trustProxy`, and otherwise the connection's own address on Node — see
 [../configuration/trust-proxy.md](../configuration/trust-proxy.md). The `ip` a
-caller puts in `meta` is stored but never trusted.
+caller puts in `meta` is stored but never trusted. Addresses are grouped the way
+sign-in limits group them: every IPv6 address in one `/64` network shares a
+count, and an IPv4-mapped IPv6 address (`::ffff:203.0.113.7`) counts as its IPv4
+address.
 
 A caller with no connecting address is not limited at all. That covers the CLI,
 MCP and your own server-side code calling `submit` in process, and it also
-covers an HTTP deployment where no trusted source of the address exists — a
-self-hosted server behind a proxy it has not declared. There is no shared bucket
-for such callers: a counter exists only for an address.
+covers a Node site where Astro's `security.allowedDomains` is set and
+`trustProxy` is not, which Astromech warns about at startup. There is no shared
+bucket for such callers: a counter exists only for an address. Behind a proxy
+without `trustProxy`, every visitor shares the proxy's address and its one
+count.
 
-The count lives in one process. Several instances (several Workers, or several
-Node processes behind a load balancer) each count their own traffic.
+The count is kept in the database, in the plugin's `plugin_forms_rate_limits`
+table, so several instances (several Workers, or several Node processes behind a
+load balancer) share it. A refused submission writes nothing, so the stored
+count stops at the limit. Each new window deletes the counts whose window has
+passed.
 
 A refused submission comes back in the same shape as any other form-level
 failure, so it renders where your other errors do:

@@ -2,6 +2,64 @@
     "version": 1,
     "dialect": "sqlite",
     "tables": {
+        "plugin_forms_rate_limits": {
+            "name": "plugin_forms_rate_limits",
+            "columns": [
+                {
+                    "key": "id",
+                    "name": "id",
+                    "kind": "id",
+                    "type": "text",
+                    "notNull": true,
+                    "primaryKey": true
+                },
+                {
+                    "key": "address",
+                    "name": "address",
+                    "kind": "text",
+                    "type": "text",
+                    "notNull": true,
+                    "primaryKey": false
+                },
+                {
+                    "key": "formId",
+                    "name": "form_id",
+                    "kind": "text",
+                    "type": "text",
+                    "notNull": true,
+                    "primaryKey": false
+                },
+                {
+                    "key": "windowStart",
+                    "name": "window_start",
+                    "kind": "integer",
+                    "type": "integer",
+                    "notNull": true,
+                    "primaryKey": false
+                },
+                {
+                    "key": "count",
+                    "name": "count",
+                    "kind": "integer",
+                    "type": "integer",
+                    "notNull": true,
+                    "primaryKey": false
+                }
+            ],
+            "fks": [],
+            "indexes": [
+                {
+                    "name": "plugin_forms_idx_rate_limits_address_form_id",
+                    "columns": ["address", "form_id"],
+                    "unique": true
+                },
+                {
+                    "name": "plugin_forms_idx_rate_limits_window_start",
+                    "columns": ["window_start"],
+                    "unique": false
+                }
+            ]
+        },
         "plugin_forms_submissions": {
             "name": "plugin_forms_submissions",
             "columns": [

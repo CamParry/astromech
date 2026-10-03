@@ -29,6 +29,39 @@ export function getAuth(): Auth<BetterAuthOptions> {
 }
 
 /**
+ * The header Better Auth reads the client address from. Only `authHeaders`
+ * sets it, so a client cannot choose the address its sign-in attempts are
+ * counted against or that its session records.
+ */
+const CLIENT_ADDRESS_HEADER = 'x-astromech-client-address';
+
+/**
+ * Hand an HTTP request to Better Auth, with `clientAddress` (from
+ * `getClientAddress`) as the address it counts and stores.
+ */
+export function handleAuthRequest(
+    request: Request,
+    clientAddress: string | undefined
+): Promise<Response> {
+    const headers = authHeaders(request.headers, clientAddress);
+    return getAuth().handler(new Request(request, { headers }));
+}
+
+/**
+ * A copy of a request's `headers` for any call into Better Auth: the client's
+ * copy of the address header dropped, and `clientAddress` set when known.
+ */
+export function authHeaders(
+    headers: Headers,
+    clientAddress: string | undefined
+): Headers {
+    const copy = new Headers(headers);
+    copy.delete(CLIENT_ADDRESS_HEADER);
+    if (clientAddress !== undefined) copy.set(CLIENT_ADDRESS_HEADER, clientAddress);
+    return copy;
+}
+
+/**
  * Refuse to serve without `BETTER_AUTH_SECRET` outside development and tests.
  * Without it Better Auth signs sessions with its built-in secret, which is
  * public, and only refuses that when `NODE_ENV` is `production`, which a
@@ -64,6 +97,19 @@ function buildAuth(): Auth<BetterAuthOptions> {
         database: {
             db: getDatabaseDriverOrThrow().getInstance().withoutPlugins(),
             type: 'sqlite',
+        },
+        advanced: {
+            ipAddress: { ipAddressHeaders: [CLIENT_ADDRESS_HEADER] },
+        },
+        // On whatever `NODE_ENV` says: Better Auth's default turns it on only
+        // in production, and a Worker never sets `NODE_ENV`. The count lives in
+        // the database, so every process and isolate shares it.
+        rateLimit: {
+            enabled: true,
+            storage: 'database',
+            modelName: 'rate_limits',
+            fields: { lastRequest: 'last_request' },
+            customRules: RATE_LIMIT_RULES,
         },
         databaseHooks: {
             user: {
@@ -162,3 +208,15 @@ function buildAuth(): Auth<BetterAuthOptions> {
         },
     }) as unknown as Auth<BetterAuthOptions>;
 }
+
+/**
+ * Per-address limits stricter than Better Auth's defaults, with windows of at
+ * most 60 seconds (`DECISIONS.md` says why). `/get-session` is not counted.
+ */
+const RATE_LIMIT_RULES = {
+    '/sign-in/*': { window: 60, max: 3 },
+    '/request-password-reset': { window: 60, max: 2 },
+    '/reset-password': { window: 60, max: 3 },
+    '/reset-password/*': { window: 60, max: 3 },
+    '/get-session': false,
+} satisfies NonNullable<BetterAuthOptions['rateLimit']>['customRules'];

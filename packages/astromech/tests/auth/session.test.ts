@@ -81,4 +81,24 @@ describe('getSession', () => {
         expect(warn).toHaveBeenCalledOnce();
         expect(warn.mock.calls[0]?.[0]).toContain(`User ${id} holds role "retired"`);
     });
+
+    it.each([
+        ['the trusted address', '203.0.113.5', '203.0.113.5'],
+        ['no address', undefined, null],
+    ])(
+        'hands Better Auth %s, never the private header the client sent',
+        async (_label, clientAddress, expected) => {
+            const { headers } = await signInTestUser(
+                db,
+                `${crypto.randomUUID()}@test.dev`
+            );
+            headers.set('x-astromech-client-address', '198.51.100.66');
+            const betterAuthGetSession = vi.spyOn(getAuth().api, 'getSession');
+
+            await getSession(headers, clientAddress);
+
+            const seen = betterAuthGetSession.mock.calls[0]?.[0]?.headers;
+            expect(new Headers(seen).get('x-astromech-client-address')).toBe(expected);
+        }
+    );
 });

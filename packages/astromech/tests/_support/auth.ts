@@ -8,7 +8,8 @@ import type { Kysely } from 'kysely';
 import { createTestUser } from '@tests/harness';
 import { getAuth } from '@/auth/better-auth';
 
-const TEST_PASSWORD = 'password123';
+/** The password `signInTestUser` gives every account it creates. */
+export const TEST_PASSWORD = 'password123';
 
 /**
  * Create a user with a credential account and sign them in. Returns their id and

@@ -18,9 +18,9 @@ export type FormsOptions = {
     /** Store ip / userAgent / referer on each submission. Default true. */
     storeMeta?: boolean;
     /**
-     * Submissions allowed per connecting address per window, counted in
-     * process. Default 20 per minute; `false` turns the limit off. A caller
-     * with no connecting address — CLI, MCP, in-process — is not limited.
+     * Submissions allowed per connecting address and form per window, counted
+     * in the database. Default 20 a minute; `false` turns it off. A caller with
+     * no connecting address (CLI, MCP, in-process) is not limited.
      */
     rateLimit?: { limit: number; windowMs: number } | false;
 };

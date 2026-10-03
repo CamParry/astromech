@@ -18,6 +18,10 @@ type AstromechGlobals = Record<string, unknown> & {
     cronTickRunning?: boolean | undefined;
     /** Cron job names already warned about as unscheduled. */
     cronUnscheduledWarned?: Set<string> | undefined;
+    /** Whether a client address that is not an IP address has been logged. */
+    clientAddressDropLogged?: boolean | undefined;
+    /** Whether a forwarding header seen without `security.trustProxy` has been logged. */
+    forwardedHeaderLogged?: boolean | undefined;
     /** Fallbacks taken by the output parse in progress; undefined outside one. */
     outputFallbacks?: number | undefined;
 };

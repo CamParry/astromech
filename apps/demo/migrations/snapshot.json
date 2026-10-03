@@ -1368,6 +1368,53 @@
         }
       ]
     },
+    "rate_limits": {
+      "name": "rate_limits",
+      "columns": [
+        {
+          "key": "id",
+          "name": "id",
+          "kind": "id",
+          "type": "text",
+          "notNull": true,
+          "primaryKey": true
+        },
+        {
+          "key": "key",
+          "name": "key",
+          "kind": "text",
+          "type": "text",
+          "notNull": true,
+          "primaryKey": false
+        },
+        {
+          "key": "count",
+          "name": "count",
+          "kind": "integer",
+          "type": "integer",
+          "notNull": true,
+          "primaryKey": false
+        },
+        {
+          "key": "lastRequest",
+          "name": "last_request",
+          "kind": "integer",
+          "type": "integer",
+          "notNull": true,
+          "primaryKey": false
+        }
+      ],
+      "fks": [],
+      "indexes": [
+        {
+          "name": "rate_limits_key_unique",
+          "columns": [
+            "key"
+          ],
+          "unique": true
+        }
+      ]
+    },
     "relationships": {
       "name": "relationships",
       "columns": [

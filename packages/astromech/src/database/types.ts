@@ -22,6 +22,7 @@ import type {
     mediaVersionsTable,
     notificationsTable,
     pluginsTable,
+    rateLimitsTable,
     relationshipsTable,
     rolesTable,
     sessionsTable,
@@ -81,6 +82,7 @@ export interface DB extends AstromechPluginTables {
     sessions: KyselyOf<typeof sessionsTable>;
     accounts: KyselyOf<typeof accountsTable>;
     verifications: KyselyOf<typeof verificationsTable>;
+    rateLimits: KyselyOf<typeof rateLimitsTable>;
 }
 
 /** The shared DB handle accepted by every repository factory (base or tx-bound). */

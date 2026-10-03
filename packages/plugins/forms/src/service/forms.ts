@@ -6,7 +6,7 @@ import type { FormsAfterSubmitPayload, FormsBeforeSubmitPayload } from '../hooks
 import type { SpamProvider } from '../spam/types';
 import type { FormsOptions, SubmissionMeta } from '../types';
 import type { DataField } from 'astromech';
-import { defineServiceMethod, z } from 'astromech';
+import { defineServiceMethod, rateLimitKey, z } from 'astromech';
 import { safeParseFields } from 'astromech/fields';
 import { compileFormFields } from '../fields/compile';
 import { AFTER_SUBMIT, BEFORE_SUBMIT } from '../hooks/events';
@@ -131,15 +131,16 @@ export function createFormsService(
                 const { clientAddress, user } = ctx;
                 const submissions = createSubmissionsRepository(ctx.db);
 
-                // A caller with no connecting address is a trusted local one
-                // (CLI, MCP, in-process) and goes unmetered. `meta.ip` is not
-                // the key: a client could mint a fresh counter per request.
-                if (rateLimit !== false && clientAddress !== undefined) {
-                    const allowed = consumeRateLimit(clientAddress, rateLimit);
-                    if (!allowed) return formError(TOO_MANY);
-                }
                 const form = await loadForm(ctx, slug);
                 if (form === null) return formError(NOT_ACCEPTING);
+                // Counted per form found, so an unknown slug writes no count. A
+                // caller with no connecting address (CLI, MCP, in-process) goes
+                // unmetered, and `meta.ip` is never the key: a client sets it.
+                if (rateLimit !== false && clientAddress !== undefined) {
+                    const key = { address: rateLimitKey(clientAddress), formId: form.id };
+                    const allowed = await consumeRateLimit(ctx.db, key, rateLimit);
+                    if (!allowed) return formError(TOO_MANY);
+                }
                 const stored = entryFields(form);
                 const definitions = compileFormFields(stored['fields']);
                 const { values, errors } = await safeParseFields(data, definitions, {

@@ -5,7 +5,7 @@
  */
 
 import type { Role, User } from '@/types/index';
-import { getAuth } from '@/auth/better-auth';
+import { authHeaders, getAuth } from '@/auth/better-auth';
 import { getDefaultContentLocale } from '@/config/content-locale';
 import { getConfig } from '@/config/registry';
 import { resolveRole } from '@/permissions/roles';
@@ -24,12 +24,16 @@ type AuthSession = NonNullable<GetSessionResult>['session'];
 
 /**
  * Resolve the Better Auth session into the user, role and session, or null when
- * there is no valid session or the user it names has no content row.
+ * there is no valid session or its user has no content row. `clientAddress` is
+ * the request's address from `getClientAddress`.
  */
 export async function getSession(
-    headers: Headers
+    headers: Headers,
+    clientAddress?: string
 ): Promise<{ user: User; role: Role; session: AuthSession } | null> {
-    const session = await getAuth().api.getSession({ headers });
+    const session = await getAuth().api.getSession({
+        headers: authHeaders(headers, clientAddress),
+    });
     if (!session?.user) return null;
 
     // Load the whole user: Better Auth's session carries no custom fields.

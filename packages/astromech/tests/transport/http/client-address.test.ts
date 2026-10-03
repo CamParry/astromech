@@ -3,18 +3,29 @@
  * infrastructure sources only, and absent rather than spoofable.
  */
 
+import type { ServerBindings } from '@/transport/http/client-address';
 import type { TrustProxy } from '@/types/index';
-import { resolveTestConfig } from '@tests/harness';
+import { expectConsole } from '@tests/console';
+import { resetRuntime, resolveTestConfig } from '@tests/harness';
 import { Hono } from 'hono';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { setConfig } from '@/config/registry';
-import { getClientAddress } from '@/transport/http/client-address';
+import { getClientAddress, rateLimitKey } from '@/transport/http/client-address';
 
-/** Serve `GET /` with the resolved address as the body, and call it with `headers`. */
-async function addressFor(headers: Record<string, string>): Promise<string> {
-    const app = new Hono();
+const PROXY_WARNING = 'set `security.trustProxy`';
+
+/**
+ * Serve `GET /` with the resolved address as the body, and call it with
+ * `headers`, passing `remoteAddress` as the server would.
+ */
+async function addressFor(
+    headers: Record<string, string>,
+    remoteAddress?: string
+): Promise<string> {
+    const app = new Hono<{ Bindings: ServerBindings }>();
     app.get('/', (c) => c.text(getClientAddress(c) ?? 'absent'));
-    const response = await app.request('/', { headers });
+    const bindings: ServerBindings = remoteAddress === undefined ? {} : { remoteAddress };
+    const response = await app.request('/', { headers }, bindings);
     return response.text();
 }
 
@@ -30,6 +41,7 @@ function trustProxy(value: TrustProxy): void {
 
 describe('getClientAddress', () => {
     beforeEach(() => {
+        resetRuntime();
         setConfig(resolveTestConfig());
     });
 
@@ -133,5 +145,98 @@ describe('getClientAddress', () => {
 
     it('is absent when no source carries an address', async () => {
         expect(await addressFor({})).toBe('absent');
+    });
+
+    it('reads the remote address when no proxy is trusted', async () => {
+        expect(await addressFor({}, '203.0.113.4')).toBe('203.0.113.4');
+    });
+
+    it('reads the remote address, not a forged x-forwarded-for', async () => {
+        expectConsole('error', PROXY_WARNING);
+
+        expect(
+            await addressFor({ 'x-forwarded-for': '198.51.100.9' }, '203.0.113.4')
+        ).toBe('203.0.113.4');
+    });
+
+    it.each(['x-forwarded-for', 'forwarded', 'cf-connecting-ip'])(
+        'tells the site to set trustProxy when it counts the connection of a request carrying %s',
+        async (header) => {
+            const error = vi.spyOn(console, 'error').mockImplementation(() => undefined);
+
+            await addressFor({ [header]: '198.51.100.9' }, '10.0.0.1');
+            await addressFor({ [header]: '198.51.100.9' }, '10.0.0.1');
+
+            expect(error).toHaveBeenCalledTimes(1);
+            expect(error.mock.calls[0]?.[0]).toContain(PROXY_WARNING);
+        }
+    );
+
+    it('says nothing of a proxy when a request carries no forwarding header', async () => {
+        expect(await addressFor({}, '203.0.113.4')).toBe('203.0.113.4');
+    });
+
+    it('ignores the remote address when trustProxy names the proxy chain', async () => {
+        trustProxy(1);
+
+        expect(await addressFor({}, '10.0.0.1')).toBe('absent');
+        expect(await addressFor({ 'x-forwarded-for': '203.0.113.4' }, '10.0.0.1')).toBe(
+            '203.0.113.4'
+        );
+    });
+
+    it('ignores the remote address on Workers', async () => {
+        pretendWorkers();
+
+        expect(await addressFor({}, '203.0.113.4')).toBe('absent');
+    });
+
+    it.each([
+        ['1.2.3.4:5678', '1.2.3.4'],
+        ['[::1]', '::1'],
+        ['[2001:db8::1]:443', '2001:db8::1'],
+        ['2001:db8::1', '2001:db8::1'],
+    ])('reads %s from x-forwarded-for as %s', async (entry, address) => {
+        trustProxy(true);
+
+        expect(await addressFor({ 'x-forwarded-for': entry })).toBe(address);
+    });
+
+    it.each(['unknown', 'not an address', '1.2.3.4:http', '[::1', '[::1]x', '999.1.1.1'])(
+        'drops %s, which is not an IP address',
+        async (entry) => {
+            trustProxy(true);
+            expectConsole('error', 'is not an IP address');
+
+            expect(await addressFor({ 'x-forwarded-for': entry })).toBe('absent');
+        }
+    );
+
+    it('logs a dropped value once per process', async () => {
+        trustProxy(true);
+        const error = vi.spyOn(console, 'error').mockImplementation(() => undefined);
+
+        await addressFor({ 'x-forwarded-for': 'unknown' });
+        await addressFor({ 'x-forwarded-for': 'garbage' });
+
+        expect(error).toHaveBeenCalledTimes(1);
+    });
+});
+
+describe('rateLimitKey', () => {
+    it.each([
+        ['203.0.113.4', '203.0.113.4'],
+        ['::ffff:203.0.113.4', '203.0.113.4'],
+        ['::FFFF:cb00:7104', '203.0.113.4'],
+        ['0:0:0:0:0:ffff:203.0.113.4', '203.0.113.4'],
+        ['2001:db8:1:2::1', '2001:db8:1:2::/64'],
+        ['2001:0DB8:0001:0002:ffff:ffff:ffff:ffff', '2001:db8:1:2::/64'],
+        ['2001:db8::1', '2001:db8:0:0::/64'],
+        ['fe80::1%eth0', 'fe80:0:0:0::/64'],
+        ['::1', '0:0:0:0::/64'],
+        ['::', '0:0:0:0::/64'],
+        ['not an address', 'not an address'],
+    ])('keys %s as %s', (address, key) => {
+        expect(rateLimitKey(address)).toBe(key);
     });
 });

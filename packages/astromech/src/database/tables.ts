@@ -3,7 +3,12 @@ import type { Table, TableInsert, TableSelect } from '@/database/define-table';
 // these value imports are ONLY so `CORE_TABLES` (bottom of file) can
 // reference the tables; the `export {...} from` blocks stay the public
 // re-export surface.
-import { accountsTable, sessionsTable, verificationsTable } from '@/auth/tables';
+import {
+    accountsTable,
+    rateLimitsTable,
+    sessionsTable,
+    verificationsTable,
+} from '@/auth/tables';
 import { defineTable } from '@/database/define-table';
 import { entriesTable, entryContentTable, entryVersionsTable } from '@/entries/tables';
 import { globalContentTable, globalsTable, globalVersionsTable } from '@/globals/tables';
@@ -15,13 +20,18 @@ import { userContentTable, usersTable, userVersionsTable } from '@/users/tables'
 
 /**
  * Aggregate schema surface for Astromech: re-exports every table's
- * `defineTable` descriptor and row types, better-auth's `sessions`, `accounts`
- * and `verifications` included.
+ * `defineTable` descriptor and row types, better-auth's `sessions`, `accounts`,
+ * `verifications` and `rate_limits` included.
  */
 
 export { rolesTable, type RoleRow, type NewRoleRow } from '@/permissions/tables';
 
-export { sessionsTable, accountsTable, verificationsTable } from '@/auth/tables';
+export {
+    sessionsTable,
+    accountsTable,
+    verificationsTable,
+    rateLimitsTable,
+} from '@/auth/tables';
 
 export {
     usersTable,
@@ -156,6 +166,7 @@ export const CORE_TABLES: Table[] = [
     sessionsTable,
     accountsTable,
     verificationsTable,
+    rateLimitsTable,
     userContentTable,
     userVersionsTable,
     entriesTable,
