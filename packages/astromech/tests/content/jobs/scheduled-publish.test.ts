@@ -165,4 +165,77 @@ describe('scheduledPublishJob', () => {
         expect(await postStatus(blocked.id)).toBe('scheduled');
         expect(await postStatus(due.id)).toBe('published');
     });
+
+    it('skips a row unscheduled after the job read it, logging at debug', async () => {
+        const past = new Date(Date.now() - 60_000);
+        const entry = await scheduledPost('Due', past);
+        await globalRepository.create(
+            { key: 'legal' },
+            { fields: { terms: 'Terms' }, status: 'scheduled', publishedAt: past }
+        );
+        // An editor unpublishes each row while the job's own update is under way.
+        probe([
+            defineHook('entry:beforeUpdate', async (ctx) => {
+                if (ctx.data.status !== 'published') return;
+                await currentServices.entries.unpublish({
+                    type: 'post',
+                    id: ctx.entry.id,
+                });
+            }),
+            defineHook('global:beforeUpdate', async (ctx) => {
+                if (ctx.data.status !== 'published') return;
+                await currentServices.globals.unpublish({ key: ctx.key });
+            }),
+        ]);
+        const debug = vi.spyOn(console, 'debug').mockImplementation(() => undefined);
+
+        await scheduledPublishJob.handler(systemAppContext());
+
+        expect(await postStatus(entry.id)).toBe('unpublished');
+        expect((await globalRepository.findByKey('legal'))?.status).toBe('unpublished');
+        const logged = debug.mock.calls.map((call) => String(call[0])).join('\n');
+        expect(logged).toContain(`entry post/${entry.id} (en)`);
+        expect(logged).toContain('global legal (en)');
+    });
+
+    it('skips a row rescheduled for later after the job read it', async () => {
+        const past = new Date(Date.now() - 60_000);
+        const later = new Date(Date.now() + 60 * 60_000);
+        const entry = await scheduledPost('Due', past);
+        await globalRepository.create(
+            { key: 'legal' },
+            { fields: { terms: 'Terms' }, status: 'scheduled', publishedAt: past }
+        );
+        probe([
+            defineHook('entry:beforeUpdate', async (ctx) => {
+                if (ctx.data.status !== 'published') return;
+                await currentServices.entries.schedule({
+                    type: 'post',
+                    id: ctx.entry.id,
+                    publishedAt: later,
+                });
+            }),
+            defineHook('global:beforeUpdate', async (ctx) => {
+                if (ctx.data.status !== 'published') return;
+                await currentServices.globals.schedule({
+                    key: ctx.key,
+                    publishedAt: later,
+                });
+            }),
+        ]);
+        vi.spyOn(console, 'debug').mockImplementation(() => undefined);
+
+        await scheduledPublishJob.handler(systemAppContext());
+
+        const rescheduled = await currentServices.entries.get({
+            type: 'post',
+            id: entry.id,
+            full: true,
+        });
+        expect(rescheduled?.status).toBe('scheduled');
+        expect(rescheduled?.publishedAt?.getTime()).toBe(later.getTime());
+        const global = await globalRepository.findByKey('legal');
+        expect(global?.status).toBe('scheduled');
+        expect(global?.publishedAt?.getTime()).toBe(later.getTime());
+    });
 });

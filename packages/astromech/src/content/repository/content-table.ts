@@ -27,7 +27,12 @@ import type { Expression, ExpressionWrapper, SqlBool } from 'kysely';
 import { getDefaultContentLocale } from '@/config/content-locale';
 import { trashConflict } from '@/content/write-guard';
 import { chunks, MAX_BOUND_PARAMETERS } from '@/database/chunks';
-import { decodeWith, encodeUpdateWith, kyselyTableKey } from '@/database/codec';
+import {
+    decodeWith,
+    encodePatchWith,
+    encodeUpdateWith,
+    kyselyTableKey,
+} from '@/database/codec';
 import { getDb } from '@/database/registry';
 import { createRepository } from '@/database/repository/create-repository';
 import { transaction } from '@/database/transaction';
@@ -496,7 +501,23 @@ export function createContentRepository<
             const live = isLive(eb);
             conditions.push(guard.trash === 'live' ? live : eb.not(live));
         }
+        conditions.push(...scheduleConditions(eb, guard));
         return conditions;
+    }
+
+    /** The guard's `scheduledFor`: still scheduled, for the time it names. */
+    function scheduleConditions(
+        eb: Parameters<JoinedWhere>[0],
+        guard: WriteGuard
+    ): Expression<SqlBool>[] {
+        if (guard.scheduledFor === undefined) return [];
+        const encoded: Record<string, unknown> = encodePatchWith(shape.contentTable, {
+            publishedAt: guard.scheduledFor,
+        });
+        return [
+            eb(`${contentKey}.status`, '=', 'scheduled'),
+            eb(`${contentKey}.publishedAt`, '=', encoded['publishedAt']),
+        ];
     }
 
     /** True when the content row's resource row passes the resource filter. */
@@ -519,11 +540,17 @@ export function createContentRepository<
     ): Promise<ConflictReason | 'gone' | null> {
         const row = await db()
             .selectFrom(contentKey)
-            .select((eb) => isLive(eb).as('live'))
+            .select((eb) => [
+                isLive(eb).as('live'),
+                eb.and(scheduleConditions(eb, guard)).as('scheduled'),
+            ])
             .where(`${contentKey}.id`, '=', guard.contentId)
             .executeTakeFirst();
         if (!row) return 'gone';
-        return trashConflict(guard, !row['live']);
+        return (
+            trashConflict(guard, !row['live']) ??
+            (row['scheduled'] ? null : 'not-scheduled')
+        );
     }
 
     /** The content-row half of `update`: insert the locale's row, or patch it. */

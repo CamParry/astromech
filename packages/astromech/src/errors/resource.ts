@@ -94,13 +94,15 @@ export class StagedChangeExistsError extends ApiError {
  * Why a write was refused with a 409: the row it was decided from no longer
  * holds the condition the write depends on. `trashed`: the entry is in the
  * trash, which only `restore` writes to. `not-trashed`: a restore found it live.
+ * `not-scheduled`: a scheduled publish found the row unscheduled or moved.
  */
-export type ConflictReason = 'trashed' | 'not-trashed';
+export type ConflictReason = 'trashed' | 'not-trashed' | 'not-scheduled';
 
 /** How a conflict message words each reason, after the resource's name. */
 const CONFLICT_MESSAGES: Record<ConflictReason, string> = {
     trashed: 'is in the trash; restore it before changing it',
     'not-trashed': 'is not in the trash',
+    'not-scheduled': 'is not scheduled for the time this publish was due',
 };
 
 /**

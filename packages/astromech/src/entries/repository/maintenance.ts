@@ -12,7 +12,7 @@ type DueScheduledEntry = {
     type: string;
     id: string;
     locale: string;
-    publishedAt: Date | null;
+    publishedAt: Date;
 };
 
 export type EntryMaintenanceRepository = ReturnType<
@@ -37,12 +37,10 @@ function createEntryMaintenanceRepository() {
                 trashed: false,
             },
         });
-        return rows.map((row) => ({
-            type: row.type,
-            id: row.entryId,
-            locale: row.locale,
-            publishedAt: row.publishedAt,
-        }));
+        // `lte: now` matched no null date; the check narrows the type.
+        return rows.flatMap(({ type, entryId, locale, publishedAt }) =>
+            publishedAt ? [{ type, id: entryId, locale, publishedAt }] : []
+        );
     }
 
     /**

@@ -21,12 +21,19 @@ export type WriteGuard = {
      * Read from the entry row's `deletedAt`, not the content row's copy.
      */
     trash?: 'live' | 'trashed' | undefined;
+    /**
+     * The row must still be scheduled, for this `publishedAt`: the time the
+     * scheduled-publish job read. Unscheduled or moved, the write is refused.
+     */
+    scheduledFor?: Date | undefined;
 };
 
 /** As much of a loaded row as the guard checks. */
 export type GuardedRecord = {
     contentId: ContentRowId;
     deletedAt?: Date | null | undefined;
+    status?: string | undefined;
+    publishedAt?: Date | null | undefined;
 };
 
 /** The repository half of a guarded write: why a write it refused changed nothing. */
@@ -51,8 +58,9 @@ export function assertGuardHolds(
     guard: WriteGuard,
     address: Address
 ): void {
-    const trashed = (loaded.canonical.deletedAt ?? null) !== null;
-    const reason = trashConflict(guard, trashed);
+    const { canonical } = loaded;
+    const trashed = (canonical.deletedAt ?? null) !== null;
+    const reason = trashConflict(guard, trashed) ?? scheduleConflict(guard, canonical);
     if (reason !== null) throw new ResourceConflictError(kind, { ...address, reason });
 }
 
@@ -93,6 +101,21 @@ export function trashConflict(
     return TRASH_CONFLICTS[guard.trash];
 }
 
+/**
+ * `not-scheduled` when the guard's `scheduledFor` refuses a row with this status
+ * and publish time; null when it holds or the guard sets none.
+ */
+export function scheduleConflict(
+    guard: WriteGuard,
+    row: { status?: string | undefined; publishedAt?: Date | null | undefined }
+): ConflictReason | null {
+    if (guard.scheduledFor === undefined) return null;
+    const holds =
+        row.status === 'scheduled' &&
+        row.publishedAt?.getTime() === guard.scheduledFor.getTime();
+    return holds ? null : 'not-scheduled';
+}
+
 /** What each `trash` condition answers when it fails. */
 const TRASH_CONFLICTS = {
     live: 'trashed',
@@ -101,5 +124,6 @@ const TRASH_CONFLICTS = {
 
 /** The reason a guard can fail for; `gone` when it names no condition but the row. */
 function guardedReason(guard: WriteGuard): ConflictReason | 'gone' {
-    return guard.trash === undefined ? 'gone' : TRASH_CONFLICTS[guard.trash];
+    if (guard.trash !== undefined) return TRASH_CONFLICTS[guard.trash];
+    return guard.scheduledFor === undefined ? 'gone' : 'not-scheduled';
 }

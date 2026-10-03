@@ -102,7 +102,7 @@ function createGlobalRepository() {
      */
     async function findDueScheduled(
         now: Date
-    ): Promise<{ key: string; locale: string; publishedAt: Date | null }[]> {
+    ): Promise<{ key: string; locale: string; publishedAt: Date }[]> {
         const rows = await getDb()
             .selectFrom('globalContent')
             .innerJoin('globals', 'globals.id', 'globalContent.globalId')
@@ -116,11 +116,12 @@ function createGlobalRepository() {
                 ])
             )
             .execute();
-        return rows.map((row) => {
+        // `publishedAt <= now` matched no null date; the check narrows the type.
+        return rows.flatMap((row) => {
             const { publishedAt } = decodeWith(globalContentTable, {
                 publishedAt: row.publishedAt,
             });
-            return { ...row, publishedAt };
+            return publishedAt ? [{ ...row, publishedAt }] : [];
         });
     }
 
@@ -131,6 +132,7 @@ function createGlobalRepository() {
         findOne: content.findOne,
         create: content.create,
         update: content.update,
+        explainConflict: content.explainConflict,
         staging: content.staging,
         versions: content.versions,
         translatable: content.translatable,

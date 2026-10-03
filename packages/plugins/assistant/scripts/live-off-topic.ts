@@ -281,7 +281,12 @@ function sampleEntry(type: string): Record<string, unknown> {
 
 const ignore = (): void => undefined;
 
-const silentLogger: PluginLogger = { info: ignore, warn: ignore, error: ignore };
+const silentLogger: PluginLogger = {
+    debug: ignore,
+    info: ignore,
+    warn: ignore,
+    error: ignore,
+};
 
 const noSessions: SessionsRepository = {
     findByUser: () => Promise.resolve(null),

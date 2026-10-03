@@ -84,6 +84,7 @@ export type PluginMethods = {
 
 /** Logger that attributes lines to the originating plugin. */
 export type PluginLogger = {
+    debug: (message: string) => void;
     info: (message: string) => void;
     warn: (message: string) => void;
     error: (message: string, error?: unknown) => void;

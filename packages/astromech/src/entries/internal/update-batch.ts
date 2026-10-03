@@ -1,5 +1,6 @@
 import type { EntryResource } from '../repository/types';
 import type { EntryRowWrite } from './prepare-row';
+import type { WriteGuard } from '@/content/write-guard';
 import type {
     AppContext,
     EntryStatus,
@@ -56,6 +57,11 @@ export async function updateEntryBatch(
          * which only `restore` writes to. Checked at load and again in the write.
          */
         trash?: 'live' | 'trashed' | undefined;
+        /**
+         * The scheduled-publish job's condition: each row must still be scheduled
+         * for this time. Checked at load and again in the write.
+         */
+        scheduledFor?: Date | undefined;
     },
     ctx: AppContext
 ): Promise<EntryResource[]> {
@@ -63,6 +69,7 @@ export async function updateEntryBatch(
     const { config, user } = ctx;
     const staged = params.staged === true;
     const trash = params.trash ?? 'live';
+    const { scheduledFor } = params;
     const entryType = resolveEntryType(config, type);
     if (!entryType) throw new UnknownEntryTypeError(type);
     const schema = updateEntrySchema({ titled: entryType.titleField !== false });
@@ -96,7 +103,7 @@ export async function updateEntryBatch(
         assertGuardHolds(
             'entry',
             { canonical: source },
-            { contentId: source.contentId, trash },
+            { contentId: source.contentId, trash, scheduledFor },
             { id, locale }
         );
         plans.push(
@@ -150,7 +157,7 @@ export async function updateEntryBatch(
                   data: written,
                   user,
                   staged,
-                  trash,
+                  guard: { trash, scheduledFor },
               })
             : writeTranslation({
                   config,
@@ -208,9 +215,10 @@ async function updateOne(params: {
     user: User | null;
     /** True when the write targets the staged change rather than the canonical. */
     staged: boolean;
-    trash: 'live' | 'trashed';
+    /** The canonical write's conditions, beyond the row it was decided from. */
+    guard: Omit<WriteGuard, 'contentId'>;
 }): Promise<EntryResource> {
-    const { config, entryType, currentEntry, data, user, staged, trash } = params;
+    const { config, entryType, currentEntry, data, user, staged } = params;
 
     const fields = await fieldsToStore({ config, entryType, currentEntry, data, user });
     const patchedNames = data.fields ? patchedFieldNames(data.fields) : [];
@@ -248,7 +256,7 @@ async function updateOne(params: {
         updatedBy: user?.id ?? null,
     };
 
-    const guard = { contentId: currentEntry.contentId, trash };
+    const guard = { ...params.guard, contentId: currentEntry.contentId };
     const entry = staged
         ? await entryRepository.staging.update(ref, write)
         : await writeGuarded({
