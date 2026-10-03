@@ -9,6 +9,7 @@ import type { SchedulerDriver } from '@/types/index';
 import type { APIContext } from 'astro';
 import type { Kysely } from 'kysely';
 import { signInTestUser, TEST_PASSWORD } from '@tests/auth';
+import { expectConsole } from '@tests/console';
 import { createTestDb, makeBootConfig } from '@tests/harness';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { createAstromech } from '@/astromech';
@@ -68,6 +69,7 @@ async function signIn(
 
 describe('the Astro route handler', () => {
     it('counts each connection apart, whatever x-forwarded-for it sends', async () => {
+        expectConsole('error', 'set `security.trustProxy`');
         const first = [];
         for (const forwardedFor of ['198.51.100.1', '198.51.100.2', '198.51.100.3']) {
             first.push(await signIn('203.0.113.1', forwardedFor));

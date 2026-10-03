@@ -4,6 +4,7 @@
  * resolve config, fill registries, verify schema, boot plugins, assemble.
  */
 
+import type { ServerBindings } from '@/transport/http/client-address';
 import type {
     AstromechConfig,
     ResolvedConfig,
@@ -45,13 +46,11 @@ export type Astromech = TypedServices & {
     /** The acting role for the current request, or null outside one. */
     getCurrentRole(): Promise<Role | null>;
     /**
-     * Serve one HTTP request from the application's own routes. `remoteAddress`
-     * is the connection's peer, which a Node server counts as the client.
+     * Serve one HTTP request from the application's own routes. Pass the socket
+     * peer's address as `remoteAddress`, never a header value: without it, and
+     * without `security.trustProxy`, every client shares one rate-limit count.
      */
-    fetch(
-        request: Request,
-        options?: { remoteAddress?: string | undefined }
-    ): Promise<Response>;
+    fetch(request: Request, options?: ServerBindings): Promise<Response>;
     /** Run the cron jobs due at `at`. Defaults to now. */
     scheduled(at?: Date): Promise<void>;
     /** The serving integration's terminal action. Idempotent. No-op on Workers. */
@@ -149,10 +148,7 @@ async function build(config: AstromechConfig): Promise<Astromech> {
         ...typedServices(currentServices),
         getCurrentUser,
         getCurrentRole,
-        fetch: async (
-            request: Request,
-            options?: { remoteAddress?: string | undefined }
-        ): Promise<Response> =>
+        fetch: async (request: Request, options?: ServerBindings): Promise<Response> =>
             http.fetch(request, { remoteAddress: options?.remoteAddress }),
         scheduled: (at?: Date): Promise<void> =>
             onTick(at ?? new Date(), systemAppContext()),

@@ -6,7 +6,7 @@ import type { FormsAfterSubmitPayload, FormsBeforeSubmitPayload } from '../hooks
 import type { SpamProvider } from '../spam/types';
 import type { FormsOptions, SubmissionMeta } from '../types';
 import type { DataField } from 'astromech';
-import { defineServiceMethod, z } from 'astromech';
+import { defineServiceMethod, rateLimitKey, z } from 'astromech';
 import { safeParseFields } from 'astromech/fields';
 import { compileFormFields } from '../fields/compile';
 import { AFTER_SUBMIT, BEFORE_SUBMIT } from '../hooks/events';
@@ -137,7 +137,7 @@ export function createFormsService(
                 // caller with no connecting address (CLI, MCP, in-process) goes
                 // unmetered, and `meta.ip` is never the key: a client sets it.
                 if (rateLimit !== false && clientAddress !== undefined) {
-                    const key = { address: clientAddress, formId: form.id };
+                    const key = { address: rateLimitKey(clientAddress), formId: form.id };
                     const allowed = await consumeRateLimit(ctx.db, key, rateLimit);
                     if (!allowed) return formError(TOO_MANY);
                 }

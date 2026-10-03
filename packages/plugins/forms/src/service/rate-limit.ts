@@ -1,7 +1,7 @@
 /**
  * Fixed-window rate limit for `submit`, counted in the plugin's own table per
- * connecting address and form, so every process and Workers isolate on the
- * database shares one count.
+ * address key (`rateLimitKey`) and form, so every process and Workers isolate
+ * on the database shares one count.
  */
 
 import type { PluginContext } from 'astromech';
@@ -12,7 +12,8 @@ export type RateLimitOptions = { limit: number; windowMs: number };
 /**
  * Record one submission from `address` to the form `formId` and answer whether
  * it is within the limit. The window starts at the first submission and resets
- * whole once it has elapsed; starting one also deletes every elapsed count.
+ * whole once it has elapsed; starting one also deletes every elapsed count. A
+ * refused submission writes nothing.
  */
 export async function consumeRateLimit(
     db: PluginContext['db'],
@@ -22,8 +23,8 @@ export async function consumeRateLimit(
     const rateLimits = createRateLimitsRepository(db);
     const now = Date.now();
 
-    const count = await rateLimits.consume(key, now, options.windowMs);
+    const count = await rateLimits.consume(key, now, options);
     if (count === 1) await rateLimits.deleteExpired(now - options.windowMs);
 
-    return count <= options.limit;
+    return count !== null && count <= options.limit;
 }

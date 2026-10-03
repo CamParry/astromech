@@ -17,7 +17,23 @@ Astromech only reads sources a client cannot set for itself:
 
 The connection's address is the client's only when nothing sits in between.
 Behind nginx, Caddy or a load balancer it is the proxy's address, so every
-client shares it until you set `trustProxy`.
+client shares it until you set `trustProxy`. When Astromech counts the
+connection's address for a request that carries `x-forwarded-for`, `forwarded`
+or `cf-connecting-ip`, it logs once that you may need to set `trustProxy`.
+
+On a server of your own that calls `Astromech.fetch` rather than serving through
+Astro, pass the socket peer's address as `remoteAddress`, never a header value:
+
+```ts
+import { getAstromech } from 'astromech';
+
+const app = await getAstromech();
+// `req` is the Node `IncomingMessage` the `Request` was built from.
+const response = await app.fetch(request, { remoteAddress: req.socket.remoteAddress });
+```
+
+Without it, and without `trustProxy`, Astromech knows no client address, so
+every client shares one count in each rate limit.
 
 Astro reads `x-forwarded-for` itself when its own `security.allowedDomains`
 option is set, so its `clientAddress` may then be a value the client made up.

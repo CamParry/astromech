@@ -10,7 +10,9 @@ import { resetRuntime, resolveTestConfig } from '@tests/harness';
 import { Hono } from 'hono';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { setConfig } from '@/config/registry';
-import { getClientAddress } from '@/transport/http/client-address';
+import { getClientAddress, rateLimitKey } from '@/transport/http/client-address';
+
+const PROXY_WARNING = 'set `security.trustProxy`';
 
 /**
  * Serve `GET /` with the resolved address as the body, and call it with
@@ -150,9 +152,28 @@ describe('getClientAddress', () => {
     });
 
     it('reads the remote address, not a forged x-forwarded-for', async () => {
+        expectConsole('error', PROXY_WARNING);
+
         expect(
             await addressFor({ 'x-forwarded-for': '198.51.100.9' }, '203.0.113.4')
         ).toBe('203.0.113.4');
+    });
+
+    it.each(['x-forwarded-for', 'forwarded', 'cf-connecting-ip'])(
+        'tells the site to set trustProxy when it counts the connection of a request carrying %s',
+        async (header) => {
+            const error = vi.spyOn(console, 'error').mockImplementation(() => undefined);
+
+            await addressFor({ [header]: '198.51.100.9' }, '10.0.0.1');
+            await addressFor({ [header]: '198.51.100.9' }, '10.0.0.1');
+
+            expect(error).toHaveBeenCalledTimes(1);
+            expect(error.mock.calls[0]?.[0]).toContain(PROXY_WARNING);
+        }
+    );
+
+    it('says nothing of a proxy when a request carries no forwarding header', async () => {
+        expect(await addressFor({}, '203.0.113.4')).toBe('203.0.113.4');
     });
 
     it('ignores the remote address when trustProxy names the proxy chain', async () => {
@@ -199,5 +220,23 @@ describe('getClientAddress', () => {
         await addressFor({ 'x-forwarded-for': 'garbage' });
 
         expect(error).toHaveBeenCalledTimes(1);
+    });
+});
+
+describe('rateLimitKey', () => {
+    it.each([
+        ['203.0.113.4', '203.0.113.4'],
+        ['::ffff:203.0.113.4', '203.0.113.4'],
+        ['::FFFF:cb00:7104', '203.0.113.4'],
+        ['0:0:0:0:0:ffff:203.0.113.4', '203.0.113.4'],
+        ['2001:db8:1:2::1', '2001:db8:1:2::/64'],
+        ['2001:0DB8:0001:0002:ffff:ffff:ffff:ffff', '2001:db8:1:2::/64'],
+        ['2001:db8::1', '2001:db8:0:0::/64'],
+        ['fe80::1%eth0', 'fe80:0:0:0::/64'],
+        ['::1', '0:0:0:0::/64'],
+        ['::', '0:0:0:0::/64'],
+        ['not an address', 'not an address'],
+    ])('keys %s as %s', (address, key) => {
+        expect(rateLimitKey(address)).toBe(key);
     });
 });

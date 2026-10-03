@@ -37,7 +37,10 @@ from sources the client cannot set: `cf-connecting-ip` on Cloudflare Workers,
 `x-forwarded-for` when the site declares the proxy in front of it with
 `security.trustProxy`, and otherwise the connection's own address on Node — see
 [../configuration/trust-proxy.md](../configuration/trust-proxy.md). The `ip` a
-caller puts in `meta` is stored but never trusted.
+caller puts in `meta` is stored but never trusted. Addresses are grouped the way
+sign-in limits group them: every IPv6 address in one `/64` network shares a
+count, and an IPv4-mapped IPv6 address (`::ffff:203.0.113.7`) counts as its IPv4
+address.
 
 A caller with no connecting address is not limited at all. That covers the CLI,
 MCP and your own server-side code calling `submit` in process, and it also
@@ -49,7 +52,8 @@ count.
 
 The count is kept in the database, in the plugin's `plugin_forms_rate_limits`
 table, so several instances (several Workers, or several Node processes behind a
-load balancer) share it. Each new window deletes the counts whose window has
+load balancer) share it. A refused submission writes nothing, so the stored
+count stops at the limit. Each new window deletes the counts whose window has
 passed.
 
 A refused submission comes back in the same shape as any other form-level

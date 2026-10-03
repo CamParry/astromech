@@ -40,6 +40,7 @@ export function getClientAddress<E extends { Bindings: ServerBindings }>(
         const bindings: ServerBindings | undefined = c.env;
         const remoteAddress = bindings?.remoteAddress;
         if (workerd || remoteAddress === undefined) return undefined;
+        warnOnForwardedHeader(c.req.raw.headers);
         return parseAddress(remoteAddress);
     }
 
@@ -48,6 +49,72 @@ export function getClientAddress<E extends { Bindings: ServerBindings }>(
         trustProxy === true ? 1 : trustProxy
     );
 }
+
+/**
+ * The key a per-client rate limit counts `address` under, grouped as Better
+ * Auth groups sign-in attempts: an IPv6 address by its /64 network
+ * (`2001:db8:1:2::/64`), since one client is often given a whole /64, and an
+ * IPv4-mapped IPv6 address (`::ffff:1.2.3.4`) as its IPv4 address. A value that
+ * is not an IP address is returned unchanged.
+ */
+export function rateLimitKey(address: string): string {
+    if (isIP(address) !== 6) return address;
+
+    const groups = ipv6Groups(address);
+    const mapped =
+        groups.slice(0, 5).every((group) => group === 0) && groups[5] === 0xffff;
+    if (mapped) {
+        const [high = 0, low = 0] = groups.slice(6);
+        return [high >> 8, high & 0xff, low >> 8, low & 0xff].join('.');
+    }
+    return `${groups
+        .slice(0, 4)
+        .map((group) => group.toString(16))
+        .join(':')}::/64`;
+}
+
+/** The eight 16-bit groups of an IPv6 address that `isIP` accepts. */
+function ipv6Groups(address: string): number[] {
+    const [withoutZone = ''] = address.split('%');
+    // A trailing dotted IPv4 part (`::ffff:1.2.3.4`) fills the last two groups.
+    const dotted = /(\d+)\.(\d+)\.(\d+)\.(\d+)$/.exec(withoutZone);
+    const hex = dotted
+        ? withoutZone.slice(0, dotted.index) +
+          [0, 2]
+              .map((at) =>
+                  (Number(dotted[at + 1]) * 256 + Number(dotted[at + 2])).toString(16)
+              )
+              .join(':')
+        : withoutZone;
+
+    const [head = '', tail] = hex.split('::');
+    const parse = (part: string): number[] =>
+        part === '' ? [] : part.split(':').map((group) => Number.parseInt(group, 16));
+    const left = parse(head);
+    const right = tail === undefined ? [] : parse(tail);
+    const zeros = new Array<number>(8 - left.length - right.length).fill(0);
+    return [...left, ...zeros, ...right];
+}
+
+/**
+ * Log, once per process, that a request carrying a forwarding header was
+ * counted by its connection: behind a proxy that is the proxy's address, so
+ * every client would share one count.
+ */
+function warnOnForwardedHeader(headers: Headers): void {
+    const forwarded = FORWARDING_HEADERS.find((name) => headers.has(name));
+    if (forwarded === undefined) return;
+
+    const state = globals();
+    if (state.forwardedHeaderLogged === true) return;
+    state.forwardedHeaderLogged = true;
+    log.warn(
+        `A request carried \`${forwarded}\`, but \`security.trustProxy\` is not set, so Astromech counts the address of the connection. Behind a proxy that is the proxy's address, and every client shares one count. If a proxy serves this site, set \`security.trustProxy\` in \`astromech.config.ts\` to the number of proxies in front of the server. This is logged once.`
+    );
+}
+
+/** Headers a proxy or CDN sets, which a request straight from a client lacks. */
+const FORWARDING_HEADERS = ['x-forwarded-for', 'forwarded', 'cf-connecting-ip'];
 
 /**
  * Take the client address from `x-forwarded-for` given `hops` trusted proxies.

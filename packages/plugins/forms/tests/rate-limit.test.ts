@@ -77,6 +77,15 @@ async function countedAddresses(): Promise<string[]> {
     return rows.map((row) => row.address);
 }
 
+/** Each stored count, with the address it is kept under. */
+async function storedCounts(): Promise<{ address: string; count: number }[]> {
+    return app.db
+        .selectFrom('pluginFormsRateLimits')
+        .select(['address', 'count'])
+        .orderBy('address')
+        .execute();
+}
+
 const TOO_MANY = 'Too many submissions — please try again shortly';
 
 describe('forms.submit rate limit', () => {
@@ -101,6 +110,32 @@ describe('forms.submit rate limit', () => {
             errors: { _form: [TOO_MANY] },
         });
         expect(await submissionCount()).toBe(1);
+    });
+
+    it('writes nothing for a refused submission, so the count stays at the limit', async () => {
+        await setup({ rateLimit: { limit: 2, windowMs: 60_000 } });
+
+        for (let i = 0; i < 5; i += 1) await submit('1.1.1.1');
+
+        expect(await storedCounts()).toEqual([{ address: '1.1.1.1', count: 2 }]);
+    });
+
+    it('counts every address in one IPv6 /64 together', async () => {
+        await setup({ rateLimit: { limit: 2, windowMs: 60_000 } });
+
+        expect((await submit('2001:db8:1:2::1')).ok).toBe(true);
+        expect((await submit('2001:db8:1:2:ffff:ffff:ffff:ffff')).ok).toBe(true);
+        expect((await submit('2001:DB8:1:2::abcd')).ok).toBe(false);
+        expect((await submit('2001:db8:1:3::1')).ok).toBe(true);
+    });
+
+    it('counts an IPv4-mapped IPv6 address with its plain IPv4 form', async () => {
+        await setup({ rateLimit: { limit: 2, windowMs: 60_000 } });
+
+        expect((await submit('1.1.1.1')).ok).toBe(true);
+        expect((await submit('::ffff:1.1.1.1')).ok).toBe(true);
+        expect((await submit('::ffff:101:101')).ok).toBe(false);
+        expect(await storedCounts()).toEqual([{ address: '1.1.1.1', count: 2 }]);
     });
 
     it('counts each address separately', async () => {
@@ -132,6 +167,7 @@ describe('forms.submit rate limit', () => {
         await setup(options);
         expect((await submit('1.1.1.1')).ok).toBe(true);
         expect((await submit('1.1.1.1')).ok).toBe(true);
+        expect(await storedCounts()).toEqual([{ address: '1.1.1.1', count: 2 }]);
 
         // A second instance on the same database: fresh registries and a new
         // HTTP app, as another process or Workers isolate builds them.

@@ -179,7 +179,7 @@ function clientAddressWarning(
     if ((resolvedConfig.security?.trustProxy ?? false) !== false) return undefined;
     // Workers read `cf-connecting-ip`, which Cloudflare sets.
     if (astroConfig.adapter?.name === '@astrojs/cloudflare') return undefined;
-    return "Astro's `security.allowedDomains` is set, so Astro may take a request's address from `x-forwarded-for`, which a client can send. Astromech does not use that address, so every client shares one sign-in count and the forms plugin's submission limit does not run. Set `security.trustProxy` in `astromech.config.ts` to the number of proxies in front of the server.";
+    return "Astro's `security.allowedDomains` is set, so Astro may take a request's address from `x-forwarded-for`, which a client can send. Astromech does not use that address, so every client shares one count in each limit keyed on the client address. Set `security.trustProxy` in `astromech.config.ts` to the number of proxies in front of the server.";
 }
 
 /**

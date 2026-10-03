@@ -96,15 +96,17 @@ export function createRateLimitsRepository(db: PluginContext['db']) {
     const repository = createRepository(rateLimitsTable, db);
 
     /**
-     * Count one request at `now` and return the count in its window. A window
-     * that started `windowMs` or more before `now` starts again at one. One
-     * statement, so concurrent requests each count once, on D1 too.
+     * Count one request at `now` and return the count in its window, or null
+     * when the window already holds `limit` requests, in which case nothing is
+     * written. A window that started `windowMs` or more before `now` starts
+     * again at one. One statement, so concurrent requests each count once, on
+     * D1 too.
      */
     async function consume(
         key: { address: string; formId: string },
         now: number,
-        windowMs: number
-    ): Promise<number> {
+        { limit, windowMs }: { limit: number; windowMs: number }
+    ): Promise<number | null> {
         const { db: handle, table } = repository.kysely();
         const elapsedBy = now - windowMs;
         const row = await handle
@@ -112,24 +114,34 @@ export function createRateLimitsRepository(db: PluginContext['db']) {
             .values({ id: crypto.randomUUID(), ...key, windowStart: now, count: 1 })
             .onConflict((conflict) =>
                 // Unqualified columns name the stored row, not the new one.
-                conflict.columns(['address', 'formId']).doUpdateSet((eb) => ({
-                    count: eb
-                        .case()
-                        .when('windowStart', '<=', elapsedBy)
-                        .then(1)
-                        .else(eb('count', '+', 1))
-                        .end(),
-                    windowStart: eb
-                        .case()
-                        .when('windowStart', '<=', elapsedBy)
-                        .then(now)
-                        .else(eb.ref('windowStart'))
-                        .end(),
-                }))
+                conflict
+                    .columns(['address', 'formId'])
+                    .doUpdateSet((eb) => ({
+                        count: eb
+                            .case()
+                            .when('windowStart', '<=', elapsedBy)
+                            .then(1)
+                            .else(eb('count', '+', 1))
+                            .end(),
+                        windowStart: eb
+                            .case()
+                            .when('windowStart', '<=', elapsedBy)
+                            .then(now)
+                            .else(eb.ref('windowStart'))
+                            .end(),
+                    }))
+                    // A row the WHERE skips is not updated and RETURNING
+                    // yields nothing for it.
+                    .where((eb) =>
+                        eb.or([
+                            eb('count', '<', limit),
+                            eb('windowStart', '<=', elapsedBy),
+                        ])
+                    )
             )
             .returning('count')
-            .executeTakeFirstOrThrow();
-        return Number(row['count']);
+            .executeTakeFirst();
+        return row === undefined ? null : Number(row['count']);
     }
 
     /** Delete the counts whose window started at or before `elapsedBy`. */
