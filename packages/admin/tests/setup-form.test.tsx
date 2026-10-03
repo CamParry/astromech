@@ -4,23 +4,59 @@
  * The first-run setup form: it shows the user fields only when a required one
  * has no default or the server names one, sends them as `data.fields`, shows a
  * 422's field errors on the field they name and any other refusal inline, and
- * says what to do when a required picker field has no default.
+ * says what to do when a required picker field has no default. Enter in a user
+ * field submits, unless the input belongs to a form or popover of its own.
  */
 
+import type { BaseFieldProps } from '@/types/index';
+import { Popover } from '@base-ui/react/popover';
 import { screen, waitFor } from '@testing-library/react';
+import React from 'react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { Route as setupRoute } from '@/admin/pages/_auth/setup';
 import { renderAdmin } from './_support/render-admin';
 
-const { adminConfig } = vi.hoisted(() => ({
+const { adminConfig, fieldTypes } = vi.hoisted(() => ({
     adminConfig: {
         defaultLocale: 'en',
         locales: ['en'],
         users: { translatable: false, fields: [] as unknown[] },
     },
+    fieldTypes: {} as Record<string, unknown>,
 }));
 
 vi.mock('virtual:astromech/admin-config', () => ({ default: adminConfig }));
+
+vi.mock('virtual:astromech/plugins/components', () => ({
+    fieldTypes,
+    pages: {},
+    hostPages: {},
+    i18n: {},
+    slots: { 'global-overlay': [], 'right-drawer': [], toolbar: [] },
+}));
+
+/** A plugin field whose search input sits in a popover, portalled out of the form. */
+function TagPicker(_props: BaseFieldProps): React.ReactElement {
+    return (
+        <Popover.Root>
+            <Popover.Trigger>Tags</Popover.Trigger>
+            <Popover.Portal>
+                <Popover.Positioner>
+                    <Popover.Popup>
+                        <input aria-label="Search tags" />
+                    </Popover.Popup>
+                </Popover.Positioner>
+            </Popover.Portal>
+        </Popover.Root>
+    );
+}
+
+fieldTypes['tag-picker'] = {
+    plugin: 'tags',
+    serviceKey: 'tags',
+    namespace: 'tags',
+    load: async () => ({ default: TagPicker }),
+};
 
 const fetchMock = vi.fn<typeof fetch>();
 
@@ -196,6 +232,46 @@ describe('the setup form', () => {
         expect(screen.queryByLabelText(/Team/)).toBeNull();
     });
 
+    it('names no account key in a toast when the 422 names only account keys', async () => {
+        setupResponse = () =>
+            refusal(422, 'VALIDATION_ERROR', 'Validation failed', {
+                fields: { email: ['Must be a valid email address'] },
+            });
+        const page = mountPage();
+
+        await fillAccount(page);
+        await page.user.click(screen.getByRole('button', { name: 'Create account' }));
+
+        await screen.findByText('Must be a valid email address');
+        expect(screen.queryByText(/Please fix/)).toBeNull();
+    });
+
+    it('clears the error under an account input once it is edited', async () => {
+        setupResponse = () =>
+            refusal(422, 'VALIDATION_ERROR', 'Validation failed', {
+                fields: { email: ['Must be a valid email address'] },
+            });
+        const page = mountPage();
+
+        await fillAccount(page);
+        await page.user.click(screen.getByRole('button', { name: 'Create account' }));
+        await screen.findByText('Must be a valid email address');
+        await page.user.type(screen.getByLabelText('Email'), 'u');
+
+        expect(screen.queryByText('Must be a valid email address')).toBeNull();
+    });
+
+    it('leaves out an optional picker field, which works only after sign-in', async () => {
+        adminConfig.users.fields = [
+            team,
+            { name: 'avatar', type: 'media', label: 'Avatar' },
+        ];
+        mountPage();
+
+        expect(await screen.findByLabelText(/Team/)).toBeDefined();
+        expect(screen.queryByText('Avatar')).toBeNull();
+    });
+
     it('shows a closed sign-up inline', async () => {
         const closed = 'Sign-up is closed. Ask an administrator to create your account.';
         setupResponse = () => refusal(403, 'SIGN_UP_CLOSED', closed);
@@ -218,6 +294,50 @@ describe('the setup form', () => {
 
         await waitFor(() =>
             expect(setupBody()).toMatchObject({ data: { fields: { team: 'Ops' } } })
+        );
+    });
+
+    it('leaves Enter in a nested form to that form', async () => {
+        adminConfig.users.fields = [
+            team,
+            { name: 'bio', type: 'richtext', label: 'Bio' },
+        ];
+        const page = mountPage();
+
+        await fillAccount(page);
+        await page.user.type(screen.getByLabelText(/Team/), 'Ops');
+        await page.user.click(screen.getByRole('button', { name: 'Link' }));
+        await page.user.type(
+            screen.getByLabelText('Link URL'),
+            'https://example.test{Enter}'
+        );
+
+        // The link form took the Enter: it applied the link and closed.
+        await waitFor(() =>
+            expect(screen.queryByRole('dialog', { name: 'Edit link' })).toBeNull()
+        );
+        expect(fetchMock.mock.calls.map(([url]) => String(url))).not.toContain(
+            '/cms/api/setup'
+        );
+    });
+
+    it('leaves Enter in a portalled popover to the popover', async () => {
+        adminConfig.users.fields = [
+            team,
+            { name: 'tags', type: 'tag-picker', label: 'Tags' },
+        ];
+        const page = mountPage();
+        await fillAccount(page);
+        await page.user.type(screen.getByLabelText(/Team/), 'Ops');
+        const submit = vi.fn();
+        document.getElementById('am-setup-form')?.addEventListener('submit', submit);
+
+        await page.user.click(await screen.findByRole('button', { name: 'Tags' }));
+        await page.user.type(await screen.findByLabelText('Search tags'), 'news{Enter}');
+
+        expect(submit).not.toHaveBeenCalled();
+        expect(fetchMock.mock.calls.map(([url]) => String(url))).not.toContain(
+            '/cms/api/setup'
         );
     });
 

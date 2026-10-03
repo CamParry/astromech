@@ -1,6 +1,6 @@
 import type { JsonObject, User } from '@/types/index';
 import { defineCommand } from 'citty';
-import { configArgs, jsonArgs } from '../common-args';
+import { configArgs, fieldsArgs, jsonArgs } from '../common-args';
 import { withApplication } from '../config';
 import { callCoreMethod } from '../methods';
 import { parseJsonArg, printResult } from '../output';
@@ -13,7 +13,7 @@ export default defineCommand({
         email: { type: 'string', description: 'Email address' },
         password: { type: 'string', description: 'Password' },
         role: { type: 'string', description: 'Role slug', default: 'admin' },
-        fields: { type: 'string', description: 'User fields as inline JSON or @file' },
+        ...fieldsArgs,
         ...jsonArgs,
         ...configArgs,
     },

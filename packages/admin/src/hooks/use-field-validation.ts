@@ -28,8 +28,6 @@ export type UseFieldValidationOptions = {
     definitions: Field[];
     values: Record<string, unknown>;
     operation: 'create' | 'update';
-    /** Server errors to show from the first render, as a 422 left them. */
-    initialServerErrors?: FieldErrors | undefined;
 };
 
 /** The revealed subset of a message map, in the order the map lists it. */
@@ -52,12 +50,9 @@ export function useFieldValidation({
     definitions,
     values,
     operation,
-    initialServerErrors,
 }: UseFieldValidationOptions): FieldValidationHandle {
     const [clientErrors, setClientErrors] = useState<FieldErrors>({});
-    const [serverErrors, setServerErrorsState] = useState<FieldErrors>(
-        initialServerErrors ?? {}
-    );
+    const [serverErrors, setServerErrorsState] = useState<FieldErrors>({});
     // There is no server counterpart: the server is never asked to collect
     // warnings, so this is the whole warning state.
     const [clientWarnings, setClientWarnings] = useState<FieldErrors>({});

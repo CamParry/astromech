@@ -7,6 +7,7 @@ import type { Field, FieldErrors } from 'astromech';
 import { useQueryClient } from '@tanstack/react-query';
 import { createFileRoute, useNavigate } from '@tanstack/react-router';
 import { AstromechApiError } from 'astromech/fetch';
+import { isLayoutField } from 'astromech/shared';
 import React, { useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import adminConfig from 'virtual:astromech/admin-config';
@@ -38,7 +39,13 @@ type SetupValues = {
 const SETUP_FORM_ID = 'am-setup-form';
 
 /** The keys `POST /setup` takes beside `data`, which a 422 may name. */
-const ACCOUNT_KEYS = new Set(['name', 'email', 'password']);
+const ACCOUNT_KEYS = ['name', 'email', 'password'] as const;
+
+type AccountKey = (typeof ACCOUNT_KEYS)[number];
+
+function isAccountKey(key: string): key is AccountKey {
+    return (ACCOUNT_KEYS as readonly string[]).includes(key);
+}
 
 /** Field types whose picker reads the API, which needs a signed-in user. */
 const PICKER_TYPES = new Set(['media', 'relationship']);
@@ -73,7 +80,7 @@ function SetupPage() {
             // A check that cannot run shows the fields rather than hiding a required one.
             const missing = await requiredFieldErrors(fields, 'user').catch(() => null);
             if (missing === null) {
-                setState({ status: 'form', userFields: fields });
+                setState({ status: 'form', userFields: fieldsBeforeSignIn(fields) });
                 return;
             }
             const pickers = Object.entries(missing).filter(([path]) =>
@@ -84,7 +91,10 @@ function SetupPage() {
                 return;
             }
             const needed = Object.keys(missing).length > 0;
-            setState({ status: 'form', userFields: needed ? fields : [] });
+            setState({
+                status: 'form',
+                userFields: needed ? fieldsBeforeSignIn(fields) : [],
+            });
         })();
     }, [navigate, queryClient]);
 
@@ -104,10 +114,26 @@ function SetupPage() {
             // A check only the server runs (a field's `validate`, a function
             // default, `users.validate`) refused a user field the form left out.
             onUserFieldErrors={() =>
-                setState({ status: 'form', userFields: adminConfig.users.fields })
+                setState({
+                    status: 'form',
+                    userFields: fieldsBeforeSignIn(adminConfig.users.fields),
+                })
             }
         />
     );
+}
+
+/**
+ * The user fields a visitor can fill in before sign-in: an optional picker
+ * field is left out, and the server gives it its default.
+ */
+function fieldsBeforeSignIn(fields: Field[]): Field[] {
+    return fields.flatMap((field): Field[] => {
+        if (isLayoutField(field))
+            return [{ ...field, fields: fieldsBeforeSignIn(field.fields) }];
+        if (PICKER_TYPES.has(field.type) && field.required !== true) return [];
+        return [field];
+    });
 }
 
 /** Names the picker fields setup cannot fill in, and the two ways past them. */
@@ -147,6 +173,9 @@ function SetupForm({
     // sign-in that fails after the account was created; a 422 lands on its fields.
     const [error, setError] = useState<string | null>(null);
 
+    // A 422's messages for the account keys, each cleared once its input is edited.
+    const [accountErrors, setAccountErrors] = useState<FieldErrors>({});
+
     const setupForm = useFieldsForm<SetupValues, SetupValues>({
         fieldDefinitions: userFields,
         operation: 'create',
@@ -161,20 +190,48 @@ function SetupForm({
                     data: { fields: values.fields },
                 });
             } catch (err) {
-                const named = Object.keys(
-                    (err instanceof Error ? readValidationErrors(err) : null)?.fields ??
-                        {}
-                );
-                if (named.some((key) => !ACCOUNT_KEYS.has(key))) onUserFieldErrors();
-                throw err;
+                throw err instanceof Error ? takeAccountErrors(err) : err;
             }
             return values;
         },
         onSuccess: (values) => void signIn(values),
-        onError: (err) =>
-            setError(err.message !== '' ? err.message : t('auth.setupFailed')),
+        onError: (err) => {
+            if (err instanceof AccountKeysRefused) return;
+            setError(err.message !== '' ? err.message : t('auth.setupFailed'));
+        },
     });
-    const { form, mutation, fieldErrors } = setupForm;
+    const { form, mutation } = setupForm;
+
+    /**
+     * Move a 422's account-key messages under their inputs, and hand back what
+     * is left for the form to show: the user fields' messages, or nothing.
+     */
+    function takeAccountErrors(err: Error): Error {
+        const refusal = readValidationErrors(err);
+        if (refusal === null || !(err instanceof AstromechApiError)) return err;
+        const account: FieldErrors = {};
+        const rest: FieldErrors = {};
+        for (const [key, messages] of Object.entries(refusal.fields)) {
+            (isAccountKey(key) ? account : rest)[key] = messages;
+        }
+        setAccountErrors(account);
+        if (Object.keys(rest).length > 0) onUserFieldErrors();
+        if (Object.keys(rest).length === 0 && refusal.form.length === 0) {
+            return new AccountKeysRefused();
+        }
+        return new AstromechApiError({
+            id: err.id,
+            code: err.code,
+            message: err.message,
+            status: err.status,
+            details: { ...err.details, fields: rest },
+        });
+    }
+
+    /** Drop the message the last refusal left on an account key, once its input is edited. */
+    function clearAccountError(key: AccountKey): void {
+        setAccountErrors(({ [key]: _cleared, ...rest }) => rest);
+    }
 
     async function signIn(values: SetupValues): Promise<void> {
         // Otherwise the cached answer sends a signed-out admin back here from login.
@@ -190,16 +247,21 @@ function SetupForm({
     function handleSubmit(e: React.FormEvent<HTMLFormElement>): void {
         e.preventDefault();
         setError(null);
+        setAccountErrors({});
         setupForm.handleSubmit();
     }
 
     /**
-     * Enter in a user field submits, as it does in an account input. The user
-     * fields sit outside the form element, so their own buttons cannot submit it.
+     * Enter in a user field's input submits, as it does in an account input.
+     * The user fields sit outside the form element, so their own buttons cannot
+     * submit it. An input in a form of its own, or portalled out of the column
+     * (React bubbles its events here all the same), keeps its Enter.
      */
     function submitOnEnter(e: React.KeyboardEvent<HTMLDivElement>): void {
-        if (e.key !== 'Enter' || e.defaultPrevented) return;
-        if (!(e.target instanceof HTMLInputElement)) return;
+        if (e.key !== 'Enter' || e.defaultPrevented || e.nativeEvent.isComposing) return;
+        const input = e.target;
+        if (!(input instanceof HTMLInputElement) || input.form !== null) return;
+        if (!e.currentTarget.contains(input)) return;
         e.preventDefault();
         formRef.current?.requestSubmit();
     }
@@ -218,8 +280,11 @@ function SetupForm({
                                 type="text"
                                 autoComplete="name"
                                 value={field.state.value}
-                                onChange={(e) => field.handleChange(e.target.value)}
-                                error={fieldErrors['name']?.[0]}
+                                onChange={(e) => {
+                                    field.handleChange(e.target.value);
+                                    clearAccountError('name');
+                                }}
+                                error={accountErrors['name']?.[0]}
                                 required
                             />
                         )}
@@ -231,8 +296,11 @@ function SetupForm({
                                 type="email"
                                 autoComplete="email"
                                 value={field.state.value}
-                                onChange={(e) => field.handleChange(e.target.value)}
-                                error={fieldErrors['email']?.[0]}
+                                onChange={(e) => {
+                                    field.handleChange(e.target.value);
+                                    clearAccountError('email');
+                                }}
+                                error={accountErrors['email']?.[0]}
                                 required
                             />
                         )}
@@ -244,8 +312,11 @@ function SetupForm({
                                 type="password"
                                 autoComplete="new-password"
                                 value={field.state.value}
-                                onChange={(e) => field.handleChange(e.target.value)}
-                                error={fieldErrors['password']?.[0]}
+                                onChange={(e) => {
+                                    field.handleChange(e.target.value);
+                                    clearAccountError('password');
+                                }}
+                                error={accountErrors['password']?.[0]}
                                 minLength={8}
                                 required
                             />
@@ -298,6 +369,12 @@ function SetupForm({
         </AuthCard>
     );
 }
+
+/**
+ * A 422 that named only account keys, whose messages already show under their
+ * inputs; the form has nothing more to say about it.
+ */
+class AccountKeysRefused extends Error {}
 
 /**
  * `POST /setup`. A refusal throws an `AstromechApiError`, so the form maps a

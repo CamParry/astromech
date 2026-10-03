@@ -46,7 +46,8 @@ field's `defaultValue` fills an absent value, a `required` field with no value
 refuses the setup, and `users.validate` runs. When a required user field has
 no default, or the server refuses one with a check the browser cannot run,
 the admin's setup screen shows the user fields beside the name, email and
-password, so the first admin can fill them in.
+password, so the first admin can fill them in. It leaves out an optional
+`media` or `relationship` field, which takes its default.
 
 A required `media` or `relationship` field with no default cannot be filled in
 there: its picker reads the API, which needs a signed-in user. The setup screen

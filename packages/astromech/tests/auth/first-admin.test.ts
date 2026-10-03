@@ -8,7 +8,12 @@
 import type { DB } from '@/database/types';
 import type { Kysely } from 'kysely';
 import { invalid } from '@tests/fixtures';
-import { createTestDb, makeTestConfig, setupTestConfig } from '@tests/harness';
+import {
+    createTestDb,
+    failWritesTo,
+    makeTestConfig,
+    setupTestConfig,
+} from '@tests/harness';
 import { sql } from 'kysely';
 import { beforeEach, describe, expect, it } from 'vitest';
 import { currentServices } from '@/app-context/services';
@@ -100,6 +105,14 @@ describe('first-run setup', () => {
 
         expect(rows).toHaveLength(1);
         expect(rows[0]?.locale).toBe(getDefaultContentLocale());
+    });
+
+    // The same writes `users.create` makes: one insert per row, no update.
+    it('writes the first admin without updating the users row it inserted', async () => {
+        await failWritesTo(usersTable, 'update');
+
+        expect(await createFirstAdmin(ADMIN)).toBe('created');
+        expect(await roleOf(ADMIN.email)).toBe('admin');
     });
 
     it('fills the default of a user field', async () => {

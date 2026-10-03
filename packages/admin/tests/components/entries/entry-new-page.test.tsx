@@ -3,8 +3,8 @@
  *
  * The entry create page: it renders the type's own fields beside the title,
  * a publish sends a create with them and opens the new entry, a 422 lands on
- * the field it names and the page stays put, and a user who may not create is
- * sent back to the list.
+ * the field it names and the page stays put, a user who may not create is
+ * sent back to the list, and the title input is described by its error.
  */
 
 import type { AdminEntryType, Entry } from '@/types/index';
@@ -129,5 +129,17 @@ describe('EntryNewPage', () => {
         expect(
             await screen.findByText("You don't have permission to access this page.")
         ).not.toBeNull();
+    });
+
+    it('describes the title input by its error', async () => {
+        const page = mountPage();
+
+        const title = await screen.findByLabelText(/Title/);
+        await page.user.type(title, 'A');
+        await page.user.clear(title);
+
+        const message = await screen.findByText('Title is required');
+        expect(title.getAttribute('aria-invalid')).toBe('true');
+        expect(title.getAttribute('aria-describedby')?.split(' ')).toContain(message.id);
     });
 });

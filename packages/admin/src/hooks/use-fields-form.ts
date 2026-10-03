@@ -56,8 +56,9 @@ export type UseFieldsFormOptions<TExtras extends object, TSaved, TMeta> = {
     /** The i18n namespace labels resolve against: a plugin's name, or core's by default. */
     namespace?: string;
     /**
-     * Whether Cmd+S submits the form; true unless this says otherwise. A form
-     * in a dialog, or one that is not a page's main form, turns it off.
+     * Whether Cmd+S submits the form; true unless this says otherwise. Only a
+     * page's main form keeps it, so one key press saves one form. It never runs
+     * while a modal dialog is open.
      */
     saveHotkey?: boolean;
     /**
@@ -65,8 +66,6 @@ export type UseFieldsFormOptions<TExtras extends object, TSaved, TMeta> = {
      * in place of the error toast.
      */
     onError?: (error: Error) => void;
-    /** A failed write's error to show from the first render, as a submit would. */
-    initialError?: Error | undefined;
 };
 
 /** A 422's field and form messages, or `null` for any other error. */
@@ -79,12 +78,6 @@ export function readValidationErrors(
     if (Object.keys(fields).length === 0 && form.length === 0) return null;
     return { fields, form };
 }
-
-/**
- * An open modal dialog, which takes the keyboard from the page behind it. A
- * toast is a dialog too, but not a modal one.
- */
-const DIALOG = '[role="dialog"]:not([aria-modal="false"]), [role="alertdialog"]';
 
 /**
  * `TExtras` is the caller's own keys, `TSaved` what `onSubmit` resolves to,
@@ -106,17 +99,12 @@ export function useFieldsForm<
     namespace = labelNamespace(undefined),
     saveHotkey = true,
     onError,
-    initialError,
 }: UseFieldsFormOptions<TExtras, TSaved, TMeta>) {
     const { toast } = useToast();
     const { t } = useTranslation();
 
-    const [initialErrors] = useState(() =>
-        initialError === undefined ? null : readValidationErrors(initialError)
-    );
-
     /** Form-level messages from a 422; they belong to no field. */
-    const [formErrors, setFormErrors] = useState<string[]>(initialErrors?.form ?? []);
+    const [formErrors, setFormErrors] = useState<string[]>([]);
 
     /**
      * Name the fields that failed rather than pointing at highlights the author
@@ -164,7 +152,6 @@ export function useFieldsForm<
         definitions: fieldDefinitions,
         values: fieldValues,
         operation,
-        initialServerErrors: initialErrors?.fields,
     });
 
     const mutation: UseMutationResult<
@@ -178,10 +165,14 @@ export function useFieldsForm<
             form.reset(form.state.values);
             onSuccess?.(saved);
         },
-        onError: (error) => handleError(error),
+        onError: (error) => showError(error),
     });
 
-    function handleError(error: Error): void {
+    /**
+     * Show a failed write's error as a failed submit does: a 422 on its fields
+     * and in the banner, anything else through `onError` or a toast.
+     */
+    function showError(error: Error): void {
         const errors = readValidationErrors(error);
         if (errors !== null) {
             const { fields, form: messages } = errors;
@@ -219,11 +210,8 @@ export function useFieldsForm<
 
     useHotkeys(
         'mod+s',
-        (event) => {
+        () => {
             if (isPendingRef.current) return;
-            // A key pressed in a dialog belongs to the dialog, not the page behind it.
-            if (event.target instanceof Element && event.target.closest(DIALOG) !== null)
-                return;
             handleSubmit();
         },
         { enabled: saveHotkey }
@@ -253,6 +241,7 @@ export function useFieldsForm<
         form,
         mutation,
         handleSubmit,
+        showError,
         isDirty,
         readOnly,
         fieldDefinitions,

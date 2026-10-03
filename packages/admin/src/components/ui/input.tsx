@@ -5,7 +5,7 @@ import { useFieldControl } from '../fields/field-control-context';
 
 type InputProps = React.ComponentProps<'input'> & {
     error?: string | undefined;
-    label?: string;
+    label?: React.ReactNode;
     hint?: string;
 };
 

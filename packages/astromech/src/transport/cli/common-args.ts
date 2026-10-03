@@ -46,6 +46,11 @@ export const localeArgs = {
     },
 } satisfies ArgsDef;
 
+/** `--fields`, for a command that writes a record's declared fields. */
+export const fieldsArgs = {
+    fields: { type: 'string', description: 'Fields as inline JSON or @file' },
+} satisfies ArgsDef;
+
 /** Read `--allow-remote` off parsed citty args, as the `loadConfig` option shape. */
 export function toAllowRemoteOption(args: { 'allow-remote'?: boolean | undefined }): {
     allowRemote: boolean;

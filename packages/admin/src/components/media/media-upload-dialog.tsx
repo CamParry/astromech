@@ -5,7 +5,7 @@
  */
 
 import type { JsonObject, Media } from 'astromech';
-import React, { useRef, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import adminConfig from 'virtual:astromech/admin-config';
 import { mediaMutations } from '../../hooks/media';
@@ -70,7 +70,6 @@ function MediaUploadForm({
         fieldDefinitions: adminConfig.media.fields,
         operation: 'create',
         saveHotkey: false,
-        initialError: error,
         onSubmit: (values) =>
             uploadMutation.mutateAsync({
                 files: remaining,
@@ -84,8 +83,13 @@ function MediaUploadForm({
             onClose();
         },
     });
-    const { mutation, handleSubmit } = uploadForm;
+    const { mutation, handleSubmit, showError } = uploadForm;
     const isPending = mutation.isPending;
+
+    // The refusal that opened the dialog shows on its fields, as a submit's would.
+    useEffect(() => {
+        if (error !== undefined) showError(error);
+    }, []);
 
     return (
         <Modal

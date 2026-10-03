@@ -411,26 +411,27 @@ export function createContentRepository<
                 string,
                 unknown
             >;
-            const id = String(created['id']);
-            await contents.create(
-                insertValues({
-                    id,
-                    locale: content.locale ?? defaultLocale(),
-                    stagedFor: null,
-                    resourceRow: created,
-                    data: content,
-                }) as never
-            );
-            return required(
-                await findOne(
-                    { id, locale: content.locale ?? defaultLocale() },
-                    {
-                        includeTrashed: true,
-                    }
-                ),
-                id
-            );
+            return createContentRow(created, content);
         });
+    }
+
+    /** The content-row half of `create`, for a resource row inserted another way. */
+    async function createContentRow(
+        resourceRow: Record<string, unknown>,
+        content: ContentWrite
+    ): Promise<R> {
+        const id = String(resourceRow['id']);
+        const locale = content.locale ?? defaultLocale();
+        await contents.create(
+            insertValues({
+                id,
+                locale,
+                stagedFor: null,
+                resourceRow,
+                data: content,
+            }) as never
+        );
+        return required(await findOne({ id, locale }, { includeTrashed: true }), id);
     }
 
     /**
@@ -617,6 +618,7 @@ export function createContentRepository<
         findByLocale,
         findResourceRows,
         create,
+        createContentRow,
         update,
         delete: del,
         locales,

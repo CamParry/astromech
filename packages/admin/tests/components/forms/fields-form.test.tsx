@@ -3,16 +3,19 @@
  *
  * `useFieldsForm` and `<FieldsForm>` over a flat record: a submit hands the
  * values to the caller's write, a 422 lands on the named field or in the
- * banner, a read-only form disables every field and submits nothing, and the
- * unsaved-changes guard holds only while the form is dirty.
+ * banner, a read-only form disables every field and submits nothing, the
+ * unsaved-changes guard holds only while the form is dirty, and Cmd+S saves
+ * from anywhere but a modal dialog.
  */
 
 import type { Field } from '@/types/index';
+import { Popover } from '@base-ui/react/popover';
 import { screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import React from 'react';
+import React, { useState } from 'react';
 import { describe, expect, it, vi } from 'vitest';
 import { FieldsForm } from '@/admin/components/forms/fields-form';
+import { Modal } from '@/admin/components/ui/modal';
 import { useFieldsForm } from '@/admin/hooks/use-fields-form';
 import { AstromechApiError } from '@/transport/http/client';
 import { renderWithProviders } from '../../_support/render-admin';
@@ -71,6 +74,47 @@ function unprocessable(details: Record<string, unknown>): AstromechApiError {
         status: 422,
         details,
     });
+}
+
+/** Cmd+S on a Mac, Ctrl+S elsewhere: the form's hotkey is whichever this platform uses. */
+const SAVE_KEYS = '{Control>}s{/Control}{Meta>}s{/Meta}';
+
+/** A valid form with a popover or a modal dialog open over it, each holding a button. */
+function FormUnderOverlay({
+    onSubmit,
+    overlay,
+}: {
+    onSubmit: Write;
+    overlay: 'popover' | 'modal';
+}): React.ReactElement {
+    const form = useFieldsForm({
+        fieldDefinitions: FIELDS,
+        operation: 'update',
+        defaultValues: { fields: { from: '/old', to: '/new' } },
+        onSubmit,
+    });
+    const [open, setOpen] = useState(true);
+    return (
+        <>
+            <FieldsForm form={form} />
+            {overlay === 'modal' ? (
+                <Modal open={open} onClose={() => setOpen(false)} title="Pick a page">
+                    <button type="button">Inside</button>
+                </Modal>
+            ) : (
+                <Popover.Root defaultOpen>
+                    <Popover.Trigger>Options</Popover.Trigger>
+                    <Popover.Portal>
+                        <Popover.Positioner>
+                            <Popover.Popup>
+                                <button type="button">Inside</button>
+                            </Popover.Popup>
+                        </Popover.Positioner>
+                    </Popover.Portal>
+                </Popover.Root>
+            )}
+        </>
+    );
 }
 
 /** Fire `beforeunload` and report whether the form asked to keep the tab open. */
@@ -166,5 +210,44 @@ describe('FieldsForm', () => {
         await waitFor(() => expect(onSubmit).toHaveBeenCalledTimes(1));
 
         await waitFor(() => expect(unloadIsBlocked()).toBe(false));
+    });
+
+    it('saves on Cmd+S while focus is in a field', async () => {
+        const onSubmit = vi.fn<Write>(async () => ({ id: 'r1' }));
+        mount(onSubmit);
+
+        await userEvent.type(inputNamed('to'), '/new');
+        await userEvent.keyboard(SAVE_KEYS);
+
+        await waitFor(() => expect(onSubmit).toHaveBeenCalledTimes(1));
+        expect(onSubmit.mock.calls[0]?.[0]).toEqual({
+            fields: { from: '/old', to: '/new' },
+        });
+    });
+
+    it('saves on Cmd+S from a button inside a popover', async () => {
+        const onSubmit = vi.fn<Write>(async () => ({ id: 'r1' }));
+        renderWithProviders(<FormUnderOverlay onSubmit={onSubmit} overlay="popover" />);
+
+        (await screen.findByRole('button', { name: 'Inside' })).focus();
+        await userEvent.keyboard(SAVE_KEYS);
+
+        await waitFor(() => expect(onSubmit).toHaveBeenCalledTimes(1));
+    });
+
+    it('leaves Cmd+S in a modal dialog to the dialog', async () => {
+        const onSubmit = vi.fn<Write>(async () => ({ id: 'r1' }));
+        renderWithProviders(<FormUnderOverlay onSubmit={onSubmit} overlay="modal" />);
+
+        const dialog = await screen.findByRole('dialog', { name: 'Pick a page' });
+        screen.getByRole('button', { name: 'Inside' }).focus();
+        await userEvent.keyboard(SAVE_KEYS);
+        await userEvent.keyboard('{Escape}');
+        await waitFor(() => expect(dialog.isConnected).toBe(false));
+
+        // Once the dialog is gone the same keys save, and only this once.
+        await userEvent.keyboard(SAVE_KEYS);
+        await waitFor(() => expect(onSubmit).toHaveBeenCalled());
+        expect(onSubmit).toHaveBeenCalledTimes(1);
     });
 });

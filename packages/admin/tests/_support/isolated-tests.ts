@@ -38,6 +38,7 @@ export const isolatedTests = [
     'tests/components/entries/create-locale-modal.test.tsx',
     'tests/components/entries/delete-entry-modal.test.tsx',
     'tests/components/entries/entry-new-page.test.tsx',
+    'tests/components/layout/app-shell.test.tsx',
     'tests/components/layout/notification-bell.test.tsx',
     'tests/components/ui/command-palette.test.tsx',
     'tests/forgot-password-form.test.tsx',

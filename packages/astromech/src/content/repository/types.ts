@@ -187,6 +187,14 @@ export type ContentRepository<
     /** Insert the resource row and its first content row. */
     create(resourceRow: Record<string, unknown>, content: ContentWrite): Promise<R>;
     /**
+     * Insert the first content row of a resource row written another way, as
+     * `create` does after its own insert. `resourceRow` is the decoded row.
+     */
+    createContentRow(
+        resourceRow: Record<string, unknown>,
+        content: ContentWrite
+    ): Promise<R>;
+    /**
      * Write one locale's content row, creating it when it does not exist, and
      * stamp the resource row's `updatedAt` (and `updatedBy`, where it has one).
      */

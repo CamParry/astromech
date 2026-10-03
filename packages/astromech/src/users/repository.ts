@@ -14,7 +14,7 @@ import { buildOrderBy } from '@/content/list';
 import { createContentRepository } from '@/content/repository/content-table';
 import { relationshipRepository } from '@/content/repository/relationships';
 import { sortableColumns } from '@/content/resources';
-import { encodeWith, kyselyTableKey } from '@/database/codec';
+import { decodeWith, encodeWith, kyselyTableKey } from '@/database/codec';
 import { createRepository } from '@/database/repository/create-repository';
 import {
     accountsTable,
@@ -167,15 +167,13 @@ function createUserRepository() {
         resourceRow: NewUserTableRow,
         write: ContentWrite
     ): Promise<UserResource | null> {
-        // Minted here, not by the column default: the content row is written under it.
-        const id = resourceRow.id ?? crypto.randomUUID();
-        // `encodeWith` fills the timestamps the columns default and serializes
-        // every value; the Kysely handle spells the column names the way
-        // `CamelCasePlugin` does.
-        const cells = Object.entries(encodeWith(usersTable, { ...resourceRow, id }));
+        // `encodeWith` fills the id and timestamps the columns default and
+        // serializes every value; the Kysely handle spells the column names the
+        // way `CamelCasePlugin` does.
+        const cells = Object.entries(encodeWith(usersTable, resourceRow));
         return transaction(async () => {
             const { db, table } = resourceRows.kysely();
-            const result = await db
+            const inserted = await db
                 .insertInto(table)
                 .columns(cells.map(([column]) => column))
                 .expression(
@@ -187,10 +185,10 @@ function createUserRepository() {
                             not(exists(selectFrom(table).select(sql.lit(1).as('one'))))
                         )
                 )
+                .returningAll()
                 .executeTakeFirst();
-            if (Number(result.numInsertedOrUpdatedRows ?? 0) !== 1) return null;
-            // A write to a locale with no content row creates it.
-            return content.update({ id, locale: write.locale }, write);
+            if (inserted === undefined) return null;
+            return content.createContentRow(decodeWith(usersTable, inserted), write);
         });
     }
 

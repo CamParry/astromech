@@ -32,25 +32,23 @@ export function TitleField({
                 }}
             >
                 {(field) => (
-                    <div className="am-field">
-                        <label className="am-field-label" htmlFor="entry-title">
-                            {t('entries.titleField')}{' '}
-                            <span className="am-field-required">*</span>
-                        </label>
-                        <Input
-                            id="entry-title"
-                            type="text"
-                            value={field.state.value}
-                            onChange={(e) => field.handleChange(e.target.value)}
-                            onBlur={field.handleBlur}
-                            placeholder={placeholder}
-                            disabled={disabled}
-                            required
-                        />
-                        {field.state.meta.errors.length > 0 && (
-                            <p className="am-field-error">{field.state.meta.errors[0]}</p>
-                        )}
-                    </div>
+                    <Input
+                        id="entry-title"
+                        label={
+                            <>
+                                {t('entries.titleField')}{' '}
+                                <span className="am-field-required">*</span>
+                            </>
+                        }
+                        error={field.state.meta.errors[0]}
+                        type="text"
+                        value={field.state.value}
+                        onChange={(e) => field.handleChange(e.target.value)}
+                        onBlur={field.handleBlur}
+                        placeholder={placeholder}
+                        disabled={disabled}
+                        required
+                    />
                 )}
             </form.Field>
         </Panel>
