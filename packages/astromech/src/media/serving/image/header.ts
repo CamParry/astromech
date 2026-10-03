@@ -186,6 +186,27 @@ export function readIfdNumber(
     return undefined;
 }
 
+/** The byte size of one value of each TIFF field type, indexed by type (BYTE is 1 ... IFD is 13). */
+const TIFF_TYPE_SIZES = [0, 1, 1, 2, 4, 8, 1, 1, 2, 4, 8, 4, 8, 4];
+
+/**
+ * Where an entry's value bytes are: in the entry itself when they fit in 4
+ * bytes, otherwise at the offset it holds. Null when they fall outside the structure.
+ */
+export function readIfdValueRange(
+    view: DataView,
+    tiff: Tiff,
+    entry: IfdEntry
+): { start: number; end: number } | null {
+    const size = (TIFF_TYPE_SIZES[entry.type] ?? 0) * entry.count;
+    if (size === 0) return null;
+    const start =
+        size <= 4
+            ? entry.offset + 8
+            : tiff.start + view.getUint32(entry.offset + 8, tiff.littleEndian);
+    return start + size <= tiff.end ? { start, end: start + size } : null;
+}
+
 /**
  * The boxes laid end to end between `start` and `end`, at most `limit` of them.
  * A size of 0 runs the box to `end`; a size of 1 means a 64-bit size follows the type.

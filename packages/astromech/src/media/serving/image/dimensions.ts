@@ -58,11 +58,9 @@ export function isReadableImage(mimeType: string): boolean {
 }
 
 /**
- * Read an image's pixel dimensions as displayed, from its header bytes: an
- * orientation that turns the image a quarter turn (EXIF, or a HEIF `irot`)
- * swaps the stored width and height, as an upright variant does. Reads PNG,
- * GIF, JPEG, WebP, TIFF, and HEIF (HEIC and AVIF). Returns null if the format
- * is unrecognised, the header is too short to determine size, or it is malformed.
+ * Read a PNG, GIF, JPEG, WebP, TIFF or HEIF image's pixel dimensions as displayed,
+ * from its header: a quarter-turn orientation (EXIF, or a HEIF `irot`) swaps width
+ * and height, as an upright variant does. Null for any other or malformed file.
  */
 export function readImageDimensions(bytes: Uint8Array): Dimensions | null {
     const view = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength);
@@ -242,10 +240,9 @@ function readTiff(view: DataView): Dimensions | null {
 }
 
 /**
- * A HEIF file's primary image dimensions: its `ispe` property, cropped by its
- * `clap` property and turned by its `irot` property. The primary item's own
- * properties count, not the first `ispe`, because a phone's HEIC stores a grid
- * image over 512px tiles.
+ * A HEIF file's primary item size: its `ispe`, cropped by its `clap` and turned
+ * by its `irot`. The primary item's own properties count, not the first `ispe`,
+ * because a phone's HEIC stores a grid image over 512px tiles.
  */
 function readHeif(view: DataView): Dimensions | null {
     const meta = findBox(view, 0, view.byteLength, META);

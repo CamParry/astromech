@@ -108,6 +108,14 @@ width and height, which are the ones its variants have. Astromech reads them
 from the file's header on upload, with or without an image driver. JPEG, PNG,
 GIF, WebP, AVIF, HEIC and TIFF are read; any other file has `null` for both.
 
+**Location data is removed from uploaded originals.** On upload and replace,
+Astromech blanks the GPS data in a JPEG, PNG, WebP, AVIF, HEIC or TIFF file's
+EXIF and XMP before storing it, since the original is public at its media URL.
+The change is made in place, with no re-encode: the pixels and the file size
+stay the same, and it works with or without an image driver, on Workers too.
+Other metadata, such as the camera model, the date taken and the copyright, is
+kept. `size` and `metadata.version` describe the stored file.
+
 What `url` points at depends on the access mode: see
 [media access modes](../configuration/storage.md#media-access-modes).
 

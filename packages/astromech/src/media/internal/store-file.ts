@@ -4,14 +4,14 @@ import {
     isReadableImage,
     readImageDimensions,
 } from '../serving/image/dimensions';
+import { removeGpsMetadata } from '../serving/image/gps';
 import { getImageConfig } from '../serving/image/registry';
 import { contentVersion } from '../serving/image/version';
 
 /**
  * Store an uploaded file under `key` and extract image metadata. An image whose
- * header gives its dimensions is buffered once to read them, and an optimisable
- * one also gets its blurhash and version; every other type streams straight to
- * storage, never buffered.
+ * header is readable is buffered once, has its GPS data blanked, and is measured
+ * and hashed as stored; every other type streams straight to storage.
  */
 export async function storeFile(
     driver: StorageDriver,
@@ -27,6 +27,7 @@ export async function storeFile(
     }
 
     const bytes = new Uint8Array(await file.arrayBuffer());
+    await removeGpsMetadata(bytes);
     const dimensions = readImageDimensions(bytes);
     const metadata = isOptimisableImage(file.type)
         ? {

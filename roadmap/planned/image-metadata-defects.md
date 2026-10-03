@@ -51,9 +51,10 @@ decoded image, which is what the variants are made from.
 
 - [ ] Record dimensions after applying EXIF orientation, from the image driver
       where one is configured, and drop the unused `orientation` key or set it.
-- [ ] Strip metadata from the stored original on upload when an image driver
-      can (sharp; the Cloudflare driver cannot rewrite the original, so say so
-      in its docs).
+- [ ] Remove the GPS data from the stored original on upload and replace,
+      blanking it in place in the EXIF and XMP with no re-encode, so the pixels
+      and size are unchanged and it needs no image driver. Other metadata
+      (camera, date, copyright) is kept.
 - [ ] Read dimensions for HEIC, AVIF and TIFF.
 - [ ] Add the version to the Cloudflare driver's origin URL.
 - [ ] Every setting that changes a variant's bytes joins its storage key.
