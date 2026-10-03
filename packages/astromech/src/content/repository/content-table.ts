@@ -18,7 +18,7 @@ import type {
     StoredRows,
 } from './types';
 import type { SortClause } from '@/content/list';
-import type { Table } from '@/database/define-table';
+import type { Table, TableSelect } from '@/database/define-table';
 import type { GenericDb } from '@/database/repository/create-repository';
 import type { JsonObject } from '@/types/index';
 import type { Expression, SqlBool } from 'kysely';
@@ -53,7 +53,7 @@ export function createContentRepository<
 >(
     shape: ContentShape<O, C, V>,
     opts: ContentRepositoryOptions<R, O, C>
-): ContentRepository<R, V> {
+): ContentRepository<R, O, V> {
     const dbOverride = opts.db;
     // Read per call rather than once, so a repository built before the config
     // resolves still answers with the configured default.
@@ -180,6 +180,18 @@ export function createContentRepository<
         return Number(row?.c ?? 0);
     }
 
+    function whereDefaultLocale(
+        conditions: (eb: Parameters<JoinedWhere>[0]) => Expression<SqlBool>[]
+    ): JoinedWhere {
+        const locale = defaultLocale();
+        return (eb) =>
+            eb.and([
+                eb(`${contentKey}.locale`, '=', locale),
+                ...canonicalOnly(eb),
+                ...conditions(eb),
+            ]);
+    }
+
     /** Split a joined record back into the two rows and decode each. */
     function split(row: Record<string, unknown>): {
         resourceRow: Record<string, unknown>;
@@ -241,6 +253,14 @@ export function createContentRepository<
             stored.contents.push(...(contentRows as Record<string, unknown>[]));
         }
         return stored;
+    }
+
+    async function findResourceRows(ids: Iterable<string>): Promise<TableSelect<O>[]> {
+        const rows: TableSelect<O>[] = [];
+        for (const chunk of chunks(ids)) {
+            rows.push(...(await resourceRows.findMany({ where: { id: { in: chunk } } })));
+        }
+        return rows;
     }
 
     /** Decode joined rows into resources and attach each one's locale list. */
@@ -309,6 +329,14 @@ export function createContentRepository<
         const { locale } = params;
         if (locale === undefined || locale === defaultLocale()) return read;
         return overlayLocale(read, locale);
+    }
+
+    async function findByLocale(locale: string): Promise<R[]> {
+        return decodeRows(
+            await joined()
+                .where((eb) => eb(`${contentKey}.locale`, '=', locale))
+                .execute()
+        );
     }
 
     async function one(raw: Record<string, unknown> | undefined): Promise<R | null> {
@@ -585,6 +613,9 @@ export function createContentRepository<
         findAnyLocale,
         findMany,
         count,
+        whereDefaultLocale,
+        findByLocale,
+        findResourceRows,
         create,
         update,
         delete: del,
