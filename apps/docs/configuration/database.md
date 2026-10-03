@@ -58,10 +58,14 @@ rather than silently producing a broken backup.
 swaps the copy's tables in within one transaction, so a backup taken before a
 migration restores into the current schema. It refuses a backup that holds a
 migration the site does not have, such as one taken by newer code or with a
-plugin since removed. It empties sessions and verification tokens rather than
-restoring them, so everyone is signed out. The serving process loads the
-migrations from `migrationsDir` at the time of the restore, so deploy that folder
-with the site and start the server from the project root.
+plugin since removed, and refuses any restore while the database records other
+migrations than the site's: run `astromech plugin:purge` for a removed plugin or
+`astromech db:init` for pending migrations first. It empties sessions and
+verification tokens rather than restoring them, so everyone is signed out. A
+backup recording the same migrations as the database restores as it is. Any
+other needs the migration files: the serving process loads them from
+`migrationsDir` at the time of the restore, so deploy that folder with the site
+and start the server from the project root.
 
 ### Where `file:./database.db` points
 

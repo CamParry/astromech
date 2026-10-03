@@ -63,6 +63,7 @@ export type PluginDatabase = {
     /**
      * Replace the live tables with the backup's, migrated to this site's schema
      * first. `preserve` names tables to leave as they are; sessions are emptied.
+     * Throws `RestoreRefusedError`, having changed nothing, when the two cannot be reconciled.
      */
     restore?(
         source: ReadableStream<Uint8Array>,

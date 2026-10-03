@@ -1143,7 +1143,9 @@ than queries (`ctx.db` is the query handle). `dump` and `restore` are optional a
 depend on the site's database driver, so check for them rather than switching on
 `dialect`. `restore(source, { preserve })` brings the backup up to the site's
 schema before it replaces the live tables, leaves the tables named in `preserve`
-as they are, and signs everyone out:
+as they are, and signs everyone out. When the backup and the database cannot be
+reconciled it throws `RestoreRefusedError` (from `astromech`), a 409 that changed
+nothing:
 
 ```ts
 if (!ctx.database.dump) throw new Error('This database cannot be dumped');

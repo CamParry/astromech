@@ -137,10 +137,14 @@ and the cron table across the restore. Otherwise a restore would erase the
 record of itself. The libsql driver runs the site's migrations forward on a copy
 of the backup, so an older backup restores into the current schema, then
 swaps the copy's tables in within one transaction. It empties sessions and
-verification tokens rather than restoring them, so everyone is signed out. It
-refuses a backup holding a migration the site does not have (a newer backup, or
-one from a plugin since removed), or one whose migrations fail, and changes
-nothing; the route answers 500 with the driver's message, which the admin shows.
+verification tokens rather than restoring them, so everyone is signed out, and
+keeps the installed-plugin records. It refuses, changing nothing, a backup
+holding a migration the site does not have (a newer backup, or one from a plugin
+since removed), and any restore while the database itself does not match the
+site's migrations (a removed plugin awaiting `astromech plugin:purge`, or
+migrations `astromech db:init` has not applied yet). The route answers a refusal
+with 409 and the driver's message, and any other failure, such as a migration
+that fails on the backup, with 500. The admin shows either message.
 
 ## Admin surface
 

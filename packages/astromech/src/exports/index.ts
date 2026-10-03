@@ -51,6 +51,8 @@ export type {
 /** Plugin schema authoring surface. */
 export { definePluginTable } from '@/database/define-plugin-table';
 export type { KyselyTableKey, PluginDB } from '@/database/define-plugin-table';
+/** What `ctx.database.restore` throws when it refuses a backup and changes nothing. */
+export { RestoreRefusedError } from '@/database/errors';
 /** A plugin package augments this to put its tables on a site's `db` handle. */
 export type { AstromechPluginTables } from '@/database/types';
 /**

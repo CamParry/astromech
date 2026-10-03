@@ -25,6 +25,7 @@ import { getConfig } from '@/config/registry';
 import { getDatabaseDriver } from '@/database/driver-registry';
 import { getMigrationProvider } from '@/database/migration-registry';
 import { getDb } from '@/database/registry';
+import { pluginsTable } from '@/database/tables';
 import { getEmailDriver } from '@/email/registry';
 import { renderEmail } from '@/email/render';
 import { getEnvRecord } from '@/env';
@@ -105,7 +106,7 @@ export function createAppContext(input: AppContextInput): AppContext {
                     ? {
                           restore: (source, { preserve }) =>
                               restore(source, {
-                                  preserve,
+                                  preserve: [...preserve, ...CORE_PRESERVED_TABLES],
                                   empty: SIGN_IN_TABLES,
                                   migrations: getMigrationProvider(),
                               }),
@@ -123,6 +124,12 @@ export function createAppContext(input: AppContextInput): AppContext {
  * revoked and an old reset link stops working.
  */
 const SIGN_IN_TABLES = [sessionsTable.name, verificationsTable.name];
+
+/**
+ * Kept as they are: the installed-plugin records describe the live database's
+ * plugin tables, which a restore leaves in place, and `plugin:purge` reads them.
+ */
+const CORE_PRESERVED_TABLES = [pluginsTable.name];
 
 const systemContext = createRegistry<AppContext>('systemAppContext', {
     required: false,

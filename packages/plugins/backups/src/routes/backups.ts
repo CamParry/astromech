@@ -7,6 +7,7 @@ import type { BackupRunRow } from '../tables/runs';
 import type { PluginContext, PluginRawRoute } from 'astromech';
 import { Readable } from 'node:stream';
 import { createGunzip } from 'node:zlib';
+import { RestoreRefusedError } from 'astromech';
 import { isBackupRunning, performBackup, resolveKeep } from '../backup';
 import { createBackupRunsRepository } from '../repository';
 import { backupRunsTable } from '../tables/runs';
@@ -101,6 +102,13 @@ async function restoreFromBackup(
 
         return Response.json({ data: { restored: row.id } });
     } catch (err) {
+        // A refusal changed nothing and names its cause, so it is not logged.
+        if (err instanceof RestoreRefusedError) {
+            return Response.json(
+                { error: err.message, details: err.details },
+                { status: err.status }
+            );
+        }
         ctx.logger.error('[backups] Restore failed', err);
         const message = err instanceof Error ? err.message : String(err);
         return Response.json({ error: message }, { status: 500 });

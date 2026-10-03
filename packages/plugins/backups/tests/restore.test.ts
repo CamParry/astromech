@@ -6,7 +6,6 @@
 
 import type { PluginTestApp } from '@tests/plugin-app';
 import type { Migration, MigrationProvider } from 'kysely/migration';
-import { expectConsole } from '@tests/console';
 import { makeUser, roleWith } from '@tests/fixtures';
 import { testMigrationProvider } from '@tests/test-db';
 import { sql } from 'kysely';
@@ -43,6 +42,14 @@ function chainWithout(prefix: string): MigrationProvider {
             );
         },
     };
+}
+
+/** Remove the forms plugin's table and ledger rows, as `plugin:purge` does. */
+async function dropFormsPlugin(): Promise<void> {
+    await sql`DROP TABLE plugin_forms_submissions`.execute(app.db);
+    await sql`DELETE FROM kysely_migration WHERE name LIKE 'plugin_forms_%'`.execute(
+        app.db
+    );
 }
 
 function restore(id: string): Promise<Response> {
@@ -128,30 +135,28 @@ describe('POST /plugins/backups/runs/:id/restore', () => {
         expect(recorded).toEqual([{ name: '9999_note_count' }]);
     });
 
-    it('refuses a backup holding a migration this site does not have, and changes nothing', async () => {
+    it('refuses a backup holding a plugin since removed and purged, and changes nothing', async () => {
         const note = await app.entries.create({
             type: 'note',
             data: { title: 'Original' },
         });
-        await sql`INSERT INTO kysely_migration (name, timestamp) VALUES ('9999_later', '2026-10-03T00:00:00.000Z')`.execute(
-            app.db
-        );
         const backupId = (await takeBackup(app)).id;
-        await sql`DELETE FROM kysely_migration WHERE name = '9999_later'`.execute(app.db);
         await app.entries.update({
             type: 'note',
             id: note.id,
             data: { title: 'Changed' },
         });
-        expectConsole('error', 'Restore failed');
+        await dropFormsPlugin();
+        setMigrationProvider(chainWithout('plugin_forms_'));
 
         const res = await restore(backupId);
 
-        expect(res.status).toBe(500);
+        expect(res.status).toBe(409);
         expect(await res.json()).toEqual({
             error:
-                'the backup records a migration this site does not have (9999_later): ' +
-                'restore it with the code and plugins that wrote it',
+                'the backup records a migration this site does not have ' +
+                '(plugin_forms_0000_baseline): restore it with the code and plugins that wrote it',
+            details: { onlyInBackup: ['plugin_forms_0000_baseline'] },
         });
         expect(
             (await app.entries.get({ type: 'note', id: note.id, full: true }))?.title
@@ -159,32 +164,44 @@ describe('POST /plugins/backups/runs/:id/restore', () => {
     });
 
     // The plugin's tables and ledger rows stay in the database until
-    // `plugin:purge`, so every backup taken while it ran holds its migrations.
-    it('refuses a backup from before a plugin was removed without a purge', async () => {
+    // `plugin:purge`, and a backup from before it was installed lacks them.
+    it('refuses a backup from before a plugin was installed while that plugin awaits its purge', async () => {
+        await dropFormsPlugin();
         const note = await app.entries.create({
             type: 'note',
             data: { title: 'Original' },
         });
         const backupId = (await takeBackup(app)).id;
+        const reinstalled = await new Migrator({
+            db: app.db,
+            provider: testMigrationProvider,
+            allowUnorderedMigrations: true,
+        }).migrateToLatest();
+        expect(reinstalled.error).toBeUndefined();
         await app.entries.update({
             type: 'note',
             id: note.id,
             data: { title: 'Changed' },
         });
         setMigrationProvider(chainWithout('plugin_forms_'));
-        expectConsole('error', 'Restore failed');
 
         const res = await restore(backupId);
 
-        expect(res.status).toBe(500);
+        expect(res.status).toBe(409);
         expect(await res.json()).toEqual({
             error:
-                'the backup records a migration this site does not have ' +
-                '(plugin_forms_0000_baseline): restore it with the code and plugins that wrote it',
+                "the database does not match this site's migrations (only in the " +
+                'database: plugin_forms_0000_baseline, run `astromech plugin:purge`)',
+            details: { onlyInDatabase: ['plugin_forms_0000_baseline'] },
         });
         expect(
             (await app.entries.get({ type: 'note', id: note.id, full: true }))?.title
         ).toBe('Changed');
+        const { rows } =
+            await sql`SELECT name FROM kysely_migration WHERE name LIKE 'plugin_forms_%'`.execute(
+                app.db
+            );
+        expect(rows).toEqual([{ name: 'plugin_forms_0000_baseline' }]);
     });
 
     it('answers 404 for a run that does not exist', async () => {
