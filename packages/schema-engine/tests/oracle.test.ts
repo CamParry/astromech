@@ -147,6 +147,34 @@ describe('dumpSchema', () => {
         expect(row?.sql).toContain("'a\"b'");
     });
 
+    // Found by `oracle.property.test.ts`.
+    it('keeps whitespace and a double-quoted word inside a literal byte for byte', async () => {
+        const db = await makeDb([
+            "CREATE TABLE `widgets` (`a` text DEFAULT 'x  y', `b` text DEFAULT '\"ab\"')",
+        ]);
+
+        const [row] = await dumpSchema(db);
+        expect(row?.sql).toBe(
+            "CREATE TABLE `widgets` (`a` text DEFAULT 'x  y', `b` text DEFAULT '\"ab\"')"
+        );
+    });
+
+    it('sorts by the whole name when a quoted name holds a doubled quote', async () => {
+        const db = await makeDb(['CREATE TABLE `t` ("a""c" text, "a""b" text)']);
+
+        const [row] = await dumpSchema(db);
+        expect(row?.sql).toBe('CREATE TABLE `t` ("a""b" text, "a""c" text)');
+    });
+
+    it('leaves the argument order of a virtual table alone', async () => {
+        const db = await makeDb(['CREATE VIRTUAL TABLE `notes` USING fts5(title, body)']);
+
+        const rows = await dumpSchema(db, { tables: ['notes'] });
+        expect(rows.find((r) => r.name === 'notes')?.sql).toBe(
+            'CREATE VIRTUAL TABLE `notes` USING fts5(title, body)'
+        );
+    });
+
     it('excludes internal sqlite_* rows and implicit (NULL-sql) indexes', async () => {
         const db = await makeDb([
             // AUTOINCREMENT creates the internal `sqlite_sequence` table; the
