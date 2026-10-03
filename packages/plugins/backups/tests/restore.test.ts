@@ -91,7 +91,7 @@ describe('POST /plugins/backups/runs/:id/restore', () => {
         expect(res.status).toBe(500);
         expect(await res.json()).toEqual({
             error:
-                'restore: the backup is from another schema version than the database ' +
+                'the backup is from another schema version than the database ' +
                 '(migrations only in the database: 9999_later)',
         });
         expect(

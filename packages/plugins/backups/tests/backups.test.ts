@@ -175,7 +175,7 @@ describe('libsql.dump / restore', () => {
         await sql.raw(`ALTER TABLE items ADD COLUMN label TEXT`).execute(db);
 
         await expect(restore(backup.stream, { preserve: [] })).rejects.toThrow(
-            'restore: table "items" has other columns in the backup (id, name) than in the database (id, label)'
+            'table "items" has other columns in the backup (id, name) than in the database (id, label)'
         );
         await backup.cleanup();
 
@@ -192,7 +192,7 @@ describe('libsql.dump / restore', () => {
         await sql.raw(`DROP TABLE items`).execute(db);
 
         await expect(restore(backup.stream, { preserve: [] })).rejects.toThrow(
-            'restore: table "items" is in the backup but not in the database'
+            'table "items" is in the backup but not in the database'
         );
         await backup.cleanup();
     });
@@ -221,7 +221,7 @@ describe('libsql.dump / restore', () => {
         await sql.raw(`UPDATE items SET name = 'post-dump'`).execute(db);
 
         await expect(restore(backup.stream, { preserve: [] })).rejects.toThrow(
-            'restore: the backup is from another schema version than the database ' +
+            'the backup is from another schema version than the database ' +
                 '(migrations only in the backup: 9998_backup_only; only in the database: 9999_database_only)'
         );
         await backup.cleanup();

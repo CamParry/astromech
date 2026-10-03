@@ -200,7 +200,7 @@ describe('BackupsPage', () => {
     it('shows why a restore failed', async () => {
         backups.list.mockResolvedValue(listing([backupRun({ id: 'run_1' })]));
         const reason =
-            'restore: the backup is from another schema version than the database ' +
+            'the backup is from another schema version than the database ' +
             '(migrations only in the database: 9999_later)';
         vi.stubGlobal(
             'fetch',

@@ -68,7 +68,7 @@ async function assertSameMigrations(c: Client): Promise<void> {
         ...(onlyLive.length > 0 ? [`only in the database: ${onlyLive.join(', ')}`] : []),
     ];
     throw new AstromechError(
-        `restore: the backup is from another schema version than the database ` +
+        `the backup is from another schema version than the database ` +
             `(migrations ${differences.join('; ')})`
     );
 }
@@ -94,7 +94,7 @@ async function copyableColumns(tx: Transaction, table: string): Promise<string> 
     const live = await columnNames(tx, 'main', table);
     if (live.length === 0) {
         throw new AstromechError(
-            `restore: table "${table}" is in the backup but not in the database`
+            `table "${table}" is in the backup but not in the database`
         );
     }
     const backup = await columnNames(tx, 'restore_src', table);
@@ -102,7 +102,7 @@ async function copyableColumns(tx: Transaction, table: string): Promise<string> 
         live.length === backup.length && backup.every((name) => live.includes(name));
     if (!sameColumns) {
         throw new AstromechError(
-            `restore: table "${table}" has other columns in the backup ` +
+            `table "${table}" has other columns in the backup ` +
                 `(${backup.join(', ')}) than in the database (${live.join(', ')})`
         );
     }
@@ -228,9 +228,7 @@ export function libsql(options?: LibsqlOptions) {
                             : '';
                     const ok = checkRows.length === 1 && firstStr === 'ok';
                     if (!ok)
-                        throw new AstromechError(
-                            'restore: backup failed integrity check'
-                        );
+                        throw new AstromechError('the backup failed its integrity check');
                     await assertSameMigrations(c);
                     const tablesResult = await c.execute(
                         `SELECT name FROM restore_src.sqlite_master WHERE type='table' AND name NOT LIKE 'sqlite_%'`
