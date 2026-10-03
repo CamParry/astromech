@@ -469,7 +469,7 @@ harness and eight test files and every later stage runs faster for it.
 
 - [x] `media.delete` removes the stored file and its variants. It found
       [media-delete-removes-files-first](media-delete-removes-files-first.md)
-      and [media-upload-skips-field-defaults](../proposed/media-upload-skips-field-defaults.md).
+      and [create-skips-field-pipeline](../planned/create-skips-field-pipeline.md).
 - [x] Backups restore, download, run, delete and permissions.
 - [x] Admin: `EntryNewPage`, `DeleteEntryModal`, `CreateLocaleModal`,
       `CommandPalette`, `NotificationBell`, the backups page and the seo

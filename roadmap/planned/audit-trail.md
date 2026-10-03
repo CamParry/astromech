@@ -48,6 +48,6 @@ not what it wrote".
 version answers what the row used to look like; this answers who changed it and
 through what.
 
-**Not the plugin.** `@astromech/activity-log` in
-`roadmap/proposed/additional-first-party-plugins.md` is a presentation surface
-over this data, and must not become a second place the recording happens.
+**Its page is core.** The activity log is a core admin page over this data,
+as in Directus, not a plugin (decided 2026-10-03,
+`roadmap/proposed/additional-first-party-plugins.md`). Nothing else records.

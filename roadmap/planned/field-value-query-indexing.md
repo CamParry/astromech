@@ -32,6 +32,42 @@ table. When this ships, the choice gets a `DECISIONS.md` entry.
   operator DSL and throw on unknown keys
   (`packages/astromech/src/entries/repository/table.ts`).
 
+## Prior art
+
+EmDash (Cloudflare's Astro CMS) ships the same design: an opt-in `indexed` flag
+builds a partial index, and an unindexed filter or sort throws "Custom fields
+must be indexed before filtering". Payload declares `index: true` and
+`unique: true`, scopes unique per locale, and keeps drafts out of it; Keystone
+uses `isIndexed: true | 'unique'`; Strapi and Sanity exempt drafts from their
+unique checks. Checked on SQLite 3.51: a partial unique index on
+`(locale, json_extract(...)) WHERE stagedFor IS NULL` lets a staged row share
+its canonical's value; a violation names the index, not a column; and an index
+on `json_extract(fields,'$.p')` is not used by `fields->>'$.p'`.
+
+## Decided (2026-10-02)
+
+- **`index: true`, and `unique: true`**, which implies an index. Payload's and
+  Directus's names. Rejected: EmDash's `indexed`, and `queryable` or `sortable`
+  flags.
+- **Scalar kinds only**: text, number, checkbox, date, single select and the
+  like, including inside a named group, tab or accordion. Config resolution
+  refuses an index on richtext, media, a repeater, a block, a multi-value field,
+  or anything inside a repeater or block.
+- **Indexed means filterable and sortable.** An undeclared field throws, naming
+  the path and `index: true`.
+- **Dotted paths under `fields.`**: `where: { 'fields.seo.title': { eq: 'x' } }`
+  and `sort: 'fields.price'`, with the repository DSL's operators. The prefix
+  keeps a field named `title` apart from the column.
+- **`unique` is per entry type and locale.** Staged and trashed rows are exempt,
+  as for slugs; unpublished rows count, since exempting them only moves the
+  clash to publish. Merging a clashing staged change answers 422 on the field.
+  A violation maps to its field through an index-name-to-path map.
+- **Indexes arrive through `db:generate`**, never as DDL at boot. Development
+  boot warns when a declared index has no migration.
+- **`db:generate` lists duplicates** before emitting a unique index over a field
+  that has them, rather than a migration that fails.
+- **Entries only.** Media and users can reuse the mechanism later.
+
 ## The shape
 
 A field opts in where it is declared, and one declaration drives everything:
@@ -47,12 +83,14 @@ Craft's case-sensitivity defect (craftcms/cms #15370) is what hand-written
 expressions on one side look like in production. No hand-written extraction
 expressions anywhere.
 
-- [ ] Declaration surface: how a field marks itself queryable (and sortable) in
-      the config, and what the loud error for an undeclared field says.
+- [ ] Declaration: `index` and `unique` on scalar field options, validated at
+      config resolution.
 - [ ] `schema-engine` support: `diff.ts:300-306` hard-errors on any index column
       that isn't a real column, and `ColumnRuntime` has no expression kind
       (`database/define-table.ts:58-77`). Partial indexes are already
       expressible; expression indexes are the gap.
+- [ ] `db:generate` emits each declared index from the config, and development
+      boot warns about a declared index with no migration.
 - [ ] Query builder: emit the declared expression for `where` / `sort` on a
       declared field; keep throwing for undeclared ones.
 - [ ] The JSON path comes from the field's schema path, not its bare name. A
@@ -72,9 +110,9 @@ expressions anywhere.
       (`DECISIONS.md`, "Fields have no `unique` option"). SQLite supports
       **unique expression indexes**, so it returns as a `UNIQUE` qualifier on a
       declared field index, and the database enforces it, concurrent writes
-      included. Decide whether a staged row counts: a partial index on
-      `stagedFor IS NULL` lets a staged copy share its canonical's value. Map
-      the constraint violation to a 422 on the field.
+      included. Map the violation to a 422 on the field, and
+      add the duplicate check to `db:generate`. Amend "Fields have no `unique`
+      option" in `DECISIONS.md`.
 
 ## Prerequisite it shares with relationships
 

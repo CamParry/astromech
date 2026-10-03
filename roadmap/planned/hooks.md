@@ -17,8 +17,7 @@ Strapi v5, Directus, Keystone 6, Craft 5 and Medusa v2.
   `parseHookOutput`, one item at a time. It vetoes by throwing an error core
   exports (`ApiError`, `PermissionDeniedError`, `ResourceValidationError`).
 - **An after-hook is an action.** It runs after commit, and its return is
-  ignored. A throw is logged naming the plugin and event, admins are notified
-  (`notification-events.md`, "Plugin hook error → admins"), the remaining
+  ignored. A throw is logged naming the plugin and event, the remaining
   handlers and batch items still run, and the call succeeds, since the write
   committed. This reverses "One hook runner, and a throw always propagates" in
   `DECISIONS.md`.

@@ -44,4 +44,4 @@ throws. `permissions` reads `identity.permissionNamespace`.
       **Public API**.
 - [x] `DECISIONS.md`: the helpers entry and the `definePluginTable` entry.
       `TERMINOLOGY.md`: "Plugin helper".
-- [x] The `plugin:new` section moved to `roadmap/planned/plugin-scaffolding.md`.
+- [x] The `plugin:new` section moved to `roadmap/proposed/plugin-scaffolding.md`.
