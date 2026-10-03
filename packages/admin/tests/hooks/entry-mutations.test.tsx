@@ -1,8 +1,8 @@
 /**
  * `entryMutations(type)` run through `useAdminMutation`: each write invalidates
- * the type's keys and toasts its result, bulk restore is one request, a restore
- * names every slug that changed in any locale, and a staged change that already
- * exists resolves as `null`.
+ * the type's keys and toasts its result, bulk restore is one request and reads
+ * nothing more, a single restore names every slug that changed in any locale,
+ * and a staged change that already exists resolves as `null`.
  *
  * @vitest-environment happy-dom
  */
@@ -56,26 +56,34 @@ function mount<T>(hook: () => T) {
 }
 
 describe('entryMutations', () => {
-    it('restores a selection in one request and invalidates the type', async () => {
-        restore.mockResolvedValue([]);
-        rowsBeforeAndAfter([], []);
-        const { result, invalidate } = mount(() =>
-            useRestoreEntries('post', {
-                name: 'Post',
-                statuses: true,
-                translatable: false,
-            })
-        );
+    it.each([
+        [
+            true,
+            'Entries restored as unpublished. An entry whose slug was taken while it was in the trash got a new one.',
+        ],
+        [
+            false,
+            'Entries restored. An entry whose slug was taken while it was in the trash got a new one.',
+        ],
+    ])(
+        'restores a selection in one request with no reads (statuses: %s)',
+        async (statuses, message) => {
+            restore.mockResolvedValue([]);
+            const { result, invalidate } = mount(() =>
+                useRestoreEntries('post', { name: 'Post', statuses, translatable: false })
+            );
 
-        result.current.bulkRestore.mutate(['a', 'b', 'c']);
+            result.current.bulkRestore.mutate(['a', 'b', 'c']);
 
-        expect(await screen.findByText('Entries restored as unpublished.')).toBeTruthy();
-        expect(restore).toHaveBeenCalledTimes(1);
-        expect(restore).toHaveBeenCalledWith({ type: 'post', ids: ['a', 'b', 'c'] });
-        expect(invalidate).toHaveBeenCalledWith({
-            queryKey: queryKeys.entries.all('post'),
-        });
-    });
+            expect(await screen.findByText(message)).toBeTruthy();
+            expect(restore).toHaveBeenCalledTimes(1);
+            expect(restore).toHaveBeenCalledWith({ type: 'post', ids: ['a', 'b', 'c'] });
+            expect(query).not.toHaveBeenCalled();
+            expect(invalidate).toHaveBeenCalledWith({
+                queryKey: queryKeys.entries.all('post'),
+            });
+        }
+    );
 
     it('names a slug a restore changed in any locale', async () => {
         restore.mockResolvedValue({});
@@ -104,35 +112,7 @@ describe('entryMutations', () => {
                 'Post restored as unpublished. A slug was in use, so it is now same-2 (de).'
             )
         ).toBeTruthy();
-    });
-
-    it('names every slug a bulk restore changed', async () => {
-        restore.mockResolvedValue([]);
-        rowsBeforeAndAfter(
-            [
-                { id: 'a', locale: 'en', slug: 'same' },
-                { id: 'b', locale: 'en', slug: 'other' },
-            ],
-            [
-                { id: 'a', locale: 'en', slug: 'same-2' },
-                { id: 'b', locale: 'en', slug: 'other-2' },
-            ]
-        );
-        const { result } = mount(() =>
-            useRestoreEntries('note', {
-                name: 'Note',
-                statuses: false,
-                translatable: false,
-            })
-        );
-
-        result.current.bulkRestore.mutate(['a', 'b']);
-
-        expect(
-            await screen.findByText(
-                'Entries restored. Some slugs were in use, so they are now same-2, other-2.'
-            )
-        ).toBeTruthy();
+        expect(restore).toHaveBeenCalledWith({ type: 'post', id: 'a' });
     });
 
     it('toasts the row that stopped a batch', async () => {

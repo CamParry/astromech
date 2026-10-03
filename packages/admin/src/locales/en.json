@@ -158,6 +158,7 @@
         "bulkDeleted": "Entries permanently deleted.",
         "bulkRestored": "Entries restored.",
         "bulkRestoredUnpublished": "Entries restored as unpublished.",
+        "bulkRestoredNewSlugs": "An entry whose slug was taken while it was in the trash got a new one.",
         "searchPlaceholder": "Search {{name}}…",
         "statusFilter": "Status: {{status}}",
         "statusFilterPrefix": "Status:",
