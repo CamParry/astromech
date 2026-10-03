@@ -74,6 +74,8 @@ not be re-derived.
       failure-recording into a thrown backup. Collapsible via `query()` if the
       extra round-trip ever matters.
 
+- [ ] Nothing removes stale `tmp/` keys from storage. `replaceMedia` deletes its copy of the old original once it finishes, but a crash mid-replace, or a copy kept because its restore failed, leaves one behind. Sweep keys older than a day, in the trash purge job (`packages/astromech/src/entries/jobs/trash-purge.ts`) or a CLI command (from `completed/media-replace-overwrites-before-commit.md`)
+
 ### `@astromech/forms` follow-ups
 
 - [ ] No trustworthy connecting address on a self-hosted Node deployment, so the submission rate limit meters nothing there. `cf-connecting-ip` is safe only because Cloudflare rewrites it; `x-forwarded-for` is client-settable on a direct connection, and Astro's `clientAddress` derives from it by default under `@astrojs/node`. Needs a trusted-proxy config option or the socket address plumbed through from the adapter — the same port would serve any other per-client limit
