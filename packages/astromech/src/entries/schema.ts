@@ -2,9 +2,10 @@ import { z } from '@hono/zod-openapi';
 import { auditKeys, publishedAtKey, versionSchema } from '@/content/schema';
 import { withFallback } from '@/services/fallback';
 import { jsonObject, unparsedJsonObject } from '@/services/json';
+import { ENTRY_STATUSES } from '@/types/domain';
 
-/** The three publication states an entry or global row may carry. */
-export const statusSchema = z.enum(['unpublished', 'published', 'scheduled']);
+/** An entry's or a global's publication status, one of `ENTRY_STATUSES`. */
+export const statusSchema = z.enum(ENTRY_STATUSES);
 
 const slugField = z
     .string()

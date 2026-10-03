@@ -8,7 +8,6 @@ import { createFileRoute, Link } from '@tanstack/react-router';
 import React from 'react';
 import { useTranslation } from 'react-i18next';
 import adminConfig from 'virtual:astromech/admin-config';
-import { Badge } from '../../components/ui/badge';
 import { EmptyState } from '../../components/ui/empty-state';
 import {
     Page,
@@ -20,18 +19,10 @@ import {
 } from '../../components/ui/page';
 import { Panel } from '../../components/ui/panel';
 import { Skeleton } from '../../components/ui/spinner';
+import { StatusBadge } from '../../components/ui/status-badge';
 import { useAiContext } from '../../context/ai-context';
 import { entriesQueryOptions, useEntriesQuery } from '../../hooks/entries';
 import { formatDate } from '../../utilities/dates';
-
-function statusVariant(
-    status: string
-): 'unpublished' | 'published' | 'scheduled' | 'default' {
-    if (status === 'unpublished') return 'unpublished';
-    if (status === 'published') return 'published';
-    if (status === 'scheduled') return 'scheduled';
-    return 'default';
-}
 
 function StatCard({
     typeId,
@@ -172,9 +163,7 @@ function DashboardPage(): React.ReactElement {
                                                 })}
                                             </div>
                                         </div>
-                                        <Badge variant={statusVariant(entry.status)}>
-                                            {entry.status}
-                                        </Badge>
+                                        <StatusBadge status={entry.status} />
                                     </li>
                                 ))}
                             </ul>

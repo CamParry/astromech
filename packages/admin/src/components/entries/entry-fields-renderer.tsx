@@ -258,6 +258,7 @@ function GroupPanel({
     );
     return (
         <Panel
+            role="group"
             title={label(node.label, node.name)}
             {...(node.description !== undefined && {
                 description: label(node.description, node.name),

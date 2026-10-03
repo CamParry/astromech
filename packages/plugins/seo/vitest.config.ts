@@ -10,7 +10,7 @@ export default pluginVitestConfig({
     // rises; never lower one to pass.
     coverageThresholds: {
         'src/*.{ts,tsx}': { lines: 99, functions: 99, branches: 99, statements: 99 },
-        'src/admin/**': { lines: 71, functions: 61, branches: 44, statements: 71 },
+        'src/admin/**': { lines: 99, functions: 99, branches: 99, statements: 99 },
         'src/fields/**': { lines: 99, functions: 99, branches: 99, statements: 99 },
         'src/globals/**': { lines: 99, functions: 99, branches: 99, statements: 99 },
         'src/helpers/**': { lines: 99, functions: 99, branches: 99, statements: 99 },

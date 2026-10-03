@@ -10,11 +10,10 @@ import React from 'react';
 import { useTranslation } from 'react-i18next';
 import { getCellRenderer } from '../../rendering/cell-registry';
 import { Link } from '../../rendering/cells/link';
-import { statusVariant } from '../../rendering/cells/status-variant';
 import { entryEditPath } from '../../utilities/entry-admin-path';
-import { Badge } from '../ui/badge';
 import { useContextMenu } from '../ui/context-menu';
 import { Dropdown } from '../ui/dropdown';
+import { StatusBadge } from '../ui/status-badge';
 
 export type RowActionsProps = {
     entry: Entry;
@@ -167,7 +166,7 @@ export function EntryCard(props: EntryCardProps): React.ReactElement {
                 )}
 
                 <div className="am-entry-card-meta">
-                    <Badge variant={statusVariant(entry.status)}>{entry.status}</Badge>
+                    <StatusBadge status={entry.status} />
                 </div>
 
                 {columns.map((col) => (

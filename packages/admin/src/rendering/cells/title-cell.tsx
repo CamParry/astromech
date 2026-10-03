@@ -1,11 +1,5 @@
 import type { CellRenderer } from 'astromech';
-import { Link } from './link';
 
+/** The entry's title; the entries list makes it the row's link. */
 export const TitleCell: CellRenderer = ({ row, ctx }) =>
-    ctx.isTrash ? (
-        <span className="am-text-muted">{row.title}</span>
-    ) : (
-        <Link to={`${ctx.basePath}/${row.id}`} className="am-link">
-            {row.title}
-        </Link>
-    );
+    ctx.isTrash ? <span className="am-text-muted">{row.title}</span> : <>{row.title}</>;

@@ -408,7 +408,7 @@ harness and eight test files and every later stage runs faster for it.
       English strings. One wrap remains: `entry-edit-locale-switch.test.tsx`
       watches `useEntryForm` for a transient partial `seo` group no output
       shows. Controls are found by `name`, because field labels name no
-      control: [field-labels-name-no-control](../planned/field-labels-name-no-control.md).
+      control: [field-labels-name-no-control](field-labels-name-no-control.md).
 - [x] Assistant: one contract suite run against both the fake approvals and
       the real repository, and stop mocking core and its own repositories. It now mocks only `ai`'s
       `streamText`. Its admin tests (`packages/plugins/assistant/tests/admin/`)
@@ -477,7 +477,7 @@ harness and eight test files and every later stage runs faster for it.
       `pluginVitestConfig({ adminPages: true })` and `renderPluginPage`. The admin
       tests build an `Entry` with `as unknown as Entry` in 10 places; a typed
       admin `Entry` builder is open. Defects found:
-      [admin-ui-defects](../planned/admin-ui-defects.md).
+      [admin-ui-defects](admin-ui-defects.md).
 - [x] The 13 untested CLI commands and the assistant's chat route. The CLI
       tests share `packages/astromech/tests/_support/cli.ts`. Defects found:
       [cli-defects](cli-defects.md).

@@ -117,11 +117,12 @@ describe('RichtextField', () => {
         expect(commits.at(-1)?.value).toMatchObject(paragraphDoc('Hello'));
     });
 
-    it('renders a read-only editor when disabled', async () => {
+    it('renders a read-only editor, marked disabled for a screen reader, when disabled', async () => {
         mount(paragraphDoc('Locked'), { disabled: true });
 
         const el = await editable();
         expect(el.getAttribute('contenteditable')).toBe('false');
+        expect(el.getAttribute('aria-disabled')).toBe('true');
         expect(el.textContent).toBe('Locked');
     });
 

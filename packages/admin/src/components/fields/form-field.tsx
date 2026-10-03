@@ -1,9 +1,10 @@
-import type { DataField } from 'astromech';
+import type { BaseFieldProps, DataField } from 'astromech';
 import React from 'react';
 import { useLabel } from '../../i18n/entry-namespace';
-import { getFieldComponent } from '../../rendering/field-registry';
+import { getFieldComponent, getFieldOptions } from '../../rendering/field-registry';
 import { Input } from '../ui/input';
 import { FieldPathProvider } from './field-context';
+import { useFieldControl } from './field-control-context';
 import { useFieldError, useFieldWarning } from './field-errors-context';
 import { useFieldValidationHandlers } from './field-validation-context';
 import { FieldWrapper } from './field-wrapper';
@@ -50,19 +51,16 @@ export function FormField({
     };
 
     const Registered = getFieldComponent(field.type);
+    const isPlugin = Registered === undefined && hasPluginFieldType(field.type);
     const control = Registered ? (
         <Registered {...commonProps} />
-    ) : hasPluginFieldType(field.type) ? (
+    ) : isPlugin ? (
         <PluginField {...commonProps} />
     ) : (
-        <Input
-            type="text"
-            name={field.name}
-            defaultValue={typeof value === 'string' ? value : ''}
-            required={required}
-            onChange={(e) => handleChange(field.name, e.target.value)}
-        />
+        <UnknownField {...commonProps} />
     );
+    // A plugin's control is its own, so its label names it through `labelId`.
+    const labelElement = isPlugin ? 'span' : getFieldOptions(field.type).labelElement;
 
     // Errors are keyed by the FULL field path (`blocks[6f1e2a].heading`), not the
     // bare field name — a nested field keyed on `field.name` would look up
@@ -82,6 +80,7 @@ export function FormField({
     return (
         <FieldWrapper
             label={label(field.label, field.name)}
+            {...(labelElement !== undefined && { labelElement })}
             description={
                 field.description !== undefined
                     ? label(field.description, field.name)
@@ -100,5 +99,25 @@ export function FormField({
         >
             <FieldPathProvider path={path}>{control}</FieldPathProvider>
         </FieldWrapper>
+    );
+}
+
+/** A field of a type nothing registered: a plain text input under its bare name. */
+function UnknownField({
+    field,
+    value,
+    required,
+    onChange,
+}: BaseFieldProps): React.ReactElement {
+    const { controlId } = useFieldControl();
+    return (
+        <Input
+            id={controlId}
+            type="text"
+            name={field.name}
+            defaultValue={typeof value === 'string' ? value : ''}
+            required={required}
+            onChange={(e) => onChange(field.name, e.target.value)}
+        />
     );
 }

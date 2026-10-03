@@ -58,6 +58,29 @@ describe('useFieldControl', () => {
         unmount();
     });
 
+    it('describes a hand-rolled control by the description, then the message', () => {
+        const { host, unmount } = mount(
+            <FieldWrapper
+                label="Rating"
+                description="Out of five"
+                error={['Something is wrong']}
+            >
+                <CustomControl />
+            </FieldWrapper>
+        );
+
+        const description = host.querySelector('.am-field-hint');
+        const message = host.querySelector('.am-field-error');
+        const control = host.querySelector('[data-testid="control"]');
+
+        expect(description?.id).toBeTruthy();
+        expect(control?.getAttribute('aria-describedby')).toBe(
+            `${description?.id} ${message?.id}`
+        );
+
+        unmount();
+    });
+
     it('carries no association when the wrapper has no error', () => {
         const { host, unmount } = mount(
             <FieldWrapper label="Rating">

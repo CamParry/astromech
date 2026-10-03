@@ -6,6 +6,7 @@
 
 import type { Table, TableInsert, TableSelect } from '@/database/define-table';
 import { defineTable } from '@/database/define-table';
+import { ENTRY_STATUSES } from '@/types/domain';
 
 export const entriesTable = defineTable(
     'entries',
@@ -43,7 +44,7 @@ export const entryContentTable = defineTable(
         title: col.text({ notNull: true }),
         slug: col.text(),
         fields: col.json(),
-        status: col.enum(['unpublished', 'published', 'scheduled'], {
+        status: col.enum(ENTRY_STATUSES, {
             notNull: true,
             default: 'unpublished',
         }),

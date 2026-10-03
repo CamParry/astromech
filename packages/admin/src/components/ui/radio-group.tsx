@@ -9,6 +9,9 @@ export type RadioGroupProps = {
     onChange?: (value: string) => void;
     name?: string;
     disabled?: boolean;
+    required?: boolean;
+    /** The id of the label naming the group. */
+    'aria-labelledby'?: string | undefined;
 };
 
 export function RadioGroup({
@@ -17,10 +20,17 @@ export function RadioGroup({
     onChange,
     name,
     disabled,
+    required,
+    'aria-labelledby': labelledBy,
 }: RadioGroupProps): React.ReactElement {
     const { ariaProps } = useFieldControl();
     return (
-        <div className="am-radio-group">
+        <div
+            className="am-radio-group"
+            role="radiogroup"
+            aria-labelledby={labelledBy}
+            {...(required === true && { 'aria-required': true })}
+        >
             {options.map((opt) => {
                 const id = `${name ?? 'radio'}--${opt.value}`;
                 return (

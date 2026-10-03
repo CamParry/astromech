@@ -31,6 +31,9 @@ export type { ToggleProps } from './toggle';
 export { Badge } from './badge';
 export type { BadgeProps, BadgeVariant } from './badge';
 
+export { StatusBadge } from './status-badge';
+export type { StatusBadgeProps } from './status-badge';
+
 export { Modal, ConfirmModal } from './modal';
 export type { ModalProps, ConfirmModalProps } from './modal';
 

@@ -7,6 +7,8 @@ export type RangeInputProps = {
     max?: number;
     step?: number;
     'aria-label'?: string;
+    /** The id of a label outside the input that names it. */
+    'aria-labelledby'?: string | undefined;
     disabled?: boolean;
 };
 
@@ -17,6 +19,7 @@ export function RangeInput({
     max = 100,
     step = 1,
     'aria-label': ariaLabel,
+    'aria-labelledby': labelledBy,
     disabled,
 }: RangeInputProps) {
     return (
@@ -31,6 +34,7 @@ export function RangeInput({
                 step={step}
                 {...(disabled !== undefined && { disabled })}
                 {...(ariaLabel !== undefined && { 'aria-label': ariaLabel })}
+                {...(labelledBy !== undefined && { 'aria-labelledby': labelledBy })}
                 onValueChange={(v) => {
                     const next = Array.isArray(v) ? v[0] : v;
                     if (next !== undefined) onChange?.(next);

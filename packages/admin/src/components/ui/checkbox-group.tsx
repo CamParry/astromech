@@ -8,6 +8,8 @@ export type CheckboxGroupProps = {
     onChange?: (value: string[]) => void;
     name?: string;
     disabled?: boolean;
+    /** The id of the label naming the group. */
+    'aria-labelledby'?: string | undefined;
 };
 
 export function CheckboxGroup({
@@ -16,6 +18,7 @@ export function CheckboxGroup({
     onChange,
     name,
     disabled,
+    'aria-labelledby': labelledBy,
 }: CheckboxGroupProps) {
     function handleChange(optValue: string, checked: boolean) {
         const next = checked ? [...value, optValue] : value.filter((v) => v !== optValue);
@@ -23,7 +26,7 @@ export function CheckboxGroup({
     }
 
     return (
-        <div className="am-checkbox-group">
+        <div className="am-checkbox-group" role="group" aria-labelledby={labelledBy}>
             {options.map((opt) => (
                 <Checkbox
                     key={opt.value}

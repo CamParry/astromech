@@ -40,11 +40,11 @@ the repository copies.
 - [ ] **A staged slug is lost at merge.** `entries/methods/staging/merge.ts`
       writes only the staged `title` and `fields`. Carry the slug, or refuse a
       slug in a staged write.
-- [ ] **The command palette ignores read permissions.** It rebuilds the sidebar's
+- [x] **The command palette ignores read permissions.** It rebuilds the sidebar's
       nav (`packages/admin/src/components/ui/command-palette.tsx`) without
       `canReadMedia`/`canReadUsers`, and omits globals and app pages. Build both
       from one `useAdminNav()`.
-- [ ] **Creating a user toasts "User updated."** (`packages/admin/src/`, the users
+- [x] **Creating a user toasts "User updated."** (`packages/admin/src/`, the users
       mutation table).
 
 ## Copies

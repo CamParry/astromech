@@ -1,9 +1,9 @@
 import type { BaseFieldProps } from 'astromech';
-import { useLabel } from '../../i18n/entry-namespace';
 import { RangeInput } from '../ui/range-input';
+import { useFieldControl } from './field-control-context';
 
 export function RangeField({ name, value, field, onChange, disabled }: BaseFieldProps) {
-    const label = useLabel();
+    const { labelId } = useFieldControl();
     const numValue = typeof value === 'number' ? value : (field.min ?? 0);
 
     return (
@@ -13,7 +13,7 @@ export function RangeField({ name, value, field, onChange, disabled }: BaseField
                 min={field.min ?? 0}
                 max={field.max ?? 100}
                 step={field.step ?? 1}
-                aria-label={label(field.label, name)}
+                aria-labelledby={labelId}
                 onChange={(v) => onChange(name, v)}
                 {...(disabled !== undefined ? { disabled } : {})}
             />

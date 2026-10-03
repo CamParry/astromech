@@ -16,6 +16,8 @@ type SliderProps = {
     disabled?: boolean;
     onValueChange?: (value: number | number[]) => void;
     'aria-label'?: string;
+    /** The id of a label outside the slider that names its thumb; wins over `aria-label`. */
+    'aria-labelledby'?: string | undefined;
 };
 
 export function Slider({
@@ -28,6 +30,7 @@ export function Slider({
     disabled,
     onValueChange,
     'aria-label': ariaLabel,
+    'aria-labelledby': labelledBy,
 }: SliderProps): React.ReactElement {
     // Base UI's thumb renders a wrapper div plus the `<input type="range">` that
     // actually takes focus, and forwards only `aria-label`/`aria-labelledby`/
@@ -61,7 +64,12 @@ export function Slider({
                                 key={i}
                                 index={i}
                                 className="am-slider-thumb"
-                                aria-label={ariaLabel ?? label ?? `Value ${i + 1}`}
+                                {...(labelledBy !== undefined
+                                    ? { 'aria-labelledby': labelledBy }
+                                    : {
+                                          'aria-label':
+                                              ariaLabel ?? label ?? `Value ${i + 1}`,
+                                      })}
                                 {...(describedBy !== undefined
                                     ? { 'aria-describedby': describedBy }
                                     : {})}

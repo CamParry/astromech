@@ -3,6 +3,12 @@ import { FieldControlProvider } from './field-control-context';
 
 export type FieldWrapperProps = {
     label: React.ReactNode;
+    /**
+     * `label` (the default) points at the one control that takes `controlId`.
+     * `span` is for a field whose controls a `<label>` cannot point at: several
+     * of them, or a contenteditable. It names them with `labelId` instead.
+     */
+    labelElement?: 'label' | 'span';
     description?: React.ReactNode;
     required?: boolean;
     error?: string[] | undefined;
@@ -14,6 +20,7 @@ export type FieldWrapperProps = {
 
 export function FieldWrapper({
     label,
+    labelElement = 'label',
     description,
     required,
     error,
@@ -28,6 +35,20 @@ export function FieldWrapper({
     // One id serves whichever message renders, so `aria-describedby` resolves
     // either way.
     const messageId = React.useId();
+    const labelId = React.useId();
+    const controlId = React.useId();
+    const descriptionId = React.useId();
+    const labelContent = (
+        <>
+            {label}
+            {/* Decoration only: the accessible name stays the label. */}
+            {required === true && (
+                <span className="am-field-required" aria-hidden="true">
+                    *
+                </span>
+            )}
+        </>
+    );
     return (
         <div
             className="am-field"
@@ -35,16 +56,28 @@ export function FieldWrapper({
             {...(hasError ? { 'data-invalid': '' } : {})}
             {...(hasWarning ? { 'data-warning': '' } : {})}
         >
-            <label className="am-field-label">
-                {label}
-                {required === true && <span className="am-field-required">*</span>}
-            </label>
-            {description !== undefined && <p className="am-field-hint">{description}</p>}
+            {labelElement === 'label' ? (
+                <label className="am-field-label" id={labelId} htmlFor={controlId}>
+                    {labelContent}
+                </label>
+            ) : (
+                <span className="am-field-label" id={labelId}>
+                    {labelContent}
+                </span>
+            )}
+            {description !== undefined && (
+                <p className="am-field-hint" id={descriptionId}>
+                    {description}
+                </p>
+            )}
             <FieldControlProvider
                 value={{
                     hasError,
                     hasWarning,
                     errorId: hasError || hasWarning ? messageId : undefined,
+                    descriptionId: description !== undefined ? descriptionId : undefined,
+                    labelId,
+                    controlId: labelElement === 'label' ? controlId : undefined,
                 }}
             >
                 {children}

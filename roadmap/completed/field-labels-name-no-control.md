@@ -11,9 +11,9 @@ the admin tests find controls by `name` through `findFieldControl` in
 
 ## The work
 
-- [ ] Give each field control an accessible name from its label: `htmlFor` and
+- [x] Give each field control an accessible name from its label: `htmlFor` and
       an `id` for a field with one control, `aria-labelledby` (or a
       `fieldset` and `legend`) for a field with several, such as the link
       field's three.
-- [ ] Move the admin tests from `findFieldControl` to label queries, and delete
+- [x] Move the admin tests from `findFieldControl` to label queries, and delete
       the helper if nothing else needs it.

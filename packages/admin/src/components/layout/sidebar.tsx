@@ -1,69 +1,20 @@
+import type { AdminNavLink } from '../../hooks/use-admin-nav';
 import type { PluginNavItem } from 'astromech';
 import { Link, useRouterState } from '@tanstack/react-router';
-import { globalPermission } from 'astromech/shared';
-import {
-    ChevronLeft,
-    ChevronRight,
-    Globe,
-    Image,
-    LayoutDashboard,
-    Puzzle,
-    Users,
-} from 'lucide-react';
+import { ChevronLeft, ChevronRight, Puzzle } from 'lucide-react';
 import React from 'react';
 import { useTranslation } from 'react-i18next';
 import adminConfig from 'virtual:astromech/admin-config';
-import adminIcons from 'virtual:astromech/admin-icons';
 import { useUi } from '../../context/ui';
-import { usePermissions } from '../../hooks/use-permissions';
-import { resolveLabel } from '../../i18n/labels';
+import { useAdminNav } from '../../hooks/use-admin-nav';
+import { resolveIcon } from '../../utilities/admin-icon';
 import { Logo } from '../brand/logo';
-import { EntryTypeIcon } from '../ui/entry-type-icon';
-
-/**
- * Drop nav items the user lacks permission for, recursively. A linkless
- * parent whose children are all hidden disappears too.
- */
-function filterNavItems(
-    items: PluginNavItem[],
-    allowed: (permission: string) => boolean
-): PluginNavItem[] {
-    return items
-        .filter((item) => item.permission === undefined || allowed(item.permission))
-        .map((item) => ({
-            ...item,
-            ...(item.children !== undefined && {
-                children: filterNavItems(item.children, allowed),
-            }),
-        }))
-        .filter((item) => item.to !== undefined || (item.children?.length ?? 0) > 0);
-}
 
 export function Sidebar() {
     const { t } = useTranslation();
     const { sidebarOpen, setSidebarOpen } = useUi();
-    const { canReadMedia, canReadUsers, hasPermission } = usePermissions();
-    // The site's own types and globals; a plugin's appear in that plugin's
-    // nav tree instead. Each global is gated on its own read permission.
-    const entryTypes = Object.entries(adminConfig.entryTypes).filter(
-        ([, entryType]) => entryType.plugin === undefined
-    );
-    const globals = Object.entries(adminConfig.globals).filter(
-        ([key, global]) =>
-            global.plugin === undefined &&
-            global.nav &&
-            hasPermission(globalPermission(key, 'read'))
-    );
-    // Each page carries its own resolved permission, so the group gates per page.
-    const appPages = (adminConfig.pages ?? []).filter(
-        (page) =>
-            page.nav !== false &&
-            (page.permission === null || hasPermission(page.permission))
-    );
-    const pluginNavItems = filterNavItems(
-        adminConfig.plugins.flatMap((plugin) => plugin.nav),
-        hasPermission
-    );
+    const nav = useAdminNav();
+    const pluginNavItems = nav.plugins.flatMap((plugin) => plugin.items);
 
     return (
         <aside
@@ -87,78 +38,27 @@ export function Sidebar() {
             </div>
             <div className="am-sidebar-main">
                 <nav className="am-sidebar-nav" aria-label={t('nav.primary')}>
-                    <ul className="am-sidebar-nav-list" role="list">
-                        <SidebarNavItem
-                            to="/"
-                            exact
-                            label={t('nav.dashboard')}
-                            icon={<LayoutDashboard size={16} />}
-                        />
-                        {canReadMedia() && (
-                            <SidebarNavItem
-                                to="/media"
-                                label={t('nav.media')}
-                                icon={<Image size={16} />}
-                            />
-                        )}
-                    </ul>
+                    <SidebarNavList links={nav.primary} />
                 </nav>
                 <div className="am-sidebar-nav-divider"></div>
-                {entryTypes.length > 0 && (
-                    <nav className="am-sidebar-nav" aria-label="Entry types">
-                        <ul className="am-sidebar-nav-list" role="list">
-                            {entryTypes.map(([key, entryType]) => (
-                                <SidebarNavItem
-                                    key={key}
-                                    to={`/entries/${key}`}
-                                    label={entryType.plural}
-                                    icon={<EntryTypeIcon name={entryType.icon} />}
-                                />
-                            ))}
-                        </ul>
+                {nav.entryTypes.length > 0 && (
+                    <nav className="am-sidebar-nav" aria-label={t('nav.entryTypes')}>
+                        <SidebarNavList links={nav.entryTypes} />
                     </nav>
                 )}
-                {globals.length > 0 && (
+                {nav.globals.length > 0 && (
                     <>
                         <div className="am-sidebar-nav-divider"></div>
                         <nav className="am-sidebar-nav" aria-label={t('nav.globals')}>
-                            <ul className="am-sidebar-nav-list" role="list">
-                                {globals.map(([key, global]) => (
-                                    <SidebarNavItem
-                                        key={key}
-                                        to={`/globals/${key}`}
-                                        label={resolveLabel(
-                                            global.label,
-                                            key,
-                                            t,
-                                            'translation'
-                                        )}
-                                        icon={<GlobalIcon name={global.icon} />}
-                                    />
-                                ))}
-                            </ul>
+                            <SidebarNavList links={nav.globals} />
                         </nav>
                     </>
                 )}
-                {appPages.length > 0 && (
+                {nav.pages.length > 0 && (
                     <>
                         <div className="am-sidebar-nav-divider"></div>
                         <nav className="am-sidebar-nav" aria-label={t('nav.pages')}>
-                            <ul className="am-sidebar-nav-list" role="list">
-                                {appPages.map((page) => (
-                                    <SidebarNavItem
-                                        key={page.path}
-                                        to={`/page/${page.path}`}
-                                        label={resolveLabel(
-                                            page.label,
-                                            page.path,
-                                            t,
-                                            'translation'
-                                        )}
-                                        icon={<PluginNavIcon name={page.icon} />}
-                                    />
-                                ))}
-                            </ul>
+                            <SidebarNavList links={nav.pages} />
                         </nav>
                     </>
                 )}
@@ -174,19 +74,11 @@ export function Sidebar() {
                         </nav>
                     </>
                 )}
-                {canReadUsers() && (
+                {nav.system.length > 0 && (
                     <>
                         <div className="am-sidebar-nav-divider"></div>
                         <nav className="am-sidebar-nav" aria-label={t('nav.system')}>
-                            <ul className="am-sidebar-nav-list" role="list">
-                                {canReadUsers() && (
-                                    <SidebarNavItem
-                                        to="/users"
-                                        label={t('nav.users')}
-                                        icon={<Users size={16} />}
-                                    />
-                                )}
-                            </ul>
+                            <SidebarNavList links={nav.system} />
                         </nav>
                     </>
                 )}
@@ -195,13 +87,23 @@ export function Sidebar() {
     );
 }
 
-function GlobalIcon({ name }: { name?: string | undefined }) {
-    const Icon = name !== undefined ? (adminIcons[name] ?? Globe) : Globe;
-    return <Icon size={16} />;
+function SidebarNavList({ links }: { links: AdminNavLink[] }) {
+    return (
+        <ul className="am-sidebar-nav-list" role="list">
+            {links.map(({ to, label, Icon }) => (
+                <SidebarNavItem
+                    key={to}
+                    to={to}
+                    label={label}
+                    icon={<Icon size={16} />}
+                />
+            ))}
+        </ul>
+    );
 }
 
 function PluginNavIcon({ name }: { name?: string | undefined }) {
-    const Icon = name !== undefined ? (adminIcons[name] ?? Puzzle) : Puzzle;
+    const Icon = resolveIcon(name, Puzzle);
     return <Icon size={16} />;
 }
 
@@ -347,19 +249,16 @@ function SidebarNavItem({
     to,
     icon,
     label,
-    exact = false,
 }: {
     to: string;
     icon: React.ReactNode;
     label: string;
-    exact?: boolean;
 }) {
     const routerState = useRouterState();
     const pathname = routerState.location.pathname;
 
-    const isActive = exact
-        ? pathname === to
-        : pathname === to || pathname.startsWith(to + '/');
+    // The dashboard's `/` matches only itself: no admin path starts with `//`.
+    const isActive = pathname === to || pathname.startsWith(to + '/');
     return (
         <li
             className={

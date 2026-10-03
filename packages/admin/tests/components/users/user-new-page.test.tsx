@@ -2,7 +2,7 @@
  * @vitest-environment happy-dom
  *
  * The user create page: a create sends the name, email, role and the declared
- * profile fields, then returns to the list; a 422 lands on the field it names
+ * profile fields, toasts, then returns to the list; a 422 lands on the field it names
  * or in the banner, and the page stays put.
  */
 
@@ -70,7 +70,7 @@ function unprocessable(details: Record<string, unknown>): AstromechApiError {
 }
 
 describe('UserNewPage', () => {
-    it('creates the user with its profile fields, then returns to the list', async () => {
+    it('creates the user with its profile fields, says so and returns to the list', async () => {
         users.create.mockResolvedValue({ id: 'u1' });
         const page = mountPage();
 
@@ -85,6 +85,7 @@ describe('UserNewPage', () => {
                 fields: { bio: 'Wrote the first program' },
             },
         });
+        expect(await screen.findByText('User created.')).not.toBeNull();
     });
 
     it('puts a 422 field error on the profile field it names', async () => {

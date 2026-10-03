@@ -11,6 +11,7 @@ export const CELL_KINDS = [
     'text',
     'title',
     'badge',
+    'status',
     'slug',
     'date',
     'boolean',

@@ -4,14 +4,15 @@
  * Static shortcuts filter client-side; a non-empty query also runs live search.
  */
 
-import type { AdminEntryType, Entry, Media, User } from 'astromech';
+import type { AdminNav, AdminNavLink } from '../../hooks/use-admin-nav';
+import type { AdminEntryType, Entry, Media, PluginNavItem, User } from 'astromech';
 import type { LucideIcon } from 'lucide-react';
 import { Dialog } from '@base-ui/react/dialog';
 import { useQuery } from '@tanstack/react-query';
 import { useNavigate } from '@tanstack/react-router';
 import { astromechUntypedClient } from 'astromech/fetch';
 import { entryPermission } from 'astromech/shared';
-import { Image, LayoutDashboard, Puzzle, Users } from 'lucide-react';
+import { Database, Image, Puzzle, Users } from 'lucide-react';
 import React, {
     createContext,
     useCallback,
@@ -23,21 +24,16 @@ import React, {
 } from 'react';
 import { useTranslation } from 'react-i18next';
 import adminConfig from 'virtual:astromech/admin-config';
-import adminIcons from 'virtual:astromech/admin-icons';
+import { useAdminNav } from '../../hooks/use-admin-nav';
 import { useDebounce } from '../../hooks/use-debounce';
 import { usePermissions } from '../../hooks/use-permissions';
 import { queryKeys } from '../../hooks/use-query-keys';
+import { resolveIcon } from '../../utilities/admin-icon';
 import { entryAdminPath } from '../../utilities/entry-admin-path';
 import { entryLabel } from '../entries/entry-label';
-import { EntryTypeIcon } from './entry-type-icon';
-
-function lucideIcon(name: string | undefined, Fallback: LucideIcon): LucideIcon {
-    if (name === undefined) return Fallback;
-    return adminIcons[name] ?? Fallback;
-}
 
 /** Groups rendered in the palette. Static = always computed client-side. */
-type StaticGroup = 'Navigation' | 'EntryTypes' | 'Pages';
+type StaticGroup = 'Navigation' | 'EntryTypes' | 'Globals' | 'Pages';
 
 type StaticCommandItem = {
     kind: 'static';
@@ -45,7 +41,7 @@ type StaticCommandItem = {
     label: string;
     to: string;
     group: StaticGroup;
-    Icon: () => React.ReactElement;
+    Icon: LucideIcon;
 };
 
 type LiveCommandItem = {
@@ -61,7 +57,7 @@ type LiveCommandItem = {
      * live entries into one group per entry type. */
     typeId?: string;
     typeLabel?: string;
-    Icon: () => React.ReactElement;
+    Icon: LucideIcon;
 };
 
 type CommandItem = StaticCommandItem | LiveCommandItem;
@@ -133,107 +129,13 @@ export function CommandPalette(): React.ReactElement {
     // Debounce the typed query for live search
     const debouncedQuery = useDebounce(query.trim(), 200);
 
-    const navItems: StaticCommandItem[] = useMemo(
-        () => [
-            {
-                kind: 'static' as const,
-                id: 'nav-dashboard',
-                label: t('nav.dashboard'),
-                to: '/',
-                group: 'Navigation' as const,
-                Icon: () => <LayoutDashboard size={15} />,
-            },
-            {
-                kind: 'static' as const,
-                id: 'nav-media',
-                label: t('nav.media'),
-                to: '/media',
-                group: 'Navigation' as const,
-                Icon: () => <Image size={15} />,
-            },
-            {
-                kind: 'static' as const,
-                id: 'nav-users',
-                label: t('nav.users'),
-                to: '/users',
-                group: 'Navigation' as const,
-                Icon: () => <Users size={15} />,
-            },
-        ],
-        [t]
-    );
-
-    // The site's own types; a plugin's are reached through its nav pages below.
-    const entryTypeItems: StaticCommandItem[] = useMemo(
-        () =>
-            Object.entries(adminConfig.entryTypes)
-                .filter(([, entryType]) => entryType.plugin === undefined)
-                .map(([key, entryType]) => ({
-                    kind: 'static' as const,
-                    id: `entry-type-${key}`,
-                    label: entryType.plural,
-                    to: `/entries/${key}`,
-                    group: 'EntryTypes' as const,
-                    Icon: () => <EntryTypeIcon name={entryType.icon} size={15} />,
-                })),
-        []
-    );
-
-    // Flatten plugin nav pages (items with a `to`) recursively, permission-filtered.
-    // A plugin's label only prefixes its pages when it contributes more than one
-    // (e.g. "SEO: Settings", "SEO: Sitemap"); a single-page plugin shows the page
-    // label alone, so a flat plugin like redirects reads "Redirects", not
-    // "Redirects: Redirects".
-    const pluginPageItems: StaticCommandItem[] = useMemo(() => {
-        const result: StaticCommandItem[] = [];
-
-        type NavPage = (typeof adminConfig.plugins)[0]['nav'][number];
-
-        for (const plugin of adminConfig.plugins) {
-            const pages: NavPage[] = [];
-            function collect(items: typeof plugin.nav) {
-                for (const item of items) {
-                    if (
-                        item.permission !== undefined &&
-                        !hasPermission(item.permission)
-                    ) {
-                        continue;
-                    }
-                    if (item.to !== undefined) pages.push(item);
-                    if (item.children !== undefined && item.children.length > 0) {
-                        collect(item.children);
-                    }
-                }
-            }
-            collect(plugin.nav);
-
-            const prefixed = pages.length > 1;
-            for (const item of pages) {
-                const IconRef = lucideIcon(item.icon, Puzzle);
-                result.push({
-                    kind: 'static' as const,
-                    id: `plugin-page-${item.to}`,
-                    label: prefixed ? `${plugin.label}: ${item.label}` : item.label,
-                    to: item.to as string,
-                    group: 'Pages' as const,
-                    Icon: () => <IconRef size={15} />,
-                });
-            }
-        }
-
-        return result;
-    }, [hasPermission]);
-
-    const allStaticItems: StaticCommandItem[] = useMemo(
-        () => [...navItems, ...entryTypeItems, ...pluginPageItems],
-        [navItems, entryTypeItems, pluginPageItems]
-    );
-
-    const q = query.toLowerCase();
-    const filteredStatic =
-        query.trim() === ''
-            ? allStaticItems
-            : allStaticItems.filter((item) => item.label.toLowerCase().includes(q));
+    const nav = useAdminNav();
+    const allStaticItems = useMemo(() => staticItems(nav), [nav]);
+    const filteredStatic = useMemo(() => {
+        if (query.trim() === '') return allStaticItems;
+        const q = query.toLowerCase();
+        return allStaticItems.filter((item) => item.label.toLowerCase().includes(q));
+    }, [allStaticItems, query]);
 
     // Every entry type the user may read, the site's and each plugin's.
     const readableTypes = useMemo(
@@ -292,7 +194,6 @@ export function CommandPalette(): React.ReactElement {
                     ? adminConfig.entryTypes[entry.type]
                     : undefined;
             const label = entryLabel(entry, entryType);
-            const iconName = entryType?.icon;
             const to = entryAdminPath(
                 typeof entry.type === 'string' ? entry.type : '',
                 entry.id
@@ -307,7 +208,7 @@ export function CommandPalette(): React.ReactElement {
                 ...(entryType?.plural !== undefined
                     ? { typeLabel: entryType.plural }
                     : {}),
-                Icon: () => <EntryTypeIcon name={iconName} size={15} />,
+                Icon: resolveIcon(entryType?.icon, Database),
             };
         });
     }, [liveQuery.data]);
@@ -321,7 +222,7 @@ export function CommandPalette(): React.ReactElement {
             sublabel: user.email,
             to: `/users/${user.id}`,
             group: 'LiveUsers' as const,
-            Icon: () => <Users size={15} />,
+            Icon: Users,
         }));
     }, [liveQuery.data]);
 
@@ -338,7 +239,7 @@ export function CommandPalette(): React.ReactElement {
                 to: '/media',
                 search: { item: m.id },
                 group: 'LiveMedia',
-                Icon: () => <Image size={15} />,
+                Icon: Image,
             };
         });
     }, [liveQuery.data]);
@@ -354,6 +255,7 @@ export function CommandPalette(): React.ReactElement {
         const staticEntryTypeMatches = filteredStatic.filter(
             (i) => i.group === 'EntryTypes'
         );
+        const staticGlobalMatches = filteredStatic.filter((i) => i.group === 'Globals');
         const staticPageMatches = filteredStatic.filter((i) => i.group === 'Pages');
 
         if (staticNavMatches.length > 0) {
@@ -364,6 +266,9 @@ export function CommandPalette(): React.ReactElement {
                 label: t('cmdpal.groupEntries'),
                 items: staticEntryTypeMatches,
             });
+        }
+        if (staticGlobalMatches.length > 0) {
+            result.push({ label: t('cmdpal.groupGlobals'), items: staticGlobalMatches });
         }
         if (staticPageMatches.length > 0) {
             result.push({ label: t('cmdpal.groupPages'), items: staticPageMatches });
@@ -547,7 +452,7 @@ export function CommandPalette(): React.ReactElement {
                                                 onClick={() => activate(item)}
                                             >
                                                 <span className="am-cmdpal-item-icon">
-                                                    <Icon />
+                                                    <Icon size={15} />
                                                 </span>
                                                 <span className="am-cmdpal-item-label">
                                                     {item.label}
@@ -568,4 +473,47 @@ export function CommandPalette(): React.ReactElement {
             </Dialog.Portal>
         </Dialog.Root>
     );
+}
+
+/**
+ * The palette's shortcuts: every page the sidebar lists, flattened. A plugin's
+ * label only prefixes its pages when it contributes more than one ("SEO:
+ * Settings", "SEO: Sitemap"), so a one-page plugin reads "Redirects".
+ */
+function staticItems(nav: AdminNav): StaticCommandItem[] {
+    const pluginPages = nav.plugins.flatMap((plugin) => {
+        const pages = navPages(plugin.items);
+        return pages.map(
+            (item): AdminNavLink => ({
+                to: item.to,
+                label: pages.length > 1 ? `${plugin.label}: ${item.label}` : item.label,
+                Icon: resolveIcon(item.icon, Puzzle),
+            })
+        );
+    });
+    return [
+        ...[...nav.primary, ...nav.system].map(toItem('Navigation')),
+        ...nav.entryTypes.map(toItem('EntryTypes')),
+        ...nav.globals.map(toItem('Globals')),
+        ...[...nav.pages, ...pluginPages].map(toItem('Pages')),
+    ];
+}
+
+/** Every item in a nav tree that links somewhere, depth first. */
+function navPages(items: PluginNavItem[]): (PluginNavItem & { to: string })[] {
+    return items.flatMap((item) => [
+        ...(item.to !== undefined ? [{ ...item, to: item.to }] : []),
+        ...navPages(item.children ?? []),
+    ]);
+}
+
+function toItem(group: StaticGroup): (link: AdminNavLink) => StaticCommandItem {
+    return ({ to, label, Icon }) => ({
+        kind: 'static',
+        id: `${group}-${to}`,
+        label,
+        to,
+        group,
+        Icon,
+    });
 }

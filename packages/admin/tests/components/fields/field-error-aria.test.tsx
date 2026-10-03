@@ -62,12 +62,11 @@ describe('field error markup', () => {
  *
  * `media` and `relationship` are excluded: both fetch over the network on mount,
  * and their only focusable control is a button rather than a form control.
- * `richtext` is excluded because its control is ProseMirror's contenteditable,
- * which needs a real layout engine to mount.
  */
 const CASES: { field: DataField; value: unknown }[] = [
     { field: { name: 'f', type: 'text' }, value: '' },
     { field: { name: 'f', type: 'textarea' }, value: '' },
+    { field: { name: 'f', type: 'richtext' }, value: null },
     { field: { name: 'f', type: 'number' }, value: null },
     { field: { name: 'f', type: 'boolean' }, value: false },
     { field: { name: 'f', type: 'date' }, value: '' },

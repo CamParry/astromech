@@ -35,6 +35,7 @@ import React, { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useTreeField } from '../../hooks/use-tree-field';
 import { FieldList } from '../entries/entry-fields-renderer';
+import { useFieldControl } from './field-control-context';
 import './tree-field.css';
 
 // Lock dragging to the vertical axis — sortable strategy governs reordering
@@ -400,6 +401,7 @@ export function TreeField({
     disabled,
 }: BaseFieldProps): React.ReactElement {
     const { t } = useTranslation();
+    const { labelId } = useFieldControl();
     const fields = field.fields ?? [];
     const maxDepth = field.maxDepth;
 
@@ -417,7 +419,7 @@ export function TreeField({
     } = useTreeField({ name, value, onChange, maxDepth, fields });
 
     return (
-        <div className="am-tree">
+        <div className="am-tree" role="group" aria-labelledby={labelId}>
             {nodes.length > 0 && (
                 <SortableSiblingList
                     nodes={nodes}

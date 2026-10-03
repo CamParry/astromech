@@ -4,7 +4,7 @@ import { useFieldControl } from './field-control-context';
 import './json-field.css';
 
 export function JsonField({ name, value, required, onChange, disabled }: BaseFieldProps) {
-    const { hasError, ariaProps } = useFieldControl();
+    const { hasError, ariaProps, controlId } = useFieldControl();
     const initialJson =
         value !== undefined && value !== null ? JSON.stringify(value, null, 2) : '';
 
@@ -49,6 +49,7 @@ export function JsonField({ name, value, required, onChange, disabled }: BaseFie
     return (
         <div className="am-json-field">
             <textarea
+                id={controlId}
                 className={`am-json-field-textarea${error !== null ? ' am-json-field-textarea-error' : ''}`}
                 name={name}
                 value={raw}

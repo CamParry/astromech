@@ -1,4 +1,5 @@
 import type { BaseFieldProps } from 'astromech';
+import { useFieldControl } from 'astromech/ui/fields';
 import React from 'react';
 import { MAX_RATING, ratingError } from '../../fields/rating';
 
@@ -8,9 +9,15 @@ export default function RatingField({
     onChange,
     disabled,
 }: BaseFieldProps): React.ReactElement {
+    const { labelId } = useFieldControl();
     const current = typeof value === 'number' ? value : 0;
     return (
-        <div data-rating-field style={{ display: 'flex', gap: '0.25rem' }}>
+        <div
+            data-rating-field
+            role="group"
+            aria-labelledby={labelId}
+            style={{ display: 'flex', gap: '0.25rem' }}
+        >
             {Array.from({ length: MAX_RATING }, (_, i) => i + 1).map((star) => (
                 <button
                     key={star}

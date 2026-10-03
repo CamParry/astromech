@@ -28,7 +28,7 @@ export function resolveTable(config: AdminEntryType): ResolvedTable {
         columns.push({
             key: 'status',
             label: 'entries.columnStatus',
-            kind: 'badge',
+            kind: 'status',
             source: 'entry',
             sortable: false,
             system: true,

@@ -261,6 +261,13 @@ export function validate(value: unknown): string | undefined {
 }
 ```
 
+The admin draws the field's label as a `span`, since it cannot know which
+element the field renders, so the field names its own control: read `labelId`
+from `useFieldControl()` (`astromech/ui/fields`) and pass it as
+`aria-labelledby`, beside the `ariaProps` that carry the error and description.
+Without it the control has no name, even a single native input.
+[Field validation](../content/field-validation.md#accessibility) has the detail.
+
 Then reference it anywhere a field is declared: `{ name: 'quality', type: 'rating' }`.
 A field whose type has `affectsData: false` still takes a name, which the admin
 uses as its key; nothing is stored under it.
@@ -439,6 +446,21 @@ export default function RedirectsPage() {
         />
     );
 }
+```
+
+A table you build yourself with `Table`, from `astromech/ui`, links its rows
+the same way. Give `<Table.Row>` an `href`, and wrap the row's primary cell in
+`<Table.RowLink>`, which renders the link a keyboard or screen reader reaches.
+A click anywhere else in the row opens it too, except a click on a control in
+the row, such as a button, a checkbox or a menu.
+
+```tsx
+<Table.Row href={`/plugin/redirects/${row.id}`}>
+    <Table.Td>
+        <Table.RowLink>{row.from}</Table.RowLink>
+    </Table.Td>
+    <Table.Td>{row.to}</Table.Td>
+</Table.Row>
 ```
 
 #### A form over your own records
