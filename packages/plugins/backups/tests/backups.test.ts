@@ -14,6 +14,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { makeTestConfig } from '@tests/harness';
 import { createPluginTestApp } from '@tests/plugin-app';
+import { testMigrationProvider } from '@tests/test-db';
 import { sql } from 'kysely';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { libsql } from '@/database/drivers/libsql';
@@ -193,9 +194,13 @@ describe('libsql.dump / restore', () => {
                 c.close();
             },
         });
-        await expect(remoteDriver.restore(emptyStream, { preserve: [] })).rejects.toThrow(
-            'file:'
-        );
+        await expect(
+            remoteDriver.restore(emptyStream, {
+                preserve: [],
+                empty: [],
+                migrations: testMigrationProvider,
+            })
+        ).rejects.toThrow('file:');
     });
 
     it('refuses an in-memory database on dump and restore', async () => {
@@ -208,7 +213,11 @@ describe('libsql.dump / restore', () => {
             });
             await expect(memoryDriver.dump()).rejects.toThrow('in-memory');
             await expect(
-                memoryDriver.restore(emptyStream, { preserve: [] })
+                memoryDriver.restore(emptyStream, {
+                    preserve: [],
+                    empty: [],
+                    migrations: testMigrationProvider,
+                })
             ).rejects.toThrow('in-memory');
         }
     });

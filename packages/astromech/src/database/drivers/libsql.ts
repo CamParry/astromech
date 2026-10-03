@@ -5,9 +5,10 @@
  */
 
 import type { DB } from '@/database/types';
-import type { DbDump } from '@/types/config';
+import type { DbDump, RestoreOptions } from '@/types/config';
 import type { Client, Config, Row, Transaction } from '@libsql/client';
 import type { DialectAdapter } from 'kysely';
+import type { MigrationProvider } from 'kysely/migration';
 import { randomUUID } from 'node:crypto';
 import { createReadStream, createWriteStream } from 'node:fs';
 import { unlink } from 'node:fs/promises';
@@ -15,6 +16,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { Readable } from 'node:stream';
 import { pipeline } from 'node:stream/promises';
+import { migrateToLatest } from '@astromech/schema-engine';
 import { createClient } from '@libsql/client';
 import { LibsqlDialect } from '@libsql/kysely-libsql';
 import { CamelCasePlugin, Kysely, SqliteAdapter } from 'kysely';
@@ -36,41 +38,79 @@ function quoteIdentifier(name: string): string {
     return `"${name.replace(/"/g, '""')}"`;
 }
 
-/** The migrations recorded in `schema`, or none when it has no migration table. */
-async function migrationNames(
-    c: Client,
-    schema: 'main' | 'restore_src'
-): Promise<string[]> {
-    const table = await c.execute(
-        `SELECT 1 FROM ${schema}.sqlite_master WHERE type = 'table' AND name = 'kysely_migration'`
-    );
-    if (table.rows.length === 0) return [];
-    const result = await c.execute(`SELECT name FROM ${schema}.kysely_migration`);
-    return result.rows.map((row) => String(row['name'] ?? firstValue(row)));
+/**
+ * Check the backup at `file`, then run the code's migration chain forward on it,
+ * so its schema is this code's. Refuses a damaged backup, one that records no
+ * migrations, and one holding a migration the code does not have.
+ */
+async function migrateBackup(file: string, migrations: MigrationProvider): Promise<void> {
+    const client = createClient({ url: `file:${file}` });
+    // The driver's own dialect, so the chain runs as one transaction as it does
+    // on the live database.
+    const db = new Kysely<DB>({
+        dialect: new LocalLibsqlDialect({ client: client as never }),
+        plugins: [new CamelCasePlugin()],
+    });
+    try {
+        await assertIntact(client);
+        await assertKnownMigrations(client, migrations);
+        try {
+            await migrateToLatest(db, migrations, { allowUnorderedMigrations: true });
+        } catch (error) {
+            const reason = error instanceof Error ? error.message : String(error);
+            throw new AstromechError(
+                `the backup could not be brought up to this schema: ${reason}`
+            );
+        }
+    } finally {
+        await db.destroy();
+        client.close();
+    }
+}
+
+async function assertIntact(client: Client): Promise<void> {
+    const { rows } = await client.execute('PRAGMA quick_check');
+    const [first] = rows;
+    const ok =
+        rows.length === 1 &&
+        first !== undefined &&
+        String(firstValue(first)).toLowerCase() === 'ok';
+    if (!ok) throw new AstromechError('the backup failed its integrity check');
 }
 
 /**
- * Refuses a backup whose recorded migrations differ from the database's. The
- * copy only checks columns, so a backup taken before a migration that created
- * a table would pass, rewind `kysely_migration`, and leave the next migration
- * run failing on a table that already exists.
+ * Refuses a backup holding a migration the code does not have: a newer
+ * backup, one from a rebaselined chain, or one from a removed plugin. Plugin
+ * chains merge unordered, so the names compare as sets rather than by head.
  */
-async function assertSameMigrations(c: Client): Promise<void> {
-    const live = await migrationNames(c, 'main');
-    const backup = await migrationNames(c, 'restore_src');
-    const onlyLive = live.filter((name) => !backup.includes(name)).sort();
-    const onlyBackup = backup.filter((name) => !live.includes(name)).sort();
-    if (onlyLive.length === 0 && onlyBackup.length === 0) return;
-    const differences = [
-        ...(onlyBackup.length > 0
-            ? [`only in the backup: ${onlyBackup.join(', ')}`]
-            : []),
-        ...(onlyLive.length > 0 ? [`only in the database: ${onlyLive.join(', ')}`] : []),
-    ];
+async function assertKnownMigrations(
+    client: Client,
+    migrations: MigrationProvider
+): Promise<void> {
+    const recorded = await migrationNames(client);
+    if (recorded.length === 0) {
+        throw new AstromechError(
+            'the backup records no migrations, so it is not an Astromech database'
+        );
+    }
+    const known = new Set(Object.keys(await migrations.getMigrations()));
+    const unknown = recorded.filter((name) => !known.has(name)).sort();
+    if (unknown.length === 0) return;
     throw new AstromechError(
-        `the backup is from another schema version than the database ` +
-            `(migrations ${differences.join('; ')})`
+        `the backup records ${unknown.length === 1 ? 'a migration' : 'migrations'} this site ` +
+            `does not have (${unknown.join(', ')}): restore it with the code and ` +
+            'plugins that wrote it'
     );
+}
+
+/** The migrations the database records, or none when it has no migration table. */
+async function migrationNames(client: Client): Promise<string[]> {
+    const table = await client.execute(
+        `SELECT 1 FROM sqlite_master WHERE type = 'table' AND name = 'kysely_migration'`
+    );
+    if (table.rows.length === 0) return [];
+    const result = await client.execute('SELECT name FROM kysely_migration');
+    return result.rows.map((row) => String(row['name'] ?? firstValue(row)));
 }
 
 async function columnNames(
@@ -195,7 +235,7 @@ export function libsql(options?: LibsqlOptions) {
 
         async restore(
             source: ReadableStream<Uint8Array>,
-            { preserve }: { preserve: string[] }
+            { preserve, empty, migrations }: RestoreOptions
         ): Promise<void> {
             assertFileUrl();
             const tmp = join(tmpdir(), `astromech-restore-${randomUUID()}.sqlite`);
@@ -205,8 +245,8 @@ export function libsql(options?: LibsqlOptions) {
                 ),
                 createWriteStream(tmp)
             );
-            const esc = tmp.replace(/'/g, "''");
             try {
+                await migrateBackup(tmp, migrations);
                 // `ATTACH` and `PRAGMA foreign_keys` change a single connection,
                 // and neither works inside a transaction. The driver's client
                 // keeps a pool of connections, so separate calls on it can land
@@ -218,35 +258,22 @@ export function libsql(options?: LibsqlOptions) {
                 // through `execute()` as soon as that call returns.
                 const c = createClient({ ...clientConfig(), concurrency: 1 });
                 try {
-                    await c.execute(`ATTACH '${esc}' AS restore_src`);
-                    const checkResult = await c.execute(`PRAGMA restore_src.quick_check`);
-                    const checkRows = checkResult.rows ?? [];
-                    const firstRow = checkRows[0];
-                    const firstStr =
-                        firstRow !== undefined
-                            ? String(firstValue(firstRow)).toLowerCase()
-                            : '';
-                    const ok = checkRows.length === 1 && firstStr === 'ok';
-                    if (!ok)
-                        throw new AstromechError('the backup failed its integrity check');
-                    await assertSameMigrations(c);
+                    await c.execute(`ATTACH '${tmp.replace(/'/g, "''")}' AS restore_src`);
                     const tablesResult = await c.execute(
                         `SELECT name FROM restore_src.sqlite_master WHERE type='table' AND name NOT LIKE 'sqlite_%'`
                     );
-                    const tables = (tablesResult.rows ?? []).map((row) => ({
-                        name: String(
-                            (row as unknown as Record<string, unknown>)['name'] ??
-                                firstValue(row)
-                        ),
-                    }));
+                    const tables = tablesResult.rows.map((row) =>
+                        String(row['name'] ?? firstValue(row))
+                    );
                     await c.execute('PRAGMA foreign_keys=OFF');
                     const tx = await c.transaction('write');
                     try {
-                        for (const { name } of tables) {
+                        for (const name of tables) {
                             if (preserve.includes(name)) continue;
                             const quoted = quoteIdentifier(name);
                             const columns = await copyableColumns(tx, name);
                             await tx.execute(`DELETE FROM main.${quoted}`);
+                            if (empty.includes(name)) continue;
                             await tx.execute(
                                 `INSERT INTO main.${quoted} (${columns}) SELECT ${columns} FROM restore_src.${quoted}`
                             );

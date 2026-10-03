@@ -54,6 +54,15 @@ are supported for **local file databases only**. They use `VACUUM INTO`, which
 needs a local file, so a remote Turso URL is rejected with an explicit error
 rather than silently producing a broken backup.
 
+`restore()` runs the site's migrations forward on a copy of the backup, then
+swaps the copy's tables in within one transaction, so a backup taken before a
+migration restores into the current schema. It refuses a backup that holds a
+migration the site does not have, such as one taken by newer code or with a
+plugin since removed. It empties sessions and verification tokens rather than
+restoring them, so everyone is signed out. The serving process loads the
+migrations from `migrationsDir` at the time of the restore, so deploy that folder
+with the site and start the server from the project root.
+
 ### Where `file:./database.db` points
 
 Relative paths in your config resolve against the **working directory**, so run

@@ -185,7 +185,9 @@ describe('BackupsPage', () => {
         await user.click(within(dialog).getByRole('button', { name: 'Restore' }));
 
         expect(
-            await screen.findByText('Restore complete. A page refresh is recommended.')
+            await screen.findByText(
+                'Restore complete. Everyone has been signed out, so sign in again to continue.'
+            )
         ).not.toBeNull();
         expect(fetch.mock.calls).toEqual([
             [restoreUrl, { credentials: 'include', method: 'POST' }],
@@ -200,8 +202,8 @@ describe('BackupsPage', () => {
     it('shows why a restore failed', async () => {
         backups.list.mockResolvedValue(listing([backupRun({ id: 'run_1' })]));
         const reason =
-            'the backup is from another schema version than the database ' +
-            '(migrations only in the database: 9999_later)';
+            'the backup records a migration this site does not have (9999_later): ' +
+            'restore it with the code and plugins that wrote it';
         vi.stubGlobal(
             'fetch',
             vi.fn<typeof globalThis.fetch>(async () =>

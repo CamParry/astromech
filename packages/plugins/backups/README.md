@@ -133,9 +133,13 @@ Two endpoints stream, so they are `rawRoutes` rather than service methods:
 
 Restore takes a safety snapshot of the current database **before** overwriting
 it, so the operation is reversible, and preserves the plugin's own run table
-and the cron table across the restore — otherwise a restore would erase the
-record of itself. The libsql driver refuses a backup whose recorded migrations
-differ from the database's, or whose tables or columns differ, and changes
+and the cron table across the restore. Otherwise a restore would erase the
+record of itself. The libsql driver runs the site's migrations forward on a copy
+of the backup, so an older backup restores into the current schema, then
+swaps the copy's tables in within one transaction. It empties sessions and
+verification tokens rather than restoring them, so everyone is signed out. It
+refuses a backup holding a migration the site does not have (a newer backup, or
+one from a plugin since removed), or one whose migrations fail, and changes
 nothing; the route answers 500 with the driver's message, which the admin shows.
 
 ## Admin surface

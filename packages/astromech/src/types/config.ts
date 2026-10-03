@@ -17,6 +17,7 @@ import type { CellKind } from './resolved';
 import type { DB } from '@/database/types';
 import type { ImageFormat } from '@/media/serving/image/url';
 import type { Kysely } from 'kysely';
+import type { MigrationProvider } from 'kysely/migration';
 
 export type DbDump = {
     /** Raw bytes of a consistent SQLite snapshot. */
@@ -44,11 +45,18 @@ export type DatabaseDriver = {
     isRemote?(): boolean;
     /** Produce a consistent full-DB snapshot. Optional — absent on drivers that can't dump in-process (e.g. D1). */
     dump?(): Promise<DbDump>;
-    /** Restore a full-DB snapshot from raw SQLite bytes. `preserve` = table names to leave untouched. Optional. */
-    restore?(
-        source: ReadableStream<Uint8Array>,
-        opts: { preserve: string[] }
-    ): Promise<void>;
+    /** Restore a full-DB snapshot from raw SQLite bytes, migrated to this schema first. Optional. */
+    restore?(source: ReadableStream<Uint8Array>, opts: RestoreOptions): Promise<void>;
+};
+
+/** How `DatabaseDriver.restore` brings a backup in. */
+export type RestoreOptions = {
+    /** Tables whose live rows stay as they are. */
+    preserve: string[];
+    /** Tables left empty rather than restored. */
+    empty: string[];
+    /** The site's merged migration chain, run forward on the backup before the copy. */
+    migrations: MigrationProvider;
 };
 
 export type StorageRange = {

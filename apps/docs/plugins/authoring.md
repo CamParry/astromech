@@ -1141,7 +1141,9 @@ await ctx.email.send(user.email, 'Your export is ready', <ExportReady url={url} 
 **`ctx.database`** — `{ dialect, dump?, restore? }`, for maintenance work rather
 than queries (`ctx.db` is the query handle). `dump` and `restore` are optional and
 depend on the site's database driver, so check for them rather than switching on
-`dialect`:
+`dialect`. `restore(source, { preserve })` brings the backup up to the site's
+schema before it replaces the live tables, leaves the tables named in `preserve`
+as they are, and signs everyone out:
 
 ```ts
 if (!ctx.database.dump) throw new Error('This database cannot be dumped');

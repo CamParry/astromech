@@ -5,6 +5,8 @@
 
 import type { AppContext, Role } from '@/types/index';
 import { makeUser } from '@tests/fixtures';
+import { contextAs, createTestDb, createTestUser, setupTestConfig } from '@tests/harness';
+import { sql } from 'kysely';
 import { describe, expect, it, vi } from 'vitest';
 import {
     createAppContext,
@@ -216,5 +218,41 @@ describe('createAppContext', () => {
         expect(app.users).not.toBe(other.users);
         expect(app.media).toBe(app.media);
         expect(app.media).not.toBe(other.media);
+    });
+});
+
+describe('database.restore', () => {
+    it('empties sessions and verification tokens rather than restoring them', async () => {
+        const db = await createTestDb();
+        setupTestConfig();
+        const user = await createTestUser(db, { email: 'kept@test.dev' });
+        const addSession = (token: string) =>
+            sql`INSERT INTO sessions (id, expires_at, token, created_at, updated_at, user_id)
+                VALUES (${crypto.randomUUID()}, '2099-01-01T00:00:00.000Z', ${token},
+                        '2026-10-03T00:00:00.000Z', '2026-10-03T00:00:00.000Z', ${user.id})`.execute(
+                db
+            );
+        await addSession('in-backup');
+        await sql`INSERT INTO verifications (id, identifier, value, expires_at)
+            VALUES (${crypto.randomUUID()}, 'reset', 'in-backup', '2099-01-01T00:00:00.000Z')`.execute(
+            db
+        );
+        const { database } = contextAs(null);
+        if (database.dump === undefined || database.restore === undefined) {
+            throw new Error('the harness database cannot dump and restore');
+        }
+        const backup = await database.dump();
+        await addSession('after-backup');
+
+        await database.restore(backup.stream, { preserve: [] });
+        await backup.cleanup();
+
+        const { rows: sessions } = await sql`SELECT token FROM sessions`.execute(db);
+        expect(sessions).toEqual([]);
+        const { rows: verifications } =
+            await sql`SELECT value FROM verifications`.execute(db);
+        expect(verifications).toEqual([]);
+        const { rows: users } = await sql`SELECT email FROM users`.execute(db);
+        expect(users).toEqual([{ email: 'kept@test.dev' }]);
     });
 });

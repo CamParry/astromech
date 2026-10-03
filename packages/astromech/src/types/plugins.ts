@@ -60,6 +60,10 @@ export type PluginEmail = {
 export type PluginDatabase = {
     dialect: string;
     dump?(): Promise<DbDump>;
+    /**
+     * Replace the live tables with the backup's, migrated to this site's schema
+     * first. `preserve` names tables to leave as they are; sessions are emptied.
+     */
     restore?(
         source: ReadableStream<Uint8Array>,
         opts: { preserve: string[] }

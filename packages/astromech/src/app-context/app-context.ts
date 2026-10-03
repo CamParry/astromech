@@ -20,8 +20,10 @@ import type {
 import type { Kysely } from 'kysely';
 import type { ReactElement } from 'react';
 import { createServices } from '@/app-context/services';
+import { sessionsTable, verificationsTable } from '@/auth/tables';
 import { getConfig } from '@/config/registry';
 import { getDatabaseDriver } from '@/database/driver-registry';
+import { getMigrationProvider } from '@/database/migration-registry';
 import { getDb } from '@/database/registry';
 import { getEmailDriver } from '@/email/registry';
 import { renderEmail } from '@/email/render';
@@ -99,13 +101,28 @@ export function createAppContext(input: AppContextInput): AppContext {
             return {
                 dialect: driver?.type ?? 'unknown',
                 ...(dump ? { dump } : {}),
-                ...(restore ? { restore } : {}),
+                ...(restore
+                    ? {
+                          restore: (source, { preserve }) =>
+                              restore(source, {
+                                  preserve,
+                                  empty: SIGN_IN_TABLES,
+                                  migrations: getMigrationProvider(),
+                              }),
+                      }
+                    : {}),
             };
         },
     };
 
     return context;
 }
+
+/**
+ * Emptied rather than restored, so a session revoked since the backup stays
+ * revoked and an old reset link stops working.
+ */
+const SIGN_IN_TABLES = [sessionsTable.name, verificationsTable.name];
 
 const systemContext = createRegistry<AppContext>('systemAppContext', {
     required: false,
