@@ -8,6 +8,7 @@ import type { DB } from '@/database/types';
 import type { AstromechConfig } from '@/types/index';
 import type { Kysely } from 'kysely';
 import { signInTestUser, TEST_PASSWORD } from '@tests/auth';
+import { expectConsole } from '@tests/console';
 import {
     createTestDb,
     makeTestConfig,
@@ -47,8 +48,9 @@ async function signIn(
 }
 
 describe('the sign-in rate limit', () => {
-    // Vitest runs with `NODE_ENV=test`, which Better Auth treats as it treats an
-    // unset `NODE_ENV` on Workers: not production, so its own default is off.
+    // Under `NODE_ENV=test`, as with an unset one on Workers, Better Auth's own
+    // default leaves the limiter off. With no address, test counts 127.0.0.1 and
+    // unset counts one `no-trusted-ip` key: either way, one count for everyone.
     it.each(['x-forwarded-for', 'x-astromech-client-address'])(
         'counts every attempt against one address when a client forges %s',
         async (header) => {
@@ -109,6 +111,59 @@ describe('the sign-in rate limit', () => {
 
         expect(onSameDatabase.status).toBe(429);
         expect(onOtherDatabase.status).toBe(200);
+    });
+});
+
+describe('the other limited routes', () => {
+    it.each([
+        // Better Auth answers an unknown email as it answers a known one, and warns.
+        ['POST', '/request-password-reset', 2, { email: EMAIL, redirectTo: '/cms' }],
+        [
+            'POST',
+            '/reset-password',
+            3,
+            { token: 'not-a-token', newPassword: 'x'.repeat(12) },
+        ],
+        ['GET', '/reset-password/not-a-token?callbackURL=/cms', 3, undefined],
+    ])('limits %s %s to %i requests a minute', async (method, path, max, body) => {
+        if (path === '/request-password-reset') {
+            expectConsole('warn', 'Reset Password: User not found');
+        }
+        const app = appWith({ trustProxy: true });
+        const send = async (): Promise<number> => {
+            const response = await app.request(`/cms/api/auth${path}`, {
+                method,
+                headers: {
+                    'Content-Type': 'application/json',
+                    'x-forwarded-for': '203.0.113.1',
+                },
+                ...(body === undefined ? {} : { body: JSON.stringify(body) }),
+            });
+            return response.status;
+        };
+
+        const allowed = [];
+        for (let attempt = 0; attempt < max; attempt++) allowed.push(await send());
+
+        expect(allowed).not.toContain(429);
+        expect(await send()).toBe(429);
+    });
+
+    it('does not count /get-session, so it writes no row', async () => {
+        const app = appWith({ trustProxy: true });
+        const { headers } = await signInTestUser(db, EMAIL);
+        headers.set('x-forwarded-for', '203.0.113.1');
+
+        const statuses = [];
+        for (let attempt = 0; attempt < 5; attempt++) {
+            statuses.push(
+                (await app.request('/cms/api/auth/get-session', { headers })).status
+            );
+        }
+        const rows = await db.selectFrom('rateLimits').select('key').execute();
+
+        expect(statuses).toEqual([200, 200, 200, 200, 200]);
+        expect(rows).toEqual([]);
     });
 });
 

@@ -22,4 +22,4 @@ pnpm run preview              # wrangler dev over the built Worker
 
 ## The gate
 
-`pnpm run check:boot:cloudflare` from the repo root builds this app, serves it on workerd and asserts `/`, `/cms`, `/cms/api/entries/post` and a `scheduled()` tick. It is too slow for the pre-commit hook, so run it by hand after anything touching the Cloudflare path.
+`pnpm run check:boot:cloudflare` from the repo root builds this app, serves it on workerd and asserts `/`, `/cms`, `/cms/api/entries/post`, a refused sign-in and a `scheduled()` tick. It is too slow for the pre-commit hook, so run it by hand after anything touching the Cloudflare path.

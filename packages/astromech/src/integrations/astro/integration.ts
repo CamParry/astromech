@@ -5,7 +5,7 @@
  */
 
 import type { AstromechConfig, ResolvedConfig } from '@/types/index';
-import type { AstroIntegration } from 'astro';
+import type { AstroConfig, AstroIntegration } from 'astro';
 import { fileURLToPath } from 'node:url';
 import { createAdminViteConfig } from '@astromech/admin/vite';
 import { buildAdminConfig } from '@/config/admin-config';
@@ -27,6 +27,7 @@ export function astromech(options: AstromechIntegrationOptions = {}): AstroInteg
     const packageSource = fileURLToPath(new URL('../../../src', import.meta.url));
 
     let loaded: { config: AstromechConfig; resolved: ResolvedConfig } | undefined;
+    let astroReadsForwardedFor: boolean | undefined;
 
     function getLoadedConfig(): { config: AstromechConfig; resolved: ResolvedConfig } {
         if (loaded === undefined) {
@@ -35,6 +36,15 @@ export function astromech(options: AstromechIntegrationOptions = {}): AstroInteg
             );
         }
         return loaded;
+    }
+
+    function getAstroReadsForwardedFor(): boolean {
+        if (astroReadsForwardedFor === undefined) {
+            throw new AstromechError(
+                'Astro config not known — the astro:config:done hook has not run.'
+            );
+        }
+        return astroReadsForwardedFor;
     }
 
     return {
@@ -69,6 +79,7 @@ export function astromech(options: AstromechIntegrationOptions = {}): AstroInteg
                         configFile: options.configFile,
                         config,
                         resolvedConfig,
+                        astroReadsForwardedFor: getAstroReadsForwardedFor,
                     }),
                 });
 
@@ -90,6 +101,10 @@ export function astromech(options: AstromechIntegrationOptions = {}): AstroInteg
             'astro:config:done': async ({ injectTypes, logger, config: astroConfig }) => {
                 const { config, resolved: resolvedConfig } = getLoadedConfig();
                 const plugins = config.plugins ?? [];
+
+                astroReadsForwardedFor = astroConfig.security.allowedDomains.length > 0;
+                const warning = clientAddressWarning(astroConfig, resolvedConfig);
+                if (warning !== undefined) logger.warn(warning);
 
                 const { generateClientTypes } = await import('@/codegen/type-generator');
                 injectTypes({
@@ -149,6 +164,22 @@ export function astromech(options: AstromechIntegrationOptions = {}): AstroInteg
             },
         },
     };
+}
+
+/**
+ * The warning for a Node site where Astro's `security.allowedDomains` is set and
+ * `security.trustProxy` is not: Astro's `clientAddress` may then come from a
+ * client-sent header, so Astromech knows no client address.
+ */
+function clientAddressWarning(
+    astroConfig: AstroConfig,
+    resolvedConfig: ResolvedConfig
+): string | undefined {
+    if (astroConfig.security.allowedDomains.length === 0) return undefined;
+    if ((resolvedConfig.security?.trustProxy ?? false) !== false) return undefined;
+    // Workers read `cf-connecting-ip`, which Cloudflare sets.
+    if (astroConfig.adapter?.name === '@astrojs/cloudflare') return undefined;
+    return "Astro's `security.allowedDomains` is set, so Astro may take a request's address from `x-forwarded-for`, which a client can send. Astromech does not use that address, so every client shares one sign-in count and the forms plugin's submission limit does not run. Set `security.trustProxy` in `astromech.config.ts` to the number of proxies in front of the server.";
 }
 
 /**

@@ -77,7 +77,7 @@ export async function getCurrentRole(): Promise<Role | null> {
  */
 async function resolveIdentity(scope: RequestScope): Promise<void> {
     const { getSession } = await import('@/auth/session');
-    const resolved = await getSession(scope.request.headers);
+    const resolved = await getSession(scope.request.headers, scope.clientAddress);
     scope.user = resolved?.user ?? null;
     scope.role = resolved?.role ?? null;
 }

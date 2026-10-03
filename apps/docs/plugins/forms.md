@@ -33,16 +33,18 @@ loaded and before the spam gate runs. Set `rateLimit` to your own `limit` and
 
 The key is the **connecting address**, which the HTTP transport derives only
 from sources the client cannot set: `cf-connecting-ip` on Cloudflare Workers,
-and `x-forwarded-for` when the site declares the proxy in front of it with
-`security.trustProxy` — see
+`x-forwarded-for` when the site declares the proxy in front of it with
+`security.trustProxy`, and otherwise the connection's own address on Node — see
 [../configuration/trust-proxy.md](../configuration/trust-proxy.md). The `ip` a
 caller puts in `meta` is stored but never trusted.
 
 A caller with no connecting address is not limited at all. That covers the CLI,
 MCP and your own server-side code calling `submit` in process, and it also
-covers an HTTP deployment where no trusted source of the address exists — a
-self-hosted server behind a proxy it has not declared. There is no shared bucket
-for such callers: a counter exists only for an address.
+covers a Node site where Astro's `security.allowedDomains` is set and
+`trustProxy` is not, which Astromech warns about at startup. There is no shared
+bucket for such callers: a counter exists only for an address. Behind a proxy
+without `trustProxy`, every visitor shares the proxy's address and its one
+count.
 
 The count lives in one process. Several instances (several Workers, or several
 Node processes behind a load balancer) each count their own traffic.

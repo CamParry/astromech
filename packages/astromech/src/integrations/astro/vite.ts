@@ -34,6 +34,8 @@ export type ViteConfigOptions = {
     configFile: string | undefined;
     config: AstromechConfig;
     resolvedConfig: ResolvedConfig;
+    /** Whether Astro takes `clientAddress` from `x-forwarded-for`, known once its config is done. */
+    astroReadsForwardedFor: () => boolean;
 };
 
 /** Build the `vite` half of the Astro config update. */
@@ -44,6 +46,7 @@ export function createViteConfig({
     configFile,
     config,
     resolvedConfig,
+    astroReadsForwardedFor,
 }: ViteConfigOptions): ViteConfig {
     const rootDir = fileURLToPath(root);
     const plugins = config.plugins ?? [];
@@ -97,7 +100,10 @@ export function createViteConfig({
             coreSourceAlias(packageSource),
             ...admin.plugins,
             virtualModule('virtual:astromech/config', () =>
-                liveConfigModule(resolveConfigPath(rootDir, configFile))
+                liveConfigModule(
+                    resolveConfigPath(rootDir, configFile),
+                    astroReadsForwardedFor()
+                )
             ),
             virtualModule(
                 'virtual:astromech/admin-config',
@@ -152,10 +158,11 @@ function pluginOptimizeDeps(def: PluginDefinition): string[] {
  * puts the live config in the SSR graph, so functions and class instances
  * survive where a JSON literal would destroy them.
  */
-function liveConfigModule(configPath: string): string {
+function liveConfigModule(configPath: string, astroReadsForwardedFor: boolean): string {
     return [
         `import rawConfig from ${specifier(configPath)};`,
         `export { rawConfig };`,
+        `export const astroReadsForwardedFor = ${String(astroReadsForwardedFor)};`,
     ].join('\n');
 }
 

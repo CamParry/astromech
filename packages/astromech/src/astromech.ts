@@ -44,8 +44,14 @@ export type Astromech = TypedServices & {
     getCurrentUser(): Promise<User | null>;
     /** The acting role for the current request, or null outside one. */
     getCurrentRole(): Promise<Role | null>;
-    /** Serve one HTTP request from the application's own routes. */
-    fetch(request: Request): Promise<Response>;
+    /**
+     * Serve one HTTP request from the application's own routes. `remoteAddress`
+     * is the connection's peer, which a Node server counts as the client.
+     */
+    fetch(
+        request: Request,
+        options?: { remoteAddress?: string | undefined }
+    ): Promise<Response>;
     /** Run the cron jobs due at `at`. Defaults to now. */
     scheduled(at?: Date): Promise<void>;
     /** The serving integration's terminal action. Idempotent. No-op on Workers. */
@@ -143,7 +149,11 @@ async function build(config: AstromechConfig): Promise<Astromech> {
         ...typedServices(currentServices),
         getCurrentUser,
         getCurrentRole,
-        fetch: async (request: Request): Promise<Response> => http.fetch(request),
+        fetch: async (
+            request: Request,
+            options?: { remoteAddress?: string | undefined }
+        ): Promise<Response> =>
+            http.fetch(request, { remoteAddress: options?.remoteAddress }),
         scheduled: (at?: Date): Promise<void> =>
             onTick(at ?? new Date(), systemAppContext()),
         startScheduler: async (): Promise<void> => {

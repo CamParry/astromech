@@ -6,11 +6,24 @@ sits behind a proxy, and what the address is used for.
 
 ## Where the address comes from
 
-Astromech only reads sources a client cannot set for itself. On Cloudflare
-Workers that is `cf-connecting-ip`, which Cloudflare overwrites on every request
-it proxies; it needs no configuration. Everywhere else there is no such header,
-so a request arriving through nginx, Caddy or a load balancer carries no trusted
-address and Astromech reports none.
+Astromech only reads sources a client cannot set for itself:
+
+- On Cloudflare Workers, `cf-connecting-ip`, which Cloudflare overwrites on
+  every request it proxies. It needs no configuration.
+- With `trustProxy` set, the entry of `x-forwarded-for` your proxies vouch for
+  (below).
+- Otherwise, on Node, the address of the connection itself, which Astro passes
+  on as `clientAddress`.
+
+The connection's address is the client's only when nothing sits in between.
+Behind nginx, Caddy or a load balancer it is the proxy's address, so every
+client shares it until you set `trustProxy`.
+
+Astro reads `x-forwarded-for` itself when its own `security.allowedDomains`
+option is set, so its `clientAddress` may then be a value the client made up.
+Astromech does not use it in that case: with `allowedDomains` set and no
+`trustProxy`, a Node site has no client address, and Astromech warns at
+startup.
 
 `x-forwarded-for` is the header proxies do use, but it is not trustworthy on its
 own: a server exposed directly will happily receive one a client made up. Only
@@ -33,24 +46,27 @@ Astromech passes the address to Better Auth in a header of its own, and drops
 any copy of that header the client sent, so Better Auth never reads
 `x-forwarded-for` itself.
 
-| Route                                                    | Limit per address      |
-| -------------------------------------------------------- | ---------------------- |
-| `/api/auth/sign-in/*`                                    | 3 requests a minute    |
-| `/api/auth/request-password-reset`                       | 2 requests a minute    |
-| `/api/auth/reset-password` and the emailed link under it | 3 requests a minute    |
-| `/api/auth/get-session`                                  | not limited            |
-| any other `/api/auth/*` route                            | Better Auth's defaults |
+| Route                                                    | Requests let through per address |
+| -------------------------------------------------------- | -------------------------------- |
+| `/api/auth/sign-in/*`                                    | 3                                |
+| `/api/auth/request-password-reset`                       | 2                                |
+| `/api/auth/reset-password` and the emailed link under it | 3                                |
+| `/api/auth/get-session`                                  | not limited                      |
+| any other `/api/auth/*` route                            | Better Auth's defaults           |
 
-Paths are under your `basePath` (`/cms` by default). A minute is counted from
-the last request that was let through. Better Auth's defaults for the other
+Paths are under your `basePath` (`/cms` by default). A count resets only once a
+full minute passes with no request let through, and requests past the limit are
+refused until then: three sign-in attempts, then blocked until a minute passes
+with none allowed. Spacing attempts out does not reset it, so a sign-in every
+50 seconds is refused on the fourth. Better Auth's defaults for the other
 routes are 100 requests per 10 seconds, with lower limits on a few such as
 `/change-password`.
 
-When no trusted address is known, every client shares one count per route. On
-a Node server without `trustProxy`, one client that sends three sign-in requests
-in a minute blocks sign-in for everyone until the minute passes. Better Auth
-also counts only a well-formed IPv4 or IPv6 address, and treats any other value
-as no address.
+When no client address is known, every client shares one count per route, and
+one client that sends three sign-in requests blocks sign-in for everyone until a
+minute passes. The same happens behind a proxy without `trustProxy`, where
+every client shares the proxy's address. Better Auth counts an IPv6 address by
+its `/64` network, the block one customer is usually given.
 
 ## Setting `trustProxy`
 
@@ -103,5 +119,6 @@ header and reports no address at all, rather than falling back to an entry it
 cannot vouch for: features keyed on the address stop seeing one, instead of
 quietly keying on something a client controls.
 
-The result is not checked for being a well-formed IP address. It is an opaque
-key, and an IPv6 address carrying a port or a zone is still a stable one.
+Astromech reads the entry without a port (`203.0.113.7:5678`) or IPv6
+brackets (`[2001:db8::1]:443`), and treats an entry that is not an IP address
+as no address at all, logging the first one it drops.

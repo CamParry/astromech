@@ -6,26 +6,42 @@
 
 import type { TrustProxy } from '@/types/index';
 import type { Context } from 'hono';
+import { isIP } from 'node:net';
 import { getRuntimeKey } from 'hono/adapter';
 import { getConfig } from '@/config/registry';
+import { globals } from '@/registry';
+import { log } from '@/utilities/log';
 
 /**
- * Read the connecting address, or undefined when no trusted source carries one.
- *
- * `cf-connecting-ip` needs no opt-in — Cloudflare overwrites it on every request
- * it proxies. `x-forwarded-for` is read only when the site sets
- * `security.trustProxy`, since a directly exposed server lets any client send it.
+ * The Hono bindings `Astromech.fetch` passes: `remoteAddress` is the address of
+ * the connection's peer, when the serving integration knows it.
  */
-export function getClientAddress(c: Context): string | undefined {
+export type ServerBindings = { remoteAddress?: string | undefined };
+
+/**
+ * Read the connecting address, or undefined when no trusted source carries one:
+ * `cf-connecting-ip` on Workers, `x-forwarded-for` only under
+ * `security.trustProxy`, and otherwise the connection's remote address on Node.
+ */
+export function getClientAddress<E extends { Bindings: ServerBindings }>(
+    c: Context<E>
+): string | undefined {
     // Trustworthy only on the runtime Cloudflare serves. A Node deployment
     // behind Cloudflare takes the `trustProxy` route below instead.
-    if (getRuntimeKey() === 'workerd') {
+    const workerd = getRuntimeKey() === 'workerd';
+    if (workerd) {
         const connectingIp = c.req.header('cf-connecting-ip');
         if (connectingIp !== undefined && connectingIp !== '') return connectingIp;
     }
 
     const trustProxy: TrustProxy = getConfig().security?.trustProxy ?? false;
-    if (trustProxy === false) return undefined;
+    if (trustProxy === false) {
+        // `app.request` in a test passes no bindings at all.
+        const bindings: ServerBindings | undefined = c.env;
+        const remoteAddress = bindings?.remoteAddress;
+        if (workerd || remoteAddress === undefined) return undefined;
+        return parseAddress(remoteAddress);
+    }
 
     return forwardedAddress(
         c.req.header('x-forwarded-for'),
@@ -48,7 +64,44 @@ function forwardedAddress(header: string | undefined, hops: number): string | un
         .filter((entry) => entry !== '');
 
     const index = entries.length - hops;
-    if (index < 0) return undefined;
+    const entry = entries[index];
+    if (entry === undefined) return undefined;
 
-    return entries[index];
+    return parseAddress(entry);
+}
+
+/**
+ * The IP address in `value`, without a port (`1.2.3.4:80`) or IPv6 brackets
+ * (`[::1]`, `[::1]:443`), or undefined when it holds none. A value that is
+ * dropped is logged, once per process.
+ */
+function parseAddress(value: string): string | undefined {
+    const address = stripPort(value);
+    if (address !== undefined && isIP(address) !== 0) return address;
+
+    const state = globals();
+    if (state.clientAddressDropLogged !== true) {
+        state.clientAddressDropLogged = true;
+        log.warn(
+            `Ignored the client address ${JSON.stringify(value)}, which is not an IP address. Check that \`security.trustProxy\` matches the proxies in front of the server. Further values are dropped without a message.`
+        );
+    }
+    return undefined;
+}
+
+/** `value` without a `:port` suffix or IPv6 brackets, or undefined when malformed. */
+function stripPort(value: string): string | undefined {
+    if (value.startsWith('[')) {
+        const close = value.indexOf(']');
+        if (close === -1) return undefined;
+        const rest = value.slice(close + 1);
+        if (rest !== '' && !/^:\d+$/.test(rest)) return undefined;
+        return value.slice(1, close);
+    }
+    // One colon is IPv4 with a port; more is a bare IPv6 address.
+    const colon = value.indexOf(':');
+    if (colon !== -1 && colon === value.lastIndexOf(':')) {
+        return /^\d+$/.test(value.slice(colon + 1)) ? value.slice(0, colon) : undefined;
+    }
+    return value;
 }

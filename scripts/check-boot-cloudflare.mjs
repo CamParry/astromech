@@ -28,7 +28,13 @@ import { mkdtemp, rm, writeFile } from 'node:fs/promises';
 import { constants, tmpdir } from 'node:os';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { expectStatus, freePort, request, sleep } from './check-helpers.mjs';
+import {
+    expectStatus,
+    freePort,
+    request,
+    REQUEST_TIMEOUT_MS,
+    sleep,
+} from './check-helpers.mjs';
 import { stopProcessGroup } from './process-group.mjs';
 import { requireFreshDist } from './require-fresh-dist.mjs';
 
@@ -95,6 +101,7 @@ async function main() {
         401,
         'the API rejects an anonymous read'
     );
+    await expectSignInRefused(base);
     // The endpoint wrangler exposes to fire `scheduled()` by hand. A 200 means
     // the Worker entry exported the handler and the tick reached the cron
     // table, which is the whole of the Cron Trigger path.
@@ -103,6 +110,30 @@ async function main() {
         200,
         'the Cron Trigger runs a tick'
     );
+}
+
+/**
+ * A sign-in with a password nobody has reaches Better Auth through the copy of
+ * the request that carries the client address, and is counted in D1 first. 401
+ * is the refused password; a 500 is the copy or the count failing on workerd.
+ */
+async function expectSignInRefused(base) {
+    const url = `${base}/cms/api/auth/sign-in/email`;
+    const response = await fetch(url, {
+        method: 'POST',
+        // Better Auth refuses a sign-in without an `Origin` it trusts. With no
+        // `BETTER_AUTH_URL` here, it trusts the origin the request came to.
+        headers: { 'Content-Type': 'application/json', Origin: base },
+        body: JSON.stringify({ email: 'nobody@example.com', password: 'not-a-password' }),
+        redirect: 'manual',
+        signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
+    });
+    if (response.status !== 401) {
+        throw new Error(
+            `${url} returned ${response.status}, expected 401 — a sign-in is counted and refused`
+        );
+    }
+    console.log(`  ok  401 ${url} — a sign-in is counted and refused`);
 }
 
 function step(message) {

@@ -6,6 +6,7 @@
  */
 
 import type { AuthVariables } from './middleware/auth';
+import type { ServerBindings } from '@/transport/http/client-address';
 import type { ResolvedConfig } from '@/types/index';
 import { swaggerUI } from '@hono/swagger-ui';
 import { OpenAPIHono, z } from '@hono/zod-openapi';
@@ -34,7 +35,7 @@ import { createPluginsRouter } from './routes/plugins';
 import { rpcRouter } from './routes/rpc';
 import { usersRouter } from './routes/users';
 
-type AppEnv = { Variables: AuthVariables };
+type AppEnv = { Bindings: ServerBindings; Variables: AuthVariables };
 
 /**
  * Compose the API surface under `${config.basePath}/api`. Hono runs matching
