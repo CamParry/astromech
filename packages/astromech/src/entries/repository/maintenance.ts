@@ -4,8 +4,6 @@
  * the per-type repository contract; keeping them here keeps raw DB out of jobs.
  */
 
-import { decodeWith } from '@/database/codec';
-import { getDb } from '@/database/registry';
 import { createRepository } from '@/database/repository/create-repository';
 import { entriesTable, entryContentTable } from '@/database/tables';
 
@@ -23,39 +21,28 @@ export type EntryMaintenanceRepository = ReturnType<
 
 function createEntryMaintenanceRepository() {
     const entries = createRepository(entriesTable);
+    const contents = createRepository(entryContentTable);
 
     /**
      * Every canonical content row of a live entry that is scheduled and whose
      * publish time has passed, for the `scheduled-publish` job to publish.
      */
     async function findDueScheduled(now: Date): Promise<DueScheduledEntry[]> {
-        // Raw: the trash filter lives on the entry row, which the `where` DSL
-        // cannot reach from `entry_content`.
-        const rows = await getDb()
-            .selectFrom('entryContent')
-            .innerJoin('entries', 'entries.id', 'entryContent.entryId')
-            .select([
-                'entries.type',
-                'entryContent.entryId as id',
-                'entryContent.locale',
-                'entryContent.publishedAt',
-            ])
-            .where((eb) =>
-                eb.and([
-                    eb('entryContent.status', '=', 'scheduled'),
-                    eb('entryContent.publishedAt', '<=', now.toISOString()),
-                    // Canonical rows only: a staged change publishes at its merge.
-                    eb('entryContent.stagedFor', 'is', null),
-                    eb('entries.deletedAt', 'is', null),
-                ])
-            )
-            .execute();
-        return rows.map((row) => {
-            const { publishedAt } = decodeWith(entryContentTable, {
-                publishedAt: row.publishedAt,
-            });
-            return { ...row, publishedAt };
+        const rows = await contents.findMany({
+            where: {
+                status: 'scheduled',
+                publishedAt: { lte: now },
+                // Canonical rows only: a staged change publishes at its merge.
+                stagedFor: null,
+                trashed: false,
+            },
         });
+        return rows.map((row) => ({
+            type: row.type,
+            id: row.entryId,
+            locale: row.locale,
+            publishedAt: row.publishedAt,
+        }));
     }
 
     /**

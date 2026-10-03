@@ -5,7 +5,7 @@
  */
 
 import type { UseMutationResult } from '@tanstack/react-query';
-import type { Entry, EntryQueryParams } from 'astromech';
+import type { EntryQueryParams } from 'astromech';
 import { mutationOptions, queryOptions, useQuery } from '@tanstack/react-query';
 import { AstromechApiError, astromechUntypedClient } from 'astromech/fetch';
 import { useTranslation } from 'react-i18next';
@@ -122,10 +122,10 @@ export function entryMutations(type: string, name: string = type) {
                 messageValues,
             },
         }),
-        /** Takes the trashed row, so `useRestoreEntry` can say when its slug changed. */
+        /** Resolves with the slugs the restore changed; `useRestoreEntries` toasts. */
         restore: mutationOptions({
             mutationKey: [...all, 'restore'],
-            mutationFn: ({ id }: TrashedEntry) => entries.restore({ type, id }),
+            mutationFn: (id: string) => restoreEntries(type, [id]),
             meta: { invalidates, errorMessage: 'entries.restoreFailed', messageValues },
         }),
         bulkTrash: mutationOptions({
@@ -148,12 +148,8 @@ export function entryMutations(type: string, name: string = type) {
         }),
         bulkRestore: mutationOptions({
             mutationKey: [...all, 'bulkRestore'],
-            mutationFn: (ids: string[]) => entries.restore({ type, ids }),
-            meta: {
-                invalidates,
-                successMessage: 'entries.bulkRestored',
-                errorMessage: 'entries.restoreFailed',
-            },
+            mutationFn: (ids: string[]) => restoreEntries(type, ids),
+            meta: { invalidates, errorMessage: 'entries.restoreFailed' },
         }),
         bulkPublish: mutationOptions({
             mutationKey: [...all, 'bulkPublish'],
@@ -242,32 +238,85 @@ export function entryMutations(type: string, name: string = type) {
     };
 }
 
-/** The trashed row a restore is asked for, as the trash list shows it. */
-type TrashedEntry = Pick<Entry, 'id' | 'locale' | 'slug'>;
+/** A locale whose slug a restore changed, because another entry took the old one. */
+type ChangedSlug = { locale: string; slug: string | null };
 
 /**
- * Restore one trashed entry and toast the result. A restored entry whose slug
- * another entry took while it was in the trash gets the next free one, and the
- * toast names it.
+ * Restore `ids` in one request, and answer the slugs that changed in any locale,
+ * read from every locale of each entry before and after.
  */
-export function useRestoreEntry(
+async function restoreEntries(type: string, ids: string[]): Promise<ChangedSlug[]> {
+    const entries = astromechUntypedClient.entries;
+    // One read per id: a list of ids has no query-string form.
+    const read = (trashed: boolean) =>
+        Promise.all(
+            ids.map((id) =>
+                entries.query({
+                    type,
+                    where: { id },
+                    locale: 'all',
+                    limit: 'all',
+                    full: true,
+                    trashed,
+                })
+            )
+        );
+    const before = new Map(
+        (await read(true))
+            .flatMap((page) => page.data)
+            .map((entry) => [`${entry.id}:${entry.locale}`, entry.slug])
+    );
+    await entries.restore({ type, ids });
+    return (await read(false))
+        .flatMap((page) => page.data)
+        .filter((entry) => {
+            const key = `${entry.id}:${entry.locale}`;
+            return before.has(key) && before.get(key) !== entry.slug;
+        })
+        .map(({ locale, slug }) => ({ locale, slug }));
+}
+
+/**
+ * Restore one entry (`restore`) or a selection (`bulkRestore`), and toast the
+ * result: unpublished when the type has statuses, and every slug that changed
+ * because another entry took the old one while the entry was in the trash.
+ */
+export function useRestoreEntries(
     type: string,
-    name: string = type
-): UseMutationResult<Entry, Error, TrashedEntry> {
+    options: { name: string; statuses: boolean; translatable: boolean }
+): {
+    restore: UseMutationResult<ChangedSlug[], Error, string>;
+    bulkRestore: UseMutationResult<ChangedSlug[], Error, string[]>;
+} {
+    const { name, statuses, translatable } = options;
     const { toast } = useToast();
     const { t } = useTranslation();
-    return useAdminMutation(entryMutations(type, name).restore, {
-        onSuccess: (restored, trashed) => {
-            const slugChanged =
-                restored.locale === trashed.locale && restored.slug !== trashed.slug;
-            toast({
-                message: slugChanged
-                    ? t('entries.restoredWithNewSlug', { name, slug: restored.slug })
-                    : t('entries.restored', { name }),
-                variant: 'success',
-            });
-        },
-    });
+    const mutations = entryMutations(type, name);
+
+    function report(changed: ChangedSlug[], bulk: boolean): void {
+        const restored = bulk
+            ? t(statuses ? 'entries.bulkRestoredUnpublished' : 'entries.bulkRestored')
+            : t(statuses ? 'entries.restoredUnpublished' : 'entries.restored', { name });
+        const slugs = changed
+            .map(({ locale, slug }) => (translatable ? `${slug} (${locale})` : slug))
+            .join(', ');
+        toast({
+            message:
+                changed.length === 0
+                    ? restored
+                    : `${restored} ${t('entries.restoredNewSlugs', { count: changed.length, slugs })}`,
+            variant: 'success',
+        });
+    }
+
+    return {
+        restore: useAdminMutation(mutations.restore, {
+            onSuccess: (changed) => report(changed, false),
+        }),
+        bulkRestore: useAdminMutation(mutations.bulkRestore, {
+            onSuccess: (changed) => report(changed, true),
+        }),
+    };
 }
 
 /** Resolve a create-staged conflict as `null`, and rethrow anything else. */

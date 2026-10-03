@@ -13,10 +13,11 @@ import { entryRepository } from '../repository/entries-table';
 import { entrySchema } from '../schema';
 
 /**
- * Takes one `id` or a list of `ids`, restored atomically with every locale, and
- * answers each one's default-locale row. While still in the trash, each locale
- * is set `unpublished` through the update path, firing the update hooks, and
- * takes the next free slug if its own was taken meanwhile.
+ * Takes one `id` or a list of `ids` and answers each one's default-locale row.
+ * Each locale is first set `unpublished` through the update path, firing the
+ * update hooks, and takes the next free slug if its own was taken meanwhile.
+ * Those writes commit one by one while the entries are still in the trash; one
+ * transaction then takes the whole batch out, so nothing goes live before it.
  */
 export const restoreEntries = defineServiceMethod({
     summary: 'Restore a trashed entry.',

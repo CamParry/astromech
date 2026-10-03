@@ -234,6 +234,12 @@ async function updateOne(params: {
     const entry = staged
         ? await entryRepository.staging.update(ref, write)
         : await entryRepository.update(ref, write);
+    if (!staged && slug !== undefined && slug !== currentEntry.slug) {
+        await entryRepository.updateStagedSlug(ref, {
+            from: currentEntry.slug,
+            to: slug,
+        });
+    }
     if (fields) {
         await syncEntryRelationships(config, entry, entryType.id);
         // A staged row is not one of the entry's locales, so its shared fields

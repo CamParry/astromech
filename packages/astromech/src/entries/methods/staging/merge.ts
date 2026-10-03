@@ -15,9 +15,10 @@ import { entrySchema } from '../../schema';
 
 /**
  * Checks the staged fields at the canonical row's status, versions the canonical
- * when the type keeps versions, overwrites its title, slug and fields, and discards
- * the staged change. A staged slug a live entry took meanwhile takes the next free
- * one. The status stays: publishing is a separate call.
+ * when the type keeps versions, overwrites its title and fields, and discards the
+ * staged change. A staged slug that differs from the canonical's replaces it, or
+ * the next free one if a live entry took it meanwhile. The status stays:
+ * publishing is a separate call.
  */
 export const mergeStagedEntry = defineServiceMethod({
     summary: 'Merge the staged change into an entry.',

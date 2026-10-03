@@ -40,8 +40,10 @@ the repository copies.
 - [x] **A staged slug is lost at merge.** `entries/methods/staging/merge.ts`
       writes only the staged `title` and `fields`. Carry the slug, or refuse a
       slug in a staged write. Carried: a staged write already stores a slug,
-      and the admin shows the slug field on a staged change. A slug a live
-      entry took meanwhile takes the next free one.
+      and the admin shows the slug field on a staged change. A live slug
+      change (update, version restore, restore) also moves a staged slug that
+      still holds the old one, so the merge carries only an edited slug, and
+      one a live entry took meanwhile takes the next free one.
 - [x] **The command palette ignores read permissions.** It rebuilds the sidebar's
       nav (`packages/admin/src/components/ui/command-palette.tsx`) without
       `canReadMedia`/`canReadUsers`, and omits globals and app pages. Build both

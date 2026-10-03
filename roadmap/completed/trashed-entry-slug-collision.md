@@ -50,9 +50,11 @@ make the other match:
 - [x] `restore` takes `uniqueSlug(slug, excludeId)` for each locale whose slug
       is now taken, and sets `unpublished` through `updateEntryBatch`, so the
       update hooks fire and `publishedAt` follows the one rule. Check what the
-      admin's restore action shows when a slug changed. The update runs while
-      the entry is still in the trash, so a failed hook leaves nothing live;
-      a batch keeps two restored entries from taking one slug. The admin said
+      admin's restore action shows when a slug changed. The updates commit one
+      by one while the entry is still in the trash, so a restore is not
+      atomic, but nothing goes live until the final transaction takes the
+      batch out of the trash; a batch keeps two restored entries from taking
+      one slug. The admin said
       only "restored", and now names the new slug. The redirects plugin's
       slug-change hook skips a trashed entry, which would otherwise have
       redirected the old path, now another entry's, to the restored one.

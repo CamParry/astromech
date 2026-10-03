@@ -65,8 +65,8 @@ The same applies to `Astromech.users.update()` and `Astromech.media.update()`.
 titled "Same" takes `same` even while an older "Same" is in the trash.
 Restoring sets every locale `unpublished`, through the same update path as any
 status change, so the update hooks fire. A locale whose slug another entry took
-meanwhile gets the next free one (`same-2`). The admin's restore message names
-the new slug. Emptying the trash deletes its entries for good.
+meanwhile gets the next free one (`same-2`). The admin's restore message says the
+entry is unpublished and names any new slug. Emptying the trash deletes its entries for good.
 
 ## Splitting a type into its own module
 

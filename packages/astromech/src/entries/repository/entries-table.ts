@@ -334,6 +334,10 @@ function createEntryRepository() {
         },
 
         restore: async (id: string, actor?: string | null): Promise<EntryResource> => {
+            // Rows first: on D1, with no transaction, a slug-index failure here
+            // must leave the entry in the trash rather than live with rows that
+            // still read as trashed.
+            await writeTrashed(id, false);
             // Guarded *and* returning: not expressible through the wrapper's
             // primary-key `update` / count-returning `updateMany`.
             await getDb()
@@ -349,7 +353,6 @@ function createEntryRepository() {
                     eb.and([eb('id', '=', id), eb('deletedAt', 'is not', null)])
                 )
                 .executeTakeFirstOrThrow();
-            await writeTrashed(id, false);
 
             const restored = await content.findAnyLocale(id);
             if (!restored) throw new ResourceNotFoundError('entry', { id: id });
@@ -371,6 +374,31 @@ function createEntryRepository() {
             .updateTable('entryContent')
             .set(encodePatchWith(entryContentTable, { trashed }))
             .where('entryId', '=', id)
+            .execute();
+    }
+
+    /**
+     * Move a locale's staged slug from `from` to `to` when it still holds `from`,
+     * the copy `createStaged` made, so a merge keeps a live slug change. An
+     * edited staged slug is left alone. Raw, so the draft's `updatedAt` stays.
+     */
+    async function updateStagedSlug(
+        ref: { id: string; locale: string },
+        slugs: { from: string | null; to: string | null }
+    ): Promise<void> {
+        await getDb()
+            .updateTable('entryContent')
+            .set(encodePatchWith(entryContentTable, { slug: slugs.to }))
+            .where((eb) =>
+                eb.and([
+                    eb('entryId', '=', ref.id),
+                    eb('locale', '=', ref.locale),
+                    eb('stagedFor', 'is not', null),
+                    slugs.from === null
+                        ? eb('slug', 'is', null)
+                        : eb('slug', '=', slugs.from),
+                ])
+            )
             .execute();
     }
 
@@ -427,6 +455,7 @@ function createEntryRepository() {
         trash,
         versions: content.versions,
         staging: content.staging,
+        updateStagedSlug,
         translatable: content.translatable,
         previewToken,
         findEntryRowsByType,
