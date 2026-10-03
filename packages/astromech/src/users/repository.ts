@@ -132,8 +132,8 @@ function createUserRepository() {
 
     /**
      * One user in `locale` (the default when absent). With `fallbackLocale`, a
-     * miss reads that locale, then any locale the user has; a user with no
-     * content row reads as null.
+     * miss reads that locale, then any locale the user has (media stops at the
+     * fallback, so each keeps its own); a user with no content row reads null.
      */
     async function findOne(
         id: string,
@@ -207,10 +207,13 @@ function createUserRepository() {
      */
     async function del(id: string): Promise<void> {
         // Relationship rows first: deleting the user row is what orphans them.
+        // Not in `content.delete`: entries drop theirs in their services instead.
         await relationshipRepository.deleteByResource(id, 'user');
         await content.delete(id);
     }
 
+    // Hand-picked, never spread (`DECISIONS.md`, "Resource repositories do not
+    // extend a base"), so a content-repository change reaches no resource unasked.
     return {
         findOne,
         findAnyLocale: content.findAnyLocale,
@@ -233,7 +236,10 @@ function createUserRepository() {
         createIfEmpty,
         createCredentialAccount,
         update: content.update,
-        /** Write the `users` row columns, whatever the locale. */
+        /**
+         * Write the `users` row columns, whatever the locale. Kept per resource: the
+         * patch type names this table's columns.
+         */
         updateUserRow: async (id: string, patch: UserRowPatch): Promise<void> => {
             await resourceRows.update(id, patch);
         },

@@ -2,7 +2,7 @@
 
 From a read-only review of every package (2026-09-27). Paths are under
 `packages/astromech/src/` unless they name a package. `completed/service-method-readability.md`
-holds the method-level fixes; `planned/media-users-repository-copies.md` holds
+holds the method-level fixes; `completed/media-users-repository-copies.md` holds
 the repository copies.
 
 ## Defects to confirm with a test first
@@ -54,6 +54,12 @@ the repository copies.
       and access string. `DECISIONS.md` rejected a `createVersionsMethods`
       factory; revisit that for these two, whose addressing and output shape
       match.
+- [ ] **Each resource drops its relationship rows on delete in its own place.**
+      Media and users do it in their repository's `delete`; entries do it in
+      `emptyTrash` (`entries/methods/empty-trash.ts`), `deleteEntryBatch`
+      (`entries/internal/delete-batch.ts`) and `trashPurgeJob`
+      (`entries/jobs/trash-purge.ts`). Move the drop into the content
+      repository's `delete`, which changes entries too.
 - [ ] **Entries build their own relationship index.** `entries/relationships.ts`
       repeats `createContentRelationships` (`content/relationships.ts`) plus three
       repository reads only it uses. Add a type filter and bind entries through

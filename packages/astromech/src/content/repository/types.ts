@@ -171,9 +171,15 @@ export type ContentRepository<
     whereDefaultLocale(
         conditions: (eb: Parameters<JoinedWhere>[0]) => Expression<SqlBool>[]
     ): JoinedWhere;
-    /** Every content row written in `locale`, staged rows included. */
+    /**
+     * Every content row written in `locale`, staged rows included. Skips the
+     * resource filter, so for entries it would return trashed rows too.
+     */
     findByLocale(locale: string): Promise<R[]>;
-    /** The resource rows for `ids`, in slices small enough for one `IN (…)` each. */
+    /**
+     * The resource rows for `ids`, in slices small enough for one `IN (…)` each.
+     * Skips the resource filter, so for entries it would return trashed rows too.
+     */
     findResourceRows(ids: Iterable<string>): Promise<TableSelect<O>[]>;
     /** Insert the resource row and its first content row. */
     create(resourceRow: Record<string, unknown>, content: ContentWrite): Promise<R>;

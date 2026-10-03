@@ -176,8 +176,9 @@ function createMediaRepository() {
     }
 
     /**
-     * One media item in `locale` (the default when absent). With
-     * `fallbackLocale`, a miss reads that locale instead.
+     * One media item in `locale` (the default when absent). With `fallbackLocale`,
+     * a miss reads that locale instead. Kept per resource: a user's read then
+     * falls back to any locale too.
      */
     async function findOne(
         id: string,
@@ -205,10 +206,13 @@ function createMediaRepository() {
      * item that is gone.
      */
     async function del(id: string): Promise<void> {
+        // Not in `content.delete`: entries drop theirs in their services instead.
         await relationshipRepository.deleteByResource(id, 'media');
         await content.delete(id);
     }
 
+    // Hand-picked, never spread (`DECISIONS.md`, "Resource repositories do not
+    // extend a base"), so a content-repository change reaches no resource unasked.
     return {
         findOne,
         findAnyLocale: content.findAnyLocale,
@@ -222,7 +226,10 @@ function createMediaRepository() {
         findFiles: content.findResourceRows,
         create,
         update: content.update,
-        /** Write the file-row columns, whatever the locale. */
+        /**
+         * Write the file-row columns, whatever the locale. Kept per resource: the
+         * patch type names this table's columns.
+         */
         updateFile: async (id: string, patch: MediaFilePatch): Promise<void> => {
             await resourceRows.update(id, patch);
         },
