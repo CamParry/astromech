@@ -26,7 +26,7 @@ not what it wrote".
 
 - [x] **Decide what a row holds.** Method id, resource type, target ids, user id
       (no foreign key), the user's email, origin, outcome, time, and the
-      version the write took. No payloads.
+      history record the write took (`roadmap/planned/history.md`). No payloads.
 - [x] **Decide whether core's log absorbs the approval rows or references them.**
       References: the approval row points to the core row of the call it
       allowed.

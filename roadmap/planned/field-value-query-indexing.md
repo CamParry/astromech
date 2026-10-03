@@ -1,5 +1,7 @@
 # Field-Value Query Indexing
 
+> **Follows `roadmap/planned/drafts.md`** (decided 2026-10-03): staged changes become drafts in their own table, so revise the staging parts of this file before building it.
+
 Filtering and sorting entries by a value inside their own field data — "all
 posts where `featured` is true", "products ordered by `price`".
 

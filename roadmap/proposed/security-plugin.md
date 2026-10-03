@@ -1,8 +1,8 @@
 # `@astromech/security`
 
 Policies a site opts into on top of core's security mechanisms
-(`roadmap/proposed/core-security.md`, which also states the core-or-plugin
-rule). Raised on 2026-10-03 from WPMU DEV Defender, Wordfence and Solid
+(`roadmap/planned/core-security.md`). The line between them is
+`DECISIONS.md`, "Security in core is defaults and shared mechanisms". Raised on 2026-10-03 from WPMU DEV Defender, Wordfence and Solid
 Security. **Target: after 1.0.**
 
 ## Candidates

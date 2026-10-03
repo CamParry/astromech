@@ -1,5 +1,7 @@
 # Naming conventions
 
+> **Follows `roadmap/planned/drafts.md`** (decided 2026-10-03): staged changes become drafts in their own table, so revise the staging parts of this file before building it.
+
 The `code` skill fixes `get*` as "returns the thing, throws when absent". Read
 cold, a `get*` call used only for its throw looks like a read with an unused
 result. Paths below are under `packages/astromech/src/` unless they say

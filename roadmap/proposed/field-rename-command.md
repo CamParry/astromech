@@ -17,14 +17,14 @@ them, but nothing moves them. Raised on 2026-10-03. **Target: 1.0.**
 ## Proposal
 
 - `astromech entries:rename-field <type> <from> <to>`, with a dry run that
-  counts the rows it would change. It covers every locale, versions and staged
+  counts the rows it would change. It covers every locale, history and drafts
   changes, and the same for globals.
 - The docs on fields say that renaming a field leaves its values behind, and
   point at the command.
 
 ## Open questions
 
-- Does the command rewrite stored versions too, or leave history as it was?
+- Does the command rewrite history records too, or leave history as it was?
 - Does it cover a field nested in a group, repeater or block (a path rather
   than a name)?
 - Is the relationship index rebuilt when the field is a `relationship`?

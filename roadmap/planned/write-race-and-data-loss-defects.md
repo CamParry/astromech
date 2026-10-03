@@ -1,5 +1,7 @@
 # Write-race and data-loss defects
 
+> **Follows `roadmap/planned/drafts.md`** (decided 2026-10-03): staged changes become drafts in their own table, so revise the staging parts of this file before building it.
+
 Items 1 to 8 of a comparison with Matt Pocock's course-video-manager
 (https://github.com/mattpocock/course-video-manager, commit `58b4c0e`), and the
 two gaps in the former `entry-hook-contract-gaps.md`, confirmed open on main at

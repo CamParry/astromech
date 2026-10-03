@@ -15,7 +15,7 @@ ready. Raised on 2026-10-03. **Target: 1.0.** Depends on
 
 ## Proposal
 
-- A "Request review" action on a draft or staged changes, for a user without
+- A "Request review" action on an unpublished entry or a draft, for a user without
   `publish`.
 - It notifies every user who can publish that entry, and the entry shows as
   awaiting review in the list.

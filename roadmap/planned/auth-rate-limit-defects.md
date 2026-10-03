@@ -1,7 +1,7 @@
 # Rate limits count the wrong thing
 
 Found on 2026-10-03 while researching login security
-(`roadmap/proposed/core-security.md`). Every per-client limit in Astromech
+(`roadmap/planned/core-security.md`). Every per-client limit in Astromech
 either does not run, counts a client-chosen address, or counts within one
 Workers isolate.
 
@@ -23,13 +23,12 @@ Workers isolate.
   `globalThis` Map.
 
 The class: any counter or client address that is not the one trusted address
-and the one database-backed store. This file absorbs the backlog item on the
-forms limit having no trustworthy address on self-hosted Node.
+and the one database-backed store. The trusted address already exists
+(`security.trustProxy`, `packages/astromech/src/transport/http/client-address.ts`);
+Better Auth and the forms limit do not use it.
 
 ## The work
 
-- [ ] A trusted-proxy setting for Node, so `client-address.ts` gives one
-      trusted address on every runtime.
 - [ ] Pass that address to Better Auth (`advanced.ipAddress`, or a private
       header Astromech strips from incoming requests and then sets), so sign-in
       limits and stored session addresses use it.
