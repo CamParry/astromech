@@ -36,10 +36,11 @@ forms({
 
 ### Options
 
-| option      | type           | default | meaning                                           |
-| ----------- | -------------- | ------- | ------------------------------------------------- |
-| `spam`      | `SpamProvider` | none    | Enables spam protection. See below.               |
-| `storeMeta` | `boolean`      | `true`  | Store `ip` / `userAgent` / `referer` on each row. |
+| option      | type                           | default                          | meaning                                                                          |
+| ----------- | ------------------------------ | -------------------------------- | -------------------------------------------------------------------------------- |
+| `spam`      | `SpamProvider`                 | none                             | Enables spam protection. See below.                                              |
+| `storeMeta` | `boolean`                      | `true`                           | Store `ip` / `userAgent` / `referer` on each row.                                |
+| `rateLimit` | `{ limit, windowMs } \| false` | `{ limit: 20, windowMs: 60000 }` | Submissions per connecting address and form per window, counted in the database. |
 
 ## Layout
 
@@ -49,7 +50,8 @@ forms/
   src/types.ts                       FormsOptions, FORM_FIELD_KINDS, FORMS_PACKAGE
   src/entries/form.ts                the `form` entry type — fields, notifications and spam tabs
   src/tables/submissions.ts          definePluginTable — the `submissions` table
-  src/repository.ts                  the submissions repository, built per call from ctx.db
+  src/tables/rate-limits.ts          definePluginTable — the submission rate limit's counts
+  src/repository.ts                  the submissions and rate limit repositories, built per call from ctx.db
   src/fields.ts                      the fields a stored submission is displayed through
   src/resources/submissions.ts       the Submissions admin resource
   src/permissions/forms.ts           the read and delete permissions over submissions
@@ -57,6 +59,7 @@ forms/
   src/fields/compile.ts              stored blocks -> core Field[]
   src/service/forms.ts               the public `get` and `submit` methods, and their output schemas
   src/service/submissions.ts         listSubmissions, getSubmission, deleteSubmission, and their output schemas
+  src/service/rate-limit.ts          the submission rate limit, counted per address and form
   src/hooks/events.ts                forms:beforeSubmit / forms:afterSubmit payloads
   src/notifications/                 one provider per notification kind (see below)
   src/spam/                          one provider per spam service (see below)

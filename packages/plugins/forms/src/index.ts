@@ -13,11 +13,12 @@ import { formsPermissions } from './permissions/forms';
 import { submissionsResource } from './resources/submissions';
 import { createFormsService } from './service/forms';
 import { spamHook } from './spam/hook';
+import { rateLimitsTable } from './tables/rate-limits';
 import { submissionsTable } from './tables/submissions';
 import { FORMS_PACKAGE } from './types';
 
 /** Listed once: the definition and the `AstromechPluginTables` augmentation both read it. */
-const tables = [submissionsTable] as const;
+const tables = [submissionsTable, rateLimitsTable] as const;
 
 declare module 'astromech' {
     // eslint-disable-next-line @typescript-eslint/consistent-type-definitions

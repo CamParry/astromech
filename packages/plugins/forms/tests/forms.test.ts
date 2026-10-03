@@ -38,7 +38,6 @@ import { PermissionDeniedError } from '@/errors/permission';
 import { defineHook } from '@/plugins/define-hook';
 import { forms, turnstile } from '../src/index';
 import { createSubmissionsRepository } from '../src/repository';
-import { resetRateLimit } from '../src/service/rate-limit';
 import { getSubmission as getSubmissionMethod } from '../src/service/submissions';
 
 const FORM = 'forms/form';
@@ -84,10 +83,6 @@ async function setup(options?: FormsOptions): Promise<void> {
     // `FIRST_PARTY_PLUGIN_MIGRATIONS`. Emitting the table from its `Table`
     // here instead would test a table the migrations might not actually
     // produce.
-    // The submit rate limit counts in a process-wide map. These calls carry no
-    // connecting address, so they go unmetered — the reset only clears a
-    // counter another test file may have left behind.
-    resetRateLimit();
     sent = [];
     app = await createPluginTestApp('forms', configWithForms(options));
 }
