@@ -4,7 +4,7 @@ What a site gets out of the box against password guessing, abusive clients and
 bots, before anyone installs a plugin. Raised on 2026-10-03 from WPMU DEV
 Defender; decided the same day. **Target: 1.0.**
 
-Prerequisites: `roadmap/planned/auth-rate-limit-defects.md` (one trusted client
+Prerequisites: `roadmap/completed/auth-rate-limit-defects.md` (one trusted client
 address and database-backed limits) and
 `roadmap/planned/account-security-defects.md`. Suspension, two-factor sign-in
 and API keys are `roadmap/planned/user-suspension.md`,

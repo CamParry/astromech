@@ -23,19 +23,34 @@ Workers isolate.
   `globalThis` Map.
 
 The class: any counter or client address that is not the one trusted address
-and the one database-backed store. The trusted address already exists
+and the one database-backed store. The trusted address already existed
 (`security.trustProxy`, `packages/astromech/src/transport/http/client-address.ts`);
-Better Auth and the forms limit do not use it.
+Better Auth and the forms limit did not use it.
 
 ## The work
 
-- [ ] Pass that address to Better Auth (`advanced.ipAddress`, or a private
+- [x] A trusted-proxy setting for Node, so `client-address.ts` gives one
+      trusted address on every runtime. `security.trustProxy` existed; it is
+      now validated, and without it a Node site counts the connection's
+      address unless Astro's `security.allowedDomains` makes that forgeable.
+- [x] Pass that address to Better Auth (`advanced.ipAddress`, or a private
       header Astromech strips from incoming requests and then sets), so sign-in
       limits and stored session addresses use it.
-- [ ] Turn Better Auth's limiter on explicitly with `storage: "database"`,
+- [x] Turn Better Auth's limiter on explicitly with `storage: "database"`,
       strict `customRules` for sign-in and password reset, and `/get-session`
       turned off, so D1 is not written on every admin page load.
-- [ ] Move the forms rate limit onto the same database store.
-- [ ] Tests: a forged `x-forwarded-for` on Node without a trusted proxy does
+- [x] Move the forms rate limit onto the same database store. Done as its own
+      plugin table (`plugin_forms_rate_limits`), not Better Auth's, which
+      prunes rows idle over a minute; keyed by `rateLimitKey` (IPv6 by /64).
+- [x] Tests: a forged `x-forwarded-for` on Node without a trusted proxy does
       not change the counted address; the limiter runs with `NODE_ENV` unset;
       two app instances share one count.
+
+## Left open
+
+- `cf-connecting-ip` on workerd is used without the IP check other sources
+  get; Cloudflare sets it, so the risk is low.
+- An IPv6 zone id (`fe80::1%eth0`) passes the check but Better Auth rejects it,
+  so such a client shares the no-address count for sign-in.
+- The forms upsert was run by hand on local D1 only; `apps/demo-cloudflare`
+  installs no forms plugin, so no check covers it.
