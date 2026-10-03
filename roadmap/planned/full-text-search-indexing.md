@@ -69,7 +69,7 @@ named groups rather than read only the top-level keys: a named `tab` or
 field, where `translatable` is refused.
 
 Trashed and staged rows are indexed and filtered out in the query, by the
-trashed flag `entry_content` gains in `trashed-entry-slug-collision.md` and by
+`entry_content.trashed` flag ([trashed-entry-slug-collision](../completed/trashed-entry-slug-collision.md)) and by
 the existing `stagedFor IS NULL`, so a restore needs no reindex.
 
 Settled in the same pass:

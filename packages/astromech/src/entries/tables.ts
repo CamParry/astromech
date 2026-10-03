@@ -55,6 +55,9 @@ export const entryContentTable = defineTable(
         stagedFor: col.reference((): Table => entryContentTable, {
             onDelete: 'no action',
         }),
+        // Copied from `entries.deletedAt` by the trash and restore writes: the
+        // slug-unique index below cannot reach across the join.
+        trashed: col.boolean({ notNull: true, default: false }),
         createdAt: col.timestamp({ notNull: true, defaultNow: true }),
         updatedAt: col.timestamp({ notNull: true, defaultNow: true, onUpdate: true }),
         createdBy: col.reference('users', { onDelete: 'set null' }),
@@ -70,7 +73,7 @@ export const entryContentTable = defineTable(
         }),
         index('entry_content_type_locale_slug_unique', ['type', 'locale', 'slug'], {
             unique: true,
-            where: 'staged_for IS NULL',
+            where: 'staged_for IS NULL AND trashed = 0',
         }),
     ]
 );

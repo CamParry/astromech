@@ -34,17 +34,25 @@ make the other match:
 
 ## The work
 
-- [ ] Write a failing test for the reproduction above.
+- [x] Write a failing test for the reproduction above.
 - [x] Decide which side changes, and record why in `DECISIONS.md`. Decided
       2026-10-02: trashing frees the slug, and restoring unpublishes
       (`DECISIONS.md`, "Trashing frees an entry's slug, and restoring
       unpublishes").
-- [ ] Add a trashed flag to `entry_content`, set and cleared for every locale
+- [x] Add a trashed flag to `entry_content`, set and cleared for every locale
       in the same transaction as `deletedAt`, and add it to
       `entry_content_type_locale_slug_unique`'s `WHERE`. Needs a migration
-      and a hand edit to the Cloudflare baseline.
-- [ ] `uniqueSlug` reads the flag instead of joining `entries`.
-- [ ] `restore` takes `uniqueSlug(slug, excludeId)` for each locale whose slug
+      and a hand edit to the Cloudflare baseline. The column is `trashed`; a
+      content row inserted into a trashed entry takes it from `deletedAt`, and
+      `apps/demo/migrations/0009_entry-content-trashed.ts` marks the rows of
+      entries already in the trash.
+- [x] `uniqueSlug` reads the flag instead of joining `entries`.
+- [x] `restore` takes `uniqueSlug(slug, excludeId)` for each locale whose slug
       is now taken, and sets `unpublished` through `updateEntryBatch`, so the
       update hooks fire and `publishedAt` follows the one rule. Check what the
-      admin's restore action shows when a slug changed.
+      admin's restore action shows when a slug changed. The update runs while
+      the entry is still in the trash, so a failed hook leaves nothing live;
+      a batch keeps two restored entries from taking one slug. The admin said
+      only "restored", and now names the new slug. The redirects plugin's
+      slug-change hook skips a trashed entry, which would otherwise have
+      redirected the old path, now another entry's, to the restored one.

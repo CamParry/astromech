@@ -4,9 +4,13 @@
  * `useAdminMutation` runs them.
  */
 
-import type { EntryQueryParams } from 'astromech';
+import type { UseMutationResult } from '@tanstack/react-query';
+import type { Entry, EntryQueryParams } from 'astromech';
 import { mutationOptions, queryOptions, useQuery } from '@tanstack/react-query';
 import { AstromechApiError, astromechUntypedClient } from 'astromech/fetch';
+import { useTranslation } from 'react-i18next';
+import { useToast } from '../components/ui/toast';
+import { useAdminMutation } from './use-admin-mutation';
 import { queryKeys } from './use-query-keys';
 
 /** One page of one entry type, keyed under `entries.all(type)` so every entry mutation refreshes it. */
@@ -118,15 +122,11 @@ export function entryMutations(type: string, name: string = type) {
                 messageValues,
             },
         }),
+        /** Takes the trashed row, so `useRestoreEntry` can say when its slug changed. */
         restore: mutationOptions({
             mutationKey: [...all, 'restore'],
-            mutationFn: (id: string) => entries.restore({ type, id }),
-            meta: {
-                invalidates,
-                successMessage: 'entries.restored',
-                errorMessage: 'entries.restoreFailed',
-                messageValues,
-            },
+            mutationFn: ({ id }: TrashedEntry) => entries.restore({ type, id }),
+            meta: { invalidates, errorMessage: 'entries.restoreFailed', messageValues },
         }),
         bulkTrash: mutationOptions({
             mutationKey: [...all, 'bulkTrash'],
@@ -240,6 +240,34 @@ export function entryMutations(type: string, name: string = type) {
             },
         }),
     };
+}
+
+/** The trashed row a restore is asked for, as the trash list shows it. */
+type TrashedEntry = Pick<Entry, 'id' | 'locale' | 'slug'>;
+
+/**
+ * Restore one trashed entry and toast the result. A restored entry whose slug
+ * another entry took while it was in the trash gets the next free one, and the
+ * toast names it.
+ */
+export function useRestoreEntry(
+    type: string,
+    name: string = type
+): UseMutationResult<Entry, Error, TrashedEntry> {
+    const { toast } = useToast();
+    const { t } = useTranslation();
+    return useAdminMutation(entryMutations(type, name).restore, {
+        onSuccess: (restored, trashed) => {
+            const slugChanged =
+                restored.locale === trashed.locale && restored.slug !== trashed.slug;
+            toast({
+                message: slugChanged
+                    ? t('entries.restoredWithNewSlug', { name, slug: restored.slug })
+                    : t('entries.restored', { name }),
+                variant: 'success',
+            });
+        },
+    });
 }
 
 /** Resolve a create-staged conflict as `null`, and rethrow anything else. */

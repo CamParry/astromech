@@ -22,7 +22,7 @@ export type RowActionsProps = {
     basePath: string;
     canDelete: boolean;
     hasTrashCap: boolean;
-    onRestore: (id: string) => void;
+    onRestore: (entry: Entry) => void;
     onConfirmDelete: (id: string, force: boolean) => void;
     onDuplicate: (id: string) => void;
     rowLabels: {
@@ -51,7 +51,7 @@ export function buildRowItems(props: RowActionsProps): DropdownItem[] {
         const items: DropdownItem[] = [
             {
                 label: rowLabels.restore,
-                onClick: () => onRestore(entry.id),
+                onClick: () => onRestore(entry),
                 icon: <RotateCcw size={14} />,
             },
         ];

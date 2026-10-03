@@ -64,6 +64,17 @@ describe('slug-change hook on a slug url template', () => {
         app = await createPluginTestApp('redirects', configWith('/blog/{slug}'));
     });
 
+    it('records nothing when a restore re-slugs an entry whose path another took', async () => {
+        const first = await app.entries.create({ type: 'post', data: { title: 'Same' } });
+        await app.entries.trash({ type: 'post', id: first.id });
+        await app.entries.create({ type: 'post', data: { title: 'Same' } });
+
+        const restored = await app.entries.restore({ type: 'post', id: first.id });
+
+        expect(restored.slug).toBe('same-2');
+        expect(await rules()).toEqual([]);
+    });
+
     it('records an enabled 301 from the old path to the new one', async () => {
         const post = await app.entries.create({ type: 'post', data: { title: 'Hello' } });
 

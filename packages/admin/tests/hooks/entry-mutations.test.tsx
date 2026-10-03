@@ -1,7 +1,8 @@
 /**
  * `entryMutations(type)` run through `useAdminMutation`: each write invalidates
- * the type's keys and toasts its result, bulk restore is one request, and a
- * staged change that already exists resolves as `null`.
+ * the type's keys and toasts its result, bulk restore is one request, a restore
+ * names a slug that changed, and a staged change that already exists resolves
+ * as `null`.
  *
  * @vitest-environment happy-dom
  */
@@ -9,7 +10,7 @@
 import { screen, waitFor } from '@testing-library/react';
 import { AstromechApiError } from 'astromech/fetch';
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { entryMutations } from '@/admin/hooks/entries';
+import { entryMutations, useRestoreEntry } from '@/admin/hooks/entries';
 import { useAdminMutation } from '@/admin/hooks/use-admin-mutation';
 import { queryKeys } from '@/admin/hooks/use-query-keys';
 import { createTestQueryClient, renderAdminHook } from '../_support/render-admin';
@@ -56,6 +57,22 @@ describe('entryMutations', () => {
             queryKey: queryKeys.entries.all('post'),
         });
         expect(await screen.findByText('Entries restored.')).toBeTruthy();
+    });
+
+    it.each([
+        ['same', 'Post restored.'],
+        [
+            'same-2',
+            'Post restored with the slug "same-2", because another entry now uses its old slug.',
+        ],
+    ])('toasts a restore that comes back with the slug %s', async (slug, message) => {
+        restore.mockResolvedValue({ id: 'a', locale: 'en', slug });
+        const { result } = mount(() => useRestoreEntry('post', 'Post'));
+
+        result.current.mutate({ id: 'a', locale: 'en', slug: 'same' });
+
+        expect(await screen.findByText(message)).toBeTruthy();
+        expect(restore).toHaveBeenCalledWith({ type: 'post', id: 'a' });
     });
 
     it('toasts the row that stopped a batch', async () => {

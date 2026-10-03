@@ -46,6 +46,11 @@
             "idx": 8,
             "tag": "0008_drop-version-status",
             "when": 1790513127212
+        },
+        {
+            "idx": 9,
+            "tag": "0009_entry-content-trashed",
+            "when": 1791017840620
         }
     ]
 }

@@ -15,7 +15,7 @@ import { useTranslation } from 'react-i18next';
 import adminConfig from 'virtual:astromech/admin-config';
 import { useAiContext } from '../../context/ai-context';
 import { useAuthorNames } from '../../hooks/author-names';
-import { entryMutations } from '../../hooks/entries';
+import { entryMutations, useRestoreEntry } from '../../hooks/entries';
 import { useAdminEntryType } from '../../hooks/use-admin-entry-type';
 import { useAdminMutation } from '../../hooks/use-admin-mutation';
 import { useIsMobile } from '../../hooks/use-is-mobile';
@@ -119,7 +119,7 @@ function EntriesListBody({
     const mutations = entryMutations(type, config.single);
     const trash = useAdminMutation(mutations.trash);
     const remove = useAdminMutation(mutations.delete);
-    const restore = useAdminMutation(mutations.restore);
+    const restore = useRestoreEntry(type, config.single);
     const duplicate = useAdminMutation(mutations.duplicate, {
         onSuccess: (entry) => openEntry(entry),
     });
@@ -208,7 +208,7 @@ function EntriesListBody({
         basePath,
         canDelete,
         hasTrashCap: capabilities.trash,
-        onRestore: (id) => restore.mutate(id),
+        onRestore: (entry) => restore.mutate(entry),
         onConfirmDelete: (id, force) => {
             const entry = list.data.find((row) => row.id === id);
             if (entry !== undefined) setDeleteTarget({ entry, force });

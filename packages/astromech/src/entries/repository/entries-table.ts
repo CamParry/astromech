@@ -216,9 +216,12 @@ function createEntryRepository() {
             contentTable: entryContentTable,
             versionsTable: entryVersionsTable,
             resourceIdColumn: 'entryId',
-            // `entry_content.type` is copied from `entries.type`: the slug-unique
-            // and list indexes cannot reach across the join.
-            inheritedColumns: ['type'],
+            // Copied onto `entry_content` because the slug-unique and list
+            // indexes cannot reach across the join.
+            inheritedColumns: {
+                type: (row) => row['type'],
+                trashed: (row) => row['deletedAt'] != null,
+            },
             insertDefaults: { title: '', slug: null },
         },
         {
@@ -231,39 +234,32 @@ function createEntryRepository() {
         }
     );
 
+    /**
+     * `baseSlug`, or the first of `base-2`, `base-3`, … that no other live
+     * entry of the type holds in `locale` and that is not in `reserved`.
+     * Staged and trashed rows hold no slug, matching the unique index.
+     */
     async function uniqueSlug(
         type: string,
         locale: string,
         baseSlug: string,
-        excludeId?: string
+        excludeId?: string,
+        reserved?: ReadonlySet<string>
     ): Promise<string> {
         let candidate = baseSlug;
         let counter = 1;
 
         while (true) {
-            // Raw: a join, because the slug of a trashed entry is free again and
-            // `deletedAt` now lives on the entry row.
-            const existing = await getDb()
-                .selectFrom('entryContent')
-                .innerJoin('entries', 'entries.id', 'entryContent.entryId')
-                .select('entryContent.id')
-                .where((eb) =>
-                    eb.and([
-                        eb('entryContent.type', '=', type),
-                        eb('entryContent.locale', '=', locale),
-                        eb('entryContent.slug', '=', candidate),
-                        // Staged rows legitimately share their canonical's slug;
-                        // they are outside the partial unique index, so they are
-                        // not a collision.
-                        eb('entryContent.stagedFor', 'is', null),
-                        eb('entries.deletedAt', 'is', null),
-                        ...(excludeId === undefined
-                            ? []
-                            : [eb('entryContent.entryId', '!=', excludeId)]),
-                    ])
-                )
-                .limit(1)
-                .executeTakeFirst();
+            const existing = reserved?.has(candidate)
+                ? true
+                : await contents.findOne({
+                      type,
+                      locale,
+                      slug: candidate,
+                      stagedFor: null,
+                      trashed: false,
+                      ...(excludeId === undefined ? {} : { entryId: { ne: excludeId } }),
+                  });
 
             if (!existing) return candidate;
 
@@ -333,6 +329,7 @@ function createEntryRepository() {
                     deletedAt: new Date(),
                     ...(actor === undefined ? {} : { updatedBy: actor }),
                 });
+                await writeTrashed(id, true);
             }
         },
 
@@ -352,6 +349,7 @@ function createEntryRepository() {
                     eb.and([eb('id', '=', id), eb('deletedAt', 'is not', null)])
                 )
                 .executeTakeFirstOrThrow();
+            await writeTrashed(id, false);
 
             const restored = await content.findAnyLocale(id);
             if (!restored) throw new ResourceNotFoundError('entry', { id: id });
@@ -362,6 +360,19 @@ function createEntryRepository() {
             await resourceRows.deleteMany({ type, deletedAt: { ne: null } });
         },
     };
+
+    /**
+     * Set the `trashed` copy on every content row of the entry, staged rows
+     * included. Raw rather than `contents.updateMany`, which stamps `updatedAt`
+     * and would mark a staged change as diverged.
+     */
+    async function writeTrashed(id: string, trashed: boolean): Promise<void> {
+        await getDb()
+            .updateTable('entryContent')
+            .set(encodePatchWith(entryContentTable, { trashed }))
+            .where('entryId', '=', id)
+            .execute();
+    }
 
     /**
      * Raw rather than `resourceRows.update`, which stamps `updatedAt`: a preview

@@ -38,10 +38,13 @@ export type ContentShape<
     /** The content table's FK column to the resource row: `entryId`, `globalId`. */
     resourceIdColumn: string;
     /**
-     * Content columns copied from the resource row when a content row is
-     * inserted and the write does not name them — entries' denormalized `type`.
+     * Content columns derived from the resource row when a content row is
+     * inserted and the write does not name them: entries' copied `type` and
+     * `trashed`.
      */
-    inheritedColumns?: readonly string[];
+    inheritedColumns?: Readonly<
+        Record<string, (resourceRow: Record<string, unknown>) => unknown>
+    >;
     /**
      * Values for the resource's own content columns on an insert that omits
      * them, so a `NOT NULL` column with no database default still writes —

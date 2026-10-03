@@ -173,6 +173,10 @@ An entry whose template names a value it doesn't have (an empty slug, or a
 missing field in `/{category}/{slug}`) has no URL, so no redirect is recorded
 for it.
 
+A trashed entry serves no page, so its change records nothing either. This
+covers a restore that gives the entry a new slug because another entry took
+its old one: the old path belongs to that other entry now.
+
 Recording a redirect keeps the rules loop-free and one hop deep:
 
 - An enabled rule whose **from** is the new path is deleted, because that path

@@ -133,6 +133,7 @@
         "permanentlyDeleted": "{{name}} permanently deleted.",
         "duplicated": "{{name}} duplicated.",
         "restored": "{{name}} restored.",
+        "restoredWithNewSlug": "{{name}} restored with the slug \"{{slug}}\", because another entry now uses its old slug.",
         "updated": "{{name}} updated.",
         "created": "{{name}} created.",
         "deleteFailed": "Delete failed",

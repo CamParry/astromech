@@ -7,6 +7,7 @@ import { resolveEntryType } from '@/entries/entry-types';
 import { defineServiceMethod } from '@/services/define-service-method';
 import { entryAccess } from '../../internal/access';
 import { prepareEntryFields } from '../../internal/prepare-fields';
+import { uniqueSlugIfChanged } from '../../internal/slug';
 import { getEntryOfType } from '../../read-entry';
 import { syncEntryRelationships } from '../../relationships';
 import { entryRepository } from '../../repository/entries-table';
@@ -14,8 +15,9 @@ import { entrySchema } from '../../schema';
 
 /**
  * Checks the staged fields at the canonical row's status, versions the canonical
- * when the type keeps versions, overwrites its title and fields, and discards the
- * staged change. The slug and status stay: publishing is a separate call.
+ * when the type keeps versions, overwrites its title, slug and fields, and discards
+ * the staged change. A staged slug a live entry took meanwhile takes the next free
+ * one. The status stays: publishing is a separate call.
  */
 export const mergeStagedEntry = defineServiceMethod({
     summary: 'Merge the staged change into an entry.',
@@ -51,6 +53,11 @@ export const mergeStagedEntry = defineServiceMethod({
             staged,
             user,
         });
+        const slug = await uniqueSlugIfChanged({
+            type,
+            entry: canonical,
+            slug: staged.slug,
+        });
 
         return transaction(async () => {
             if (versioning) {
@@ -58,7 +65,7 @@ export const mergeStagedEntry = defineServiceMethod({
             }
             const updated = await entryRepository.update(
                 { id, locale },
-                { title: staged.title, fields, updatedBy: userId }
+                { title: staged.title, slug, fields, updatedBy: userId }
             );
             // Deleted before the re-index, so references only the staged change
             // held are dropped.

@@ -9,6 +9,7 @@ import * as m0005 from './0005_user-content';
 import * as m0006 from './0006_global-relationship-source';
 import * as m0007 from './0007_drop-settings';
 import * as m0008 from './0008_drop-version-status';
+import * as m0009 from './0009_entry-content-trashed';
 
 export const migrationProvider: MigrationProvider = {
     async getMigrations() {
@@ -22,6 +23,7 @@ export const migrationProvider: MigrationProvider = {
             '0006_global-relationship-source': m0006,
             '0007_drop-settings': m0007,
             '0008_drop-version-status': m0008,
+            '0009_entry-content-trashed': m0009,
         };
     },
 };
