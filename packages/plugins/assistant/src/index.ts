@@ -34,6 +34,7 @@ export type { AssistantOptions };
 const DEFAULT_OPTIONS: ResolvedAssistantOptions = {
     effort: 'medium',
     readOnly: false,
+    instructions: '',
 };
 
 /** Applies defaults. Called once when the site registers the plugin. */

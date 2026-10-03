@@ -76,7 +76,8 @@ export async function* runAssistantLoop(input: {
 
         const { system, messages } = buildRequest(
             answerUnansweredCalls(turns),
-            input.aiContext
+            input.aiContext,
+            input.options.instructions
         );
 
         // The `finish-step` stream part omits `messages`, so completed steps

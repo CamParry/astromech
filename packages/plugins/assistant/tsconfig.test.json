@@ -30,6 +30,7 @@
         "src/**/*",
         "migrations/**/*",
         "tests/**/*",
+        "scripts/**/*",
         "../../astromech/src/virtual-modules.d.ts",
         "../../admin/src/virtual-modules.d.ts",
         "../../astromech/src/astro-client.d.ts"

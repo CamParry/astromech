@@ -39,6 +39,7 @@ const streamTextMock = vi.mocked(streamText);
 const OPTIONS: ResolvedAssistantOptions = {
     effort: 'medium',
     readOnly: false,
+    instructions: '',
 };
 
 const logger: PluginLogger = { info: vi.fn(), warn: vi.fn(), error: vi.fn() };

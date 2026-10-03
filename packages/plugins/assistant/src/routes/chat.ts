@@ -10,8 +10,8 @@ import type {
     ChatRequest,
     ResolvedAssistantOptions,
 } from '../types';
-import type { AiContextItem, PluginContext, PluginRawRoute } from 'astromech';
-import { getModel } from 'astromech';
+import type { PluginContext, PluginRawRoute } from 'astromech';
+import { aiContextItemSchema, getModel } from 'astromech';
 import { createApprovalsRepository } from '../approvals/repository';
 import { createSessionsRepository } from '../sessions/repository';
 
@@ -66,7 +66,7 @@ async function handleChat(
     if (body === null) {
         return Response.json(
             {
-                error: 'Expected { messages: [{ role, content: [{ type, … }] }], aiContext?: [], decisions?: [{ approvalId, action }] }',
+                error: 'Expected { messages: [{ role, content: [{ type, … }] }], aiContext?: [{ reference: { kind, label, type?, id? }, depth, order }], decisions?: [{ approvalId, action }] }',
             },
             { status: 400 }
         );
@@ -124,8 +124,9 @@ export async function readChatRequest(request: Request): Promise<ChatRequest | n
     const answered = decisions === undefined ? {} : { decisions };
 
     if (aiContext === undefined) return { messages, ...answered };
-    if (!Array.isArray(aiContext)) return null;
-    return { messages, aiContext: aiContext as AiContextItem[], ...answered };
+    const items = aiContextItemSchema.array().safeParse(aiContext);
+    if (!items.success) return null;
+    return { messages, aiContext: items.data, ...answered };
 }
 
 /** Is this an array of `{ approvalId, action }` answers? */
