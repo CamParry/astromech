@@ -46,11 +46,11 @@ export type HttpRouteSpec = {
      */
     notFound?: string;
     /**
-     * A 400 or 409 the method answers for a reason neither its schemas nor its
+     * A 409 the method answers for a reason neither its schemas nor its
      * `requires` state, worded for the OpenAPI document (the last admin, a
      * staged change that already exists).
      */
-    refusals?: { badRequest?: string; conflict?: string };
+    refusals?: { conflict?: string };
     /** Marks a route whose server handler is written by hand, not generated. */
     handler?: 'bespoke';
     /**
@@ -400,14 +400,19 @@ export const USERS_ROUTE_SPECS = [
         bodyKey: 'data',
         handler: 'bespoke',
         queryArgs: ['locale'],
-        refusals: { badRequest: 'the new `role` leaves the site with no admin' },
+        refusals: {
+            conflict:
+                'the new `role` leaves the site with no admin (`CONFLICT`, reason `last-admin`)',
+        },
     },
     {
         verb: 'delete',
         path: '/:id',
         id: 'users.delete',
         envelope: 'success',
-        refusals: { badRequest: 'the user is the last admin' },
+        refusals: {
+            conflict: 'the user is the last admin (`CONFLICT`, reason `last-admin`)',
+        },
     },
     {
         verb: 'get',

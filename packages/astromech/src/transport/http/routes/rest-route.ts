@@ -334,7 +334,7 @@ function operationId(route: HttpRouteSpec): string {
  * Why this route can answer 400: a body that is not JSON (see `readBody`), a
  * `dir` that is neither order, a list's `sort` or `where` naming a key it cannot
  * use (`UnknownSortKeyError`, `UnknownWhereKeyError`, `InvalidReferencesFilterError`),
- * a public read of trashed rows (`PublicTrashedReadError`), and the row's own.
+ * and a public read of trashed rows (`PublicTrashedReadError`).
  */
 function badRequestReasons(
     route: HttpRouteSpec,
@@ -356,9 +356,6 @@ function badRequestReasons(
     if ('where' in shape) reasons.push('`where` names a key the list cannot filter by');
     if ('trashed' in shape && 'full' in shape) {
         reasons.push('`trashed` is asked for without `full`');
-    }
-    if (route.refusals?.badRequest !== undefined) {
-        reasons.push(route.refusals.badRequest);
     }
     return reasons;
 }

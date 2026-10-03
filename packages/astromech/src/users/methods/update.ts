@@ -8,7 +8,7 @@ import { changesVersionedContent, snapshotVersion } from '@/content/versions';
 import { transaction } from '@/database/transaction';
 import { ResourceNotFoundError } from '@/errors/resource';
 import { defineServiceMethod } from '@/services/define-service-method';
-import { assertKeepsAnAdmin } from '../internal/last-admin';
+import { assertKeepsAnAdmin, lastAdminError } from '../internal/last-admin';
 import { syncUserRelationships } from '../relationships';
 import { userRepository } from '../repository';
 import { updateUserSchema, userSchema } from '../schema';
@@ -16,7 +16,8 @@ import { updateUserSchema, userSchema } from '../schema';
 /**
  * `name`, `email` and `role` are written whatever the locale. `fields` merges into
  * one locale's content row, and a locale with none is seeded from the default
- * locale's. Demoting the last admin is refused.
+ * locale's. Demoting the last admin is refused, and a user deleted while the
+ * call runs answers 404.
  */
 export const updateUser = defineServiceMethod({
     summary:
@@ -60,6 +61,18 @@ export const updateUser = defineServiceMethod({
         const patchedNames = patch === undefined ? [] : patchedFieldNames(patch);
 
         await transaction(async () => {
+            // The `users` row first: its `WHERE` repeats the last-admin check, so
+            // a refusal writes nothing even where `transaction()` opens none (D1).
+            if (name !== undefined || email !== undefined || role !== undefined) {
+                const written = await userRepository.updateUserRow(id, {
+                    name,
+                    email,
+                    role,
+                });
+                if (written === 'missing')
+                    throw new ResourceNotFoundError('user', { id });
+                if (written === 'last-admin') throw lastAdminError('demote');
+            }
             if (current && changesVersionedContent('user', current, { fields })) {
                 await snapshotVersion(
                     'user',
@@ -68,9 +81,6 @@ export const updateUser = defineServiceMethod({
                     user,
                     { id, locale }
                 );
-            }
-            if (name !== undefined || email !== undefined || role !== undefined) {
-                await userRepository.updateUserRow(id, { name, email, role });
             }
             if (fields !== undefined) {
                 await userRepository.update(

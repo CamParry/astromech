@@ -245,7 +245,7 @@ describe('one answer on every transport', () => {
             { id: admin.id, data },
             transports
         );
-        expect(results).toEqual(every(transports, 'BAD_REQUEST'));
+        expect(results).toEqual(every(transports, 'CONFLICT'));
         expect((await currentServices.users.get({ id: admin.id }))?.role).toBe('admin');
     });
 
