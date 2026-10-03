@@ -34,11 +34,26 @@ item 8 proposed, would protect libsql only.
 - **Unique indexes are the backstop.** A partial unique index on `stagedFor`
   where it is not null, and a unique `(contentId, version)` index on all four
   versions tables. A violation answers 409, with no retry.
-- **A backup records its migration head.** Restore refuses a backup from a newer
-  head, and restores an older one as it was taken, then runs migrations
-  forward. Rejected: an explicit column list, which silently drops or defaults
-  columns, and refusing every backup from another head, which makes backups
-  useless after any migration.
+- **Restore migrates a copy of the backup, then swaps it in** (revised
+  2026-10-03). Restore writes the backup to a temporary file and compares its
+  migration names with the code's merged chain, as sets: plugin chains merge
+  and run unordered, so there is no single head. A backup holding a migration
+  the code lacks is refused, naming it; that covers a newer backup, a
+  rebaselined chain and a removed plugin. Otherwise the chain runs forward on
+  the temporary copy, then one transaction replaces the live tables with the
+  copy's, keeping the preserved tables. Sessions and verification tokens are
+  emptied rather than restored, so a revoked session stays revoked (Drupal's
+  Backup and Migrate does the same). WordPress, Drupal, Rails, Django, D1 Time
+  Travel and Turso all restore the whole database and migrate afterwards.
+  Rejected: copying into the live schema and refusing any difference (the
+  current `assertSameMigrations`, and Strapi), which makes every older backup
+  unusable after one migration; restoring as taken and migrating on the next
+  boot (WordPress, Drupal, Ghost), which leaves the live database behind the
+  code and re-runs migrations over preserved plugin tables; restoring a newer
+  backup with a warning (Rails, Django, Payload), since Kysely throws on a
+  ledger row with no matching migration. D1 restores through Time Travel, which
+  restores the whole database and returns an undo bookmark, and then writes
+  the preserved rows back.
 - **Every error a caller can reach is an `ApiError` subclass.** A bulk update
   setting `slug` answers 422 naming `slug`, before any write. Payload and
   Directus let the database refuse it and answer 400, but Astromech renames
@@ -71,10 +86,15 @@ item 8 proposed, would protect libsql only.
       the change to `apps/demo-cloudflare`'s migration and snapshot. Map the
       violation to 409 by index name, since SQLite's message names the index
       for an expression or partial index.
-- [ ] **Backup restore.** Record the migration head in the backup; refuse a newer
-      one; restore an older one verbatim and migrate forward. Replaces the
-      `INSERT ... SELECT *` in `database/drivers/libsql.ts`. Check
-      `@astromech/backups` and the D1 path for the same copy.
+- [ ] **Backup restore.** Replace `assertSameMigrations` in
+      `database/drivers/libsql.ts` with the set comparison, run the migrator
+      on the temporary copy, then keep today's column-checked copy as the swap,
+      and empty sessions and verification tokens. Check first whether the
+      serving process ships migration files; if not, restoring an older backup
+      runs through the CLI rather than the admin. Check each migration for
+      reads outside the database (environment, config, files, clock), which a
+      later forward run would not reproduce. Test a plugin removed without
+      `plugin:purge` end to end. D1 restores through Time Travel.
 - [ ] **Caller errors.** The bulk `slug` 422 in `update-batch.ts`; typed errors
       for `entries/methods/preview/issue-token.ts` and the `missing` (404) and
       `noStaged` (409) `AstromechError`s in

@@ -23,7 +23,7 @@ Each item removes a hand-kept copy that can drift from the thing it copies.
       per resource in `content/` and have each copy read it, so a new column
       fails the typecheck until it is classified. Add a test that each versions
       table's columns equal `versionedColumns` plus its own keys.
-- [ ] **One source for entry status.** It is written seven times:
+- [x] **One source for entry status.** It is written seven times:
       `entries/schema.ts:7`, `types/domain.ts:46`, `entries/tables.ts:46`,
       `globals/tables.ts:32`, and in the admin at
       `packages/admin/src/hooks/use-list-controller.ts:17`,
@@ -31,7 +31,9 @@ Each item removes a hand-kept copy that can drift from the thing it copies.
       `packages/admin/src/pages/_protected/index.tsx:26` (a copy of
       `statusVariant`). Add `ENTRY_STATUSES` and derive the rest. Backups
       restates its status and trigger the same way
-      (`packages/plugins/backups/src/tables/runs.ts:14`).
+      (`packages/plugins/backups/src/tables/runs.ts:14`). Done 2026-10-03:
+      `ENTRY_STATUSES` in `types/domain.ts`, exported from `astromech/shared`,
+      and `BACKUP_RUN_STATUSES` and `BACKUP_RUN_TRIGGERS` in backups.
 - [ ] **Methods declare the errors they raise.** HTTP refusals are
       hand-written strings (`transport/http/routes/http-routes.ts:53`). Add an
       `errors` key to `defineServiceMethod` and derive the refusals and OpenAPI
