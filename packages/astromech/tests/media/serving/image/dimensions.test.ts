@@ -1,3 +1,5 @@
+import { readFile } from 'node:fs/promises';
+import { join } from 'node:path';
 import sharpLib from 'sharp';
 import { describe, expect, it } from 'vitest';
 import {
@@ -364,9 +366,9 @@ describe('readImageDimensions', () => {
     });
 });
 
-describe('readImageDimensions with an EXIF orientation', () => {
+describe('readImageDimensions with an orientation', () => {
     const orientations = [1, 2, 3, 4, 5, 6, 7, 8];
-    const cases = (['jpeg', 'png', 'webp'] as const).flatMap((format) =>
+    const cases = (['jpeg', 'png', 'webp', 'tiff', 'avif'] as const).flatMap((format) =>
         orientations.map((orientation) => ({ format, orientation }))
     );
 
@@ -389,4 +391,38 @@ describe('readImageDimensions with an EXIF orientation', () => {
             });
         }
     );
+});
+
+describe('readImageDimensions for HEIF and TIFF files', () => {
+    /** A committed fixture's bytes, from the fixtures folder beside this file. */
+    async function fixture(name: string): Promise<Uint8Array> {
+        return new Uint8Array(
+            await readFile(join(import.meta.dirname, 'fixtures', name))
+        );
+    }
+
+    // Written by macOS's sips, as a phone does: 512px tiles under one grid image.
+    it('reads the primary grid image of a tiled HEIC, not a tile', async () => {
+        expect(readImageDimensions(await fixture('grid-1200x800.heic'))).toEqual({
+            width: 1200,
+            height: 800,
+        });
+    });
+
+    it('reads a big-endian TIFF', async () => {
+        expect(readImageDimensions(await fixture('big-endian-6x4.tiff'))).toEqual({
+            width: 6,
+            height: 4,
+        });
+    });
+
+    it('returns null for a HEIF cut off before its item properties', async () => {
+        const heic = await fixture('grid-1200x800.heic');
+        expect(readImageDimensions(heic.slice(0, 120))).toBeNull();
+    });
+
+    it('returns null for a TIFF cut off before its first IFD', async () => {
+        const tiff = await fixture('big-endian-6x4.tiff');
+        expect(readImageDimensions(tiff.slice(0, 64))).toBeNull();
+    });
 });

@@ -6,7 +6,9 @@
 
 type Dimensions = { width: number; height: number };
 
-/** The EXIF orientation tag. */
+/** EXIF and TIFF tag numbers this reader uses. */
+const TAG_IMAGE_WIDTH = 0x0100;
+const TAG_IMAGE_LENGTH = 0x0101;
 const TAG_ORIENTATION = 0x0112;
 
 /** True only for raster bitmap types we can optimise (transform). Excludes svg, gif, video, pdf, etc. */
@@ -24,10 +26,11 @@ export function isOptimisableImage(mimeType: string): boolean {
 }
 
 /**
- * Read an image's pixel dimensions as displayed, from its header bytes: an EXIF
- * orientation that turns the image a quarter turn swaps the stored width and
- * height, as an upright variant does. Returns null if the format is
- * unrecognised or the header is too short to determine size.
+ * Read an image's pixel dimensions as displayed, from its header bytes: an
+ * orientation that turns the image a quarter turn (EXIF, or a HEIF `irot`)
+ * swaps the stored width and height, as an upright variant does. Reads PNG,
+ * GIF, JPEG, WebP, TIFF, and HEIF (HEIC and AVIF). Returns null if the format
+ * is unrecognised or the header is too short to determine size.
  */
 export function readImageDimensions(bytes: Uint8Array): Dimensions | null {
     if (bytes.length < 8) return null;
@@ -77,6 +80,19 @@ export function readImageDimensions(bytes: Uint8Array): Dimensions | null {
         bytes[11] === 0x50
     ) {
         return readWebp(view);
+    }
+
+    // TIFF: II*\0 (little-endian) or MM\0* (big-endian)
+    if (
+        (bytes[0] === 0x49 && bytes[1] === 0x49 && bytes[2] === 0x2a && bytes[3] === 0) ||
+        (bytes[0] === 0x4d && bytes[1] === 0x4d && bytes[2] === 0 && bytes[3] === 0x2a)
+    ) {
+        return readTiff(view);
+    }
+
+    // HEIF (HEIC, AVIF): an ISO base media file opening with an ftyp box
+    if (fourCC(view, 4) === 'ftyp') {
+        return readHeif(view);
     }
 
     return null;
@@ -274,4 +290,112 @@ function readWebpOrientation(view: DataView): number | undefined {
         offset += 8 + size + (size % 2);
     }
     return undefined;
+}
+
+function readTiff(view: DataView): Dimensions | null {
+    const tags = readTiffTags(view, 0);
+    const width = tags.get(TAG_IMAGE_WIDTH);
+    const height = tags.get(TAG_IMAGE_LENGTH);
+    if (width == null || height == null) return null;
+    return upright(width, height, tags.get(TAG_ORIENTATION));
+}
+
+/** One ISO base media box: its type and where its payload starts and ends. */
+type Box = { type: string; start: number; end: number };
+
+/** The boxes laid end to end between `start` and `end`. */
+function readBoxes(view: DataView, start: number, end: number): Box[] {
+    const boxes: Box[] = [];
+    let offset = start;
+    while (offset + 8 <= end) {
+        let size = view.getUint32(offset);
+        let header = 8;
+        if (size === 1) {
+            // A 64-bit size follows the type.
+            if (offset + 16 > end) break;
+            size = view.getUint32(offset + 8) * 2 ** 32 + view.getUint32(offset + 12);
+            header = 16;
+        } else if (size === 0) {
+            size = end - offset;
+        }
+        if (size < header || offset + size > end) break;
+        boxes.push({
+            type: fourCC(view, offset + 4),
+            start: offset + header,
+            end: offset + size,
+        });
+        offset += size;
+    }
+    return boxes;
+}
+
+/** The first box of `type` among `boxes`. */
+function findBox(boxes: Box[], type: string): Box | undefined {
+    return boxes.find((box) => box.type === type);
+}
+
+/**
+ * A HEIF file's primary image dimensions: its `ispe` property, turned by its
+ * `irot` property. The primary item's own properties count, not the first
+ * `ispe`, because a phone's HEIC stores a grid image over 512px tiles.
+ */
+function readHeif(view: DataView): Dimensions | null {
+    const meta = findBox(readBoxes(view, 0, view.byteLength), 'meta');
+    // meta, pitm, ipma, ispe and irot are full boxes: a version byte and 3 flag bytes first.
+    if (!meta || meta.start + 4 > meta.end) return null;
+    const metaBoxes = readBoxes(view, meta.start + 4, meta.end);
+    const pitm = findBox(metaBoxes, 'pitm');
+    const iprp = findBox(metaBoxes, 'iprp');
+    if (!pitm || !iprp || pitm.start + 6 > pitm.end) return null;
+    const primary =
+        view.getUint8(pitm.start) === 0
+            ? view.getUint16(pitm.start + 4)
+            : view.getUint32(pitm.start + 4);
+
+    const iprpBoxes = readBoxes(view, iprp.start, iprp.end);
+    const ipco = findBox(iprpBoxes, 'ipco');
+    if (!ipco) return null;
+    const properties = readBoxes(view, ipco.start, ipco.end);
+    const associated = iprpBoxes
+        .filter((box) => box.type === 'ipma')
+        .flatMap((ipma) => readPropertyIndexes(view, ipma, primary))
+        .map((index) => properties[index - 1]);
+
+    const ispe = associated.find((box) => box?.type === 'ispe');
+    if (!ispe || ispe.start + 12 > ispe.end) return null;
+    const width = view.getUint32(ispe.start + 4);
+    const height = view.getUint32(ispe.start + 8);
+    const irot = associated.find((box) => box?.type === 'irot');
+    // irot's low two bits count quarter turns anticlockwise; an odd count swaps the axes.
+    const quarterTurns =
+        irot && irot.start < irot.end ? view.getUint8(irot.start) & 0x03 : 0;
+    return quarterTurns % 2 === 1 ? { width: height, height: width } : { width, height };
+}
+
+/** The 1-based `ipco` indexes an `ipma` box associates with item `itemId`. */
+function readPropertyIndexes(view: DataView, ipma: Box, itemId: number): number[] {
+    if (ipma.start + 8 > ipma.end) return [];
+    const version = view.getUint8(ipma.start);
+    const wideIndexes = (view.getUint8(ipma.start + 3) & 1) === 1;
+    const entryCount = view.getUint32(ipma.start + 4);
+    let offset = ipma.start + 8;
+    for (let entry = 0; entry < entryCount; entry++) {
+        const idSize = version === 0 ? 2 : 4;
+        if (offset + idSize + 1 > ipma.end) return [];
+        const id = version === 0 ? view.getUint16(offset) : view.getUint32(offset);
+        const count = view.getUint8(offset + idSize);
+        offset += idSize + 1;
+        const indexSize = wideIndexes ? 2 : 1;
+        if (offset + count * indexSize > ipma.end) return [];
+        if (id === itemId) {
+            // The top bit of each association marks it essential; the rest is the index.
+            return Array.from({ length: count }, (_, i) =>
+                wideIndexes
+                    ? view.getUint16(offset + i * 2) & 0x7fff
+                    : view.getUint8(offset + i) & 0x7f
+            );
+        }
+        offset += count * indexSize;
+    }
+    return [];
 }
