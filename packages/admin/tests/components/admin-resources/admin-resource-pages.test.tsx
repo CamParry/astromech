@@ -151,6 +151,25 @@ describe('the admin resource list', () => {
         expect(rpc.remove).toHaveBeenCalledWith({ id: 'r2' });
     });
 
+    it('refreshes the list when a bulk delete stops partway', async () => {
+        rpc.list.mockResolvedValue(page([RULE, { ...RULE, id: 'r2', from: '/two' }]));
+        rpc.remove.mockResolvedValueOnce(null).mockRejectedValueOnce(new Error('Locked'));
+        mount('/plugin/redirects/resources/rules');
+        await screen.findByText('/old');
+        const listReads = rpc.list.mock.calls.length;
+
+        await userEvent.click(screen.getByLabelText('Select all'));
+        await userEvent.click(screen.getByRole('button', { name: /Bulk actions/ }));
+        await userEvent.click(await screen.findByRole('menuitem', { name: 'Delete' }));
+        await userEvent.click(await screen.findByRole('button', { name: 'Delete' }));
+
+        await waitFor(() => expect(rpc.remove).toHaveBeenCalledTimes(2));
+        // The first row is gone although the batch failed.
+        await waitFor(() =>
+            expect(rpc.list.mock.calls.length).toBeGreaterThan(listReads)
+        );
+    });
+
     it('hides create and delete from a user without their permission', async () => {
         rpc.list.mockResolvedValue(page([RULE]));
         mount('/plugin/redirects/resources/rules', [READ]);

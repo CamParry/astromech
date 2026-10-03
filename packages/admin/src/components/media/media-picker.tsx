@@ -22,6 +22,7 @@ import { MediaCard } from './media-card';
 import { MediaEmpty } from './media-empty';
 import { MediaFilters } from './media-filters';
 import { MediaSortSelect } from './media-sort-select';
+import { MediaUploadDialog } from './media-upload-dialog';
 
 const DEFAULT_PER_PAGE = 24;
 
@@ -46,7 +47,7 @@ export function MediaPicker({
 }: MediaPickerProps): React.ReactElement {
     const { t } = useTranslation();
     const { canUploadMedia } = usePermissions();
-    const { upload, isUploading } = useUploadMedia();
+    const { upload, isUploading, uploadDialog } = useUploadMedia();
     const { items, totalItems, totalPages, currentPage, isLoading, isError } =
         useMediaBrowser(query, perPage);
 
@@ -118,6 +119,8 @@ export function MediaPicker({
                     )}
                 </DropZone>
             )}
+
+            <MediaUploadDialog {...uploadDialog} />
         </div>
     );
 }

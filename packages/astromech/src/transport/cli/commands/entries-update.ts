@@ -1,6 +1,6 @@
 import type { Entry, EntryStatus, EntryUpdateData, JsonObject } from '@/types/index';
 import { defineCommand } from 'citty';
-import { configArgs, entryArgs, jsonArgs, localeArgs } from '../common-args';
+import { configArgs, entryArgs, fieldsArgs, jsonArgs, localeArgs } from '../common-args';
 import { withApplication } from '../config';
 import { callEntryMethod } from '../methods';
 import { parseJsonArg, printResult } from '../output';
@@ -14,7 +14,7 @@ export default defineCommand({
         slug: { type: 'string', description: 'New slug' },
         status: { type: 'string', description: 'New status (draft|published|scheduled)' },
         publishedAt: { type: 'string', description: 'Published-at ISO datetime' },
-        fields: { type: 'string', description: 'Fields as inline JSON or @file' },
+        ...fieldsArgs,
         data: {
             type: 'string',
             description: 'Full EntryUpdateData as inline JSON or @file',

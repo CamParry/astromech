@@ -24,8 +24,9 @@ export default defineConfig({
 });
 ```
 
-`users.validate` is a whole-resource validator. It runs on `create` and on
-`update`, after every field has been processed, so it sees the coerced values:
+`users.validate` is a whole-resource validator. It runs on `create`, on
+`update` and on first-run setup, after every field has been processed, so it
+sees the coerced values:
 
 ```ts
 users: {
@@ -36,6 +37,25 @@ users: {
         }
     },
 }
+```
+
+## The first admin
+
+First-run setup creates the first admin the way `create` creates a user: a
+field's `defaultValue` fills an absent value, a `required` field with no value
+refuses the setup, and `users.validate` runs. When a required user field has
+no default, or the server refuses one with a check the browser cannot run,
+the admin's setup screen shows the user fields beside the name, email and
+password, so the first admin can fill them in. It leaves out an optional
+`media` or `relationship` field, which takes its default.
+
+A required `media` or `relationship` field with no default cannot be filled in
+there: its picker reads the API, which needs a signed-in user. The setup screen
+names the field instead. Give it a `defaultValue`, or create the first admin
+from the command line with its value:
+
+```sh
+astromech users:create --name Ada --email ada@example.com --fields '{"avatar":"<media id>"}'
 ```
 
 ## Reading users from your site

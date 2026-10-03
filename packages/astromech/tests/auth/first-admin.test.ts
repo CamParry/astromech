@@ -8,7 +8,12 @@
 import type { DB } from '@/database/types';
 import type { Kysely } from 'kysely';
 import { invalid } from '@tests/fixtures';
-import { createTestDb, setupTestConfig } from '@tests/harness';
+import {
+    createTestDb,
+    failWritesTo,
+    makeTestConfig,
+    setupTestConfig,
+} from '@tests/harness';
 import { sql } from 'kysely';
 import { beforeEach, describe, expect, it } from 'vitest';
 import { currentServices } from '@/app-context/services';
@@ -16,6 +21,7 @@ import { getAuth } from '@/auth/better-auth';
 import { createFirstAdmin } from '@/auth/setup';
 import { getDefaultContentLocale } from '@/config/content-locale';
 import { decodeWith } from '@/database/codec';
+import { mediaRepository } from '@/media/repository';
 import { DEFAULT_ROLE_SLUG } from '@/permissions/roles';
 import { userRepository } from '@/users/repository';
 import { usersTable } from '@/users/tables';
@@ -99,6 +105,97 @@ describe('first-run setup', () => {
 
         expect(rows).toHaveLength(1);
         expect(rows[0]?.locale).toBe(getDefaultContentLocale());
+    });
+
+    // The same writes `users.create` makes: one insert per row, no update.
+    it('writes the first admin without updating the users row it inserted', async () => {
+        await failWritesTo(usersTable, 'update');
+
+        expect(await createFirstAdmin(ADMIN)).toBe('created');
+        expect(await roleOf(ADMIN.email)).toBe('admin');
+    });
+
+    it('fills the default of a user field', async () => {
+        setupTestConfig({
+            ...makeTestConfig(),
+            users: {
+                fields: [
+                    { name: 'team', type: 'text', label: 'Team', defaultValue: 'Ops' },
+                ],
+            },
+        });
+
+        await createFirstAdmin(ADMIN);
+
+        const [admin] = (await usersService.query({ limit: 'all' })).data;
+        expect(admin?.fields).toEqual({ team: 'Ops' });
+    });
+
+    it('refuses setup, writing nothing, while a required user field has no default', async () => {
+        setupTestConfig({
+            ...makeTestConfig(),
+            users: {
+                fields: [{ name: 'team', type: 'text', label: 'Team', required: true }],
+            },
+        });
+
+        await expect(createFirstAdmin(ADMIN)).rejects.toMatchObject({
+            name: 'ValidationError',
+            fields: { team: ['This field is required'] },
+        });
+        expect(await rowCount('users')).toBe(0);
+        expect(await rowCount('accounts')).toBe(0);
+    });
+
+    it('stores the user fields sent with the first admin', async () => {
+        setupTestConfig({
+            ...makeTestConfig(),
+            users: {
+                fields: [{ name: 'team', type: 'text', label: 'Team', required: true }],
+            },
+        });
+
+        expect(
+            await createFirstAdmin({ ...ADMIN, data: { fields: { team: 'Ops' } } })
+        ).toBe('created');
+
+        const [admin] = (await usersService.query({ limit: 'all' })).data;
+        expect(admin?.fields).toEqual({ team: 'Ops' });
+    });
+
+    it('indexes the references the first admin holds', async () => {
+        const media = await mediaRepository.create(
+            { filename: 'avatar.png', mimeType: 'image/png', size: 1 },
+            {}
+        );
+        setupTestConfig({
+            ...makeTestConfig(),
+            users: { fields: [{ name: 'avatar', type: 'media', label: 'Avatar' }] },
+        });
+
+        await createFirstAdmin({ ...ADMIN, data: { fields: { avatar: media.id } } });
+
+        const usage = await currentServices.media.usedBy({ id: media.id });
+        expect(usage.map((row) => [row.sourceKind, row.sourceTitle])).toEqual([
+            ['user', ADMIN.name],
+        ]);
+    });
+
+    // Checked before the fields, so an installed site answers the same refusal
+    // whatever its user fields require.
+    it('answers closed once a user exists, even while a required user field has no value', async () => {
+        await createFirstAdmin(ADMIN);
+        setupTestConfig({
+            ...makeTestConfig(),
+            users: {
+                fields: [{ name: 'team', type: 'text', label: 'Team', required: true }],
+            },
+        });
+
+        expect(await createFirstAdmin({ ...ADMIN, email: 'second@test.dev' })).toBe(
+            'closed'
+        );
+        expect(await rowCount('users')).toBe(1);
     });
 
     it('answers closed for a second setup, writing no user or account row', async () => {

@@ -64,7 +64,10 @@ export function adminResourceMutations(target: AdminResourceTarget) {
                 errorMessage: 'adminResources.deleteFailed',
             },
         }),
-        /** One delete call per id, in order; the first failure stops the rest. */
+        /**
+         * One delete call per id, in order; the first failure stops the rest,
+         * with the rows before it deleted, so the list refreshes either way.
+         */
         deleteMany: mutationOptions({
             mutationKey: key('deleteMany'),
             mutationFn: async (ids: string[]) => {
@@ -72,6 +75,7 @@ export function adminResourceMutations(target: AdminResourceTarget) {
             },
             meta: {
                 invalidates,
+                invalidateOn: 'settled',
                 successMessage: 'adminResources.deleted',
                 errorMessage: 'adminResources.deleteFailed',
             },

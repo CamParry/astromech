@@ -14,7 +14,7 @@ import type { AdminConfig } from '@/types/index';
 const config = {
     defaultLocale: 'en',
     locales: ['en'],
-    media: { translatable: false },
+    media: { translatable: false, fields: [] },
     entryTypes: {
         post: { single: 'Post', plural: 'Posts' },
         'forms/form': { plugin: 'forms', single: 'Form', plural: 'Forms' },

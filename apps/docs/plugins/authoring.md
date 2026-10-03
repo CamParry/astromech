@@ -474,8 +474,13 @@ hook takes the definitions, the `operation` (`'create'` or `'update'`), the
 the `namespace` labels resolve against. It runs the field pipeline before a
 submit goes out. When `onSubmit` rejects with a 422, it puts each message in
 the error's `details.fields` on the field it names and shows `details.form` in a
-banner above the form. It also saves on Cmd+S, and asks before a tab with
-unsaved changes closes.
+banner above the form; any other failure is a toast, or goes to your `onError`
+instead. The hook returns `showError(error)`, which shows an error you hold
+the same way, such as a refusal from before the form opened. The form saves on
+Cmd+S (Ctrl+S outside macOS), from a field too, but not while a modal dialog is
+open, and asks before a tab with unsaved changes closes. Only a page's main form
+keeps the shortcut: any other form, such as one in a dialog, passes
+`saveHotkey: false`, so one key press saves one form.
 
 ```tsx
 // admin/pages/redirect-form.tsx

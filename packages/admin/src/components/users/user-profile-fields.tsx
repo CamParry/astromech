@@ -13,7 +13,7 @@ import { Select } from '../ui/select';
  * read, so a `form.Field` render prop's `field` passes in as it is.
  */
 type StringFieldApi = {
-    state: { value: string; meta: { errors: readonly React.ReactNode[] } };
+    state: { value: string; meta: { errors: readonly (string | undefined)[] } };
     handleChange: (value: string) => void;
     handleBlur: () => void;
 };
@@ -26,31 +26,26 @@ export type UserTextFieldProps = Omit<InputProps, 'id' | 'label'> & {
     field?: StringFieldApi;
 };
 
-/** A labelled text input with its first error below it. */
+/** A labelled text input, described by its first error. */
 export function UserTextField({
     id,
     label,
     field,
     ...props
 }: UserTextFieldProps): React.ReactElement {
-    const errors = field?.state.meta.errors ?? [];
     return (
-        <div className="am-field">
-            <label className="am-field-label" htmlFor={id}>
-                {label}
-            </label>
-            <Input
-                id={id}
-                {...(field !== undefined && {
-                    value: field.state.value,
-                    onChange: (e: React.ChangeEvent<HTMLInputElement>) =>
-                        field.handleChange(e.target.value),
-                    onBlur: field.handleBlur,
-                })}
-                {...props}
-            />
-            {errors.length > 0 && <p className="am-field-error">{errors[0]}</p>}
-        </div>
+        <Input
+            id={id}
+            label={label}
+            error={field?.state.meta.errors[0]}
+            {...(field !== undefined && {
+                value: field.state.value,
+                onChange: (e: React.ChangeEvent<HTMLInputElement>) =>
+                    field.handleChange(e.target.value),
+                onBlur: field.handleBlur,
+            })}
+            {...props}
+        />
     );
 }
 

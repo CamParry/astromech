@@ -113,12 +113,8 @@ const ADAPTERS: Record<ResourceType, Adapter> = {
     },
     media: {
         async save(fields) {
-            const row = await mediaRepository.create(
-                { filename: 'file.png', mimeType: 'image/png', size: 1 },
-                {}
-            );
-            await mediaService.update({ id: row.id, data: { fields } });
-            return row.id;
+            const file = new File(['bytes'], 'file.txt', { type: 'text/plain' });
+            return (await mediaService.upload({ file, data: { fields } })).id;
         },
         read: (id) => mediaService.get({ id }),
         update: (id, fields, locale) =>

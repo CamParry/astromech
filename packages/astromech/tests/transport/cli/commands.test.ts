@@ -6,6 +6,8 @@
  * handling, its method call and its output end to end.
  */
 
+import type { AstromechConfig, DataField } from '@/types/index';
+import { field } from '@tests/fixtures';
 import { createTestDb, makeTestConfig, setupTestConfig } from '@tests/harness';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { currentServices } from '@/app-context/services';
@@ -26,13 +28,20 @@ import usersGet from '@/transport/cli/commands/users-get';
 import usersList from '@/transport/cli/commands/users-list';
 import { ask, confirm } from '@/transport/cli/prompt';
 
+/** The user fields the booted site declares, set per test. */
+const site = vi.hoisted(() => ({ userFields: [] as DataField[] }));
+
+function siteConfig(): AstromechConfig {
+    return { ...makeTestConfig(), users: { fields: site.userFields } };
+}
+
 vi.mock('@/config/load', () => ({
-    loadConfigFile: vi.fn(() => Promise.resolve(makeTestConfig())),
+    loadConfigFile: vi.fn(() => Promise.resolve(siteConfig())),
 }));
 
 vi.mock('@/astromech', () => ({
     createAstromech: vi.fn(() => {
-        const resolved = setupTestConfig(makeTestConfig());
+        const resolved = setupTestConfig(siteConfig());
         setMethodManifest(generateMethodManifest(resolved, []));
         return Promise.resolve({ config: resolved });
     }),
@@ -45,6 +54,7 @@ let errors: string[];
 
 beforeEach(async () => {
     vi.clearAllMocks();
+    site.userFields = [];
     await createTestDb();
     setupTestConfig(makeTestConfig());
     printed = [];
@@ -144,6 +154,21 @@ describe('users commands', () => {
         await run(usersDelete, { id, force: true });
         expect(printed.at(-1)).toBe(`User ${id} deleted`);
         expect(vi.mocked(confirm)).not.toHaveBeenCalled();
+    });
+
+    it('create takes the user fields as JSON', async () => {
+        site.userFields = [field({ name: 'team', type: 'text', required: true })];
+
+        await run(usersCreate, {
+            name: 'Ada',
+            email: 'ada@test.dev',
+            password: 'secret-password-1',
+            fields: '{"team":"Ops"}',
+            json: true,
+        });
+
+        expect(errors).toEqual([]);
+        expect(lastJson<{ fields: unknown }>().fields).toEqual({ team: 'Ops' });
     });
 
     it('reports a missing user as the command’s error, as JSON under --json', async () => {

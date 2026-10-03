@@ -11,6 +11,7 @@ import { MediaFilters } from '../../../components/media/media-filters';
 import { MediaGrid } from '../../../components/media/media-grid';
 import { MediaSortSelect, sortPatch } from '../../../components/media/media-sort-select';
 import { MediaTable } from '../../../components/media/media-table';
+import { MediaUploadDialog } from '../../../components/media/media-upload-dialog';
 import { useConfirm } from '../../../components/ui/confirm';
 import { DropZone } from '../../../components/ui/drop-zone';
 import { Dropdown } from '../../../components/ui/dropdown';
@@ -61,7 +62,7 @@ function MediaIndexPage(): React.ReactElement {
     const [viewMode, setViewMode] = useViewMode('media');
 
     const { canUploadMedia, canUpdateMedia, canDeleteMedia } = usePermissions();
-    const { upload, isUploading } = useUploadMedia();
+    const { upload, isUploading, uploadDialog } = useUploadMedia();
 
     useAiContext({ kind: 'media', label: t('media.title') }, { depth: 0 });
 
@@ -279,6 +280,8 @@ function MediaIndexPage(): React.ReactElement {
                 canUpdate={canUpdateMedia()}
                 canUpload={canUpload}
             />
+
+            <MediaUploadDialog {...uploadDialog} />
         </>
     );
 }

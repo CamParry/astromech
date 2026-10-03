@@ -5,8 +5,8 @@ import { variantPrefix } from '../serving/image/url';
 
 /**
  * Remove an item's derived variants and, when given, an original it no longer
- * uses. Runs after the row write commits, so a failure is logged rather than
- * thrown and leaves at worst an orphaned file.
+ * uses. Runs once the row write has committed or failed, so a failure is logged
+ * rather than thrown and leaves at worst an orphaned file.
  */
 export async function removeFiles(
     driver: StorageDriver,

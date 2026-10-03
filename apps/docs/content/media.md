@@ -27,8 +27,8 @@ export default defineConfig({
 
 `title`, `alt` and `caption` are built in, so do not declare fields for them.
 
-`media.validate` is a whole-resource validator. It runs on `update`, after
-every field has been processed, so it sees the coerced values:
+`media.validate` is a whole-resource validator. It runs on `upload` and
+`update`, after every field has been processed, so it sees the coerced values:
 
 ```ts
 media: {
@@ -40,6 +40,32 @@ media: {
     },
 }
 ```
+
+## Uploading
+
+`upload` takes the file and, optionally, `data.fields` for the default-locale
+content:
+
+```ts
+const image = await app.media.upload({
+    file,
+    data: { fields: { photographer: 'Ann' } },
+});
+```
+
+The fields are checked as a create: a field's `defaultValue` fills an absent
+value, and a `required` field with no value and no default refuses the upload.
+They are checked before the file is written, so a refused upload stores
+nothing, and a write that fails after it removes the file again. Over HTTP,
+`POST /api/media` takes a multipart body with a `file` part and an optional
+`data` part holding `data` as JSON, such as `{"fields":{"photographer":"Ann"}}`.
+
+In the admin, an upload asks for the media fields only when a required one has
+no default, or when the server refuses the fields with a check the browser
+cannot run (a field's `validate`, a function default, `media.validate`). One
+form covers the whole upload, and every file takes its values. Files upload one
+at a time, so when one fails the ones before it stay uploaded, and a retry
+sends only the failed file and those after it.
 
 ## Reading media from your site
 

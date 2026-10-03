@@ -600,7 +600,17 @@ describe('the multipart media routes', () => {
         expect(request.method).toBe('POST');
         expect(request.body).toBeInstanceOf(FormData);
         expect((request.body as FormData).get('file')).toBeInstanceOf(File);
+        expect((request.body as FormData).has('data')).toBe(false);
         expect(result).toEqual(media);
+    });
+
+    it("sends an upload's data as a JSON-encoded data part", async () => {
+        stub({ data: media }, 201);
+        await client.media.upload({ file: file(), data: { fields: { credit: 'Ann' } } });
+
+        const part = (only().body as FormData).get('data');
+        expect(typeof part).toBe('string');
+        expect(JSON.parse(part as string)).toEqual({ fields: { credit: 'Ann' } });
     });
 
     it('posts a replacement as FormData to /media/:id/replace', async () => {

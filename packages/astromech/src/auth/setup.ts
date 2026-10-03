@@ -6,9 +6,9 @@
 
 import type { BuiltInRoleSlug } from '@/permissions/roles';
 import { z } from '@hono/zod-openapi';
-import { hashPassword } from 'better-auth/crypto';
-import { getDefaultContentLocale } from '@/config/content-locale';
-import { transaction } from '@/database/transaction';
+import { getConfig } from '@/config/registry';
+import { jsonObject } from '@/services/json';
+import { createUserRows } from '@/users/create-user-rows';
 import { userRepository } from '@/users/repository';
 
 /** The refusal every closed sign-up path answers with. */
@@ -22,40 +22,42 @@ export const firstAdminSchema = z.object({
     name: z.string().min(1, 'Name is required'),
     email: z.string().email('Must be a valid email address'),
     password: z.string().min(8, 'Password must be at least 8 characters'),
+    data: z.strictObject({ fields: jsonObject.optional() }).optional(),
 });
 
 /**
- * Create the first admin, with its credential account and its default-locale
- * content row. Answers `'closed'` when a user already exists, having written
- * nothing.
+ * Whether first-run setup is open: no `users` row exists, with or without a
+ * content row. `GET /setup/check` answers it; `createFirstAdmin` checks it first.
+ */
+export async function needsSetup(): Promise<boolean> {
+    return (await userRepository.countUserRows()) === 0;
+}
+
+/**
+ * Create the first admin as `users.create` creates a user, its fields parsed as
+ * a create. Answers `'closed'` when a user already exists, having written
+ * nothing and checked no field.
  */
 export async function createFirstAdmin(
     input: z.infer<typeof firstAdminSchema>
 ): Promise<'created' | 'closed'> {
-    const id = crypto.randomUUID();
-    // Hashed before the transaction opens, so no lock is held while it runs.
-    const passwordHash = await hashPassword(input.password);
+    if (!(await needsSetup())) return 'closed';
 
-    // libSQL runs the three writes as one transaction. D1 has no interactive
-    // transactions, so there the first statement is the gate on its own: a
-    // failure after it leaves an admin with no password, and
-    // `astromech users:create` is how that install recovers.
-    return transaction(async () => {
-        const inserted = await userRepository.createIfEmpty({
-            id,
+    // The empty-table insert is the gate against a concurrent setup. D1 has no
+    // interactive transactions, so there a failure after it leaves an admin with
+    // no password, and `astromech users:create` is how that install recovers.
+    const created = await createUserRows({
+        config: getConfig(),
+        user: null,
+        row: {
             email: input.email,
             name: input.name,
             emailVerified: true,
             role: 'admin' satisfies BuiltInRoleSlug,
-        });
-        if (!inserted) return 'closed';
-
-        await userRepository.createCredentialAccount(id, passwordHash);
-        // A write to a locale with no content row creates it.
-        await userRepository.update(
-            { id, locale: getDefaultContentLocale() },
-            { fields: {} }
-        );
-        return 'created';
+        },
+        password: input.password,
+        fields: input.data?.fields,
+        ifEmpty: true,
     });
+    return created === null ? 'closed' : 'created';
 }

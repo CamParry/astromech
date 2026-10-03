@@ -112,6 +112,31 @@ describe('mediaService.upload', () => {
         if (!result) throw new Error('expected notes.txt in storage');
         expect(await new Response(result.body).text()).toBe('hello world');
     });
+
+    it('refuses fields that fail validation, storing no file and no item', async () => {
+        setupTestConfig({
+            ...makeTestConfig(),
+            storage,
+            media: {
+                fields: [
+                    { name: 'credit', type: 'text', label: 'Credit', required: true },
+                ],
+            },
+        });
+
+        await expect(
+            mediaService.upload({
+                file: textFile('notes.txt', 'hello'),
+                data: { fields: {} },
+            })
+        ).rejects.toMatchObject({
+            name: 'ValidationError',
+            fields: { credit: ['This field is required'] },
+        });
+
+        expect(await listAll(storage, '')).toEqual([]);
+        expect((await mediaService.query({})).data).toEqual([]);
+    });
 });
 
 describe('mediaService.replace', () => {

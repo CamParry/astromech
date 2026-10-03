@@ -88,7 +88,10 @@
         "setupSubtitle": "Create your admin account to get started.",
         "setupName": "Name",
         "setupCreatingAccount": "Creating account…",
-        "setupCreateAccount": "Create account"
+        "setupCreateAccount": "Create account",
+        "setupFailed": "Setup failed",
+        "setupNeedsDefault_one": "The required user field {{fields}} has no default, and its picker works only after sign-in. Give it a defaultValue in the config, or create the first admin with astromech users:create --fields.",
+        "setupNeedsDefault_other": "The required user fields {{fields}} have no default, and their pickers work only after sign-in. Give them a defaultValue in the config, or create the first admin with astromech users:create --fields."
     },
     "dashboard": {
         "title": "Dashboard",
@@ -431,7 +434,13 @@
         "selectFile": "Select {{filename}}",
         "uploadedToast_one": "{{count}} file uploaded.",
         "uploadedToast_other": "{{count}} files uploaded.",
+        "uploadedPartialToast": "Uploaded {{uploaded}} of {{total}} files.",
         "uploadFailed": "Upload failed",
+        "uploadButton": "Upload",
+        "uploadFieldsTitle_one": "Upload {{count}} file",
+        "uploadFieldsTitle_other": "Upload {{count}} files",
+        "uploadFieldsDescription_one": "Fill in the fields for {{filenames}}.",
+        "uploadFieldsDescription_other": "Fill in the fields for {{filenames}}. Every file in this upload takes these values.",
         "deleteDescription": "This file will be permanently deleted. This action cannot be undone.",
         "updateButton": "Update",
         "replaceButton": "Replace file",

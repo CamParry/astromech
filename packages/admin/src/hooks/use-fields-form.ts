@@ -55,7 +55,29 @@ export type UseFieldsFormOptions<TExtras extends object, TSaved, TMeta> = {
     readOnly?: boolean;
     /** The i18n namespace labels resolve against: a plugin's name, or core's by default. */
     namespace?: string;
+    /**
+     * Whether Cmd+S submits the form; true unless this says otherwise. Only a
+     * page's main form keeps it, so one key press saves one form. It never runs
+     * while a modal dialog is open.
+     */
+    saveHotkey?: boolean;
+    /**
+     * Reports a failed submit that is not a 422 with field or form messages,
+     * in place of the error toast.
+     */
+    onError?: (error: Error) => void;
 };
+
+/** A 422's field and form messages, or `null` for any other error. */
+export function readValidationErrors(
+    error: Error
+): { fields: FieldErrors; form: string[] } | null {
+    if (!(error instanceof AstromechApiError) || error.status !== 422) return null;
+    const fields = (error.details?.fields ?? {}) as FieldErrors;
+    const form = (error.details?.form ?? []) as string[];
+    if (Object.keys(fields).length === 0 && form.length === 0) return null;
+    return { fields, form };
+}
 
 /**
  * `TExtras` is the caller's own keys, `TSaved` what `onSubmit` resolves to,
@@ -75,6 +97,8 @@ export function useFieldsForm<
     validationMode,
     readOnly = false,
     namespace = labelNamespace(undefined),
+    saveHotkey = true,
+    onError,
 }: UseFieldsFormOptions<TExtras, TSaved, TMeta>) {
     const { toast } = useToast();
     const { t } = useTranslation();
@@ -141,23 +165,29 @@ export function useFieldsForm<
             form.reset(form.state.values);
             onSuccess?.(saved);
         },
-        onError: (error) => handleError(error),
+        onError: (error) => showError(error),
     });
 
-    function handleError(error: Error): void {
-        if (error instanceof AstromechApiError && error.status === 422) {
-            const fields = (error.details?.fields ?? {}) as FieldErrors;
-            const messages = (error.details?.form ?? []) as string[];
+    /**
+     * Show a failed write's error as a failed submit does: a 422 on its fields
+     * and in the banner, anything else through `onError` or a toast.
+     */
+    function showError(error: Error): void {
+        const errors = readValidationErrors(error);
+        if (errors !== null) {
+            const { fields, form: messages } = errors;
             if (messages.length > 0) setFormErrors(messages);
-            if (Object.keys(fields).length > 0 || messages.length > 0) {
-                validation.setServerErrors(fields);
-                // A form-level message names no field, so it is its own sentence
-                // rather than an entry in the field-name summary.
-                const summary =
-                    Object.keys(fields).length > 0 ? [validationMessage(fields)] : [];
-                toast({ message: [...messages, ...summary].join(' '), variant: 'error' });
-                return;
-            }
+            validation.setServerErrors(fields);
+            // A form-level message names no field, so it is its own sentence
+            // rather than an entry in the field-name summary.
+            const summary =
+                Object.keys(fields).length > 0 ? [validationMessage(fields)] : [];
+            toast({ message: [...messages, ...summary].join(' '), variant: 'error' });
+            return;
+        }
+        if (onError !== undefined) {
+            onError(error);
+            return;
         }
         toast({
             message: error.message !== '' ? error.message : t('common.error'),
@@ -178,10 +208,14 @@ export function useFieldsForm<
     const isPendingRef = useRef(mutation.isPending);
     isPendingRef.current = mutation.isPending;
 
-    useHotkeys('mod+s', () => {
-        if (isPendingRef.current) return;
-        handleSubmit();
-    });
+    useHotkeys(
+        'mod+s',
+        () => {
+            if (isPendingRef.current) return;
+            handleSubmit();
+        },
+        { enabled: saveHotkey }
+    );
 
     // Warn on closing the tab with unsaved changes. `form` is stable, and its
     // `state` getter reads the live value when the event fires.
@@ -207,6 +241,7 @@ export function useFieldsForm<
         form,
         mutation,
         handleSubmit,
+        showError,
         isDirty,
         readOnly,
         fieldDefinitions,

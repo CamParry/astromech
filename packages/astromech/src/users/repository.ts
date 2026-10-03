@@ -14,7 +14,7 @@ import { buildOrderBy } from '@/content/list';
 import { createContentRepository } from '@/content/repository/content-table';
 import { relationshipRepository } from '@/content/repository/relationships';
 import { sortableColumns } from '@/content/resources';
-import { encodeWith, kyselyTableKey } from '@/database/codec';
+import { decodeWith, encodeWith, kyselyTableKey } from '@/database/codec';
 import { createRepository } from '@/database/repository/create-repository';
 import {
     accountsTable,
@@ -22,6 +22,7 @@ import {
     usersTable,
     userVersionsTable,
 } from '@/database/tables';
+import { transaction } from '@/database/transaction';
 
 /** One locale of one user, as the users service reads it. */
 export type UserResource = Resource & {
@@ -158,30 +159,37 @@ function createUserRepository() {
     }
 
     /**
-     * Insert the `users` row only while the table is empty, in one statement.
-     * `true` when this call inserted it: first-run setup's gate, so a losing
-     * racer inserts nothing.
+     * `create`, only while the `users` table is empty: first-run setup's gate.
+     * The `users` row goes in with one conditional statement, so a losing racer
+     * writes nothing and gets `null`.
      */
-    async function createIfEmpty(row: NewUserTableRow): Promise<boolean> {
-        const { db, table } = resourceRows.kysely();
-        // `encodeWith` mints the id and the timestamps the columns default, and
+    async function createIfEmpty(
+        resourceRow: NewUserTableRow,
+        write: ContentWrite
+    ): Promise<UserResource | null> {
+        // `encodeWith` fills the id and timestamps the columns default and
         // serializes every value; the Kysely handle spells the column names the
         // way `CamelCasePlugin` does.
-        const cells = Object.entries(encodeWith(usersTable, row));
-        const result = await db
-            .insertInto(table)
-            .columns(cells.map(([column]) => column))
-            .expression(
-                db
-                    .selectNoFrom(
-                        cells.map(([column, value]) => sql.val(value).as(column))
-                    )
-                    .where(({ not, exists, selectFrom }) =>
-                        not(exists(selectFrom(table).select(sql.lit(1).as('one'))))
-                    )
-            )
-            .executeTakeFirst();
-        return Number(result.numInsertedOrUpdatedRows ?? 0) === 1;
+        const cells = Object.entries(encodeWith(usersTable, resourceRow));
+        return transaction(async () => {
+            const { db, table } = resourceRows.kysely();
+            const inserted = await db
+                .insertInto(table)
+                .columns(cells.map(([column]) => column))
+                .expression(
+                    db
+                        .selectNoFrom(
+                            cells.map(([column, value]) => sql.val(value).as(column))
+                        )
+                        .where(({ not, exists, selectFrom }) =>
+                            not(exists(selectFrom(table).select(sql.lit(1).as('one'))))
+                        )
+                )
+                .returningAll()
+                .executeTakeFirst();
+            if (inserted === undefined) return null;
+            return content.createContentRow(decodeWith(usersTable, inserted), write);
+        });
     }
 
     /** Write the better-auth credential account that lets `userId` sign in with `passwordHash`. */
@@ -225,6 +233,8 @@ function createUserRepository() {
             resourceRows.findOne({ id }),
         /** The `users` rows for `ids`. */
         findUserRows: content.findResourceRows,
+        /** How many `users` rows exist, whether or not they have a content row. */
+        countUserRows: (): Promise<number> => resourceRows.count(),
         /** Every user's id. */
         findIds: (): Promise<string[]> => resourceRows.pluck('id'),
         /** The ids of the users holding `role`. */

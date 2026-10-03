@@ -287,10 +287,16 @@ const entriesService: EntriesService = createEntriesService('/entries', 'full');
 /**
  * A multipart upload — the two media routes with no row in the table, because a
  * `File` has no JSON representation and so no schema either side could state.
+ * An upload's `data` travels as a JSON-encoded form part.
  */
-async function uploadFile(path: string, file: File): Promise<Media> {
+async function uploadFile(
+    path: string,
+    file: File,
+    data?: Parameters<MediaService['upload']>[0]['data']
+): Promise<Media> {
     const formData = new FormData();
     formData.append('file', file);
+    if (data !== undefined) formData.append('data', JSON.stringify(data));
 
     const response = await fetch(`${apiBase}${path}`, {
         method: 'POST',
@@ -305,7 +311,10 @@ async function uploadFile(path: string, file: File): Promise<Media> {
 }
 
 const mediaService = restService<MediaService>('media', callRoute, {
-    upload: (params) => uploadFile('/media', (params as { file: File }).file),
+    upload: (params) => {
+        const { file, data } = params as Parameters<MediaService['upload']>[0];
+        return uploadFile('/media', file, data);
+    },
     replace: (params) => {
         const { id, file } = params as { id: string; file: File };
         return uploadFile(`/media/${id}/replace`, file);

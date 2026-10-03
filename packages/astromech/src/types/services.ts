@@ -14,6 +14,7 @@ import type {
     EntryVersion,
     Global,
     GlobalVersion,
+    JsonObject,
     Media,
     MediaVersion,
     Notification,
@@ -372,7 +373,10 @@ export type MediaUpdateData = z.input<typeof updateMediaSchema>;
 export type MediaService = {
     query(params?: MediaQueryParams): Promise<QueryResult<Media>>;
     get(params: { id: string; locale?: string }): Promise<Media | null>;
-    upload(params: { file: File }): Promise<Media>;
+    upload(params: {
+        file: File;
+        data?: { fields?: JsonObject | undefined };
+    }): Promise<Media>;
     replace(params: { id: string; file: File }): Promise<Media>;
     update(params: {
         id: string;

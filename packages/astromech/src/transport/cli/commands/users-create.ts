@@ -1,9 +1,9 @@
-import type { User } from '@/types/index';
+import type { JsonObject, User } from '@/types/index';
 import { defineCommand } from 'citty';
-import { configArgs, jsonArgs } from '../common-args';
+import { configArgs, fieldsArgs, jsonArgs } from '../common-args';
 import { withApplication } from '../config';
 import { callCoreMethod } from '../methods';
-import { printResult } from '../output';
+import { parseJsonArg, printResult } from '../output';
 import { ask } from '../prompt';
 
 export default defineCommand({
@@ -13,6 +13,7 @@ export default defineCommand({
         email: { type: 'string', description: 'Email address' },
         password: { type: 'string', description: 'Password' },
         role: { type: 'string', description: 'Role slug', default: 'admin' },
+        ...fieldsArgs,
         ...jsonArgs,
         ...configArgs,
     },
@@ -27,10 +28,21 @@ export default defineCommand({
                 ...Object.fromEntries(missing.map(([key], i) => [key, answers[i]])),
             };
 
+            const fields =
+                args.fields === undefined
+                    ? undefined
+                    : ((await parseJsonArg(args.fields)) as JsonObject);
+
             // `users.create` checks the role against the config and writes the
             // user, its content row and its credential account in one transaction.
             const user = await callCoreMethod<User>('users.create', {
-                data: { name, email, password, role: args.role ?? 'admin' },
+                data: {
+                    name,
+                    email,
+                    password,
+                    role: args.role ?? 'admin',
+                    ...(fields !== undefined ? { fields } : {}),
+                },
             });
             printResult(user, {
                 json: args.json,

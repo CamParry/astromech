@@ -640,6 +640,8 @@ export type AdminConfig = {
     media: {
         /** Whether a media item may hold a content row per locale. */
         translatable: boolean;
+        /** The custom field tree a media item's `fields` column holds. */
+        fields: Field[];
     };
     /** The users section's own settings. */
     users: {

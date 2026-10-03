@@ -3,7 +3,7 @@
  *
  * The user create page: a create sends the name, email, role and the declared
  * profile fields, toasts, then returns to the list; a 422 lands on the field it names
- * or in the banner, and the page stays put.
+ * or in the banner, and the page stays put. A profile input is described by its error.
  */
 
 import type { RenderAdminResult } from '../../_support/render-admin';
@@ -110,5 +110,17 @@ describe('UserNewPage', () => {
         const banner = await screen.findByRole('alert');
         expect(banner.textContent).toBe('A user with this email exists');
         expect(page.location()).toBe('/users/new');
+    });
+
+    it('describes a profile input by its error', async () => {
+        const page = mountPage();
+
+        const name = await screen.findByLabelText('Name');
+        await page.user.type(name, 'A');
+        await page.user.clear(name);
+
+        const message = await screen.findByText('Name is required');
+        expect(name.getAttribute('aria-invalid')).toBe('true');
+        expect(name.getAttribute('aria-describedby')?.split(' ')).toContain(message.id);
     });
 });

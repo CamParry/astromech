@@ -46,6 +46,7 @@ const OWNED_TABLES = [
     'round_trip',
     'migrated',
     'introspected',
+    'user_content',
     'users',
     'kysely_migration',
     'kysely_migration_lock',
@@ -162,7 +163,8 @@ describe('d1() against local emulation', () => {
     // the conditional insert stands alone there, and D1's `meta.changes` is how
     // its row count comes back.
     it('inserts the first user once, and nothing on a second call', async () => {
-        // The app's `users` DDL, less the unique index this case does not need.
+        // The app's `users` and `user_content` DDL, less the indexes and
+        // foreign keys this case does not need.
         await sql`CREATE TABLE users (
             id TEXT PRIMARY KEY NOT NULL,
             email TEXT NOT NULL,
@@ -173,21 +175,30 @@ describe('d1() against local emulation', () => {
             created_at TEXT NOT NULL,
             updated_at TEXT NOT NULL
         )`.execute(db);
+        await sql`CREATE TABLE user_content (
+            id TEXT PRIMARY KEY NOT NULL,
+            user_id TEXT NOT NULL,
+            locale TEXT NOT NULL,
+            fields TEXT,
+            created_at TEXT NOT NULL,
+            updated_at TEXT NOT NULL,
+            created_by TEXT,
+            updated_by TEXT
+        )`.execute(db);
         // The app wired to this D1 database the way boot wires it.
         setupTestConfig({ ...makeTestConfig(), db: d1({ binding: 'DB' }) });
 
-        const first = await userRepository.createIfEmpty({
-            email: 'first@test.dev',
-            name: 'First',
-            role: 'admin',
-        });
-        const second = await userRepository.createIfEmpty({
-            email: 'second@test.dev',
-            name: 'Second',
-            role: 'admin',
-        });
+        const first = await userRepository.createIfEmpty(
+            { email: 'first@test.dev', name: 'First', role: 'admin' },
+            { fields: {} }
+        );
+        const second = await userRepository.createIfEmpty(
+            { email: 'second@test.dev', name: 'Second', role: 'admin' },
+            { fields: {} }
+        );
 
-        expect([first, second]).toEqual([true, false]);
+        expect(first?.email).toBe('first@test.dev');
+        expect(second).toBeNull();
         const { rows } = await sql<{ email: string }>`
             SELECT email FROM users
         `.execute(db);

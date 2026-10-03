@@ -12,10 +12,14 @@ import { swaggerUI } from '@hono/swagger-ui';
 import { OpenAPIHono, z } from '@hono/zod-openapi';
 import { cors } from 'hono/cors';
 import { secureHeaders } from 'hono/secure-headers';
-import { currentServices } from '@/app-context/services';
 import { handleAuthRequest } from '@/auth/better-auth';
 import { meSchema } from '@/auth/schema';
-import { createFirstAdmin, firstAdminSchema, SIGN_UP_CLOSED } from '@/auth/setup';
+import {
+    createFirstAdmin,
+    firstAdminSchema,
+    needsSetup,
+    SIGN_UP_CLOSED,
+} from '@/auth/setup';
 import { resolveNodeEnv } from '@/env';
 import { handleMediaRequest } from '@/media/serving/handler';
 import { getRequestScope, runInRequestScope } from '@/request-scope/request-scope';
@@ -138,13 +142,11 @@ export function createHttpApp(config: ResolvedConfig): OpenAPIHono<AppEnv> {
         c.text('Method not allowed', 405, { Allow: 'GET, HEAD' })
     );
 
-    // Not in a route table: unauthenticated by design, and it deliberately calls
-    // `users.query` — a `users:read` method — ungated, because before the first
-    // user exists there is no role to hold the grant.
-    app.get(`${api}/setup/check`, async (c) => {
-        const result = await currentServices.users.query({ limit: 'all' });
-        return c.json({ needsSetup: result.data.length === 0 });
-    });
+    // Not in a route table: unauthenticated by design. Before the first user
+    // exists there is no role to hold a grant.
+    app.get(`${api}/setup/check`, async (c) =>
+        c.json({ needsSetup: await needsSetup() })
+    );
 
     // Not in a route table either, and unauthenticated for the same reason:
     // before the first user there is no role to hold a grant. The write refuses
