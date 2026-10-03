@@ -6,12 +6,14 @@
  */
 
 import type { EntryStatus } from 'astromech';
+import { ENTRY_STATUSES } from 'astromech/shared';
 import React from 'react';
 import { useTranslation } from 'react-i18next';
 import { formatDatetime } from '../../utilities/dates';
 import { Input } from '../ui/input';
 import { Panel } from '../ui/panel';
 import { Select } from '../ui/select';
+import { ENTRY_STATUS_LABEL_KEYS } from '../ui/status-badge';
 
 export type PublishPanelProps = {
     status: EntryStatus;
@@ -34,11 +36,10 @@ export function PublishPanel({
 }: PublishPanelProps): React.ReactElement {
     const { t } = useTranslation();
 
-    const statusOptions = [
-        { value: 'unpublished' as EntryStatus, label: t('entries.unpublished') },
-        { value: 'published' as EntryStatus, label: t('entries.published') },
-        { value: 'scheduled' as EntryStatus, label: t('entries.scheduled') },
-    ];
+    const statusOptions = ENTRY_STATUSES.map((value) => ({
+        value,
+        label: t(ENTRY_STATUS_LABEL_KEYS[value]),
+    }));
 
     const formattedPublishedAt =
         entryPublishedAt != null ? formatDatetime(entryPublishedAt) : null;

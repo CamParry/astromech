@@ -6,6 +6,7 @@
 import { defineServiceMethod, noInput, withFallback, z } from 'astromech';
 import { isBackupRunning, performBackup, resolveKeep } from '../backup';
 import { createBackupRunsRepository } from '../repository';
+import { BACKUP_RUN_STATUSES, BACKUP_RUN_TRIGGERS } from '../types';
 
 const MAX_RUNS = 100;
 
@@ -14,8 +15,8 @@ const backupRunSchema = z.object({
     id: z.string(),
     /** The artifact's storage key; null until the dump is stored. */
     key: withFallback(z.string().nullable(), null),
-    status: z.enum(['running', 'success', 'failed']),
-    trigger: z.enum(['scheduled', 'manual', 'pre-restore']),
+    status: z.enum(BACKUP_RUN_STATUSES),
+    trigger: z.enum(BACKUP_RUN_TRIGGERS),
     sizeBytes: withFallback(z.number().nullable(), null),
     error: withFallback(z.string().nullable(), null),
     startedAt: z.date(),

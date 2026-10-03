@@ -26,7 +26,7 @@ export function isBackupRunning(): boolean {
  */
 export async function performBackup(
     ctx: PluginContext,
-    trigger: 'scheduled' | 'manual' | 'pre-restore',
+    trigger: BackupRunRow['trigger'],
     opts: { keep: number }
 ): Promise<BackupRunRow> {
     const runs = createBackupRunsRepository(ctx.db);

@@ -6,7 +6,7 @@
 
 import type { ListSort } from '../components/ui/use-list-state';
 import type { UseAdminEntryTypeResult } from './use-admin-entry-type';
-import type { Entry } from 'astromech';
+import type { Entry, EntryStatus } from 'astromech';
 import { useSearch } from '@tanstack/react-router';
 import React from 'react';
 import { useListState } from '../components/ui/use-list-state';
@@ -14,7 +14,8 @@ import { defaultContentLocale } from '../utilities/content-locale';
 import { validateEntriesListSearch } from '../utilities/entry-admin-path';
 import { useEntriesQuery } from './entries';
 
-export type StatusFilter = 'all' | 'unpublished' | 'published' | 'scheduled' | 'trashed';
+/** The entries list's status filter: one entry status, every row, or the trash. */
+export type StatusFilter = EntryStatus | 'all' | 'trashed';
 
 /** The locale filter's value for "every locale". */
 export const LOCALE_FILTER_ALL = '__all__';

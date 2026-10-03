@@ -6,17 +6,13 @@
 
 import type { TableInsert, TableSelect } from 'astromech';
 import { definePluginTable } from 'astromech';
-import { BACKUPS_PACKAGE } from '../types';
+import { BACKUP_RUN_STATUSES, BACKUP_RUN_TRIGGERS, BACKUPS_PACKAGE } from '../types';
 
 export const backupRunsTable = definePluginTable(BACKUPS_PACKAGE, 'runs', ({ col }) => ({
     id: col.id(),
     key: col.text(),
-    status: col.enum(['running', 'success', 'failed'] as const, {
-        notNull: true,
-    }),
-    trigger: col.enum(['scheduled', 'manual', 'pre-restore'] as const, {
-        notNull: true,
-    }),
+    status: col.enum(BACKUP_RUN_STATUSES, { notNull: true }),
+    trigger: col.enum(BACKUP_RUN_TRIGGERS, { notNull: true }),
     sizeBytes: col.integer(),
     error: col.text(),
     startedAt: col.timestamp({ notNull: true, defaultNow: true }),
