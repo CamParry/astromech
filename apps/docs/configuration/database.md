@@ -25,7 +25,8 @@ Each driver has its own subpath so that importing one never pulls the other's
 client library into your bundle — that is what keeps `@libsql/client` out of a
 Workers build.
 
-v1 is SQLite-only. Postgres and MySQL are a future major, not a flag.
+Astromech runs on SQLite only: a local file or Turso through `libsql()`, or D1.
+There is no Postgres or MySQL driver.
 
 ## `libsql()`
 

@@ -87,7 +87,6 @@ answered §7 by choosing the one-low-level-adapter reading and building it:
 Kysely + `createStorage` + `defineTable` descriptors with per-dialect DDL emit in
 `@astromech/schema-engine`. The `getStorage()` resolver shipped as two seams —
 `getEntryStorage(type)` (`entries/storage/registry.ts`) and
-`DatabaseDriver.createDialect()`, chosen from userland config. The Postgres
-adapter is tracked in `planned/additional-database-drivers.md`, which already
-covers the driver, the descriptor/DDL dialect variants and the per-dialect
-migration pipeline. Nothing is left here.
+`DatabaseDriver.createDialect()`, chosen from userland config. Postgres was
+dropped on 2026-10-03 (`DECISIONS.md`, "The database is SQLite"). Nothing is
+left here.

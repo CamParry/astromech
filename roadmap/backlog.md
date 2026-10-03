@@ -13,6 +13,7 @@ Finished items are deleted rather than ticked; the record of what shipped is in
 - [ ] Investigate admin-page composition — one page rendering **both** a managed form and custom widgets (Sanity-style view tabs, or a custom component mounting managed form regions via a `useSettingsForm` hook). `AdminPage` XOR-validates `fields`/`component` today and was deliberately left open so this is additive (from `completed/unified-admin-pages.md`)
 - [ ] No check finds an admin `t('…')` key with no English string, or a string nothing uses. A scan on 2026-10-02 found no missing key once `common.continue` was added, and about 60 strings that look unused (for example `globals.saved`, `entry.status.*`); some may be built at runtime. Decide whether `check:unused` or a small script should cover both.
 - [ ] `useAuthorNames` fetches every user (`limit: 'all'`); replace it with a batched, `users:read`-gated `users.names({ ids })` when user counts warrant it.
+- [ ] Deleting a user lists the entries whose `relationship` fields name them before it confirms, as `entries/methods/used-by.ts` does for an entry, since the delete empties those fields (`DECISIONS.md`, "Users are deleted, not archived").
 
 ### Fields
 

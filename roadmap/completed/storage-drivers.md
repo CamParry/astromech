@@ -99,7 +99,7 @@ AWS accepts it.
       its absence throws an actionable message
 - [x] Delete the throwing `d1Driver` stub
 - [ ] ~~Rebuild `d1({ binding })`~~ → **moved to
-      `roadmap/planned/additional-database-drivers.md`.** `getInstance()` is
+      the additional database drivers file**, since built (`completed/d1-driver.md`). `getInstance()` is
       synchronous while binding resolution is async, so it needs a Kysely dialect
       resolving inside `acquireConnection()`, and no D1 dialect exists here.
 - [ ] First real attempt at a Workers boot — **not done**, see Not verified

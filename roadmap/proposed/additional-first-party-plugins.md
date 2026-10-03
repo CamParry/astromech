@@ -26,7 +26,7 @@ import-export, Slack, WordPress importer, editorial comments.
 - [ ] `@astromech/wordpress-import` — WXR into entries, media and users, the
       likeliest way a site arrives.
 - [ ] `@astromech/comments` — editorial comments on an entry, with mentions
-      that notify. A future idea beside `editor-locking.md`, since both are
+      that notify. A future idea beside `planned/editor-locking.md`, since both are
       about several people on one entry.
 - [x] `@astromech/backups` — see `roadmap/completed/backups-plugin.md`
 

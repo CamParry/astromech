@@ -1,7 +1,8 @@
 # D1 Driver (Cloudflare)
 
-Split out of `planned/additional-database-drivers.md` on 2026-07-29 when the
-driver was built. The remaining dialects (Postgres, MySQL) stay in that file.
+Split out of the additional database drivers file on 2026-07-29 when the
+driver was built. The other dialects were dropped on 2026-10-03 (`DECISIONS.md`,
+"The database is SQLite").
 
 **Status:** shipped. Built, unit-tested, verified against Cloudflare's own D1
 implementation through wrangler's local emulation (which found and fixed a

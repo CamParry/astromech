@@ -25,7 +25,7 @@ item 8 proposed, would protect libsql only.
   transaction, as `planned/hooks.md` places them. Rejected: item 8's re-read
   inside `writeBatch`, which D1 cannot honour.
 - **Editor-to-editor conflicts are out of scope.** Two editors saving the same
-  entry is `proposed/editor-locking.md`.
+  entry is `planned/editor-locking.md`.
 - **The trash is read-only.** Update and publish on a trashed entry answer 409;
   restore is the only write. WordPress refuses to edit a trashed post until it
   is restored.
