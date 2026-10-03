@@ -61,7 +61,11 @@ nothing, and a write that fails after it removes the file again. Over HTTP,
 `data` part holding `data` as JSON, such as `{"fields":{"photographer":"Ann"}}`.
 
 In the admin, an upload asks for the media fields only when a required one has
-no default. One form covers the whole upload, and every file takes its values.
+no default, or when the server refuses the fields with a check the browser
+cannot run (a field's `validate`, a function default, `media.validate`). One
+form covers the whole upload, and every file takes its values. Files upload one
+at a time, so when one fails the ones before it stay uploaded, and a retry
+sends only the failed file and those after it.
 
 ## Reading media from your site
 

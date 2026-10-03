@@ -474,8 +474,10 @@ hook takes the definitions, the `operation` (`'create'` or `'update'`), the
 the `namespace` labels resolve against. It runs the field pipeline before a
 submit goes out. When `onSubmit` rejects with a 422, it puts each message in
 the error's `details.fields` on the field it names and shows `details.form` in a
-banner above the form. It also saves on Cmd+S, and asks before a tab with
-unsaved changes closes.
+banner above the form; any other failure is a toast, or goes to your `onError`
+instead. It also saves on Cmd+S, except while a dialog is open, and asks before
+a tab with unsaved changes closes. A form inside a dialog passes
+`saveHotkey: false`.
 
 ```tsx
 // admin/pages/redirect-form.tsx

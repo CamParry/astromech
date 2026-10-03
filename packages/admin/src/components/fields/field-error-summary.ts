@@ -43,6 +43,17 @@ export function fieldLabelPathForError(
     definitions: Field[],
     path: string
 ): Label[] | null {
+    return fieldChainForError(definitions, path)?.map(labelOf) ?? null;
+}
+
+/**
+ * The declared fields an error path runs through, outermost first, or `null`
+ * when `fieldLabelPathForError` cannot resolve it.
+ */
+export function fieldChainForError(
+    definitions: Field[],
+    path: string
+): DataField[] | null {
     let segments;
     try {
         segments = parseInstancePath(path);
@@ -50,7 +61,7 @@ export function fieldLabelPathForError(
         return null;
     }
 
-    const labels: Label[] = [];
+    const chain: DataField[] = [];
     let candidates: DataField[] | null = flattenFieldNodes(definitions);
 
     for (const segment of segments) {
@@ -69,11 +80,11 @@ export function fieldLabelPathForError(
         // disagreeing ones are not, and a guess would name the wrong field.
         if (matches.some((field) => !sameLabel(labelOf(field), label))) return null;
 
-        labels.push(label);
+        chain.push(first);
         candidates = childrenOf(first);
     }
 
-    return labels.length > 0 ? labels : null;
+    return chain.length > 0 ? chain : null;
 }
 
 function sameLabel(a: Label, b: Label): boolean {

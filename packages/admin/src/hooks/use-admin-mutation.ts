@@ -18,6 +18,11 @@ import { useToast } from '../components/ui/toast';
 export type AdminMutationMeta = {
     /** Keys that go stale when the mutation succeeds. */
     invalidates: readonly QueryKey[];
+    /**
+     * `'settled'` invalidates them when it fails too, for a batch whose earlier
+     * writes landed before one failed. Defaults to `'success'`.
+     */
+    invalidateOn?: 'success' | 'settled';
     /** i18n key toasted on success; absent when the caller reports it. */
     successMessage?: string;
     /** i18n key toasted when the error carries no message of its own. */
@@ -51,12 +56,16 @@ export function useAdminMutation<TData, TVariables>(
     const { t } = useTranslation();
     const meta = options.meta;
 
+    function invalidate(): void {
+        for (const queryKey of meta?.invalidates ?? []) {
+            void queryClient.invalidateQueries({ queryKey });
+        }
+    }
+
     return useMutation({
         ...options,
         onSuccess: (data, variables) => {
-            for (const queryKey of meta?.invalidates ?? []) {
-                void queryClient.invalidateQueries({ queryKey });
-            }
+            invalidate();
             if (meta?.successMessage !== undefined) {
                 toast({
                     message: t(meta.successMessage, meta.messageValues ?? {}),
@@ -66,6 +75,7 @@ export function useAdminMutation<TData, TVariables>(
             callbacks?.onSuccess?.(data, variables);
         },
         onError: (error) => {
+            if (meta?.invalidateOn === 'settled') invalidate();
             if (callbacks?.toastError !== false) {
                 toast({
                     message: errorMessage(error, t(meta?.errorMessage ?? 'common.error')),

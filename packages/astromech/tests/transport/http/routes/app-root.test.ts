@@ -12,7 +12,10 @@ import { adminRole } from '@tests/fixtures';
 import { createTestDb, makeTestConfig, requestAs, setupTestConfig } from '@tests/harness';
 import { describe, expect, it } from 'vitest';
 import { currentServices } from '@/app-context/services';
+import { encodeWith } from '@/database/codec';
+import { getDb } from '@/database/registry';
 import { createHttpApp } from '@/transport/http/app';
+import { usersTable } from '@/users/tables';
 
 /** The composed HTTP app, typed as `createHttpApp` builds it. */
 type HttpApp = ReturnType<typeof createHttpApp>;
@@ -42,6 +45,24 @@ describe('GET /setup/check', () => {
         await usersService.create({ data: { email: 'first@test.dev', name: 'First' } });
         const res = await app.request(`${api}/setup/check`);
         expect(res.status).toBe(200);
+        expect(await res.json()).toEqual({ needsSetup: false });
+    });
+
+    // A setup on D1 that failed after its gate leaves a `users` row with no
+    // content row, and `POST /setup` answers closed from then on.
+    it('reports needsSetup: false for a users row with no content row', async () => {
+        const app = await freshApp();
+        await getDb()
+            .insertInto('users')
+            .values(
+                encodeWith(usersTable, {
+                    email: 'first@test.dev',
+                    name: 'First',
+                    role: 'admin',
+                })
+            )
+            .execute();
+        const res = await app.request(`${api}/setup/check`);
         expect(await res.json()).toEqual({ needsSetup: false });
     });
 });

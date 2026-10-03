@@ -8,7 +8,6 @@ import type { NewUserTableRow } from './tables';
 import type { ContentWrite } from '@/content/repository/types';
 import type { ResolvedConfig, User } from '@/types/index';
 import { hashPassword } from 'better-auth/crypto';
-import { getDefaultContentLocale } from '@/config/content-locale';
 import { prepareFields } from '@/content/prepare-fields';
 import { transaction } from '@/database/transaction';
 import { syncUserRelationships } from './relationships';
@@ -56,7 +55,7 @@ export async function createUserRows(
     return transaction(async () => {
         const created =
             input.ifEmpty === true
-                ? await createIfEmpty(row, write)
+                ? await userRepository.createIfEmpty(row, write)
                 : await userRepository.create(row, write);
         if (created === null) return null;
         if (passwordHash !== undefined) {
@@ -65,16 +64,4 @@ export async function createUserRows(
         await syncUserRelationships(config, created.id);
         return created;
     });
-}
-
-/** The `users` row only into an empty table, then its content row; `null` when the table was not empty. */
-async function createIfEmpty(
-    row: NewUserTableRow,
-    write: ContentWrite
-): Promise<UserResource | null> {
-    // Minted here, not by the column default: the content row is written under it.
-    const id = row.id ?? crypto.randomUUID();
-    if (!(await userRepository.createIfEmpty({ ...row, id }))) return null;
-    // A write to a locale with no content row creates it.
-    return userRepository.update({ id, locale: getDefaultContentLocale() }, write);
 }

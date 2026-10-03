@@ -26,6 +26,14 @@ export const firstAdminSchema = z.object({
 });
 
 /**
+ * Whether first-run setup is open: no `users` row exists, with or without a
+ * content row. `GET /setup/check` answers it; `createFirstAdmin` checks it first.
+ */
+export async function needsSetup(): Promise<boolean> {
+    return (await userRepository.countUserRows()) === 0;
+}
+
+/**
  * Create the first admin as `users.create` creates a user, its fields parsed as
  * a create. Answers `'closed'` when a user already exists, having written
  * nothing and checked no field.
@@ -33,7 +41,7 @@ export const firstAdminSchema = z.object({
 export async function createFirstAdmin(
     input: z.infer<typeof firstAdminSchema>
 ): Promise<'created' | 'closed'> {
-    if ((await userRepository.countUserRows()) > 0) return 'closed';
+    if (!(await needsSetup())) return 'closed';
 
     // The empty-table insert is the gate against a concurrent setup. D1 has no
     // interactive transactions, so there a failure after it leaves an admin with

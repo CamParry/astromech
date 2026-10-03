@@ -126,17 +126,20 @@ export function mediaMutations() {
             meta: { invalidates, errorMessage: 'media.deleteFailed' },
         }),
         /**
-         * Upload in order, each file with `fields` when given; the caller
-         * reports how many went.
+         * Upload in order, each file with `fields` when given, calling
+         * `onUploaded` as each one lands. A failure stops the batch with the
+         * files before it uploaded, so the library refreshes either way.
          */
         upload: mutationOptions({
             mutationKey: ['media', 'upload'],
             mutationFn: async ({
                 files,
                 fields,
+                onUploaded,
             }: {
                 files: File[];
                 fields?: JsonObject;
+                onUploaded?: (file: File) => void;
             }) => {
                 const uploaded = [];
                 for (const file of files) {
@@ -146,10 +149,15 @@ export function mediaMutations() {
                             ...(fields !== undefined ? { data: { fields } } : {}),
                         })
                     );
+                    onUploaded?.(file);
                 }
                 return uploaded;
             },
-            meta: { invalidates, errorMessage: 'media.uploadFailed' },
+            meta: {
+                invalidates,
+                invalidateOn: 'settled',
+                errorMessage: 'media.uploadFailed',
+            },
         }),
         restoreVersion: mutationOptions({
             mutationKey: ['media', 'restoreVersion'],

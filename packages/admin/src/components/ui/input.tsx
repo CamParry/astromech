@@ -4,7 +4,7 @@ import React from 'react';
 import { useFieldControl } from '../fields/field-control-context';
 
 type InputProps = React.ComponentProps<'input'> & {
-    error?: string;
+    error?: string | undefined;
     label?: string;
     hint?: string;
 };
@@ -39,7 +39,10 @@ export function Input({
                     {...props}
                 />
                 {error !== undefined && (
-                    <Field.Error className="am-field-error">{error}</Field.Error>
+                    // `match` shows it whatever the control's own validity says.
+                    <Field.Error className="am-field-error" match>
+                        {error}
+                    </Field.Error>
                 )}
                 {hint !== undefined && error === undefined && (
                     <Field.Description className="am-field-hint">

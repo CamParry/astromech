@@ -22,6 +22,7 @@ import {
     usersTable,
     userVersionsTable,
 } from '@/database/tables';
+import { transaction } from '@/database/transaction';
 
 /** One locale of one user, as the users service reads it. */
 export type UserResource = Resource & {
@@ -158,30 +159,39 @@ function createUserRepository() {
     }
 
     /**
-     * Insert the `users` row only while the table is empty, in one statement.
-     * `true` when this call inserted it: first-run setup's gate, so a losing
-     * racer inserts nothing.
+     * `create`, only while the `users` table is empty: first-run setup's gate.
+     * The `users` row goes in with one conditional statement, so a losing racer
+     * writes nothing and gets `null`.
      */
-    async function createIfEmpty(row: NewUserTableRow): Promise<boolean> {
-        const { db, table } = resourceRows.kysely();
-        // `encodeWith` mints the id and the timestamps the columns default, and
-        // serializes every value; the Kysely handle spells the column names the
-        // way `CamelCasePlugin` does.
-        const cells = Object.entries(encodeWith(usersTable, row));
-        const result = await db
-            .insertInto(table)
-            .columns(cells.map(([column]) => column))
-            .expression(
-                db
-                    .selectNoFrom(
-                        cells.map(([column, value]) => sql.val(value).as(column))
-                    )
-                    .where(({ not, exists, selectFrom }) =>
-                        not(exists(selectFrom(table).select(sql.lit(1).as('one'))))
-                    )
-            )
-            .executeTakeFirst();
-        return Number(result.numInsertedOrUpdatedRows ?? 0) === 1;
+    async function createIfEmpty(
+        resourceRow: NewUserTableRow,
+        write: ContentWrite
+    ): Promise<UserResource | null> {
+        // Minted here, not by the column default: the content row is written under it.
+        const id = resourceRow.id ?? crypto.randomUUID();
+        // `encodeWith` fills the timestamps the columns default and serializes
+        // every value; the Kysely handle spells the column names the way
+        // `CamelCasePlugin` does.
+        const cells = Object.entries(encodeWith(usersTable, { ...resourceRow, id }));
+        return transaction(async () => {
+            const { db, table } = resourceRows.kysely();
+            const result = await db
+                .insertInto(table)
+                .columns(cells.map(([column]) => column))
+                .expression(
+                    db
+                        .selectNoFrom(
+                            cells.map(([column, value]) => sql.val(value).as(column))
+                        )
+                        .where(({ not, exists, selectFrom }) =>
+                            not(exists(selectFrom(table).select(sql.lit(1).as('one'))))
+                        )
+                )
+                .executeTakeFirst();
+            if (Number(result.numInsertedOrUpdatedRows ?? 0) !== 1) return null;
+            // A write to a locale with no content row creates it.
+            return content.update({ id, locale: write.locale }, write);
+        });
     }
 
     /** Write the better-auth credential account that lets `userId` sign in with `passwordHash`. */

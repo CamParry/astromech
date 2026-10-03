@@ -3,7 +3,7 @@
  * a resource's fields out unless they must: first-run setup and the upload dialog.
  */
 
-import type { Field } from 'astromech';
+import type { Field, FieldErrors } from 'astromech';
 import { safeParseFields } from 'astromech/shared';
 
 /**
@@ -15,11 +15,23 @@ export async function requiresFieldValues(
     definitions: Field[],
     kind: 'user' | 'media'
 ): Promise<boolean> {
+    const errors = await requiredFieldErrors(definitions, kind);
+    return Object.keys(errors).length > 0;
+}
+
+/**
+ * The errors a create sending no field values would get, by field path: one
+ * for each required field with no default.
+ */
+export async function requiredFieldErrors(
+    definitions: Field[],
+    kind: 'user' | 'media'
+): Promise<FieldErrors> {
     const { errors } = await safeParseFields({}, definitions, {
         operation: 'create',
         validation: 'complete',
         resource: { kind, record: null },
         user: null,
     });
-    return Object.keys(errors).length > 0;
+    return errors;
 }

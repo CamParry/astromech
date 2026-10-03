@@ -1,7 +1,7 @@
 /**
  * Upload files to the media library, toasting how many went. The library page
  * and the field picker both run it, and render the dialog it opens when a
- * required media field has no default.
+ * required media field has no default, or when the server refuses the fields.
  */
 
 import type { MediaUploadDialogProps } from '../components/media/media-upload-dialog';
@@ -13,6 +13,7 @@ import { useToast } from '../components/ui/toast';
 import { requiresFieldValues } from '../utilities/requires-field-values';
 import { mediaMutations } from './media';
 import { useAdminMutation } from './use-admin-mutation';
+import { readValidationErrors } from './use-fields-form';
 
 export type UseUploadMediaResult = {
     upload: (files: File[]) => void;
@@ -21,12 +22,14 @@ export type UseUploadMediaResult = {
     uploadDialog: MediaUploadDialogProps;
 };
 
+/** What the dialog holds: the files waiting on their fields, and why it opened. */
+type PendingUpload = { files: File[]; error?: Error };
+
 export function useUploadMedia(): UseUploadMediaResult {
     const { toast } = useToast();
     const { t } = useTranslation();
 
-    // The files the dialog holds while the author fills in the media fields.
-    const [pendingFiles, setPendingFiles] = useState<File[]>([]);
+    const [pending, setPending] = useState<PendingUpload>({ files: [] });
 
     const toastUploaded = useCallback(
         (uploaded: Media[]) => {
@@ -38,9 +41,8 @@ export function useUploadMedia(): UseUploadMediaResult {
         [toast, t]
     );
 
-    const mutation = useAdminMutation(mediaMutations().upload, {
-        onSuccess: toastUploaded,
-    });
+    // This hook reports a failure, a 422 naming fields by opening the dialog.
+    const mutation = useAdminMutation(mediaMutations().upload, { toastError: false });
     const { mutate } = mutation;
 
     const upload = useCallback(
@@ -52,19 +54,61 @@ export function useUploadMedia(): UseUploadMediaResult {
                     adminConfig.media.fields,
                     'media'
                 ).catch(() => true);
-                if (needed) setPendingFiles(files);
-                else mutate({ files });
+                if (needed) {
+                    setPending({ files });
+                    return;
+                }
+                const remaining = [...files];
+                mutate(
+                    {
+                        files,
+                        onUploaded: (file) => {
+                            remaining.splice(remaining.indexOf(file), 1);
+                        },
+                    },
+                    {
+                        onSuccess: toastUploaded,
+                        onError: (error) => {
+                            const uploaded = files.length - remaining.length;
+                            const partial =
+                                uploaded > 0
+                                    ? t('media.uploadedPartialToast', {
+                                          uploaded,
+                                          total: files.length,
+                                      })
+                                    : null;
+                            // A check only the server runs (a field's `validate`, a
+                            // function default) refused the fields: ask for them.
+                            const fieldErrors = readValidationErrors(error)?.fields ?? {};
+                            if (Object.keys(fieldErrors).length > 0) {
+                                setPending({ files: remaining, error });
+                                if (partial !== null)
+                                    toast({ message: partial, variant: 'warning' });
+                                return;
+                            }
+                            const reason =
+                                error.message !== ''
+                                    ? error.message
+                                    : t('media.uploadFailed');
+                            toast({
+                                message:
+                                    partial === null ? reason : `${partial} ${reason}`,
+                                variant: 'error',
+                            });
+                        },
+                    }
+                );
             })();
         },
-        [mutate]
+        [mutate, toast, toastUploaded, t]
     );
 
     return {
         upload,
         isUploading: mutation.isPending,
         uploadDialog: {
-            files: pendingFiles,
-            onClose: () => setPendingFiles([]),
+            ...pending,
+            onClose: () => setPending({ files: [] }),
             onUploaded: toastUploaded,
         },
     };

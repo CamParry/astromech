@@ -2,8 +2,9 @@
  * @vitest-environment happy-dom
  *
  * The first-run setup form: it shows the user fields only when a required one
- * has no default, sends them as `data.fields`, and shows a 422's field errors
- * on the field they name.
+ * has no default or the server names one, sends them as `data.fields`, shows a
+ * 422's field errors on the field they name and any other refusal inline, and
+ * says what to do when a required picker field has no default.
  */
 
 import { screen, waitFor } from '@testing-library/react';
@@ -82,6 +83,16 @@ function setupBody(): unknown {
 
 const team = { name: 'team', type: 'text', label: 'Team', required: true };
 
+/** A `POST /setup` refusal in the API's error envelope. */
+function refusal(
+    status: number,
+    code: string,
+    message: string,
+    details?: Record<string, unknown>
+): Response {
+    return json({ error: { id: 'e1', code, message, status, details } }, status);
+}
+
 describe('the setup form', () => {
     it('leaves the user fields out when every required one has a default', async () => {
         adminConfig.users.fields = [{ ...team, defaultValue: 'Ops' }];
@@ -148,5 +159,79 @@ describe('the setup form', () => {
         expect(fetchMock.mock.calls.map(([url]) => String(url))).not.toContain(
             '/cms/api/setup'
         );
+    });
+
+    it('shows the user fields when a 422 names one the form left out', async () => {
+        // The default passes the browser's check; a rule only the server runs refuses it.
+        adminConfig.users.fields = [{ ...team, defaultValue: 'Ops' }];
+        setupResponse = () =>
+            refusal(422, 'VALIDATION_ERROR', 'Validation failed', {
+                fields: { team: ['Team must be a real team'] },
+            });
+        const page = mountPage();
+
+        await fillAccount(page);
+        expect(screen.queryByLabelText(/Team/)).toBeNull();
+        await page.user.click(screen.getByRole('button', { name: 'Create account' }));
+
+        expect(await screen.findByLabelText(/Team/)).toBeDefined();
+        expect(screen.getByText('Team must be a real team')).toBeDefined();
+    });
+
+    it('shows a 422 on an account key under its input, without the user fields', async () => {
+        adminConfig.users.fields = [{ ...team, defaultValue: 'Ops' }];
+        setupResponse = () =>
+            refusal(422, 'VALIDATION_ERROR', 'Validation failed', {
+                fields: { email: ['Must be a valid email address'] },
+            });
+        const page = mountPage();
+
+        await fillAccount(page);
+        await page.user.click(screen.getByRole('button', { name: 'Create account' }));
+
+        const message = await screen.findByText('Must be a valid email address');
+        expect(message.closest('.am-field')?.querySelector('input')).toBe(
+            screen.getByLabelText('Email')
+        );
+        expect(screen.queryByLabelText(/Team/)).toBeNull();
+    });
+
+    it('shows a closed sign-up inline', async () => {
+        const closed = 'Sign-up is closed. Ask an administrator to create your account.';
+        setupResponse = () => refusal(403, 'SIGN_UP_CLOSED', closed);
+        const page = mountPage();
+
+        await fillAccount(page);
+        await page.user.click(screen.getByRole('button', { name: 'Create account' }));
+
+        const message = await screen.findByText(closed);
+        expect(message.className).toBe('am-auth-error');
+        expect(page.location()).toBe('/setup');
+    });
+
+    it('submits on Enter in a user field', async () => {
+        adminConfig.users.fields = [team];
+        const page = mountPage();
+
+        await fillAccount(page);
+        await page.user.type(screen.getByLabelText(/Team/), 'Ops{Enter}');
+
+        await waitFor(() =>
+            expect(setupBody()).toMatchObject({ data: { fields: { team: 'Ops' } } })
+        );
+    });
+
+    it('names a required picker field with no default instead of showing the form', async () => {
+        adminConfig.users.fields = [
+            { name: 'avatar', type: 'media', label: 'Avatar', required: true },
+        ];
+        mountPage();
+
+        expect(
+            await screen.findByText(
+                'The required user field Avatar has no default, and its picker works only after sign-in. Give it a defaultValue in the config, or create the first admin with astromech users:create --fields.'
+            )
+        ).toBeDefined();
+        expect(screen.queryByLabelText('Email')).toBeNull();
     });
 });
