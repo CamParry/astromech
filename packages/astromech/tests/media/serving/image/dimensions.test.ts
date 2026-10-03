@@ -1,3 +1,4 @@
+import sharpLib from 'sharp';
 import { describe, expect, it } from 'vitest';
 import {
     isOptimisableImage,
@@ -361,4 +362,31 @@ describe('readImageDimensions', () => {
             });
         });
     });
+});
+
+describe('readImageDimensions with an EXIF orientation', () => {
+    const orientations = [1, 2, 3, 4, 5, 6, 7, 8];
+    const cases = (['jpeg', 'png', 'webp'] as const).flatMap((format) =>
+        orientations.map((orientation) => ({ format, orientation }))
+    );
+
+    it.each(cases)(
+        'agrees with the upright variant for $format at orientation $orientation',
+        async ({ format, orientation }) => {
+            const stored = await sharpLib({
+                create: { width: 40, height: 20, channels: 3, background: '#808080' },
+            })
+                .toFormat(format)
+                .withMetadata({ orientation })
+                .toBuffer();
+            const variant = await sharpLib(stored)
+                .rotate()
+                .toBuffer({ resolveWithObject: true });
+
+            expect(readImageDimensions(new Uint8Array(stored))).toEqual({
+                width: variant.info.width,
+                height: variant.info.height,
+            });
+        }
+    );
 });

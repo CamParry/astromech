@@ -102,6 +102,12 @@ A `Media` carries:
   the content in any locale. To tell whether the file itself changed, compare
   `metadata.version`, the content hash of an optimisable image.
 
+`width` and `height` are the image as displayed: a photo whose EXIF orientation
+turns it a quarter turn, as a phone's portrait photo does, records the upright
+width and height, which are the ones its variants have. Astromech reads them
+from the file's header on upload, with or without an image driver. JPEG, PNG
+and WebP are read; any other file has `null` for both.
+
 What `url` points at depends on the access mode: see
 [media access modes](../configuration/storage.md#media-access-modes).
 
