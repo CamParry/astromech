@@ -56,7 +56,24 @@ const columnArb: fc.Arbitrary<SnapshotColumn> = fc
         }
     });
 
-function tableArb(name: string): fc.Arbitrary<SnapshotTable> {
+/**
+ * Only `c1` references, and only the `id` of a table earlier in `TABLE_NAMES`,
+ * so keys form chains (`gamma` → `beta` → `alpha`) but no cycle. A key prefers
+ * the table just before its own and brings its `c1` column, so a chain of
+ * keys is common enough for the drop-order cases to come up.
+ */
+function tableArb(name: (typeof TABLE_NAMES)[number]): fc.Arbitrary<SnapshotTable> {
+    const [nearest, ...further] = TABLE_NAMES.slice(
+        0,
+        TABLE_NAMES.indexOf(name)
+    ).reverse();
+    const target =
+        nearest === undefined
+            ? fc.constant(null)
+            : fc.oneof(
+                  { weight: 2, arbitrary: fc.constant(nearest) },
+                  { weight: 1, arbitrary: fc.constantFrom(null, ...further) }
+              );
     return fc
         .record({
             columns: fc.uniqueArray(columnArb, {
@@ -66,15 +83,17 @@ function tableArb(name: string): fc.Arbitrary<SnapshotTable> {
             indexed: fc.subarray([...COLUMN_NAMES]),
             uniqueIndexes: fc.boolean(),
             onDelete: fc.option(fc.constantFrom('no action', 'cascade', 'set null')),
+            target,
         })
-        .map(({ columns, indexed, uniqueIndexes, onDelete }) => {
+        .map(({ columns: generated, indexed, uniqueIndexes, onDelete, target }) => {
+            const keyed = onDelete !== null && target !== null;
+            const columns =
+                keyed && !generated.some((c) => c.name === 'c1')
+                    ? [col.text('c1'), ...generated]
+                    : generated;
             const names = new Set(columns.map((c) => c.name));
             return table(name, [col.id(), ...columns], {
-                // Only `c1` references, and only another table's `id`.
-                fks:
-                    onDelete !== null && names.has('c1') && name !== 'alpha'
-                        ? [fk('c1', 'alpha', onDelete)]
-                        : [],
+                fks: keyed ? [fk('c1', target, onDelete)] : [],
                 indexes: indexed
                     .filter((c) => names.has(c))
                     .map((c) =>
@@ -85,14 +104,20 @@ function tableArb(name: string): fc.Arbitrary<SnapshotTable> {
 }
 
 /** A foreign key needs its target in the database (a rebuild fails with "no
- *  such table" otherwise), so a table keeps its key only when `alpha` exists. */
+ *  such table" otherwise), so a table keeps a key only when its target exists. */
 function toSnapshot(tables: SnapshotTable[]): Snapshot {
-    const hasAlpha = tables.some((t) => t.name === 'alpha');
-    return snap(...tables.map((t) => (hasAlpha ? t : { ...t, fks: [] })));
+    const names = new Set(tables.map((t) => t.name));
+    return snap(
+        ...tables.map((t) => ({
+            ...t,
+            fks: t.fks.filter((f) => names.has(f.targetTable)),
+        }))
+    );
 }
 
+/** Every table half the time, so chains of keys run their full length. */
 const snapshotArb: fc.Arbitrary<Snapshot> = fc
-    .subarray([...TABLE_NAMES])
+    .oneof(fc.constant([...TABLE_NAMES]), fc.subarray([...TABLE_NAMES]))
     .chain((names) => fc.tuple(...names.map(tableArb)))
     .map(toSnapshot);
 
@@ -144,7 +169,8 @@ const snapshotPairArb: fc.Arbitrary<[Snapshot, Snapshot]> = snapshotArb.chain((a
                 return fc.oneof(
                     { weight: 3, arbitrary: fc.constant(prev) },
                     { weight: 3, arbitrary: editTable(prev) },
-                    { weight: 1, arbitrary: fresh }
+                    { weight: 1, arbitrary: fresh },
+                    { weight: 2, arbitrary: fc.constant(null) }
                 );
             })
         )
@@ -229,7 +255,7 @@ async function insert(db: Kysely<unknown>, name: string, row: Row): Promise<void
  * Two rows for a table of `a`. Every value is `"b'c"` or `'a'`, which every
  * column kind stores as-is and the enum CHECK accepts, so a copy across a type
  * or kind change keeps it. The rows differ in every column (no unique index
- * trips), the ids match `alpha`'s for the foreign keys, and the second row
+ * trips), every table has the same two ids for the foreign keys, and the second row
  * leaves each nullable column NULL, so a rebuild's `COALESCE` has work to do.
  */
 function seedRows(t: SnapshotTable): Row[] {
@@ -249,10 +275,10 @@ function seedRows(t: SnapshotTable): Row[] {
  *
  * - its key has a delete action and points at a table the ops rebuild, whose
  *   `DROP TABLE` fires that action on the rows (see the failing case below);
- * - `b` gives it a key with no `alpha` in `a`, so the key would point at an
- *   empty new table;
+ * - `b` gives it a key whose target is not in `a`, so the key would point at
+ *   an empty new table;
  * - `b` gives a key column a default the rows take (a new column, or NULL
- *   made NOT NULL), and the default is no `alpha` id;
+ *   made NOT NULL), and the default is no id of the target;
  * - the ops add a NOT NULL `real` column and then an enum column. SQLite
  *   3.45's `quick_check` reads the old rows' `1.5` default as NULL, and an
  *   `ADD COLUMN` with a CHECK runs that check, so the second add fails.
@@ -278,7 +304,7 @@ function canSeed(
         return false;
     }
     if (next === undefined || next.fks.length === 0) return true;
-    if (!('alpha' in a.tables)) return false;
+    if (next.fks.some((f) => !(f.targetTable in a.tables))) return false;
     return next.fks.every((f) => {
         const before = prev.columns.find((c) => c.name === f.column);
         const after = next.columns.find((c) => c.name === f.column);
@@ -293,7 +319,7 @@ function canSeed(
  * with a NULL that `b` makes NOT NULL replaced by `b`'s default (the rebuild's
  * `COALESCE`). A unique index in `b` on a column new to its table would see
  * that column's default in every row, so then every table gets only the row
- * of NULLs, whose ids and key values still match `alpha`'s.
+ * of NULLs, whose ids and key values still match each other.
  */
 function seedBoth(a: Snapshot, b: Snapshot) {
     const { ops } = diffSnapshots(a, b);
@@ -308,8 +334,10 @@ function seedBoth(a: Snapshot, b: Snapshot) {
         for (const prev of Object.values(a.tables)) {
             const next = b.tables[prev.name];
             if (!canSeed(prev, next, a, ops)) continue;
-            // `alpha` comes first, and a row's key needs `alpha`'s rows.
-            if (prev.fks.some((f) => !filled.has(f.targetTable))) continue;
+            // A key points at an earlier table, and a row's key, in `a` or in
+            // `b`, needs that table's rows.
+            const keys = [...prev.fks, ...(next?.fks ?? [])];
+            if (keys.some((f) => !filled.has(f.targetTable))) continue;
             filled.add(prev.name);
             const seeded = seedRows(prev);
             for (const row of oneRow ? seeded.slice(1) : seeded) {
@@ -418,16 +446,48 @@ describe('diffSnapshots properties', () => {
                 const dropped = ops.flatMap((op) =>
                     op.kind === 'dropTable' ? [op.name] : []
                 );
-                // Drops follow the foreign keys rather than snapshot order.
+                // Drops follow the foreign keys rather than snapshot order;
+                // the next property checks that order.
                 expect(
-                    { created, dropped: dropped.sort() },
+                    { created, dropped: new Set(dropped) },
                     'property: table-level ops follow the table sets'
                 ).toEqual({
                     created: Object.keys(b.tables).filter((n) => !(n in a.tables)),
-                    dropped: Object.keys(a.tables)
-                        .filter((n) => !(n in b.tables))
-                        .sort(),
+                    dropped: new Set(
+                        Object.keys(a.tables).filter((n) => !(n in b.tables))
+                    ),
                 });
+            })
+        );
+    });
+
+    it('drops no table before a table that points at it', () => {
+        fc.assert(
+            fc.property(snapshotPairArb, ([a, b]) => {
+                const { ops } = diffSnapshots(a, b);
+                const dropAt = (name: string): number =>
+                    ops.findIndex((op) => op.kind === 'dropTable' && op.name === name);
+                // A table that points at a dropped table is dropped too, or
+                // rebuilt without the key; either op must come first.
+                const removesKeyAt = (name: string): number =>
+                    ops.findIndex(
+                        (op) =>
+                            (op.kind === 'dropTable' && op.name === name) ||
+                            (op.kind === 'rebuildTable' && op.table.name === name)
+                    );
+                const early = Object.values(a.tables).flatMap((from) =>
+                    from.fks.flatMap(({ targetTable: to }) => {
+                        if (to === from.name || to in b.tables) return [];
+                        const before = removesKeyAt(from.name);
+                        return before !== -1 && before < dropAt(to)
+                            ? []
+                            : [`"${to}" is dropped before "${from.name}" lets go of it`];
+                    })
+                );
+                expect(
+                    early,
+                    'property: no table is dropped before a table that points at it'
+                ).toEqual([]);
             })
         );
     });
@@ -588,6 +648,38 @@ describe('diffSnapshots properties', () => {
             );
         }
     );
+
+    // A dropped table that a kept table points at waits for the rebuilds, and
+    // so does every dropped table it points at: dropping `alpha` first would
+    // cascade through `beta` into `gamma`'s rows before `gamma`'s rebuild
+    // removes its key.
+    it('keeps the rows of a table whose key it removes when it drops the chain of tables the key points at', async () => {
+        const a = snap(
+            alpha,
+            table('beta', [col.id(), col.text('c1')], {
+                fks: [fk('c1', 'alpha', 'cascade')],
+            }),
+            table('gamma', [col.id(), col.text('c1')], {
+                fks: [fk('c1', 'beta', 'cascade')],
+            })
+        );
+        const b = snap(table('gamma', [col.id(), col.text('c1')]));
+        expect(diffSnapshots(a, b).errors).toEqual([]);
+        await migrateAndEmit(
+            a,
+            b,
+            async (migrated) => {
+                expect(await dumpRows(migrated)).toEqual({
+                    gamma: [{ id: 'g', c1: 'b' }],
+                });
+            },
+            async (migrated) => {
+                await insert(migrated, 'alpha', { id: 'a', c1: null });
+                await insert(migrated, 'beta', { id: 'b', c1: 'a' });
+                await insert(migrated, 'gamma', { id: 'g', c1: 'b' });
+            }
+        );
+    });
 
     // The rebuild's `RENAME` brings the rows' target back under the old name
     // but leaves the `DROP TABLE`'s violations on the count. The migration's

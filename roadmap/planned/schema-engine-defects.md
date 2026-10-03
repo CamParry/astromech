@@ -36,8 +36,11 @@ fixed.
       together with the key pointing at it failed, because the `DROP TABLE`
       ran before the rebuild that removes the key; dropping it together with
       the table pointing at it failed when the parent came first. Under a
-      cascading key the early drop deleted the child rows instead. A dropped
-      table now goes after the tables that point at it.
+      cascading key the early drop deleted the child rows instead, and in a
+      chain of dropped tables it reached a kept table's rows through the
+      dropped table between them. A dropped table now goes after the tables
+      that point at it, and one that waits for a rebuild holds back every
+      dropped table it points at, directly or through others.
 - [ ] **Rebuilding a referenced table fails with foreign keys on.** Fixed on
       libsql, open on D1. Core runs with foreign keys on, and Kysely's
       `SqliteAdapter` reports no transactional DDL, so `Migrator` ran each

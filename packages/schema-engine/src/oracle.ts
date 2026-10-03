@@ -4,7 +4,7 @@ import { sql } from 'kysely';
 /**
  * Schema oracle — a normalized `sqlite_master` dump. The parity primitive: two
  * databases built by different routes are equivalent iff their `dumpSchema`
- * output matches, once whitespace, identifier quoting and column order are
+ * output matches, once comments, whitespace, identifier quoting and column order are
  * normalized.
  */
 
@@ -54,6 +54,26 @@ function skipQuoted(text: string, i: number): number {
     if (text.startsWith('--', i)) return span(2, '\n');
     if (text.startsWith('/*', i)) return span(2, '*/');
     return i;
+}
+
+/**
+ * `statement` with each line comment (`--`) and block comment outside a quoted
+ * name or literal replaced by a space. Done before {@link normalize} folds newlines,
+ * which would let a `--` comment run on over the rest of the statement.
+ */
+function stripComments(statement: string): string {
+    let result = '';
+    for (let i = 0; i < statement.length; i++) {
+        const end = skipQuoted(statement, i);
+        if (end === i) {
+            result += statement[i];
+            continue;
+        }
+        const comment = statement.startsWith('--', i) || statement.startsWith('/*', i);
+        result += comment ? ' ' : statement.slice(i, end);
+        i = end - 1;
+    }
+    return result;
 }
 
 /** A `CREATE TABLE` statement cut into the text before its definition list,
@@ -157,6 +177,9 @@ export async function dumpSchema<T>(
             type: row.type as 'table' | 'index',
             name: row.name,
             tblName: row.tblName,
-            sql: row.type === 'table' ? canonicalTable(row.sql) : normalize(row.sql),
+            sql:
+                row.type === 'table'
+                    ? canonicalTable(stripComments(row.sql))
+                    : normalize(stripComments(row.sql)),
         }));
 }

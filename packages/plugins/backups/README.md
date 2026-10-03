@@ -134,7 +134,9 @@ Two endpoints stream, so they are `rawRoutes` rather than service methods:
 Restore takes a safety snapshot of the current database **before** overwriting
 it, so the operation is reversible, and preserves the plugin's own run table
 and the cron table across the restore — otherwise a restore would erase the
-record of itself.
+record of itself. The libsql driver refuses a backup whose recorded migrations
+differ from the database's, or whose tables or columns differ, and changes
+nothing; the route answers 500 with the driver's message, which the admin shows.
 
 ## Admin surface
 

@@ -59,7 +59,8 @@ wherever the snapshot puts it, a column moved with no other change produces no
 ops, and a rebuild's `INSERT…SELECT` names every column. A migrated database can
 hold a table's columns in another order than a fresh build, so read and copy
 columns by name, never by position. `serializeSnapshot` is a plain stable
-`JSON.stringify(snapshot, null, 2)`.
+`JSON.stringify(snapshot, null, 2)`, and throws for a NaN or infinite default,
+which JSON would write as `null`.
 
 ## Locked policies
 
@@ -106,7 +107,9 @@ failure. Its D1 driver cannot: D1 has no interactive transactions, so rebuilding
 a referenced table on D1 still fails.
 
 A dropped table goes after the tables that point at it: after their own drop,
-or after the rebuild that removes their key.
+or after the rebuild that removes their key. A dropped table that waits for a
+rebuild holds back every dropped table it points at, directly or through other
+dropped tables, so no drop cascades into a kept table's rows.
 
 Purely additive changes (a nullable column, or a NOT NULL column with a literal
 default, that is not a primary key) fast-path to native `ALTER TABLE ADD COLUMN`
@@ -129,7 +132,7 @@ engine never prints.
 
 ## The oracle
 
-`dumpSchema(db, { tables? })` returns a whitespace-normalized `sqlite_master`
+`dumpSchema(db, { tables? })` returns a comment-free, whitespace-normalized `sqlite_master`
 dump ordered by `(type, tblName, name)`, excluding internal `sqlite_*` and
 implicit-index rows. Each `CREATE TABLE` lists its columns by name, then its
 table constraints, so column order does not count. It is the parity primitive: two databases built by

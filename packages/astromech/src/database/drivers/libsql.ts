@@ -31,6 +31,48 @@ function firstValue(row: Row): unknown {
     return (row as unknown as unknown[])[0] ?? Object.values(row)[0];
 }
 
+/** `name` as a double-quoted SQL identifier. */
+function quoteIdentifier(name: string): string {
+    return `"${name.replace(/"/g, '""')}"`;
+}
+
+/** The migrations recorded in `schema`, or none when it has no migration table. */
+async function migrationNames(
+    c: Client,
+    schema: 'main' | 'restore_src'
+): Promise<string[]> {
+    const table = await c.execute(
+        `SELECT 1 FROM ${schema}.sqlite_master WHERE type = 'table' AND name = 'kysely_migration'`
+    );
+    if (table.rows.length === 0) return [];
+    const result = await c.execute(`SELECT name FROM ${schema}.kysely_migration`);
+    return result.rows.map((row) => String(row['name'] ?? firstValue(row)));
+}
+
+/**
+ * Refuses a backup whose recorded migrations differ from the database's. The
+ * copy only checks columns, so a backup taken before a migration that created
+ * a table would pass, rewind `kysely_migration`, and leave the next migration
+ * run failing on a table that already exists.
+ */
+async function assertSameMigrations(c: Client): Promise<void> {
+    const live = await migrationNames(c, 'main');
+    const backup = await migrationNames(c, 'restore_src');
+    const onlyLive = live.filter((name) => !backup.includes(name)).sort();
+    const onlyBackup = backup.filter((name) => !live.includes(name)).sort();
+    if (onlyLive.length === 0 && onlyBackup.length === 0) return;
+    const differences = [
+        ...(onlyBackup.length > 0
+            ? [`only in the backup: ${onlyBackup.join(', ')}`]
+            : []),
+        ...(onlyLive.length > 0 ? [`only in the database: ${onlyLive.join(', ')}`] : []),
+    ];
+    throw new AstromechError(
+        `restore: the backup is from another schema version than the database ` +
+            `(migrations ${differences.join('; ')})`
+    );
+}
+
 async function columnNames(
     tx: Transaction,
     schema: 'main' | 'restore_src',
@@ -50,6 +92,11 @@ async function columnNames(
  */
 async function copyableColumns(tx: Transaction, table: string): Promise<string> {
     const live = await columnNames(tx, 'main', table);
+    if (live.length === 0) {
+        throw new AstromechError(
+            `restore: table "${table}" is in the backup but not in the database`
+        );
+    }
     const backup = await columnNames(tx, 'restore_src', table);
     const sameColumns =
         live.length === backup.length && backup.every((name) => live.includes(name));
@@ -59,7 +106,7 @@ async function copyableColumns(tx: Transaction, table: string): Promise<string> 
                 `(${backup.join(', ')}) than in the database (${live.join(', ')})`
         );
     }
-    return live.map((name) => `"${name.replace(/"/g, '""')}"`).join(', ');
+    return live.map(quoteIdentifier).join(', ');
 }
 
 export function libsql(options?: LibsqlOptions) {
@@ -184,6 +231,7 @@ export function libsql(options?: LibsqlOptions) {
                         throw new AstromechError(
                             'restore: backup failed integrity check'
                         );
+                    await assertSameMigrations(c);
                     const tablesResult = await c.execute(
                         `SELECT name FROM restore_src.sqlite_master WHERE type='table' AND name NOT LIKE 'sqlite_%'`
                     );
@@ -198,11 +246,11 @@ export function libsql(options?: LibsqlOptions) {
                     try {
                         for (const { name } of tables) {
                             if (preserve.includes(name)) continue;
-                            const q = name.replace(/"/g, '""');
+                            const quoted = quoteIdentifier(name);
                             const columns = await copyableColumns(tx, name);
-                            await tx.execute(`DELETE FROM main."${q}"`);
+                            await tx.execute(`DELETE FROM main.${quoted}`);
                             await tx.execute(
-                                `INSERT INTO main."${q}" (${columns}) SELECT ${columns} FROM restore_src."${q}"`
+                                `INSERT INTO main.${quoted} (${columns}) SELECT ${columns} FROM restore_src.${quoted}`
                             );
                         }
                         await tx.commit();

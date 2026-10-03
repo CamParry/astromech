@@ -52,7 +52,21 @@ export type Snapshot = {
     tables: Record<string, SnapshotTable>;
 };
 
-/** Stable JSON rendering of a snapshot (same input → identical output). */
+/**
+ * Stable JSON rendering of a snapshot (same input → identical output). Throws
+ * for a NaN or infinite default, which `JSON.stringify` would write as `null`.
+ */
 export function serializeSnapshot(snapshot: Snapshot): string {
+    for (const table of Object.values(snapshot.tables)) {
+        for (const column of table.columns) {
+            const value = column.default;
+            if (typeof value !== 'number' || Number.isFinite(value)) continue;
+            throw new Error(
+                `[schema-engine] cannot write the default of \`${table.name}\`.\`${column.name}\` ` +
+                    `to the snapshot: ${value} is not a finite number, and JSON cannot store it. ` +
+                    `Use a finite number.`
+            );
+        }
+    }
     return JSON.stringify(snapshot, null, 2);
 }

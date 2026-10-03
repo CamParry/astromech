@@ -183,6 +183,57 @@ describe('libsql.dump / restore', () => {
         expect(rows).toEqual([{ id: '1', label: null }]);
     });
 
+    it('refuses a backup with a table the database does not have', async () => {
+        const { db } = app;
+        const { dump, restore } = databaseCapabilities();
+
+        await sql.raw(`CREATE TABLE items (id TEXT PRIMARY KEY, name TEXT)`).execute(db);
+        const backup = await dump();
+        await sql.raw(`DROP TABLE items`).execute(db);
+
+        await expect(restore(backup.stream, { preserve: [] })).rejects.toThrow(
+            'restore: table "items" is in the backup but not in the database'
+        );
+        await backup.cleanup();
+    });
+
+    // The column check alone passes a backup taken before a migration that
+    // created a table: the copy would rewind `kysely_migration`, and the next
+    // migration run would fail on the table that already exists.
+    it('refuses a backup from another schema version, naming the migrations that differ', async () => {
+        const { db } = app;
+        const { dump, restore } = databaseCapabilities();
+        const record = (name: string) =>
+            sql`INSERT INTO kysely_migration (name, timestamp) VALUES (${name}, '2026-10-03T00:00:00.000Z')`.execute(
+                db
+            );
+
+        await sql.raw(`CREATE TABLE items (id TEXT PRIMARY KEY, name TEXT)`).execute(db);
+        await sql.raw(`INSERT INTO items VALUES ('1', 'alpha')`).execute(db);
+        await record('9998_backup_only');
+        const backup = await dump();
+
+        await sql`DELETE FROM kysely_migration WHERE name = '9998_backup_only'`.execute(
+            db
+        );
+        await sql.raw(`CREATE TABLE later (id TEXT PRIMARY KEY)`).execute(db);
+        await record('9999_database_only');
+        await sql.raw(`UPDATE items SET name = 'post-dump'`).execute(db);
+
+        await expect(restore(backup.stream, { preserve: [] })).rejects.toThrow(
+            'restore: the backup is from another schema version than the database ' +
+                '(migrations only in the backup: 9998_backup_only; only in the database: 9999_database_only)'
+        );
+        await backup.cleanup();
+
+        const { rows: items } = await sql.raw(`SELECT name FROM items`).execute(db);
+        expect(items).toEqual([{ name: 'post-dump' }]);
+        const { rows: recorded } = await sql
+            .raw(`SELECT name FROM kysely_migration WHERE name LIKE '999%'`)
+            .execute(db);
+        expect(recorded).toEqual([{ name: '9999_database_only' }]);
+    });
+
     it('rolls back every table when one table fails to copy', async () => {
         const { db } = app;
         const { dump, restore } = databaseCapabilities();

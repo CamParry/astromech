@@ -74,6 +74,16 @@ describe('dumpSchema', () => {
         );
     });
 
+    it('drops comments, so a column after one sorts by its own name', async () => {
+        const db = await makeDb([
+            'CREATE TABLE `t` (\n    `z` text,\n    -- c, d\n    y text,\n' +
+                '    /* b, c */ `a` text\n)',
+        ]);
+
+        const [row] = await dumpSchema(db);
+        expect(row?.sql).toBe('CREATE TABLE `t` (`a` text, y text, `z` text)');
+    });
+
     // `ALTER TABLE ADD COLUMN` appends the column before the closing `)` with
     // its own spacing, or before the first table constraint.
     const fk = 'CONSTRAINT `t_p_fkey` FOREIGN KEY (`p`) REFERENCES `t`(`id`)';

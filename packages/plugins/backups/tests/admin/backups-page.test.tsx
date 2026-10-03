@@ -196,4 +196,27 @@ describe('BackupsPage', () => {
             ).toBeNull();
         });
     });
+
+    it('shows why a restore failed', async () => {
+        backups.list.mockResolvedValue(listing([backupRun({ id: 'run_1' })]));
+        const reason =
+            'restore: the backup is from another schema version than the database ' +
+            '(migrations only in the database: 9999_later)';
+        vi.stubGlobal(
+            'fetch',
+            vi.fn<typeof globalThis.fetch>(async () =>
+                Response.json({ error: reason }, { status: 500 })
+            )
+        );
+        const { user } = renderPage();
+
+        const row = await findRow('Scheduled');
+        await user.click(within(row).getByRole('button', { name: 'Restore' }));
+        const dialog = await screen.findByRole('alertdialog', {
+            name: 'Restore this backup?',
+        });
+        await user.click(within(dialog).getByRole('button', { name: 'Restore' }));
+
+        expect(await screen.findByText(`Restore failed: ${reason}`)).not.toBeNull();
+    });
 });
