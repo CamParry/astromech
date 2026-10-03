@@ -64,8 +64,9 @@ reading one teaches the rest. `users/methods/create.ts` and
     5. The writes, in one `transaction` when they touch more than one table,
        even through one repository call. The first statement carries the
        guard, so a write refused there writes nothing, even on D1; a guarded
-       write that matches no row answers 409 (`writeGuarded`). A version is snapshotted
-       here, from the row as stored, never from the copy step 2 loaded.
+       write that matches no row answers 409, or 404 when the row is gone
+       (`writeGuarded`). A version is snapshotted here, from the row as
+       stored, never from the copy step 2 loaded.
     6. The after hook.
     7. Return.
        A handler that only forwards (a batch method, a status change) delegates

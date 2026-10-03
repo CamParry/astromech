@@ -126,7 +126,10 @@ describe('a user deleted while an update runs', () => {
         });
 
         await expect(
-            usersService.update({ id: editor.id, data: { name: 'Renamed' } })
+            usersService.update({
+                id: editor.id,
+                data: { name: 'Renamed', fields: {} },
+            })
         ).rejects.toBeInstanceOf(ResourceNotFoundError);
         expect(await usersService.get({ id: editor.id })).toBeNull();
     });

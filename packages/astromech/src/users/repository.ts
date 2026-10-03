@@ -258,10 +258,9 @@ function createUserRepository() {
 
     /**
      * Drops the user, unless they are the last admin, then every relationship
-     * pointing at (or from) them. The guarded delete runs first, so a refusal
-     * writes nothing even where `transaction()` opens none (D1). Call it inside a
-     * transaction: an index outliving a failed delete would name a user who is
-     * gone.
+     * pointing at (or from) them. Call it inside a transaction. On D1, which opens
+     * none, a failed second statement leaves index rows naming a gone user; the
+     * other order would wipe a last admin's rows on an ordinary refusal.
      */
     async function del(id: string): Promise<'deleted' | 'missing' | 'last-admin'> {
         const { db, table } = resourceRows.kysely();

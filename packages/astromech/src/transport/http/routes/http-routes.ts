@@ -48,7 +48,7 @@ export type HttpRouteSpec = {
     /**
      * A 409 the method answers for a reason neither its schemas nor its
      * `requires` state, worded for the OpenAPI document (the last admin, a
-     * staged change that already exists).
+     * staged change that already exists, an entry in the trash).
      */
     refusals?: { conflict?: string };
     /** Marks a route whose server handler is written by hand, not generated. */

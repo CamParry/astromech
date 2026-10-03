@@ -49,24 +49,6 @@ Tested on D1 on 2026-10-02:
 - Whether plugin chains, which merge into the app chain at apply time, can
   batch the same way.
 
-## Content writes D1 leaves partial
-
-The same missing transaction leaves gaps in content writes. Each write's first
-statement carries its guard (`DECISIONS.md`, "A write repeats its load-step
-checks in its own `WHERE`"), so a refused write changes nothing, but:
-
-- **Earlier items of a multi-id call stay written.** `writeBatch` runs inside
-  `transaction()`, which on D1 runs with none, so when a later id fails (a 409,
-  a 422) the ids in `BulkOperationError.succeededBefore` keep their writes.
-- **A snapshot written before a refused update stays.** The version snapshot
-  and the update are two statements; a row changed between them refuses the
-  update and leaves a version identical to the row as it stood.
-- **Two interleaved updates can snapshot the same state.** Both snapshots can
-  read the row before either update lands, so two versions hold the same
-  content and the state between the updates is never versioned.
-
-Sending the snapshot and the update as one `batch()` would close the last two.
-
 ## Why it matters soon
 
 The permissions work drops the unused `roles` table
