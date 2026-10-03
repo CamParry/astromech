@@ -36,8 +36,9 @@ This is a living reference; it grows as the project does.
   wrangler config, migrations against D1, and why Node and Vercel need no
   equivalent.
 - [configuration/trust-proxy.md](configuration/trust-proxy.md) — where the
-  connecting address of a request comes from, the `security.trustProxy` option
-  for a site behind a proxy, and why the address is counted from the end of
+  connecting address of a request comes from, the sign-in rate limits and
+  session record that use it, the `security.trustProxy` option for a site
+  behind a proxy, and why the address is counted from the end of
   `x-forwarded-for`.
 - [content/entry-types.md](content/entry-types.md) — declaring entry types: the
   `entries` record, and `defineEntryType` for splitting a type into its own

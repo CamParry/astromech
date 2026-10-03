@@ -10,6 +10,7 @@ import { resolveGlobals } from '@/config/globals';
 import { assertPluginsValid } from '@/config/plugins';
 import { assertMediaAccessCompatible } from '@/config/validate/media-access';
 import { assertRelationshipTargets } from '@/config/validate/relationships';
+import { assertTrustProxyValid } from '@/config/validate/trust-proxy';
 import { assertUniqueDataNames, validateFieldTree } from '@/fields/field-tree';
 import { setPluginFieldTypes } from '@/fields/field-type-registry';
 import { resolveRoles } from '@/permissions/roles';
@@ -41,6 +42,7 @@ export function resolveConfig(config: AstromechConfig): ResolvedConfig {
 
     const mediaAccess = config.media?.access ?? 'public';
     assertMediaAccessCompatible(mediaAccess, config.media?.image?.driver.name);
+    assertTrustProxyValid(config.security?.trustProxy);
 
     // `image` carries a live driver and `media` is picked into
     // `PluginConfigView`, so it is dropped here rather than only in the type.

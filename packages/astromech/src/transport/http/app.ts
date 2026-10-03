@@ -12,7 +12,7 @@ import { OpenAPIHono, z } from '@hono/zod-openapi';
 import { cors } from 'hono/cors';
 import { secureHeaders } from 'hono/secure-headers';
 import { currentServices } from '@/app-context/services';
-import { getAuth } from '@/auth/better-auth';
+import { handleAuthRequest } from '@/auth/better-auth';
 import { meSchema } from '@/auth/schema';
 import { createFirstAdmin, firstAdminSchema, SIGN_UP_CLOSED } from '@/auth/setup';
 import { resolveNodeEnv } from '@/env';
@@ -165,7 +165,9 @@ export function createHttpApp(config: ResolvedConfig): OpenAPIHono<AppEnv> {
     // A catch-all because Better Auth owns its route surface, so core does not
     // list its routes. Built per request: at construction it would open a
     // dialect in the CLI and MCP.
-    app.on(['GET', 'POST'], `${api}/auth/*`, (c) => getAuth().handler(c.req.raw));
+    app.on(['GET', 'POST'], `${api}/auth/*`, (c) =>
+        handleAuthRequest(c.req.raw, getClientAddress(c))
+    );
 
     // Plugin RPC + raw routes enforce access per-method (incl. public), so
     // they mount before the API-wide requireAuth. So does the one route over

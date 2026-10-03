@@ -1,5 +1,5 @@
 /**
- * better-auth's sessions, accounts and verifications. These describe what its
+ * better-auth's sessions, accounts, verifications and rate limits. These describe what its
  * adapter writes: ISO-8601 TEXT timestamps and its own ids. `users` stays in
  * `users/tables.ts`, because it is the user.
  */
@@ -41,4 +41,15 @@ export const verificationsTable = defineTable('verifications', ({ col }) => ({
     expiresAt: col.timestamp({ notNull: true }),
     createdAt: col.timestamp(),
     updatedAt: col.timestamp(),
+}));
+
+/**
+ * better-auth's rate limiter counts, one row per address and path. `lastRequest`
+ * is epoch milliseconds, which better-auth compares as a number.
+ */
+export const rateLimitsTable = defineTable('rate_limits', ({ col }) => ({
+    id: col.id({ format: 'uuid' }),
+    key: col.text({ notNull: true, unique: true }),
+    count: col.integer({ notNull: true }),
+    lastRequest: col.integer({ notNull: true }),
 }));
