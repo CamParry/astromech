@@ -183,9 +183,11 @@ describe('readChatRequest', () => {
     it('reads back any request the drawer could send', async () => {
         await fc.assert(
             fc.asyncProperty(chatRequest, async (request) => {
+                // The request travels as JSON, which turns a generated -0 into 0.
+                const sent: unknown = JSON.parse(JSON.stringify(request));
                 await expect(
                     readChatRequest(post(JSON.stringify(request)))
-                ).resolves.toEqual(request);
+                ).resolves.toEqual(sent);
             })
         );
     });
