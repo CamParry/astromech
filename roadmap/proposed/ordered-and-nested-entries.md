@@ -21,10 +21,15 @@ entry, as `@astromech/menus` uses it. Raised on 2026-10-03. **Target: 1.0.**
 - An option for position alone (manual order without nesting).
 - The `url` template can use the parent's path.
 
+## Decided (2026-10-03)
+
+- **`parentId` lives on `entries`**, shared by every locale, as Craft
+  structures and WordPress `post_parent` do. A draft copies a content row, not
+  the entry, so moving an entry under a new parent applies at once.
+
 ## Open questions
 
 - How does it overlap with `roadmap/proposed/media-folders.md`? A folder and a
   parent are two ways of grouping entries.
-- Is the parent per locale or shared across translations?
 - What happens to children when a parent is trashed, and to URLs and redirects
   when one moves?
