@@ -126,8 +126,8 @@ Generation itself is the AI SDK's: import `generateText`, `streamText` or
 `Output.object` from `ai` and pass the model you were given. Astromech doesn't
 wrap those — `DECISIONS.md` records why.
 
-Every model handed out this way logs one line per completed call — the name, the
-provider and model id, the duration and the token usage.
+Every model handed out this way logs one line per completed call to stderr — the
+name, the provider and model id, the duration and the token usage.
 
 ## What `@astromech/assistant` needs
 

@@ -5,9 +5,14 @@
  */
 
 import type { ContentRowId } from './repository/types';
+import type { ApiError } from '@/errors/api-error';
 import type { ConflictReason } from '@/errors/resource';
 import type { ResourceType } from '@/types/domain';
-import { ResourceConflictError, ResourceNotFoundError } from '@/errors/resource';
+import {
+    ResourceConflictError,
+    ResourceNotFoundError,
+    StagedChangeExistsError,
+} from '@/errors/resource';
 
 /**
  * What a guarded write requires of the row it changes. Plain data: the
@@ -26,7 +31,15 @@ export type WriteGuard = {
      * scheduled-publish job read. Unscheduled or moved, the write is refused.
      */
     scheduledFor?: Date | undefined;
+    /** Staging create: the row must have no staged change yet. */
+    stagedAbsent?: true | undefined;
 };
+
+/**
+ * Why a guarded write was refused: a failed condition, `staged-change-exists`
+ * for `stagedAbsent`, or `gone` when the content row no longer exists.
+ */
+export type GuardFailure = ConflictReason | 'staged-change-exists' | 'gone';
 
 /** As much of a loaded row as the guard checks. */
 export type GuardedRecord = {
@@ -38,15 +51,15 @@ export type GuardedRecord = {
 
 /** The repository half of a guarded write: why a write it refused changed nothing. */
 export type GuardedRepository = {
-    /**
-     * The condition that fails now, `gone` when the content row no longer
-     * exists, or null when every condition holds again.
-     */
-    explainConflict(guard: WriteGuard): Promise<ConflictReason | 'gone' | null>;
+    /** The condition that fails now, or null when every condition holds again. */
+    explainConflict(guard: WriteGuard): Promise<GuardFailure | null>;
 };
 
-/** Where a guarded write was aimed, for the error that refuses it. */
-type Address = { id: string; locale?: string | undefined };
+/**
+ * Where a guarded write was aimed, for the error that refuses it; `staged` when
+ * it wrote a staged change, so a 404 names that.
+ */
+type Address = { id: string; locale: string; staged?: boolean };
 
 /**
  * The load-step check: the guard's conditions against the rows just read, so a
@@ -54,14 +67,17 @@ type Address = { id: string; locale?: string | undefined };
  */
 export function assertGuardHolds(
     kind: ResourceType,
-    loaded: { canonical: GuardedRecord },
+    loaded: { canonical: GuardedRecord; staged?: GuardedRecord | null | undefined },
     guard: WriteGuard,
     address: Address
 ): void {
     const { canonical } = loaded;
     const trashed = (canonical.deletedAt ?? null) !== null;
-    const reason = trashConflict(guard, trashed) ?? scheduleConflict(guard, canonical);
-    if (reason !== null) throw new ResourceConflictError(kind, { ...address, reason });
+    const failure =
+        trashConflict(guard, trashed) ??
+        scheduleConflict(guard, canonical) ??
+        stagedConflict(guard, (loaded.staged ?? null) !== null);
+    if (failure !== null) throw refusal(kind, address, failure);
 }
 
 /**
@@ -83,9 +99,7 @@ export async function writeGuarded<R>(params: {
     const explained = await repository.explainConflict(guard);
     // A condition that holds again by the time it is read still refused the
     // write, so the error names the condition the guard sets.
-    const reason = explained === null ? guardedReason(guard) : explained;
-    if (reason === 'gone') throw new ResourceNotFoundError(kind, address);
-    throw new ResourceConflictError(kind, { ...address, reason });
+    throw refusal(kind, address, explained ?? guardedFailure(guard));
 }
 
 /**
@@ -116,14 +130,36 @@ export function scheduleConflict(
     return holds ? null : 'not-scheduled';
 }
 
+/**
+ * `staged-change-exists` when the guard's `stagedAbsent` refuses a row that has
+ * a staged change; null when it holds or the guard sets none.
+ */
+export function stagedConflict(
+    guard: WriteGuard,
+    hasStaged: boolean
+): 'staged-change-exists' | null {
+    return guard.stagedAbsent === true && hasStaged ? 'staged-change-exists' : null;
+}
+
+/** The error a failure answers: 404 for a row gone, else a 409. */
+function refusal(kind: ResourceType, address: Address, failure: GuardFailure): ApiError {
+    const { id, locale } = address;
+    if (failure === 'gone') return new ResourceNotFoundError(kind, address);
+    if (failure === 'staged-change-exists') {
+        return new StagedChangeExistsError(kind, { id, locale });
+    }
+    return new ResourceConflictError(kind, { id, locale, reason: failure });
+}
+
 /** What each `trash` condition answers when it fails. */
 const TRASH_CONFLICTS = {
     live: 'trashed',
     trashed: 'not-trashed',
 } as const satisfies Record<NonNullable<WriteGuard['trash']>, ConflictReason>;
 
-/** The reason a guard can fail for; `gone` when it names no condition but the row. */
-function guardedReason(guard: WriteGuard): ConflictReason | 'gone' {
+/** The failure a guard can name; `gone` when it names no condition but the row. */
+function guardedFailure(guard: WriteGuard): GuardFailure {
     if (guard.trash !== undefined) return TRASH_CONFLICTS[guard.trash];
-    return guard.scheduledFor === undefined ? 'gone' : 'not-scheduled';
+    if (guard.scheduledFor !== undefined) return 'not-scheduled';
+    return guard.stagedAbsent === true ? 'staged-change-exists' : 'gone';
 }

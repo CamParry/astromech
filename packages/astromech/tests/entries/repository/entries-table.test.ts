@@ -391,6 +391,33 @@ describe('findMany and count', () => {
         expect(rows.map((e) => e.title)).toEqual(['At', 'Past', 'Unset']);
         expect(await entryRepository.count(params)).toBe(3);
     });
+
+    // An import or raw SQL may store the time without milliseconds or with an
+    // offset; as strings, both sort after `asOf` (`Z` after `.000Z`, `12:00+02:00`
+    // after `11:00Z`), but both are at or before it.
+    it.each(['2020-01-01T11:00:00Z', '2020-01-01T12:00:00+02:00'])(
+        'compares publishedAsOf with a publishedAt stored as %s by time',
+        async (stored) => {
+            const asOf = new Date('2020-01-01T11:00:00.000Z');
+            const entry = await entryRepository.create({
+                type: 'post',
+                title: 'Stored',
+                slug: 'stored',
+                status: 'published',
+                publishedAt: asOf,
+            });
+            await db
+                .updateTable('entryContent')
+                .set({ publishedAt: stored })
+                .where('entryId', '=', entry.id)
+                .execute();
+
+            const params = { type: 'post', publishedAsOf: asOf } as const;
+            const rows = await entryRepository.findMany(params);
+            expect(rows.map((e) => e.title)).toEqual(['Stored']);
+            expect(await entryRepository.count(params)).toBe(1);
+        }
+    );
 });
 
 describe('staging (forward versioning)', () => {

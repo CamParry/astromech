@@ -26,6 +26,7 @@ import { getDb } from '@/database/registry';
 import { createRepository } from '@/database/repository/create-repository';
 import { compileWhere } from '@/database/repository/where';
 import { entriesTable, entryContentTable, entryVersionsTable } from '@/database/tables';
+import { compareTimestamps } from '@/database/timestamps';
 import { ResourceNotFoundError } from '@/errors/resource';
 import { UnknownWhereKeyError } from '../errors';
 import { isReferencesFilter } from './references-filter';
@@ -89,15 +90,14 @@ function buildListWhere(
             conditions.push(eb('entryContent.locale', '=', localeVal ?? defaultLocale));
         }
 
-        // `publishedAt` is stored as ISO text, so a string comparison orders by time.
         if (params.publishedAsOf !== undefined) {
             conditions.push(
                 eb.or([
                     eb('entryContent.publishedAt', 'is', null),
-                    eb(
+                    compareTimestamps(
                         'entryContent.publishedAt',
                         '<=',
-                        params.publishedAsOf.toISOString()
+                        params.publishedAsOf
                     ),
                 ])
             );

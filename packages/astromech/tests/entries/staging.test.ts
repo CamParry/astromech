@@ -13,11 +13,12 @@
  * through the EntriesService-typed local transport.
  */
 
-import type { JsonObject } from '@/types/index';
+import type { JsonObject, ResolvedConfig } from '@/types/index';
 import {
     createTestDb,
     createTestUser,
     makeTestConfig,
+    registerTestPlugins,
     runAsUser,
     setupTestConfig,
 } from '@tests/harness';
@@ -27,9 +28,13 @@ import { relationshipRepository } from '@/content/repository/relationships';
 import { getDb } from '@/database/registry';
 import { entryRepository } from '@/entries/repository/entries-table';
 import { CapabilityError } from '@/errors/capability';
-import { StagedChangeExistsError } from '@/errors/resource';
+import { ResourceConflictError, StagedChangeExistsError } from '@/errors/resource';
+import { defineHook } from '@/plugins/define-hook';
 
 const api = currentServices.entries;
+
+/** The resolved config of the current test, for registering a probe plugin. */
+let resolved: ResolvedConfig;
 
 beforeEach(async () => {
     await createTestDb();
@@ -38,12 +43,18 @@ beforeEach(async () => {
     // post: versioning on + relationship field; note: versioning off.
     if (cfg.entries.post) cfg.entries.post.staging = true;
     if (cfg.entries.note) cfg.entries.note.staging = true;
-    setupTestConfig(cfg);
+    resolved = setupTestConfig(cfg);
 });
 
 afterEach(() => {
     vi.useRealTimers();
 });
+
+/** The titles of an entry's staged rows, read from the table: the trash hides them. */
+async function stagedTitles(entryId: string): Promise<string[]> {
+    const rows = await entryRepository.findContentRowsByEntry(entryId);
+    return rows.filter((row) => row.stagedFor !== null).map((row) => row.title);
+}
 
 function relationTargets(entryId: string): Promise<string[]> {
     return relationshipRepository
@@ -111,6 +122,23 @@ describe('createStaged', () => {
             expect((err as StagedChangeExistsError).locale).toBe('en');
             expect(err).not.toHaveProperty('stagedId');
         }
+    });
+
+    it('refuses to stage a change to a trashed entry', async () => {
+        const entry = await api.create({ type: 'post', data: { title: 'Live' } });
+        await api.trash({ type: 'post', id: entry.id });
+
+        const refused = await api
+            .createStaged({ type: 'post', id: entry.id })
+            .catch((err: unknown) => err);
+
+        expect(refused).toBeInstanceOf(ResourceConflictError);
+        expect(refused).toMatchObject({
+            status: 409,
+            code: 'CONFLICT',
+            details: { reason: 'trashed' },
+        });
+        expect(await stagedTitles(entry.id)).toEqual([]);
     });
 
     it('throws CapabilityError when the type does not support staging', async () => {
@@ -578,5 +606,40 @@ describe('deleteStaged', () => {
         await expect(
             api.deleteStaged({ type: 'post', id: canonical.id })
         ).rejects.toThrow(/no staged change/);
+    });
+});
+
+describe('a staged write', () => {
+    // `note` keeps no versions, so the staged write is the first to meet the trash.
+    it('refuses a staged change whose entry is trashed between the read and the write', async () => {
+        const entry = await api.create({ type: 'note', data: { title: 'Live' } });
+        await api.createStaged({ type: 'note', id: entry.id });
+        let done = false;
+        registerTestPlugins(
+            [
+                {
+                    package: '@test/probe',
+                    hooks: [
+                        defineHook('entry:beforeUpdate', async (ctx) => {
+                            if (done) return;
+                            done = true;
+                            await api.trash({ type: 'note', id: ctx.entry.id });
+                        }),
+                    ],
+                },
+            ],
+            resolved
+        );
+
+        const refused = api.update({
+            type: 'note',
+            id: entry.id,
+            staged: true,
+            data: { title: 'Draft' },
+        });
+
+        await expect(refused).rejects.toBeInstanceOf(ResourceConflictError);
+        await expect(refused).rejects.toMatchObject({ details: { reason: 'trashed' } });
+        expect(await stagedTitles(entry.id)).toEqual(['Live']);
     });
 });

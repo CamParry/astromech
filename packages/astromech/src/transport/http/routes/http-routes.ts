@@ -104,6 +104,11 @@ const STAGED_CHANGE_EXISTS = {
     conflict: 'the locale already has a staged change (`staged_change_exists`)',
 };
 
+/** An entry's `createStaged` 409s: a staged change already, or an entry in the trash. */
+const ENTRY_STAGE_CONFLICTS = {
+    conflict: `${STAGED_CHANGE_EXISTS.conflict}; ${ENTRY_TRASHED.conflict}`,
+};
+
 export const ENTRIES_ROUTE_SPECS = [
     { verb: 'get', path: '/:type', id: 'entries.query', envelope: 'raw', client: 'none' },
     { verb: 'get', path: '/:type/:id', id: 'entries.get', notFound: 'Entry' },
@@ -259,7 +264,7 @@ export const ENTRIES_ROUTE_SPECS = [
         id: 'entries.createStaged',
         status: 201,
         queryArgs: ['locale'],
-        refusals: STAGED_CHANGE_EXISTS,
+        refusals: ENTRY_STAGE_CONFLICTS,
     },
     {
         verb: 'get',

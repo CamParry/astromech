@@ -1,5 +1,6 @@
 import type { EntryResource } from '../repository/types';
 import type { EntryRowWrite } from './prepare-row';
+import type { ContentRowId } from '@/content/repository/types';
 import type { WriteGuard } from '@/content/write-guard';
 import type {
     AppContext,
@@ -112,6 +113,7 @@ export async function updateEntryBatch(
                 : {
                       kind: 'translate',
                       id,
+                      sourceContentId: source.contentId,
                       write: await planTranslation({
                           config,
                           entryType,
@@ -165,6 +167,7 @@ export async function updateEntryBatch(
                   id: plan.id,
                   locale,
                   write: plan.write,
+                  guard: { contentId: plan.sourceContentId, trash },
               })
     );
 
@@ -201,7 +204,13 @@ export async function updateEntryBatch(
 /** What one id in the batch turns out to be: an edit, or a new translation. */
 type UpdatePlan =
     | { kind: 'update'; id: string; record: EntryResource }
-    | { kind: 'translate'; id: string; write: EntryRowWrite };
+    | {
+          kind: 'translate';
+          id: string;
+          /** The row the translation was checked against and is copied from. */
+          sourceContentId: ContentRowId;
+          write: EntryRowWrite;
+      };
 
 /**
  * Updates one entry with a parsed patch: saves the state it replaces as a
@@ -215,7 +224,7 @@ async function updateOne(params: {
     user: User | null;
     /** True when the write targets the staged change rather than the canonical. */
     staged: boolean;
-    /** The conditions the snapshot and the canonical write carry, beyond the row. */
+    /** The conditions the snapshot and the write carry, beyond the row. */
     guard: Omit<WriteGuard, 'contentId'>;
 }): Promise<EntryResource> {
     const { config, entryType, currentEntry, data, user, staged } = params;
@@ -223,6 +232,7 @@ async function updateOne(params: {
     const fields = await fieldsToStore({ config, entryType, currentEntry, data, user });
     const patchedNames = data.fields ? patchedFieldNames(data.fields) : [];
     const ref = { id: currentEntry.id, locale: currentEntry.locale };
+    const address = { ...ref, staged };
     const guard = { ...params.guard, contentId: currentEntry.contentId };
 
     // Decided before the slug is uniquified, so the version compares what the caller sent.
@@ -234,7 +244,7 @@ async function updateOne(params: {
             fields,
         })
     ) {
-        await snapshotVersion('entry', entryRepository, guard, user, ref);
+        await snapshotVersion('entry', entryRepository, guard, user, address);
     }
 
     const publishedAt = resolvePublishedAt({
@@ -257,15 +267,16 @@ async function updateOne(params: {
         updatedBy: user?.id ?? null,
     };
 
-    const entry = staged
-        ? await entryRepository.staging.update(ref, write)
-        : await writeGuarded({
-              kind: 'entry',
-              address: ref,
-              guard,
-              repository: entryRepository,
-              write: () => entryRepository.update(ref, write, guard),
-          });
+    const entry = await writeGuarded({
+        kind: 'entry',
+        address,
+        guard,
+        repository: entryRepository,
+        write: () =>
+            staged
+                ? entryRepository.staging.update(ref, write, guard)
+                : entryRepository.update(ref, write, guard),
+    });
     if (!staged && slug !== undefined && slug !== currentEntry.slug) {
         await entryRepository.updateStagedSlug(ref, {
             from: currentEntry.slug,
@@ -361,16 +372,26 @@ async function planTranslation(params: {
     });
 }
 
-/** Writes the planned translation and folds its references into the entry's index. */
+/**
+ * Writes the planned translation while the row it was checked against holds the
+ * guard, and folds its references into the entry's index.
+ */
 async function writeTranslation(params: {
     config: ResolvedConfig;
     type: string;
     id: string;
     locale: string;
     write: EntryRowWrite;
+    guard: WriteGuard;
 }): Promise<EntryResource> {
-    const { config, type, id, locale, write } = params;
-    const entry = await entryRepository.update({ id, locale }, write);
+    const { config, type, id, locale, write, guard } = params;
+    const entry = await writeGuarded({
+        kind: 'entry',
+        address: { id, locale },
+        guard,
+        repository: entryRepository,
+        write: () => entryRepository.translatable.create({ id, locale }, write, guard),
+    });
     await syncEntryRelationships(config, entry, type);
     return entry;
 }

@@ -9,6 +9,7 @@ import type {
     ContentRef,
     ContentRepository,
     ContentRepositoryOptions,
+    ContentRowId,
     ContentShape,
     ContentWrite,
     JoinedQuery,
@@ -18,14 +19,13 @@ import type {
     StoredRows,
 } from './types';
 import type { SortClause } from '@/content/list';
-import type { WriteGuard } from '@/content/write-guard';
+import type { GuardFailure, WriteGuard } from '@/content/write-guard';
 import type { Table, TableSelect } from '@/database/define-table';
 import type { GenericDb } from '@/database/repository/create-repository';
-import type { ConflictReason } from '@/errors/resource';
 import type { JsonObject } from '@/types/index';
 import type { Expression, ExpressionWrapper, SqlBool } from 'kysely';
 import { getDefaultContentLocale } from '@/config/content-locale';
-import { trashConflict } from '@/content/write-guard';
+import { stagedConflict, trashConflict } from '@/content/write-guard';
 import { chunks, MAX_BOUND_PARAMETERS } from '@/database/chunks';
 import {
     decodeWith,
@@ -140,12 +140,19 @@ export function createContentRepository<
         for (const [column, derive] of inheritedColumns) {
             values[column] = derive(params.resourceRow);
         }
-        for (const [key, value] of Object.entries(params.data)) {
-            if (NON_COLUMN_KEYS.has(key) || value === undefined) continue;
-            values[key] = value;
-        }
+        Object.assign(values, writtenValues(params.data));
         for (const [key, value] of Object.entries(insertDefaults)) {
             if (values[key] === undefined) values[key] = value;
+        }
+        return values;
+    }
+
+    /** The columns a write names, without the keys that name the row. */
+    function writtenValues(data: ContentWrite): Record<string, unknown> {
+        const values: Record<string, unknown> = {};
+        for (const [key, value] of Object.entries(data)) {
+            if (NON_COLUMN_KEYS.has(key) || value === undefined) continue;
+            values[key] = value;
         }
         return values;
     }
@@ -523,7 +530,22 @@ export function createContentRepository<
             conditions.push(guard.trash === 'live' ? live : eb.not(live));
         }
         conditions.push(...scheduleConditions(eb, guard));
+        if (guard.stagedAbsent === true && hasStagedFor) {
+            conditions.push(eb.not(hasStagedChange(eb)));
+        }
         return conditions;
+    }
+
+    /** True when the content row has a staged change. */
+    function hasStagedChange(
+        eb: Parameters<JoinedWhere>[0]
+    ): ExpressionWrapper<Record<string, Record<string, unknown>>, string, SqlBool> {
+        return eb.exists(
+            eb
+                .selectFrom(`${contentKey} as staged`)
+                .select('staged.id')
+                .whereRef('staged.stagedFor', '=', `${contentKey}.id`)
+        );
     }
 
     /**
@@ -607,21 +629,61 @@ export function createContentRepository<
         return inserted.length > 0;
     }
 
-    async function explainConflict(
-        guard: WriteGuard
-    ): Promise<ConflictReason | 'gone' | null> {
+    async function explainConflict(guard: WriteGuard): Promise<GuardFailure | null> {
         const row = await db()
             .selectFrom(contentKey)
             .select((eb) => [
                 isLive(eb).as('live'),
                 eb.and(scheduleConditions(eb, guard)).as('scheduled'),
+                ...(hasStagedFor ? [hasStagedChange(eb).as('hasStaged')] : []),
             ])
             .where(`${contentKey}.id`, '=', guard.contentId)
             .executeTakeFirst();
         if (!row) return 'gone';
         return (
             trashConflict(guard, !row['live']) ??
-            (row['scheduled'] ? null : 'not-scheduled')
+            (row['scheduled'] ? null : 'not-scheduled') ??
+            stagedConflict(guard, Boolean(row['hasStaged']))
+        );
+    }
+
+    /**
+     * Insert a content row copied from the row the guard names, with `values`
+     * over its columns, while the guard's conditions hold: one
+     * `INSERT ... SELECT`. The new row's id, or null with nothing written.
+     */
+    async function insertFrom(
+        guard: WriteGuard,
+        values: Record<string, unknown>
+    ): Promise<ContentRowId | null> {
+        // The id and timestamps come from the columns' app defaults.
+        const encoded = encodeWith(shape.contentTable, values) as Record<string, unknown>;
+        const handle = db();
+        const select = handle
+            .selectFrom(contentKey)
+            .select((eb) =>
+                contentColumns.map((column) =>
+                    column in encoded
+                        ? eb.val(encoded[column]).as(column)
+                        : eb.ref(`${contentKey}.${column}`).as(column)
+                )
+            )
+            .where((eb) => eb.and(guardConditions(eb, guard)));
+        const inserted = await handle
+            .insertInto(contentKey)
+            .columns(contentColumns as never)
+            .expression(select as never)
+            .returning('id' as never)
+            .execute();
+        return inserted.length > 0 ? (String(encoded['id']) as ContentRowId) : null;
+    }
+
+    /** One content row by its own id, staged or not, joined to its resource row. */
+    async function findByContentId(contentId: ContentRowId): Promise<R | null> {
+        return one(
+            await joined()
+                .where((eb) => eb(`${contentKey}.id`, '=', contentId))
+                .executeTakeFirst()
         );
     }
 
@@ -677,6 +739,70 @@ export function createContentRepository<
             .executeTakeFirst();
     }
 
+    /**
+     * Copy the canonical row into a staged change, with `data` over it. Without
+     * a guard the canonical is the live row of `ref`'s locale, and must exist.
+     */
+    function createStagedRow(ref: ContentRef, data: ContentWrite): Promise<R>;
+    function createStagedRow(
+        ref: ContentRef,
+        data: ContentWrite,
+        guard: WriteGuard
+    ): Promise<R | null>;
+    async function createStagedRow(
+        ref: ContentRef,
+        data: ContentWrite,
+        guard?: WriteGuard
+    ): Promise<R | null> {
+        if (guard === undefined) {
+            const canonical = await findCanonical(
+                ref.id,
+                ref.locale ?? defaultLocale(),
+                false
+            );
+            if (!canonical) throw missing(ref.id);
+            const { contentRow } = split(canonical);
+            const contentId = String(contentRow['id']) as ContentRowId;
+            return required(await createStagedRow(ref, data, { contentId }), ref.id);
+        }
+        const contentId = await insertFrom(guard, {
+            // The staged row's authorship is the write's, not the canonical's.
+            createdBy: null,
+            updatedBy: null,
+            ...writtenValues(data),
+            stagedFor: guard.contentId,
+        });
+        if (contentId === null) return null;
+        return required(await findByContentId(contentId), ref.id);
+    }
+
+    /** Patch a locale's staged row; with a guard, the row it names while it holds. */
+    function updateStagedRow(ref: ContentRef, data: ContentWrite): Promise<R>;
+    function updateStagedRow(
+        ref: ContentRef,
+        data: ContentWrite,
+        guard: WriteGuard
+    ): Promise<R | null>;
+    async function updateStagedRow(
+        ref: ContentRef,
+        data: ContentWrite,
+        guard?: WriteGuard
+    ): Promise<R | null> {
+        if (guard !== undefined) {
+            if (!(await writeGuardedRow(guard, data))) return null;
+            return required(await findByContentId(guard.contentId), ref.id);
+        }
+        const locale = ref.locale ?? defaultLocale();
+        const existing = await findStaged(ref.id, locale);
+        if (!existing) throw noStaged(ref.id);
+
+        const { contentRow } = split(existing);
+        await contents.update(String(contentRow['id']), patchValues(data) as never);
+        const updated = await staging.findOne({ id: ref.id, locale });
+        if (!updated) throw noStaged(ref.id);
+        return updated;
+    }
+
     // A staged write leaves the resource row alone: a staged change is not the
     // resource until the merge, which writes through `update`.
     const staging = {
@@ -684,35 +810,9 @@ export function createContentRepository<
             return one(await findStaged(ref.id, ref.locale ?? defaultLocale()));
         },
 
-        create: async (ref: ContentRef, data: ContentWrite): Promise<R> => {
-            const locale = ref.locale ?? defaultLocale();
-            const canonical = await findCanonical(ref.id, locale, false);
-            if (!canonical) throw missing(ref.id);
-            const { resourceRow, contentRow } = split(canonical);
+        create: createStagedRow,
 
-            await contents.create(
-                insertValues({
-                    id: ref.id,
-                    locale,
-                    stagedFor: String(contentRow['id']),
-                    resourceRow,
-                    data,
-                }) as never
-            );
-            return required(await staging.findOne({ id: ref.id, locale }), ref.id);
-        },
-
-        update: async (ref: ContentRef, data: ContentWrite): Promise<R> => {
-            const locale = ref.locale ?? defaultLocale();
-            const existing = await findStaged(ref.id, locale);
-            if (!existing) throw noStaged(ref.id);
-
-            const { contentRow } = split(existing);
-            await contents.update(String(contentRow['id']), patchValues(data) as never);
-            const updated = await staging.findOne({ id: ref.id, locale });
-            if (!updated) throw noStaged(ref.id);
-            return updated;
-        },
+        update: updateStagedRow,
 
         delete: async (ref: ContentRef): Promise<void> => {
             await contents.deleteMany({
@@ -765,6 +865,27 @@ export function createContentRepository<
                     } as never);
                 }
                 await touch(id);
+            });
+        },
+
+        create: async (
+            ref: ContentRef,
+            data: ContentWrite,
+            guard: WriteGuard
+        ): Promise<R | null> => {
+            const locale = ref.locale ?? defaultLocale();
+            return transaction(async () => {
+                const contentId = await insertFrom(guard, {
+                    ...insertDefaults,
+                    createdBy: null,
+                    updatedBy: null,
+                    ...writtenValues(data),
+                    locale,
+                    ...(hasStagedFor ? { stagedFor: null } : {}),
+                });
+                if (contentId === null) return null;
+                await touch(ref.id, data.updatedBy);
+                return required(await findByContentId(contentId), ref.id);
             });
         },
     };

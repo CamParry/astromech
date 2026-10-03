@@ -1,7 +1,8 @@
 import type { EntryResource } from '../../repository/types';
+import type { WriteGuard } from '@/content/write-guard';
 import { z } from '@hono/zod-openapi';
+import { assertGuardHolds, writeGuarded } from '@/content/write-guard';
 import { transaction } from '@/database/transaction';
-import { StagedChangeExistsError } from '@/errors/resource';
 import { defineServiceMethod } from '@/services/define-service-method';
 import { entryAccess } from '../../internal/access';
 import { getEntryOfType } from '../../read-entry';
@@ -10,9 +11,10 @@ import { entryRepository } from '../../repository/entries-table';
 import { entrySchema } from '../../schema';
 
 /**
- * Copies one locale's title, slug and fields into an unpublished staged change,
- * which `update({ staged: true })` edits and `mergeStaged` makes live. Throws
- * when the locale has no row of this type, or already has a staged change.
+ * Copies one locale's title, slug and fields, as stored when the copy is made,
+ * into an unpublished staged change, which `update({ staged: true })` edits and
+ * `mergeStaged` makes live. Throws when the locale has no row of this type, the
+ * entry is in the trash, or the locale already has a staged change.
  */
 export const createStagedEntry = defineServiceMethod({
     summary: 'Stage a change to an entry.',
@@ -32,23 +34,33 @@ export const createStagedEntry = defineServiceMethod({
 
         const canonical = await getEntryOfType(type, id, params.locale);
         const { locale } = canonical;
-        const existing = await entryRepository.staging.findOne({ id, locale });
-        if (existing) throw new StagedChangeExistsError('entry', { id, locale });
+        const staged = await entryRepository.staging.findOne({ id, locale });
+        const guard: WriteGuard = {
+            contentId: canonical.contentId,
+            trash: 'live',
+            stagedAbsent: true,
+        };
+        assertGuardHolds('entry', { canonical, staged }, guard, { id, locale });
 
         return transaction(async () => {
             // The partial unique index lets the staged row keep the canonical's slug.
-            const created = await entryRepository.staging.create(
-                { id, locale },
-                {
-                    title: canonical.title,
-                    slug: canonical.slug,
-                    fields: canonical.fields,
-                    status: 'unpublished',
-                    publishedAt: null,
-                    createdBy: userId,
-                    updatedBy: userId,
-                }
-            );
+            const created = await writeGuarded({
+                kind: 'entry',
+                address: { id, locale },
+                guard,
+                repository: entryRepository,
+                write: () =>
+                    entryRepository.staging.create(
+                        { id, locale },
+                        {
+                            status: 'unpublished',
+                            publishedAt: null,
+                            createdBy: userId,
+                            updatedBy: userId,
+                        },
+                        guard
+                    ),
+            });
             await syncEntryRelationships(config, created, type);
             return created;
         });

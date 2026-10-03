@@ -835,6 +835,38 @@ describe('the trash is read-only', () => {
         expect(await readTrashed()).toMatchObject({ id: entry.id, title: 'A' });
     });
 
+    it('refuses a new locale when the entry is trashed between the read and the write', async () => {
+        const resolved = setupTestConfig();
+        const entry = await api.create({ type: 'post', data: { title: 'A' } });
+        let done = false;
+        registerTestPlugins(
+            [
+                {
+                    package: '@test/probe',
+                    hooks: [
+                        defineHook('entry:beforeCreate', async () => {
+                            if (done) return;
+                            done = true;
+                            await api.trash({ type: 'post', id: entry.id });
+                        }),
+                    ],
+                },
+            ],
+            resolved
+        );
+
+        const refused = api.update({
+            type: 'post',
+            id: entry.id,
+            locale: 'de',
+            data: { title: 'B' },
+        });
+
+        await expect(refused).rejects.toBeInstanceOf(ResourceConflictError);
+        await expect(refused).rejects.toMatchObject({ details: { reason: 'trashed' } });
+        expect(await readTrashed()).toMatchObject({ id: entry.id, locales: ['en'] });
+    });
+
     it('names the trash when the entry is out of it again by the time the refusal is explained', async () => {
         const resolved = setupTestConfig();
         registerTestPlugins(

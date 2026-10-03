@@ -533,7 +533,8 @@ describe('the documented error statuses', () => {
         ).toBe(
             'Conflict: the entry type does not declare `staging` ' +
                 '(`capability_not_supported`); the locale already has a staged change ' +
-                '(`staged_change_exists`).'
+                '(`staged_change_exists`); the entry is in the trash (`CONFLICT`, ' +
+                'reason `trashed`).'
         );
         expect(paths['/entries/{type}']?.['post']?.responses['409']?.description).toBe(
             'Conflict: the body sets `status` or `publishedAt` on a type without ' +

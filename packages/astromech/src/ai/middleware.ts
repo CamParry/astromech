@@ -9,6 +9,7 @@ import type {
     LanguageModelV4Usage,
 } from '@ai-sdk/provider';
 import type { LanguageModelMiddleware } from 'ai';
+import { log } from '@/utilities/log';
 
 /**
  * Middleware logging one line per call under the configured model name — the
@@ -19,7 +20,7 @@ export function logging(name: string): LanguageModelMiddleware {
         wrapGenerate: async ({ doGenerate, model }) => {
             const startedAt = Date.now();
             const result = await doGenerate();
-            log(name, model, 'generate', Date.now() - startedAt, result.usage);
+            logCall(name, model, 'generate', Date.now() - startedAt, result.usage);
             return result;
         },
         wrapStream: async ({ doStream, model }) => {
@@ -34,7 +35,7 @@ export function logging(name: string): LanguageModelMiddleware {
                             controller.enqueue(chunk);
                         },
                         flush() {
-                            log(name, model, 'stream', Date.now() - startedAt, usage);
+                            logCall(name, model, 'stream', Date.now() - startedAt, usage);
                         },
                     }
                 )
@@ -44,10 +45,8 @@ export function logging(name: string): LanguageModelMiddleware {
     };
 }
 
-const TAG = '[astromech:ai]';
-
-/** Emit the single per-call log line. */
-function log(
+/** Emit the single per-call log line, to stderr like the rest of core's output. */
+function logCall(
     name: string,
     model: LanguageModelV4,
     operation: 'generate' | 'stream',
@@ -56,7 +55,7 @@ function log(
 ): void {
     const input = usage?.inputTokens.total ?? '?';
     const output = usage?.outputTokens.total ?? '?';
-    console.info(
-        `${TAG} ${name} ${model.provider}/${model.modelId} ${operation} ${ms}ms in=${input} out=${output}`
+    log.info(
+        `ai: ${name} ${model.provider}/${model.modelId} ${operation} ${ms}ms in=${input} out=${output}`
     );
 }

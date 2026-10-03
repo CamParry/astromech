@@ -74,11 +74,13 @@ export async function updateGlobalLocale(
     if ((staged || params.createMissingLocale === false) && (id === null || !current)) {
         throw new ResourceNotFoundError('global', { id: key, locale });
     }
-    // The canonical write is conditional on the row it was decided from.
-    let guard: WriteGuard | null = null;
-    if (canonical !== null) {
-        guard = { contentId: canonical.contentId, scheduledFor: params.scheduledFor };
-        assertGuardHolds('global', { canonical }, guard, { id: key, locale });
+    // A write to an existing row is conditional on the row it was decided from.
+    const guard: WriteGuard | null =
+        current === null
+            ? null
+            : { contentId: current.contentId, scheduledFor: params.scheduledFor };
+    if (current !== null && guard !== null) {
+        assertGuardHolds('global', { canonical: current }, guard, { id: key, locale });
     }
 
     // Before the fields are prepared, not only before the writes: the hook may
@@ -101,13 +103,21 @@ export async function updateGlobalLocale(
     const patchedNames = data.fields ? patchedFieldNames(data.fields) : [];
 
     const updated = await transaction(async () => {
-        if (staged && id !== null) {
+        if (staged && id !== null && guard !== null) {
             // No version and no propagation: both belong to the canonical row,
             // which the merge writes.
-            const stagedRow = await globalRepository.staging.update(
-                { id, locale },
-                { fields, updatedBy: userId }
-            );
+            const stagedRow = await writeGuarded({
+                kind: 'global',
+                address: { id: key, locale, staged },
+                guard,
+                repository: globalRepository,
+                write: () =>
+                    globalRepository.staging.update(
+                        { id, locale },
+                        { fields, updatedBy: userId },
+                        guard
+                    ),
+            });
             if (fields) await syncGlobalRelationships(config, stagedRow.id);
             return stagedRow;
         }
