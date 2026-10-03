@@ -10,6 +10,7 @@ import type {
     ListRunsResult,
     TriggerRunResult,
 } from '../../service/backups';
+import type { BackupRunStatus } from '../../types';
 import type { BadgeVariant } from 'astromech/ui';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import {
@@ -56,7 +57,7 @@ function rawFetch(plugin: string, path: string, init?: RequestInit): Promise<Res
     });
 }
 
-const STATUS_VARIANTS: Record<BackupRun['status'], BadgeVariant> = {
+const STATUS_VARIANTS: Record<BackupRunStatus, BadgeVariant> = {
     running: 'default',
     success: 'success',
     failed: 'danger',

@@ -1,3 +1,4 @@
+import type { EntryStatus } from 'astromech';
 import React from 'react';
 
 type BadgeVariant =
@@ -6,9 +7,7 @@ type BadgeVariant =
     | 'success'
     | 'warning'
     | 'danger'
-    | 'unpublished'
-    | 'published'
-    | 'scheduled'
+    | EntryStatus
     | 'trashed';
 
 type BadgeProps = {

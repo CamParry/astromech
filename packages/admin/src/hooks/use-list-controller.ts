@@ -6,15 +6,17 @@
 
 import type { ListSort } from '../components/ui/use-list-state';
 import type { UseAdminEntryTypeResult } from './use-admin-entry-type';
-import type { Entry } from 'astromech';
+import type { Entry, EntryStatus } from 'astromech';
 import { useSearch } from '@tanstack/react-router';
+import { isEntryStatus } from 'astromech/shared';
 import React from 'react';
 import { useListState } from '../components/ui/use-list-state';
 import { defaultContentLocale } from '../utilities/content-locale';
 import { validateEntriesListSearch } from '../utilities/entry-admin-path';
 import { useEntriesQuery } from './entries';
 
-export type StatusFilter = 'all' | 'unpublished' | 'published' | 'scheduled' | 'trashed';
+/** The entries list's status filter: one entry status, every row, or the trash. */
+export type StatusFilter = EntryStatus | 'all' | 'trashed';
 
 /** The locale filter's value for "every locale". */
 export const LOCALE_FILTER_ALL = '__all__';
@@ -29,7 +31,7 @@ export function useListController(
     const search = validateEntriesListSearch(raw);
     const hasI18n = config.capabilities.translatable;
 
-    const status = (search.status ?? 'all') as StatusFilter;
+    const status = isStatusFilter(search.status) ? search.status : 'all';
     const locale = search.locale ?? defaultContentLocale();
     const isTrash = status === 'trashed';
     const { q, sort, page } = list;
@@ -88,4 +90,8 @@ function sortPage(entries: Entry[], sort: ListSort | null): Entry[] {
             ? value(a).localeCompare(value(b))
             : value(b).localeCompare(value(a))
     );
+}
+
+function isStatusFilter(value: unknown): value is StatusFilter {
+    return value === 'all' || value === 'trashed' || isEntryStatus(value);
 }

@@ -5,11 +5,13 @@
 
 import type { StatusFilter } from '../../hooks/use-list-controller';
 import { Menu } from '@base-ui/react/menu';
+import { ENTRY_STATUSES } from 'astromech/shared';
 import { Check, SlidersHorizontal } from 'lucide-react';
 import React from 'react';
 import { useTranslation } from 'react-i18next';
 import { LOCALE_FILTER_ALL } from '../../hooks/use-list-controller';
 import { Select } from '../ui/select';
+import { ENTRY_STATUS_LABEL_KEYS } from '../ui/status-badge';
 
 /** The status filter, offering only what the type's statuses and trash allow. */
 export function StatusFilterSelect({
@@ -27,11 +29,10 @@ export function StatusFilterSelect({
     const options: { value: StatusFilter; label: string }[] = [
         { value: 'all', label: t('entries.all') },
         ...(hasStatuses
-            ? ([
-                  { value: 'unpublished', label: t('entries.unpublished') },
-                  { value: 'published', label: t('entries.published') },
-                  { value: 'scheduled', label: t('entries.scheduled') },
-              ] as const)
+            ? ENTRY_STATUSES.map((status) => ({
+                  value: status,
+                  label: t(ENTRY_STATUS_LABEL_KEYS[status]),
+              }))
             : []),
         ...(hasTrash ? [{ value: 'trashed' as const, label: t('entries.trashed') }] : []),
     ];
