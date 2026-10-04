@@ -14,12 +14,12 @@ beforeEach(async () => {
 });
 
 describe('the redirects methods in the OpenAPI document', () => {
-    it('documents `create` with its input as the body and its output as the bare 200', () => {
-        const { document } = servedDocument([redirects()]);
+    it('documents `create` with its input as the body and its output as the bare 200', async () => {
+        const { document } = await servedDocument([redirects()]);
         const create = document.paths['/plugins/redirects/create']?.['post'];
         expect(create?.summary).toBe('Create a redirect rule.');
 
-        const body = create?.requestBody?.content['application/json'].schema;
+        const body = create?.requestBody?.content['application/json']?.schema;
         expect(Object.keys(body?.properties ?? {})).toEqual(['data']);
         expect(body?.additionalProperties).toBe(false);
 
@@ -46,8 +46,8 @@ describe('the redirects methods in the OpenAPI document', () => {
         ]);
     });
 
-    it('documents the public `lookup` with no 401 or 403', () => {
-        const { document } = servedDocument([redirects()]);
+    it('documents the public `lookup` with no 401 or 403', async () => {
+        const { document } = await servedDocument([redirects()]);
         const lookup = document.paths['/plugins/redirects/lookup']?.['post'];
         expect(Object.keys(lookup?.responses ?? {})).toEqual(['200', '422', '500']);
         const output = lookup?.responses['200']?.content?.['application/json'].schema;

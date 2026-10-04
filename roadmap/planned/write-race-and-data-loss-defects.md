@@ -108,12 +108,26 @@ item 8 proposed, would protect libsql only.
       the class. A user or media update whose row is deleted after the read,
       sending unchanged fields, answers 500 (`it.fails` in
       `packages/astromech/tests/users/last-admin.test.ts`).
-- [ ] **OpenAPI coverage** as decided above.
-- [ ] **Plugin versions.** Each `packages/plugins/*/src/index.ts` reads its
-      version from its `package.json` with a JSON import, and a test checks the
-      two agree.
-- [ ] **CLI statuses.** Build the list from `statusSchema.options` in
+- [x] **OpenAPI coverage** as decided above (`DECISIONS.md`, "The OpenAPI
+      document covers every mounted route but the internal ones"). The
+      cross-type `POST /entries/query` and `POST /entries/count` were already
+      table rows.
+- [ ] **Refused auth routes in the document.** Better Auth's generator lists
+      every endpoint, so the document shows `/auth/sign-up/email`, which
+      always answers 403, and `/auth/change-email`, which is off. Decide
+      whether `transport/http/routes/auth-document.ts` leaves them out.
+- [x] **Plugin versions.** Each `packages/plugins/*/src/index.ts` reads its
+      version from its `package.json` with a JSON import, which tsup inlines,
+      and the plugin contract
+      (`packages/astromech/tests/_support/plugin-contract.ts`) checks the
+      declared package and version against `package.json`.
+- [ ] **Core's API version.** The OpenAPI document's `info.version`
+      (`transport/http/routes/openapi-document.ts`) is a hard-coded `1.0.0`
+      while `astromech` is `0.1.0`. Decide whether it tracks the package
+      version, as the plugins now do, or names the API's own version.
+- [x] **CLI statuses.** Build the list from `statusSchema.options` in
       `transport/cli/commands/entries-create.ts`, `entries-update.ts` and
-      `entries-status.ts`, and fix `apps/docs/cli.md`. Rename "Entry type slug"
+      `entries-list.ts` (`statusArgs` in `transport/cli/common-args.ts`), drop
+      "draft" from `entries-status.ts`, and fix `apps/docs/cli.md`. Rename "Entry type slug"
       to "Entry type id" (`transport/cli/common-args.ts`) and "method-manifest
       entry" to "manifest method" (`transport/cli/commands/call.ts`).

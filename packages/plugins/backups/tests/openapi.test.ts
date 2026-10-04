@@ -14,8 +14,8 @@ beforeEach(async () => {
 });
 
 describe('the backups methods in the OpenAPI document', () => {
-    it('documents `list` with no body and a fallback key as its nullable schema', () => {
-        const { document } = servedDocument([backups()]);
+    it('documents `list` with no body and a fallback key as its nullable schema', async () => {
+        const { document } = await servedDocument([backups()]);
         const list = document.paths['/plugins/backups/list']?.['post'];
         expect(list?.requestBody).toBeUndefined();
         expect(Object.keys(list?.responses ?? {})).toEqual(['200', '401', '403', '500']);

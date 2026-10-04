@@ -8,6 +8,7 @@ import type { AssistantOptions, ResolvedAssistantOptions } from './types';
 import type { PluginDB, ServiceInterface } from 'astromech';
 import { definePlugin, withDefaults } from 'astromech';
 import { migrationProvider } from '../migrations/index';
+import { version } from '../package.json';
 import { assistantPermissions } from './permissions/assistant';
 import { chatRoutes } from './routes/chat';
 import { createSessionsService } from './service/sessions';
@@ -47,7 +48,7 @@ export const assistant = definePlugin((options?: AssistantOptions) => {
 
     return {
         package: ASSISTANT_PACKAGE,
-        version: '0.1.0',
+        version,
         label: 'Assistant',
         icon: 'Sparkles',
         tables,

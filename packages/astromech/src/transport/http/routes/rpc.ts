@@ -8,11 +8,12 @@
  */
 
 import type { AuthVariables } from '@/transport/http/middleware/auth';
-import { OpenAPIHono } from '@hono/zod-openapi';
+import { OpenAPIHono, z } from '@hono/zod-openapi';
 import { optionalAuth } from '@/transport/http/middleware/auth';
 import { badRequest, notFound, unauthorized } from '@/transport/http/middleware/errors';
 import { answerPluginMethod } from '@/transport/http/routes/plugins';
 import { resolveScopedMethod } from '@/transport/tools/scoped-tools';
+import { errorResponses } from './error-responses';
 
 type Env = { Variables: AuthVariables };
 
@@ -44,6 +45,48 @@ router.post('/:id', async (c) => {
     // rebasing onto a wire name.
     const result = await dispatch.tool.invoke(callArgs(body));
     return c.json({ data: result ?? null });
+});
+// Documented once, as the generic call: each method's own schemas are
+// documented at its REST route or plugin path.
+router.openAPIRegistry.registerPath({
+    method: 'post',
+    path: '/{id}',
+    operationId: 'rpc.call',
+    summary: 'Call any manifest method by id.',
+    description:
+        'The body is the method’s argument object. A core method answers ' +
+        '`{ data }` and needs a session; a plugin method answers as ' +
+        '`POST /plugins/{serviceKey}/{method}` does: its bare result, and no ' +
+        'session when the method is public.',
+    request: {
+        params: z.object({
+            id: z.string().openapi({
+                description: 'The method id, as `astromech methods` lists it.',
+            }),
+        }),
+        body: {
+            content: {
+                'application/json': { schema: z.record(z.string(), z.unknown()) },
+            },
+        },
+    },
+    responses: {
+        200: {
+            description: 'The method’s result.',
+            content: {
+                'application/json': { schema: z.object({ data: z.unknown() }) },
+            },
+        },
+        ...errorResponses({
+            badRequest: [
+                'the method cannot be called with a JSON body (binary input, or no input schema)',
+            ],
+            session: true,
+            permission: true,
+            notFound: 'No manifest method has this id.',
+            input: true,
+        }),
+    },
 });
 
 /**

@@ -437,8 +437,8 @@ export const USERS_ROUTE_SPECS = [
 
 /**
  * `POST /media` and `POST /media/:id/replace` are absent by design: their
- * body is multipart and a `File` has no JSON representation, so there is no
- * schema to document and no body the generic client could build.
+ * body is multipart, which no generic client body can build, so
+ * `transport/http/routes/media.ts` serves and documents them by hand.
  */
 export const MEDIA_ROUTE_SPECS = [
     { verb: 'get', path: '/', id: 'media.query', envelope: 'raw' },

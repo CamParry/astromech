@@ -35,7 +35,7 @@ function accessMarker(method: ManifestMethod | AnnotatedManifestMethod): string 
 }
 
 export default defineCommand({
-    meta: { name: 'methods', description: 'List method-manifest entries' },
+    meta: { name: 'methods', description: 'List the manifest methods' },
     args: {
         filter: {
             type: 'string',

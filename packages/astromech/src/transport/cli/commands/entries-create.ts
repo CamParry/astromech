@@ -1,6 +1,6 @@
 import type { Entry, EntryCreateData, EntryStatus, JsonObject } from '@/types/index';
 import { defineCommand } from 'citty';
-import { configArgs, fieldsArgs, jsonArgs, localeArgs } from '../common-args';
+import { configArgs, fieldsArgs, jsonArgs, localeArgs, statusArgs } from '../common-args';
 import { withApplication } from '../config';
 import { callEntryMethod } from '../methods';
 import { parseJsonArg, printResult } from '../output';
@@ -8,14 +8,11 @@ import { parseJsonArg, printResult } from '../output';
 export default defineCommand({
     meta: { name: 'entries:create', description: 'Create a new entry' },
     args: {
-        type: { type: 'positional', required: true, description: 'Entry type slug' },
+        type: { type: 'positional', required: true, description: 'Entry type id' },
         title: { type: 'string', description: 'Entry title' },
         slug: { type: 'string', description: 'Entry slug' },
         ...localeArgs,
-        status: {
-            type: 'string',
-            description: 'Entry status (draft|published|scheduled)',
-        },
+        ...statusArgs('Entry status'),
         publishedAt: { type: 'string', description: 'Published-at ISO datetime' },
         ...fieldsArgs,
         ...jsonArgs,

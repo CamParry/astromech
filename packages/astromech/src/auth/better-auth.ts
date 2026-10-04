@@ -7,6 +7,7 @@
 import type { Auth, BetterAuthOptions } from 'better-auth';
 import { APIError, betterAuth } from 'better-auth';
 import { createAuthMiddleware } from 'better-auth/api';
+import { openAPI } from 'better-auth/plugins';
 import { SIGN_UP_CLOSED } from '@/auth/setup';
 import { getConfig } from '@/config/registry';
 import { getDatabaseDriverOrThrow } from '@/database/driver-registry';
@@ -87,6 +88,11 @@ function buildAuth(): Auth<BetterAuthOptions> {
         secret: resolveEnv('BETTER_AUTH_SECRET'),
         baseURL: resolveEnv('BETTER_AUTH_URL'),
         basePath: `${basePath}/api/auth`,
+        // The API's own document merges Better Auth's routes from this plugin's
+        // schema (`transport/http/routes/auth-document.ts`); neither of its
+        // HTTP routes is served.
+        plugins: [openAPI({ disableDefaultReference: true })],
+        disabledPaths: [...OPEN_API_PATHS],
         // Better Auth queries through the app's Kysely instance, so one Kysely
         // lock covers auth and app queries. A second instance's write fails with
         // SQLITE_BUSY on a local file while an app transaction is open.
@@ -226,6 +232,9 @@ function buildAuth(): Auth<BetterAuthOptions> {
         },
     }) as unknown as Auth<BetterAuthOptions>;
 }
+
+/** The routes the `openAPI` plugin adds, which the API does not serve. */
+const OPEN_API_PATHS = ['/open-api/generate-schema', '/reference'] as const;
 
 /**
  * Per-address limits stricter than Better Auth's defaults, with windows of at

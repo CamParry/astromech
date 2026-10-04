@@ -13,7 +13,7 @@ import { bootedManifest } from '../methods';
 import { parseJsonArg } from '../output';
 
 export default defineCommand({
-    meta: { name: 'call', description: 'Call a method-manifest entry by id' },
+    meta: { name: 'call', description: 'Call a manifest method by id' },
     args: {
         id: {
             type: 'positional',

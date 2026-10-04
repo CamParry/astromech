@@ -45,7 +45,7 @@ export const publishCommand = statusCommand({
 
 export const unpublishCommand = statusCommand({
     name: 'entries:unpublish',
-    description: 'Unpublish an entry (revert to draft)',
+    description: 'Unpublish an entry (set its status to unpublished)',
     method: 'unpublish',
     done: 'Unpublished',
 });

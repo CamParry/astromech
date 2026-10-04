@@ -8,6 +8,7 @@ import type { BackupsOptions } from './types';
 import type { PluginContext, PluginDB, ServiceInterface } from 'astromech';
 import { definePlugin, withDefaults } from 'astromech';
 import { migrationProvider } from '../migrations/index';
+import { version } from '../package.json';
 import { performBackup, resolveKeep } from './backup';
 import { settingsGlobal } from './globals/settings';
 import { backupsPage } from './pages/backups';
@@ -50,7 +51,7 @@ export const backups = definePlugin((options?: BackupsOptions) => {
 
     return {
         package: BACKUPS_PACKAGE,
-        version: '0.1.0',
+        version,
         label: 'Backups',
         icon: 'DatabaseBackup',
         tables,

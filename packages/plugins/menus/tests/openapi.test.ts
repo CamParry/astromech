@@ -13,8 +13,8 @@ beforeEach(async () => {
 });
 
 describe('the menus method in the OpenAPI document', () => {
-    it('documents the tree through the `MenuItem` component', () => {
-        const { document } = servedDocument([
+    it('documents the tree through the `MenuItem` component', async () => {
+        const { document } = await servedDocument([
             menus({ menus: [{ key: 'main', label: 'Main' }] }),
         ]);
         const get = document.paths['/plugins/menus/get']?.['post'];

@@ -299,7 +299,7 @@ export type PluginFieldType = Omit<FieldType, 'build' | 'layout'> & {
  * ```ts
  * export const redirects = definePlugin({
  *     package: '@astromech/redirects',
- *     version: '0.1.0',
+ *     version, // imported from the package's package.json
  *     label: 'Redirects',
  *     icon: 'Signpost',
  *     // ...the rest of the definition...
