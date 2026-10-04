@@ -49,7 +49,7 @@ a failing test first.
 
 - [x] Public reads drop undeclared keys.
 - [x] Sync cron schedules from config on boot; fix the Cloudflare docs.
-- [ ] Constant-time comparison of the cron secret.
+- [x] Constant-time comparison of the cron secret.
 - [ ] A result and error on each cron run.
 - [ ] Bundle migration names so Workers can check them.
 - [ ] `validate` reads staged rows apart, globals included.
