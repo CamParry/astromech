@@ -80,7 +80,10 @@ Prerequisite: `roadmap/in-progress/caching-defects.md`. Builds on
   cached. The admin bar loads from a script (`roadmap/planned/admin-bar.md`).
   Signed-in visitors need no bypass: site reads are the same for every user.
 - **"Clear cache"** in the admin and the admin bar clears the tag, behind a new
-  `cache:clear` permission granted to admins (Blitz has `blitz:clear`).
+  `cache:clear` permission granted to admins (Blitz has `blitz:clear`). It is
+  a service method, so `astromech cache:clear --url <site>` reaches it with an
+  API key, and the CLI calls it after a direct write
+  (`roadmap/planned/cli-commands.md`).
 - **Cloudflare:** `cacheCloudflare()` is supported, documented as experimental
   in Astro, and turned on in `apps/demo-cloudflare`. A purge refused by the
   rate limit is retried on the next tick.
@@ -112,7 +115,7 @@ compression and the CDN.
       and the clear at the end of a cron tick through a provider handle.
 - [ ] Workers: purge through `cache.purge`, retry after a rate-limit refusal;
       turn it on in `apps/demo-cloudflare`.
-- [ ] "Clear cache" and `cache:clear` in the admin and the admin bar.
+- [ ] "Clear cache" and `cache:clear` in the admin, the admin bar and the CLI.
 - [ ] Docs: providers, `routeRules` examples, several Node processes, what
       prerendering supports.
 

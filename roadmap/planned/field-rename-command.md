@@ -75,9 +75,10 @@ nothing moves them. Raised on 2026-10-03; decided 2026-10-04.
 - **`fields:remove <path>`** ships with it, since it is the same code with
   `unset` in place of the move. Changing a field's type stays a hand-written
   migration (`DECISIONS.md`).
-- **No hooks per entry**, one audit trail row with the target and the counts,
-  and a printed reminder to clear the page cache; `--clear-cache` follows API
-  keys and a clear endpoint.
+- **No hooks per entry**, and one audit trail row with the target and the
+  counts. The page cache is cleared as for any direct write
+  (`roadmap/planned/cli-commands.md`).
+- **The value walker is shared** with `roadmap/planned/search-replace.md`.
 - **`validate` reports undeclared keys at every depth** and suggests the
   command; the field docs and `cli.md` say a rename leaves values behind.
 
@@ -88,7 +89,7 @@ nothing moves them. Raised on 2026-10-03; decided 2026-10-04.
       `--overwrite`, value checks, the dump or restore point.
 - [ ] Rewrite content, drafts and history; rebuild relationships and search
       text for changed rows.
-- [ ] The audit row and the cache reminder.
+- [ ] The audit row and the cache clear.
 - [ ] `validate` reports undeclared keys at every depth.
 - [ ] `apps/docs`: fields and the CLI.
 

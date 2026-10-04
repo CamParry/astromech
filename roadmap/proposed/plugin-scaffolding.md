@@ -4,7 +4,7 @@ milestone: 1.0
 
 # `astromech plugin:init` scaffolding
 
-There is `plugin:generate` and `plugin:purge`, but nothing to start a plugin
+There is `plugin:generate`, but nothing to start a plugin
 _from_: a new plugin begins by copying `packages/plugins/redirects/`.
 
 A scaffold locks in conventions, so it waits until the authoring surface stops
@@ -33,8 +33,7 @@ tests it.
 
 ## Decided (2026-10-03)
 
-- **`astromech plugin:init`**, Strapi's word, beside `plugin:generate` and
-  `plugin:purge`. Rejected: `plugin:new`, which no prior art uses.
+- **`astromech plugin:init`**, Strapi's word, beside `plugin:generate`. Rejected: `plugin:new`, which no prior art uses.
 - **A standalone package by default**; inside a pnpm workspace it writes a
   workspace package instead.
 - **Questions, each with a flag**, so an agent or CI can run it without input.

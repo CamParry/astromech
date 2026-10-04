@@ -45,7 +45,9 @@ migrations list on Workers). Notifications use
     - HTTPS, and `trustProxy` when a forwarded header was seen;
     - database size against D1's limits (an optional `size()` on the driver;
       `page_count * page_size` on libSQL);
-    - cron rows with no handler and removed plugins (pointing at `plugin:purge`).
+    - cron rows with no handler and removed plugins (pointing at `prune`).
+- **`astromech doctor`** runs the load-time checks in the terminal
+  (`roadmap/planned/cli-commands.md`).
 - **Information, not checks:** the drivers in use, the runtime and the Node
   version.
 - **On demand,** since they cost money or have side effects: a test email to

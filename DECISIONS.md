@@ -104,7 +104,11 @@ Live choices and what each one beat. An entry is here because the losing option 
 
 ## Config, boot and packaging
 
-**A site owner changes the database only through `astromech` CLI commands.** Migrations, exports, restores and index rebuilds each have a command, so a step that has to follow another (running the migrations before importing data, rebuilding the search index after it) is in the command rather than in a guide. Rejected: documenting raw `wrangler d1` or `sqlite3` steps, which a reader can run out of order or half-run.
+**A site owner changes the database only through `astromech` CLI commands.** Migrations, exports, imports and index rebuilds each have a command, so a step that has to follow another (running the migrations before importing data, rebuilding the search index after it) is in the command rather than in a guide. Rejected: documenting raw `wrangler d1` or `sqlite3` steps, which a reader can run out of order or half-run.
+
+**CLI commands are named after their service and registered with `defineCommand`.** A command is `noun:verb` with the service's key (`entries:query` for `entries.query`), and core and plugins both register commands through `defineCommand`, citty's own name, whose `run` gets the same scoped services a plugin method does. One command is generated per service method from its input schema. The clean-up command is `prune` (git, Docker, npm, Laravel's `model:prune`). Rejected: singular nouns (WP-CLI's `post`), which break the match with `call` and the other transports; renaming `query` to `list`, which needs a lookup table; aliases; plugins importing citty; and `purge` or `cleanup` for `prune`.
+
+**A CLI command reaches the database directly, or a site over HTTP with an API key.** Permissions come from the key or `--as`, never from which command runs. The bulk commands (`db:*`, `export`/`import`, `search-replace`, `fields:*`) are direct only, because one Worker request is capped at 30 seconds of CPU by default and 128MB of memory, and a site with broken migrations cannot migrate itself over HTTP. Rejected: limiting content commands to HTTP as if they were more sensitive, when `search-replace` can change as much as `users:create`.
 
 **The server loads the config as a module.** The Astro integration takes a path, `virtual:astromech/config` re-exports the author's module, and boot runs in the injected middleware, so drivers, models and `{ custom: fn }` rules reach the serving process. The cost is two config evaluations. Rejected: copying live values into registries at build time, which leaves the deployed registries empty.
 
@@ -319,6 +323,7 @@ Plugins are the exception. A plugin reaches the database only through `ctx.db`, 
 **Drift is reported, not enforced.** `pnpm run report:drift` finds a second copy of a helper, a cast or a query key, and review decides whether to share it, schedule it or keep it. Rejected: lint bans on code shapes and a count that may only fall (they force awkward structure, as dependency-cruiser did), and periodic clean-up passes, after which the drift returns.
 
 **`check:install` follows the installation guide on packed tarballs.** Workspace links hide packaging and generator defects, and the script reads its commands from `apps/docs/installation.md`, so the guide cannot drift from what is tested. Rejected: a fixture site, which drifts from the guide, and a stage in `verify`, which would stop the gate running offline.
+
 **A roadmap file's milestone is a field; its status is the directory.** Each live file's frontmatter holds `milestone: 1.0` or `milestone: later`. Scope changes often (a feature moved from 1.0 to later within one week), and a directory per milestone would make each change a `git mv` that breaks links, or nest status under milestone. GitHub milestones, Kubernetes KEPs (`latest-milestone` in `kep.yaml`) and Python PEPs (`Python-Version`) keep it as a field. A generated index in `roadmap/README.md` shows progress, and `check:docs` fails when it is stale. Rejected: milestone directories under `roadmap/` (`v1/`, `future/`), and inline "**Target: 1.0.**" text, which 24 of 44 planned files lacked.
 
 ## Reserved words
