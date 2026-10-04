@@ -6,6 +6,7 @@
 
 import type { Auth, BetterAuthOptions } from 'better-auth';
 import { APIError, betterAuth } from 'better-auth';
+import { createAuthMiddleware } from 'better-auth/api';
 import { SIGN_UP_CLOSED } from '@/auth/setup';
 import { getConfig } from '@/config/registry';
 import { getDatabaseDriverOrThrow } from '@/database/driver-registry';
@@ -111,6 +112,14 @@ function buildAuth(): Auth<BetterAuthOptions> {
             fields: { lastRequest: 'last_request' },
             customRules: RATE_LIMIT_RULES,
         },
+        hooks: {
+            // A password change signs out every other session whatever the
+            // client asks, so a stolen session does not outlive the change.
+            before: createAuthMiddleware(async (ctx) => {
+                if (ctx.path !== '/change-password') return;
+                return { context: { body: { ...ctx.body, revokeOtherSessions: true } } };
+            }),
+        },
         databaseHooks: {
             user: {
                 create: {
@@ -177,6 +186,7 @@ function buildAuth(): Auth<BetterAuthOptions> {
         },
         emailAndPassword: {
             enabled: true,
+            revokeSessionsOnPasswordReset: true,
             sendResetPassword: async ({
                 user,
                 url,

@@ -203,6 +203,12 @@ Astromech logs the link instead when `NODE_ENV` is `development`. Anywhere
 else it logs only that the email was not sent, because the link signs in as
 the user and anyone who can read the logs could use it.
 
+A new password signs out the sessions the old one opened. A reset through the
+link revokes every session the user had. A change through Better Auth's
+`/api/auth/change-password` revokes every session but the caller's, whether or
+not the request sets `revokeOtherSessions`, and its response carries the
+caller's new session cookie.
+
 `update` and `delete` refuse to take the `admin` role from the only user
 holding it, whether the call comes from the admin, the CLI, MCP or a plugin.
 The refusal answers 409 `CONFLICT` with `details.reason` `last-admin`. The
