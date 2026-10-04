@@ -9,10 +9,11 @@ import type { Kysely } from 'kysely';
 import { expectConsole } from '@tests/console';
 import { createTestDb, setupTestConfig } from '@tests/harness';
 import { sql } from 'kysely';
-import { beforeEach, describe, expect, it } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { currentServices } from '@/app-context/services';
 import { getAuth } from '@/auth/better-auth';
 import { transaction } from '@/database/transaction';
+import { clearEnvSource, setEnvSource } from '@/env';
 import { DEFAULT_ROLE_SLUG } from '@/permissions/roles';
 
 const entriesService = currentServices.entries;
@@ -27,6 +28,8 @@ beforeEach(async () => {
     db = await createTestDb();
     basePath = setupTestConfig().basePath;
 });
+
+afterEach(clearEnvSource);
 
 /** A password reset request: one user lookup, then a verification row insert. */
 function requestReset(): Promise<Response> {
@@ -48,7 +51,9 @@ function wait(ms: number): Promise<void> {
 
 describe('Better Auth beside an open app transaction', () => {
     it('writes once the transaction commits instead of failing with SQLITE_BUSY', async () => {
-        // The config names no email driver, so the request logs that instead.
+        // The config names no email driver, so outside development the request
+        // logs that the email was not sent.
+        setEnvSource({ NODE_ENV: 'test' });
         expectConsole('error', `password reset email to ${EMAIL} was not sent`);
         await usersService.create({
             data: { email: EMAIL, name: 'Reset', role: DEFAULT_ROLE_SLUG },

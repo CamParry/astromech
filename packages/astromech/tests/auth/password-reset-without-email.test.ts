@@ -7,10 +7,10 @@
 import type { DB } from '@/database/types';
 import type { Kysely } from 'kysely';
 import { createTestDb, makeTestConfig, setupTestConfig } from '@tests/harness';
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { currentServices } from '@/app-context/services';
 import { handleAuthRequest } from '@/auth/better-auth';
-import { setEnvSource } from '@/env';
+import { clearEnvSource, setEnvSource } from '@/env';
 import { DEFAULT_ROLE_SLUG } from '@/permissions/roles';
 
 const EMAIL = 'no-driver@test.dev';
@@ -25,6 +25,8 @@ beforeEach(async () => {
         data: { email: EMAIL, name: 'No driver', role: DEFAULT_ROLE_SLUG },
     });
 });
+
+afterEach(clearEnvSource);
 
 /**
  * Request a reset for `EMAIL` under `nodeEnv`, and return what was logged and

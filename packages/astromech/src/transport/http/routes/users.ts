@@ -60,7 +60,8 @@ router.put('/:id', async (c) => {
     const raw = await c.req.json<unknown>().catch(() => undefined);
     if (raw === undefined) return badRequest(c, 'Invalid JSON body');
     const body = typeof raw === 'object' && raw !== null ? raw : {};
-    if (!canUpdateUsers && 'role' in body && body.role !== undefined) return forbidden(c);
+    if (!canUpdateUsers && 'role' in body && body.role !== undefined)
+        return forbidden(c, 'Changing your role requires the "users:update" permission');
     // A stolen session could change the email and then reset the password, so
     // self-access cannot change it until the change asks for the password.
     if (!canUpdateUsers && 'email' in body && body.email !== undefined)

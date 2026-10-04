@@ -278,6 +278,10 @@ describe('PUT /users/:id', () => {
             body: JSON.stringify({ role: 'admin' }),
         });
         expect(res.status).toBe(403);
+        expect(((await res.json()) as { error: { message: string } }).error.message).toBe(
+            'Changing your role requires the "users:update" permission'
+        );
+        expect((await usersService.get({ id: self.id }))?.role).toBe('editor');
     });
 
     it('403s a self-edit that changes email, and keeps the email', async () => {

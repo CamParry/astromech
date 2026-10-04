@@ -196,12 +196,13 @@ Auth's own `/api/auth/change-email` route is turned off, and its
 
 `create` takes an optional `password` of at least eight characters, and with
 one writes the credential account the user signs in with; without one the user
-sets a password through the reset link.
+sets a password through the reset link. Outside development a site with no
+`email` driver has no way to deliver that link, so give a password on create.
 
 The reset link goes out through the config's `email` driver. With no driver,
 Astromech logs the link instead when `NODE_ENV` is `development`. Anywhere
-else it logs only that the email was not sent, because the link signs in as
-the user and anyone who can read the logs could use it.
+else it logs only that the email was not sent, because the link lets anyone who
+opens it set the user's password, and anyone who can read the logs could use it.
 
 A new password signs out the sessions the old one opened. A reset through the
 link revokes every session the user had. A change through Better Auth's

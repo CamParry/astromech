@@ -236,7 +236,7 @@
         "nameField": "Name",
         "nameRequired": "Name is required",
         "emailField": "Email",
-        "emailReadonly": "Email cannot be changed.",
+        "emailReadonly": "Email cannot be changed here.",
         "joinedLabel": "Joined",
         "lastUpdatedLabel": "Last updated",
         "created": "User created.",
