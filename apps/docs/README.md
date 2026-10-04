@@ -87,7 +87,7 @@ This is a living reference; it grows as the project does.
   slots, permissions, service methods, hooks, entry types, database tables, and
   i18n).
 - [cli.md](cli.md) — the `astromech` CLI: entry CRUD + publish, JSON output,
-  method-manifest discovery, rebuilding the relationships index, and reporting
+  manifest method discovery, rebuilding the relationships index, and reporting
   stored rows that fail the current validation.
 
 ## Learning from the bundled plugins

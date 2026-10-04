@@ -9,6 +9,7 @@
 import type { AstromechConfig, DataField } from '@/types/index';
 import { field } from '@tests/fixtures';
 import { createTestDb, makeTestConfig, setupTestConfig } from '@tests/harness';
+import { renderUsage } from 'citty';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { currentServices } from '@/app-context/services';
 import { setMethodManifest } from '@/codegen/manifest-registry';
@@ -106,6 +107,14 @@ describe('entries commands', () => {
         await run(unpublishCommand, { type: 'post', id, json: true });
         expect(lastJson<{ status: string }>().status).not.toBe('published');
         expect(errors).toEqual([]);
+    });
+
+    it.each([
+        ['entries:create', () => renderUsage(entriesCreate)],
+        ['entries:update', () => renderUsage(entriesUpdate)],
+        ['entries:list', () => renderUsage(entriesList)],
+    ])('%s lists the statuses an entry takes under --status', async (_name, usage) => {
+        expect(await usage()).toMatch(/--status.*\(unpublished\|published\|scheduled\)/);
     });
 
     it('reports a missing entry as the command’s error', async () => {

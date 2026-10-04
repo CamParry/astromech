@@ -112,8 +112,9 @@ item 8 proposed, would protect libsql only.
 - [ ] **Plugin versions.** Each `packages/plugins/*/src/index.ts` reads its
       version from its `package.json` with a JSON import, and a test checks the
       two agree.
-- [ ] **CLI statuses.** Build the list from `statusSchema.options` in
+- [x] **CLI statuses.** Build the list from `statusSchema.options` in
       `transport/cli/commands/entries-create.ts`, `entries-update.ts` and
-      `entries-status.ts`, and fix `apps/docs/cli.md`. Rename "Entry type slug"
+      `entries-list.ts` (`statusArgs` in `transport/cli/common-args.ts`), drop
+      "draft" from `entries-status.ts`, and fix `apps/docs/cli.md`. Rename "Entry type slug"
       to "Entry type id" (`transport/cli/common-args.ts`) and "method-manifest
       entry" to "manifest method" (`transport/cli/commands/call.ts`).

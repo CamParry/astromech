@@ -4,6 +4,7 @@
  */
 
 import type { ArgsDef } from 'citty';
+import { statusSchema } from '@/entries/schema';
 
 /** `--config`, for a command that reads the config and never opens the database. */
 export const configPathArgs = {
@@ -34,9 +35,19 @@ export const jsonArgs = {
 
 /** The entry type and id an entry command acts on. */
 export const entryArgs = {
-    type: { type: 'positional', required: true, description: 'Entry type slug' },
+    type: { type: 'positional', required: true, description: 'Entry type id' },
     id: { type: 'positional', required: true, description: 'Entry ID' },
 } satisfies ArgsDef;
+
+/** `--status`, described by `label` and followed by the statuses an entry takes. */
+export function statusArgs(label: string) {
+    return {
+        status: {
+            type: 'string',
+            description: `${label} (${statusSchema.options.join('|')})`,
+        },
+    } satisfies ArgsDef;
+}
 
 /** `--locale`, for a command acting on one locale. */
 export const localeArgs = {
