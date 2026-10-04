@@ -38,8 +38,37 @@ export function detectImageFormat(bytes: Uint8Array): ImageFormat | null {
     if (head === 'RIFF' && bytes.length >= 12 && fourCC(view, 8) === 'WEBP')
         return 'webp';
     if (head === 'II*\0' || head === 'MM\0*') return 'tiff';
-    if (fourCC(view, 4) === 'ftyp') return 'heif';
+    if (fourCC(view, 4) === 'ftyp' && hasHeifBrand(view)) return 'heif';
     return null;
+}
+
+/** The `ftyp` brands of a HEIF or AVIF image, as against an MP4 or QuickTime video, which share the box. */
+const HEIF_BRANDS = new Set([
+    'mif1',
+    'mif2',
+    'msf1',
+    'miaf',
+    'heic',
+    'heix',
+    'heim',
+    'heis',
+    'hevc',
+    'hevx',
+    'hevm',
+    'hevs',
+    'avif',
+    'avis',
+]);
+
+/** Whether the `ftyp` box at the start of `view` lists a HEIF brand, as its major brand or a compatible one. */
+function hasHeifBrand(view: DataView): boolean {
+    const end = Math.min(view.getUint32(0), view.byteLength);
+    if (view.byteLength >= 12 && HEIF_BRANDS.has(fourCC(view, 8))) return true;
+    // The minor version follows the major brand; the compatible brands follow it.
+    for (let offset = 16; offset + 4 <= end; offset += 4) {
+        if (HEIF_BRANDS.has(fourCC(view, offset))) return true;
+    }
+    return false;
 }
 
 /** The four ASCII characters at `offset`. */

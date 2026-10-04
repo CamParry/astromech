@@ -109,12 +109,24 @@ from the file's header on upload, with or without an image driver. JPEG, PNG,
 GIF, WebP, AVIF, HEIC and TIFF are read; any other file has `null` for both.
 
 **Location data is removed from uploaded originals.** On upload and replace,
-Astromech blanks the GPS data in a JPEG, PNG, WebP, AVIF, HEIC or TIFF file's
-EXIF and XMP before storing it, since the original is public at its media URL.
+Astromech blanks the GPS data in a JPEG, PNG, WebP, AVIF, HEIC or TIFF file
+before storing it, since the original is public at its media URL. It removes:
+
+- the EXIF GPS block;
+- in XMP, every `exif:GPS*` property (under whatever prefix the file gives the
+  EXIF namespace), and a DJI drone's `GpsLatitude`, `GpsLongitude` and
+  `AbsoluteAltitude`;
+- in a PNG, the `exif:GPS*` text chunks ImageMagick writes, and the GPS block in
+  its raw EXIF profiles.
+
+The file is recognised by its bytes, so an image uploaded with another or no
+content type is cleaned too; its `mimeType` stays the type it was uploaded with.
 The change is made in place, with no re-encode: the pixels and the file size
 stay the same, and it works with or without an image driver, on Workers too.
 Other metadata, such as the camera model, the date taken and the copyright, is
-kept. `size` and `metadata.version` describe the stored file.
+kept, and so is any location held elsewhere: a place name in IPTC or XMP, a
+camera maker's own notes, or text in a field. `size` and `metadata.version`
+describe the stored file.
 
 What `url` points at depends on the access mode: see
 [media access modes](../configuration/storage.md#media-access-modes).

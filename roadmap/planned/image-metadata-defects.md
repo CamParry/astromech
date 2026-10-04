@@ -74,3 +74,11 @@ decoded image, which is what the variants are made from.
 - **Core sets no upload size limit.** An image is buffered whole to read its
   header, so the largest upload is bounded only by the runtime's memory and the
   host's request limit.
+- **Some GPS data is out of reach of in-place removal.** A HEIF `Exif` item
+  stored in several extents or by construction method 2 (an item reference) is
+  left alone, as is a GPS pointer in a TIFF page IFD after the first, XMP in a
+  GIF, an XMP property split across two extended-XMP segments in a JPEG, and a
+  location in a camera maker's MakerNotes.
+- **A compressed text past the first 16 MB is left alone.** A PNG's compressed
+  text chunks inflate to at most 16 MB in all, so a chunk beyond that keeps its
+  GPS data.
