@@ -22,7 +22,7 @@ nothing moves them. Raised on 2026-10-03; decided 2026-10-04.
   values loses the old value.
 - Public reads keep undeclared keys
   (`packages/astromech/src/content/visibility.ts`), so a renamed or removed
-  `private: true` field is served publicly (`roadmap/planned/operations-defects.md`).
+  `private: true` field is served publicly (`roadmap/completed/operations-defects.md`).
 
 ## Prior art
 
