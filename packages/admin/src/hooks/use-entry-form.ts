@@ -24,7 +24,10 @@ export type EntryPayload = {
     title: string;
     slug?: string;
     fields: JsonObject;
-    /** Omitted for statuses-off types so the API doesn't 409 on a status write. */
+    /**
+     * Omitted when the editor left it alone on an update, and always for a
+     * statuses-off type, whose API answers 409 to a status write.
+     */
     status?: EntryStatus;
     publishedAt?: Date | null;
 };
@@ -50,8 +53,8 @@ type UseEntryFormOptions<TSaved> = {
     /** Whether this entry type has a slug field. */
     hasSlug: boolean;
     /**
-     * Whether the statuses capability is on. When off, the payload omits
-     * `status`/`publishedAt` so the API doesn't 409 on a statuses-off type.
+     * Whether the statuses capability is on. When off, the payload never
+     * carries `status` or `publishedAt`.
      */
     hasStatuses?: boolean;
     /** Initial form values; defaults to empty and unpublished. */
@@ -78,32 +81,38 @@ export function useEntryForm<TSaved = Entry>({
     onSuccess,
     readOnly = false,
 }: UseEntryFormOptions<TSaved>) {
-    function buildPayload(
-        values: EntryFormValues,
-        overrideStatus?: EntryStatus
-    ): EntryPayload {
-        const status = overrideStatus ?? values.status;
+    /**
+     * The write's payload. An update sends `status` and `publishedAt` only when
+     * the editor changed them or pressed Publish, since either needs the publish
+     * permission; a create always says which status it makes.
+     */
+    function buildPayload(values: EntryFormValues, publish: boolean): EntryPayload {
+        const status = statusAfter(values, publish);
+        const sendsStatus =
+            hasStatuses && (publish || operation === 'create' || changed('status'));
         const payload: EntryPayload = {
             title: values.title,
             fields: values.fields as JsonObject,
-            // Omit status entirely for statuses-off types (the API 409s on a
-            // status write there); the entries service defaults to 'unpublished'.
-            ...(hasStatuses ? { status } : {}),
+            // A statuses-off type takes no status write (the API answers 409).
+            ...(sendsStatus ? { status } : {}),
         };
         if (hasSlug && values.slug.trim()) {
             payload.slug = values.slug.trim();
         }
-        if (hasStatuses && status === 'scheduled' && values.publishedAt) {
+        if (
+            hasStatuses &&
+            status === 'scheduled' &&
+            values.publishedAt !== '' &&
+            (sendsStatus || changed('publishedAt'))
+        ) {
             payload.publishedAt = new Date(values.publishedAt);
         }
         return payload;
     }
 
-    function payloadFor(
-        values: EntryFormValues,
-        meta: EntrySubmitMeta | undefined
-    ): EntryPayload {
-        return buildPayload(values, meta?.publish === true ? 'published' : undefined);
+    /** Whether the editor changed this key since the form last loaded or saved. */
+    function changed(name: 'status' | 'publishedAt'): boolean {
+        return fieldsForm.form.getFieldMeta(name)?.isDirty === true;
     }
 
     const fieldsForm = useFieldsForm<EntryExtras, TSaved, EntrySubmitMeta>({
@@ -118,15 +127,17 @@ export function useEntryForm<TSaved = Entry>({
             publishedAt: defaultValues?.publishedAt ?? '',
             fields: defaultValues?.fields ?? {},
         },
-        // The stage comes from the payload rather than a hardcoded 'publish'
-        // so the browser and the server agree in every case, including a
-        // statuses-off type whose payload carries no status at all.
+        // An update that sends no status is validated against the row's own,
+        // which is the form's, so the browser and the server pick one stage.
         validationMode: (values, meta) =>
-            entryValidationMode({ status: payloadFor(values, meta).status, hasStatuses }),
+            entryValidationMode({
+                status: statusAfter(values, meta?.publish === true),
+                hasStatuses,
+            }),
         onSubmit: (values, meta) =>
             meta?.publish === true
-                ? publishFn(payloadFor(values, meta))
-                : saveFn(payloadFor(values, meta)),
+                ? publishFn(buildPayload(values, true))
+                : saveFn(buildPayload(values, false)),
         ...(onSuccess !== undefined ? { onSuccess } : {}),
     });
 
@@ -134,8 +145,12 @@ export function useEntryForm<TSaved = Entry>({
         ...fieldsForm,
         handleSave: (): void => fieldsForm.handleSubmit({ publish: false }),
         handlePublish: (): void => fieldsForm.handleSubmit({ publish: true }),
-        buildPayload,
     };
+}
+
+/** The status the row has after a submit, whether or not the payload names it. */
+function statusAfter(values: EntryFormValues, publish: boolean): EntryStatus {
+    return publish ? 'published' : values.status;
 }
 
 /** The TanStack form `useEntryForm` builds, for the entry-only controls that bind to it. */

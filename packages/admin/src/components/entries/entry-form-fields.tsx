@@ -87,17 +87,26 @@ export function SlugField({
     );
 }
 
-/** The status select and publish date, bound to the form's `status` and `publishedAt`. */
+/**
+ * The status select and publish date, bound to the form's `status` and
+ * `publishedAt`. Without `canPublish` they are read-only, with a note saying why.
+ */
 export function StatusField({
     form,
     savedPublishedAt,
     disabled = false,
+    canPublish,
 }: {
     form: EntryForm;
     /** The saved row's publish date, shown once it is live. */
     savedPublishedAt?: Date | string | null | undefined;
     disabled?: boolean;
+    /** Whether the user holds the publish permission, which a status change needs. */
+    canPublish: boolean;
 }): React.ReactElement {
+    const { t } = useTranslation();
+    // A form that is read-only as a whole says so in its own banner.
+    const hint = !disabled && !canPublish ? t('entries.statusNeedsPublish') : undefined;
     return (
         <form.Field name="status">
             {(statusField) => (
@@ -111,7 +120,8 @@ export function StatusField({
                             onPublishedAtChange={(value) =>
                                 publishedAtField.handleChange(value)
                             }
-                            readOnly={disabled}
+                            readOnly={disabled || !canPublish}
+                            hint={hint}
                         />
                     )}
                 </form.Field>

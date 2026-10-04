@@ -3,10 +3,11 @@
  *
  * The global edit page. A global is declared by config and its row is created
  * on demand, so a `null` read is an empty form whose first save is the write
- * that creates it. One `update` carries the fields and the status the publish
- * panel asks for, a locale with no row is opened, not written, the merge
- * confirm warns when the staged read reports `diverged`, staging over unsaved
- * edits asks first, and merging over them asks once.
+ * that creates it. One `update` carries the fields, and the status only when
+ * the publish panel changed it, which needs publish. A locale with no row is
+ * opened, not written, the merge confirm warns when the staged read reports
+ * `diverged`, staging over unsaved edits asks first, and merging over them
+ * asks once.
  */
 
 import type { RenderAdminResult } from '../../_support/render-admin';
@@ -207,7 +208,7 @@ describe('the global edit page', () => {
         expect(document.querySelector('.am-badge')).toBeNull();
     });
 
-    it('saves through `update` with the fields and the status', async () => {
+    it('saves through `update` with the fields alone when the status is unchanged', async () => {
         const { api, update } = makeApi({ canonical: makeGlobal() });
         const page = mountPage({ api, config: config() });
 
@@ -223,7 +224,44 @@ describe('the global edit page', () => {
             key: KEY,
             locale: 'en',
             staged: false,
-            data: { fields: { tagline: 'A new tagline' }, status: 'unpublished' },
+            data: { fields: { tagline: 'A new tagline' } },
+        });
+    });
+
+    it('shows the status read-only without publish, and saves without it', async () => {
+        const { api, update } = makeApi({
+            canonical: makeGlobal({
+                status: 'published',
+                publishedAt: new Date('2026-01-01T09:00:00Z'),
+            }),
+        });
+        const page = mountPage({
+            api,
+            config: config(),
+            permissions: [`global:${KEY}:read`, `global:${KEY}:update`],
+        });
+
+        const field = await tagline();
+        const select = screen.getByRole('combobox', { name: 'Status' });
+        expect(select.textContent).toContain('Published');
+        expect(select.hasAttribute('data-disabled')).toBe(true);
+        const hint = screen.getByText(
+            'Only users who can publish can change the status.'
+        );
+        expect(select.getAttribute('aria-describedby')?.split(' ')).toContain(hint.id);
+
+        await page.user.clear(field);
+        await page.user.type(field, 'A new tagline');
+        await page.user.click(screen.getByRole('button', { name: 'Update' }));
+
+        await waitFor(() => {
+            expect(update).toHaveBeenCalledTimes(1);
+        });
+        expect(update.mock.calls[0]?.[0]).toEqual({
+            key: KEY,
+            locale: 'en',
+            staged: false,
+            data: { fields: { tagline: 'A new tagline' } },
         });
     });
 

@@ -2,9 +2,10 @@
  * @vitest-environment happy-dom
  *
  * The entry create page: it renders the type's own fields beside the title,
- * a publish sends a create with them and opens the new entry, a 422 lands on
- * the field it names and the page stays put, a user who may not create is
- * sent back to the list, and the title input is described by its error.
+ * a publish sends a create with them and opens the new entry, a user without
+ * publish can only save unpublished, a 422 lands on the field it names and the
+ * page stays put, a user who may not create is sent back to the list, and the
+ * title input is described by its error.
  */
 
 import type { AdminEntryType, Entry } from '@/types/index';
@@ -93,6 +94,28 @@ describe('EntryNewPage', () => {
             },
         });
         expect(await screen.findByText('Post created.')).not.toBeNull();
+    });
+
+    it('saves unpublished without publish, offering no Publish and a read-only status', async () => {
+        entries.create.mockResolvedValue({ id: 'p1', locale: 'en' } as Entry);
+        const page = mountPage(['entry:post:read', 'entry:post:create']);
+
+        await page.user.type(await screen.findByLabelText(/Title/), 'Hello world');
+        expect(screen.queryByRole('button', { name: 'Publish' })).toBeNull();
+        expect(screen.queryByRole('button', { name: 'Save as Unpublished' })).toBeNull();
+        const select = screen.getByRole('combobox', { name: 'Status' });
+        expect(select.textContent).toContain('Unpublished');
+        expect(select.hasAttribute('data-disabled')).toBe(true);
+        expect(
+            screen.getByText('Only users who can publish can change the status.')
+        ).not.toBeNull();
+        await page.user.click(screen.getByRole('button', { name: 'Save' }));
+
+        await waitFor(() => expect(page.location()).toBe('/entries/post/p1?locale=en'));
+        expect(entries.create).toHaveBeenCalledWith({
+            type: 'post',
+            data: { title: 'Hello world', fields: {}, status: 'unpublished' },
+        });
     });
 
     it('puts a 422 field error on the field it names and stays on the page', async () => {

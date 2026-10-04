@@ -69,6 +69,7 @@ function EntryNewBody({
     requestedLocale: string;
 }): React.ReactElement {
     const { type, config, basePath, namespace } = entryType;
+    const canPublish = entryType.can('publish');
     const navigate = useNavigate();
     const { toast } = useToast();
     const { t } = useTranslation();
@@ -171,7 +172,7 @@ function EntryNewBody({
                         />
                     </PageTitle>
                     <ButtonGroup>
-                        {hasStatuses ? (
+                        {hasStatuses && canPublish ? (
                             <>
                                 <Button
                                     variant="secondary"
@@ -219,7 +220,9 @@ function EntryNewBody({
                         }
                         sidebar={
                             <>
-                                {hasStatuses && <StatusField form={form} />}
+                                {hasStatuses && (
+                                    <StatusField form={form} canPublish={canPublish} />
+                                )}
                                 {hasSlug && <SlugField form={form} />}
                                 <FieldColumn form={entryForm} fields={sidebar} />
                             </>

@@ -77,7 +77,7 @@ function makeEntry(id: string, title: string): Entry {
 }
 
 /** Mount the page at `url` under a real router, beside the edit page its rows link to. */
-function mountList(url: string, type = 'post') {
+function mountList(url: string, type = 'post', permissions: string[] = ['*']) {
     const queryClient = createTestQueryClient();
     queryClient.setQueryData<QueryResult<User>>(queryKeys.users.list({ limit: 'all' }), {
         data: [],
@@ -92,7 +92,7 @@ function mountList(url: string, type = 'post') {
             },
             { path: '/entries/$type/$id', component: () => <p>Entry page</p> },
         ],
-        { url, queryClient }
+        { url, queryClient, permissions }
     );
 }
 
@@ -219,6 +219,35 @@ describe('the entries list', () => {
 
         await waitFor(() => expect(view.pathname()).toBe('/entries/post/e1'));
     });
+
+    it.each([
+        ['offers', ['*'], ['Publish', 'Unpublish', 'Move to trash', 'Delete']],
+        [
+            'leaves out',
+            ['entry:post:read', 'entry:post:delete'],
+            ['Move to trash', 'Delete'],
+        ],
+    ])(
+        '%s bulk publish and unpublish by the publish permission',
+        async (_, permissions, actions) => {
+            adminConfig.entryTypes = { post: POST };
+            query.mockResolvedValue({
+                data: [makeEntry('e1', 'Hello')],
+                pagination: { page: 1, pages: 1, total: 1, limit: 20 },
+            });
+            mountList('/entries/post', 'post', permissions);
+            await screen.findByText('Hello');
+
+            const [firstRow] = screen.getAllByRole('checkbox', { name: 'Select row' });
+            await userEvent.click(firstRow as HTMLElement);
+            await userEvent.click(
+                screen.getByRole('button', { name: 'Bulk actions (1)' })
+            );
+
+            const items = await screen.findAllByRole('menuitem');
+            expect(items.map((item) => item.textContent)).toEqual(actions);
+        }
+    );
 
     it('renders the not-found page for a type the config does not declare', async () => {
         mountList('/entries/missing', 'missing');

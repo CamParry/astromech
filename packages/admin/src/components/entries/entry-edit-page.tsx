@@ -311,6 +311,7 @@ function EntryEditBody({
                                         form={form}
                                         savedPublishedAt={entry?.publishedAt}
                                         disabled={isReadOnly}
+                                        canPublish={controller.canPublish}
                                     />
                                 )}
                                 {hasSlug && (

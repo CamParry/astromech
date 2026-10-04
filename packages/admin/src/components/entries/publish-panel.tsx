@@ -1,8 +1,6 @@
 /**
- * PublishPanel — sidebar panel for managing entry publish status.
- *
- * Renders status select, datetime picker (when scheduled), and shows
- * the published date when the entry is live.
+ * The sidebar panel for an entry's or a global's status: the status select,
+ * the publish date while scheduled, and the published date once it is live.
  */
 
 import type { EntryStatus } from 'astromech';
@@ -10,6 +8,7 @@ import { ENTRY_STATUSES, isEntryStatus } from 'astromech/shared';
 import React from 'react';
 import { useTranslation } from 'react-i18next';
 import { formatDatetime } from '../../utilities/dates';
+import { FieldControlProvider } from '../fields/field-control-context';
 import { Input } from '../ui/input';
 import { Panel } from '../ui/panel';
 import { Select } from '../ui/select';
@@ -24,6 +23,8 @@ export type PublishPanelProps = {
     onStatusChange: (status: EntryStatus) => void;
     onPublishedAtChange: (value: string) => void;
     readOnly?: boolean;
+    /** A note under the status select, such as why it cannot be changed. */
+    hint?: string | undefined;
 };
 
 export function PublishPanel({
@@ -33,8 +34,11 @@ export function PublishPanel({
     onStatusChange,
     onPublishedAtChange,
     readOnly = false,
+    hint,
 }: PublishPanelProps): React.ReactElement {
     const { t } = useTranslation();
+    const statusId = React.useId();
+    const hintId = React.useId();
 
     const statusOptions = ENTRY_STATUSES.map((value) => ({
         value,
@@ -48,15 +52,31 @@ export function PublishPanel({
         <Panel title={t('entries.statusPanel')}>
             <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
                 <div className="am-field">
-                    <label className="am-field-label">{t('entries.statusField')}</label>
-                    <Select
-                        value={status}
-                        onValueChange={(v) => {
-                            if (isEntryStatus(v)) onStatusChange(v);
+                    <label className="am-field-label" htmlFor={statusId}>
+                        {t('entries.statusField')}
+                    </label>
+                    <FieldControlProvider
+                        value={{
+                            hasError: false,
+                            errorId: undefined,
+                            descriptionId: hint !== undefined ? hintId : undefined,
                         }}
-                        options={statusOptions}
-                        disabled={readOnly}
-                    />
+                    >
+                        <Select
+                            id={statusId}
+                            value={status}
+                            onValueChange={(v) => {
+                                if (isEntryStatus(v)) onStatusChange(v);
+                            }}
+                            options={statusOptions}
+                            disabled={readOnly}
+                        />
+                    </FieldControlProvider>
+                    {hint !== undefined && (
+                        <p id={hintId} className="am-field-hint">
+                            {hint}
+                        </p>
+                    )}
                 </div>
 
                 {status === 'scheduled' && (

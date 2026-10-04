@@ -144,6 +144,7 @@ function GlobalEditBody({
                                         form={form}
                                         savedPublishedAt={record?.publishedAt}
                                         disabled={isReadOnly}
+                                        canPublish={controller.canPublish}
                                     />
                                 )}
                                 <FieldColumn

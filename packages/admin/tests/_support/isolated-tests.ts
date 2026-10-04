@@ -19,6 +19,7 @@ export const isolatedTests = [
     'tests/components/entries/entry-edit-locale-switch.test.tsx',
     'tests/components/entries/entry-edit-meta.test.tsx',
     'tests/components/entries/entry-edit-unsaved-changes.test.tsx',
+    'tests/components/entries/entry-edit-status.test.tsx',
     'tests/components/entries/entries-list-page.test.tsx',
     'tests/components/globals/global-edit-page.test.tsx',
     'tests/components/layout/sidebar-globals.test.tsx',

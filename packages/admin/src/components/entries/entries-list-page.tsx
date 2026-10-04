@@ -158,7 +158,7 @@ function EntriesListBody({
     // The bulk menu, and so row selection, needs the delete permission.
     const bulkActions: DataListBulkAction[] = canDelete
         ? [
-              ...(capabilities.statuses && !list.isTrash
+              ...(capabilities.statuses && can('publish') && !list.isTrash
                   ? [
                         {
                             label: t('entries.bulkPublishSelected'),

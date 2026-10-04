@@ -126,6 +126,7 @@
         "statusPanel": "Status",
         "statusField": "Status",
         "publishedAtField": "Publish date",
+        "statusNeedsPublish": "Only users who can publish can change the status.",
         "unpublished": "Unpublished",
         "published": "Published",
         "scheduled": "Scheduled",
