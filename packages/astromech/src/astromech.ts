@@ -51,10 +51,19 @@ export type Astromech = TypedServices & {
      * without `security.trustProxy`, every client shares one rate-limit count.
      */
     fetch(request: Request, options?: ServerBindings): Promise<Response>;
-    /** Run the cron jobs due at `at`. Defaults to now. */
-    scheduled(at?: Date): Promise<void>;
+    /**
+     * Run the cron jobs due at `at`, by default now. A platform's `waitUntil`
+     * is handed the tick, so the runtime keeps running until it settles.
+     */
+    scheduled(at?: Date, options?: ScheduledOptions): Promise<void>;
     /** The serving integration's terminal action. Idempotent. No-op on Workers. */
     startScheduler(): Promise<void>;
+};
+
+/** What the platform that fired a tick lends it. */
+export type ScheduledOptions = {
+    /** Keep the runtime alive until `promise` settles, as a Worker's `ctx.waitUntil` does. */
+    waitUntil?: (promise: Promise<unknown>) => void;
 };
 
 type Registered = {
@@ -150,8 +159,11 @@ async function build(config: AstromechConfig): Promise<Astromech> {
         getCurrentRole,
         fetch: async (request: Request, options?: ServerBindings): Promise<Response> =>
             http.fetch(request, { remoteAddress: options?.remoteAddress }),
-        scheduled: (at?: Date): Promise<void> =>
-            onTick(at ?? new Date(), systemAppContext()),
+        scheduled: (at?: Date, options?: ScheduledOptions): Promise<void> => {
+            const tick = onTick(at ?? new Date(), systemAppContext());
+            options?.waitUntil?.(tick);
+            return tick;
+        },
         startScheduler: async (): Promise<void> => {
             await getSchedulerDriver()?.start((now) => onTick(now, systemAppContext()));
         },

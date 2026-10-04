@@ -63,8 +63,10 @@ halves:
    `fetch` is your framework's, unchanged. `scheduled` creates the Astromech
    application if the tick is the first thing the isolate runs, because a cron
    trigger fires `scheduled()` and never `fetch()`, so it cannot rely on a
-   request having created anything. Both register the Worker's `env`, which is
-   where bindings and string vars come from:
+   request having created anything. It hands the tick to the Worker's
+   `ctx.waitUntil`, and so does `app.scheduled(at, { waitUntil })` when you
+   call it from your own `scheduled()`. Both handlers register the Worker's
+   `env`, which is where bindings and string vars come from:
 
     ```ts
     // src/worker.ts
