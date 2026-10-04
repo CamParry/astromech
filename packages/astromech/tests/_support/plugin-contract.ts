@@ -5,7 +5,7 @@
  */
 
 import type { AstromechPluginServices, PluginDefinition } from '@/types/index';
-import { existsSync, readdirSync } from 'node:fs';
+import { existsSync, readdirSync, readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { createTestDb } from '@tests/harness';
 import { servedDocument } from '@tests/openapi';
@@ -32,6 +32,17 @@ export function describePluginContract(
             await createTestDb();
         });
 
+        it('declares the name and version its package.json publishes', () => {
+            const packageJson = JSON.parse(
+                readFileSync(new URL('package.json', packageUrl), 'utf8')
+            ) as { name: string; version: string };
+
+            expect({ package: definition.package, version: definition.version }).toEqual({
+                package: packageJson.name,
+                version: packageJson.version,
+            });
+        });
+
         it('refuses unknown keys in every method input, at every depth', () => {
             const inputs = methodInputs(definition.service ?? {});
 
@@ -39,8 +50,8 @@ export function describePluginContract(
             expect(openInputObjects(inputs)).toEqual([]);
         });
 
-        it('documents every method in the OpenAPI document without a warning', () => {
-            const { document, warnings } = servedDocument([definition]);
+        it('documents every method in the OpenAPI document without a warning', async () => {
+            const { document, warnings } = await servedDocument([definition]);
             const documented = methods.filter(
                 (method) =>
                     document.paths[`/plugins/${key}/${method}`]?.['post'] !== undefined

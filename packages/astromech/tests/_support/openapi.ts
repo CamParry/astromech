@@ -30,7 +30,12 @@ export type OpenApiOperation = {
     summary?: string;
     security?: Record<string, string[]>[];
     parameters?: { name: string; in: string; schema?: OpenApiSchema }[];
-    requestBody?: { content: { 'application/json': { schema: OpenApiSchema } } };
+    requestBody?: {
+        content: {
+            'application/json'?: { schema: OpenApiSchema };
+            'multipart/form-data'?: { schema: OpenApiSchema };
+        };
+    };
     responses: Record<
         string,
         {
@@ -52,24 +57,30 @@ export type OpenApiDocument = {
     };
 };
 
+/** One route the app mounts: its verb, as Hono records it, and its full path. */
+export type MountedHttpRoute = { method: string; path: string };
+
 /**
  * The document the app serves with `plugins` registered, the API prefix its
- * server names (each path is relative to it), and each warning building it
- * logged. Needs a test database, since the app is built over the config.
+ * server names (each path is relative to it), each warning building it logged,
+ * and the routes the app mounts. Needs a test database, since the app is built
+ * over the config.
  */
-export function servedDocument(plugins: PluginDefinition[]): {
+export async function servedDocument(plugins: PluginDefinition[]): Promise<{
     api: string;
     document: OpenApiDocument;
     warnings: string[];
-} {
+    routes: MountedHttpRoute[];
+}> {
     const resolved = setupTestConfig({ ...makeTestConfig(), plugins });
     const api = `${resolved.basePath}/api`;
     const app = createHttpApp(resolved);
+    const routes = app.routes.map(({ method, path }) => ({ method, path }));
     const logged = vi.spyOn(console, 'error').mockImplementation(() => undefined);
     try {
-        const document = openApiDocument(app, api) as unknown as OpenApiDocument;
+        const document = (await openApiDocument(app, api)) as unknown as OpenApiDocument;
         const warnings = logged.mock.calls.map((call) => String(call[0]));
-        return { api, document, warnings };
+        return { api, document, warnings, routes };
     } finally {
         logged.mockRestore();
     }

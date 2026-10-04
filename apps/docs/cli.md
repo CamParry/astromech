@@ -49,17 +49,18 @@ astromech methods --json
 | `entries:create <type>`         | Create an entry                                   |
 | `entries:update <type> <id>`    | Update an entry                                   |
 | `entries:publish <type> <id>`   | Publish an entry                                  |
-| `entries:unpublish <type> <id>` | Revert an entry to draft                          |
+| `entries:unpublish <type> <id>` | Set an entry's status to `unpublished`            |
 | `entries:delete <type> <id>`    | Permanently delete (`--force` to skip the prompt) |
 
 `create`/`update` take scalar flags (`--title`, `--slug`, `--locale`,
 `--status`, `--publishedAt`) plus `--fields` for field data. `--fields` (and
 `update`'s `--data`, the update patch) accept inline JSON or `@file` to read
-from disk. Explicit flags override values in `--data`.
+from disk. Explicit flags override values in `--data`. `--status`, here and on
+`entries:list`, is one of `unpublished`, `published` or `scheduled`.
 
 ```sh
 astromech entries:create post \
-  --title "Launch post" --status draft \
+  --title "Launch post" --status unpublished \
   --fields '{"body":"…","featured":true}'
 
 astromech entries:update post <id> --data @patch.json
@@ -76,12 +77,12 @@ manifest the boot generates, so it needs no prior build.
 astromech methods                     # text: id, [effects], (permission)
 astromech methods --source entries    # filter by source: core | entries | plugin
 astromech methods --filter create     # case-insensitive substring on method id or name
-astromech methods --json              # full manifest entries (input/output schemas, entryType, …)
+astromech methods --json              # full manifest methods (input/output schemas, entryType, …)
 ```
 
 ## Calling a method
 
-`call` runs any manifest entry by id, with its arguments as JSON. The id is the
+`call` runs any manifest method by id, with its arguments as JSON. The id is the
 one `astromech methods` prints; `--args` takes inline JSON or `@file`, and
 defaults to `{}`. The result is printed as JSON.
 

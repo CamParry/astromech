@@ -34,7 +34,7 @@ type Document = OpenApiDocument;
  * route documents a named schema, so a `$ref` is followed to its component.
  */
 function bodyProperties(operation: Operation | undefined, doc: Document): string[] {
-    const schema = operation?.requestBody?.content['application/json'].schema;
+    const schema = operation?.requestBody?.content['application/json']?.schema;
     const resolved =
         schema?.$ref === undefined
             ? schema
@@ -185,7 +185,7 @@ describe('the documented request bodies', () => {
         const open: string[] = [];
         for (const [path, operations] of Object.entries(doc.paths)) {
             for (const [verb, operation] of Object.entries(operations)) {
-                const schema = operation.requestBody?.content['application/json'].schema;
+                const schema = operation.requestBody?.content['application/json']?.schema;
                 if (schema === undefined) continue;
                 const resolved =
                     schema.$ref === undefined
@@ -578,7 +578,7 @@ describe('the documented error statuses', () => {
             '422',
             '500',
         ]);
-        const body = query?.requestBody?.content['application/json'].schema;
+        const body = query?.requestBody?.content['application/json']?.schema;
         expect(body?.properties?.['type']).toEqual({
             anyOf: [{ type: 'string' }, { type: 'array', items: { type: 'string' } }],
         });
@@ -675,8 +675,8 @@ describe('the served document', () => {
         },
     });
 
-    it('declares OpenAPI 3.1, the API base as its server and the session as its security', () => {
-        const { api, document: doc } = servedDocument([probe]);
+    it('declares OpenAPI 3.1, the API base as its server and the session as its security', async () => {
+        const { api, document: doc } = await servedDocument([probe]);
         expect(doc.openapi).toBe('3.1.0');
         expect(doc.servers).toEqual([{ url: api }]);
         expect(Object.keys(doc.paths)).toContain('/entries/{type}');
@@ -691,8 +691,8 @@ describe('the served document', () => {
         expect(doc.paths['/plugins/probe/echo']?.['post']?.security).toBeUndefined();
     });
 
-    it('names every operation by a unique id, its method id where it has one route', () => {
-        const { document: doc } = servedDocument([probe]);
+    it('names every operation by a unique id, its method id where it has one route', async () => {
+        const { document: doc } = await servedDocument([probe]);
         const ids = Object.values(doc.paths).flatMap((operations) =>
             Object.values(operations).map((operation) => operation.operationId)
         );
@@ -711,8 +711,8 @@ describe('the served document', () => {
         expect(id('/me', 'get')).toBe('me.get');
     });
 
-    it('documents `/me` as the signed-in user and their role', () => {
-        const { document: doc } = servedDocument([]);
+    it('documents `/me` as the signed-in user and their role', async () => {
+        const { document: doc } = await servedDocument([]);
         const me = doc.paths['/me']?.['get'];
         expect(statuses(me)).toEqual(['200', '401', '500']);
         expect(responseSchema(me, 200)?.properties?.['data']).toEqual({
@@ -730,8 +730,8 @@ describe('the served document', () => {
         ]);
     });
 
-    it('documents a plugin method’s input as its body and its output as the bare 200', () => {
-        const { document: doc, warnings } = servedDocument([probe]);
+    it('documents a plugin method’s input as its body and its output as the bare 200', async () => {
+        const { document: doc, warnings } = await servedDocument([probe]);
         const echo = doc.paths['/plugins/probe/echo']?.['post'];
         expect(bodyProperties(echo, doc)).toEqual(['text']);
         expect(responseSchema(echo, 200)?.properties?.['echoed']).toEqual({
@@ -741,8 +741,8 @@ describe('the served document', () => {
         expect(warnings).toEqual([]);
     });
 
-    it('documents no body, and no 422, for a plugin method that takes no arguments', () => {
-        const { document: doc } = servedDocument([probe]);
+    it('documents no body, and no 422, for a plugin method that takes no arguments', async () => {
+        const { document: doc } = await servedDocument([probe]);
         const whoami = doc.paths['/plugins/probe/whoami']?.['post'];
         expect(whoami?.requestBody).toBeUndefined();
         // Signed in is enough, so there is nothing to refuse with a 403.
@@ -751,15 +751,15 @@ describe('the served document', () => {
         expect(whoami?.responses['200']?.content).toBeUndefined();
     });
 
-    it('documents no 401 or 403 for a public plugin method', () => {
-        const { document: doc } = servedDocument([probe]);
+    it('documents no 401 or 403 for a public plugin method', async () => {
+        const { document: doc } = await servedDocument([probe]);
         const ping = doc.paths['/plugins/probe/ping']?.['post'];
         expect(ping?.summary).toBe('Answer pong.');
         expect(statuses(ping)).toEqual(['200', '500']);
     });
 
-    it('shares a core component a plugin output reuses', () => {
-        const { document: doc, warnings } = servedDocument([probe]);
+    it('shares a core component a plugin output reuses', async () => {
+        const { document: doc, warnings } = await servedDocument([probe]);
         const latest = doc.paths['/plugins/probe/latest']?.['post'];
         expect(responseSchema(latest, 200)?.anyOf?.[0]).toEqual({
             $ref: '#/components/schemas/Entry',
@@ -767,9 +767,9 @@ describe('the served document', () => {
         expect(warnings).toEqual([]);
     });
 
-    it('leaves a plugin schema undescribed when its component name is core’s', () => {
-        const before = component(servedDocument([]).document, 'Entry');
-        const { document: doc, warnings } = servedDocument([clashing]);
+    it('leaves a plugin schema undescribed when its component name is core’s', async () => {
+        const before = component((await servedDocument([])).document, 'Entry');
+        const { document: doc, warnings } = await servedDocument([clashing]);
         expect(component(doc, 'Entry')).toEqual(before);
         const read = doc.paths['/plugins/clashing/read']?.['post'];
         expect(read?.responses['200']?.content).toBeUndefined();
@@ -781,8 +781,8 @@ describe('the served document', () => {
         ]);
     });
 
-    it('leaves the second of two plugins that name different schemas alike undescribed', () => {
-        const { document: doc, warnings } = servedDocument([
+    it('leaves the second of two plugins that name different schemas alike undescribed', async () => {
+        const { document: doc, warnings } = await servedDocument([
             thing('first', 'a'),
             thing('second', 'b'),
         ]);
@@ -796,5 +796,125 @@ describe('the served document', () => {
         expect(warnings).toEqual([
             expect.stringContaining('which plugin "first" names for a different schema'),
         ]);
+    });
+});
+
+describe('the document’s coverage', () => {
+    /**
+     * Mounted routes the document leaves out on purpose: first-run setup and the
+     * cron poke are internal, the document does not describe itself, and the two
+     * catch-alls are documented by what they serve (each plugin method, each
+     * Better Auth route).
+     */
+    const INTERNAL = new Set([
+        'GET /setup/check',
+        'POST /setup',
+        'POST /cron/run',
+        'GET /openapi.json',
+        'POST /plugins/{name}/{method}',
+        'GET /auth/*',
+        'POST /auth/*',
+    ]);
+
+    it('documents every route the app mounts, but the internal ones', async () => {
+        const { api, document: doc, routes } = await servedDocument([]);
+        const undocumented = routes
+            .filter((route) => route.method !== 'ALL' && route.path.startsWith(`${api}/`))
+            .map((route) => ({
+                verb: route.method.toLowerCase(),
+                path: documentPath('', route.path.slice(api.length)),
+            }))
+            .filter(({ verb, path }) => !INTERNAL.has(`${verb.toUpperCase()} ${path}`))
+            .filter(({ verb, path }) => doc.paths[path]?.[verb] === undefined)
+            .map(({ verb, path }) => `${verb.toUpperCase()} ${path}`);
+
+        expect(undocumented).toEqual([]);
+    });
+
+    it('documents the cross-type query and count', async () => {
+        const { document: doc } = await servedDocument([]);
+        expect(doc.paths['/entries/query']?.['post']?.operationId).toBe(
+            'entries.queryMany'
+        );
+        expect(doc.paths['/entries/count']?.['post']?.operationId).toBe('entries.count');
+    });
+
+    it('documents the media upload and replace as multipart bodies with a file part', async () => {
+        const { document: doc } = await servedDocument([]);
+        const upload = doc.paths['/media']?.['post'];
+        const replace = doc.paths['/media/{id}/replace']?.['post'];
+
+        expect(upload?.operationId).toBe('media.upload');
+        expect(replace?.operationId).toBe('media.replace');
+        const uploadBody = upload?.requestBody?.content['multipart/form-data']?.schema;
+        expect(uploadBody?.required).toEqual(['file']);
+        expect(uploadBody?.properties?.['file']).toMatchObject({
+            type: 'string',
+            format: 'binary',
+        });
+        expect(Object.keys(uploadBody?.properties ?? {})).toEqual(['file', 'data']);
+        const replaceBody = replace?.requestBody?.content['multipart/form-data']?.schema;
+        expect(Object.keys(replaceBody?.properties ?? {})).toEqual(['file']);
+        expect(statuses(upload)).toEqual(['201', '400', '401', '403', '422', '500']);
+        expect(responseSchema(upload, 201)?.properties?.['data']).toEqual({
+            $ref: '#/components/schemas/Media',
+        });
+        expect(replace?.responses['404']).toBeDefined();
+    });
+
+    it('documents the entry types a role may read, as a bare list and one by id', async () => {
+        const { document: doc } = await servedDocument([]);
+        const list = doc.paths['/entry-types']?.['get'];
+        const one = doc.paths['/entry-types/{type}']?.['get'];
+
+        expect(list?.operationId).toBe('entryTypes.list');
+        expect(one?.operationId).toBe('entryTypes.get');
+        expect(types(responseSchema(list, 200))).toEqual(['array']);
+        expect(responseSchema(list, 200)?.items).toEqual({
+            $ref: '#/components/schemas/EntryTypeMeta',
+        });
+        expect(responseSchema(one, 200)).toEqual({
+            $ref: '#/components/schemas/EntryTypeMeta',
+        });
+        expect(statuses(one)).toEqual(['200', '401', '403', '404', '500']);
+    });
+
+    it('documents `POST /rpc/{id}` once, as the call of any manifest method', async () => {
+        const { document: doc } = await servedDocument([]);
+        const rpc = doc.paths['/rpc/{id}']?.['post'];
+
+        expect(rpc?.operationId).toBe('rpc.call');
+        expect(rpc?.parameters?.map((parameter) => parameter.name)).toEqual(['id']);
+        expect(rpc?.requestBody?.content['application/json']?.schema.type).toBe('object');
+        expect(statuses(rpc)).toEqual(['200', '400', '401', '403', '404', '422', '500']);
+    });
+
+    it('merges Better Auth’s routes under `/auth`, with the session each one needs', async () => {
+        const { document: doc } = await servedDocument([]);
+        const signIn = doc.paths['/auth/sign-in/email']?.['post'];
+        const changePassword = doc.paths['/auth/change-password']?.['post'];
+
+        expect(signIn?.operationId).toBe('auth.signInEmail');
+        expect(signIn?.security).toEqual([]);
+        expect(changePassword?.security).toEqual([{ sessionCookie: [] }]);
+        expect(doc.paths['/auth/get-session']?.['get']).toBeDefined();
+        // Better Auth writes OpenAPI 3.0's `nullable`; the document is 3.1.
+        expect(JSON.stringify(doc)).not.toContain('"nullable"');
+        // The plugin's own routes are not served, so they are not documented.
+        expect(doc.paths['/auth/open-api/generate-schema']).toBeUndefined();
+        expect(doc.paths['/auth/reference']).toBeUndefined();
+    });
+
+    it('names Better Auth’s components apart from core’s', async () => {
+        const { document: doc } = await servedDocument([]);
+        const user = component(doc, 'User');
+
+        expect(Object.keys(user.properties ?? {})).toContain('role');
+        expect(component(doc, 'AuthUser').properties?.['emailVerified']).toBeDefined();
+        expect(
+            responseSchema(doc.paths['/auth/sign-in/email']?.['post'], 200)?.properties?.[
+                'user'
+            ]?.$ref
+        ).toBe('#/components/schemas/AuthUser');
     });
 });

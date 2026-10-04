@@ -6,11 +6,13 @@
 import type { AuthVariables } from '@/transport/http/middleware/auth';
 import type { JsonObject, ServiceMethodContract } from '@/types/index';
 import type { Context } from 'hono';
-import { OpenAPIHono } from '@hono/zod-openapi';
+import { OpenAPIHono, z } from '@hono/zod-openapi';
+import { mediaSchema } from '@/media/schema';
 import { mediaDefinition } from '@/media/service';
 import { permissionsFor } from '@/permissions/permissions-for';
 import { jsonObject } from '@/services/json';
 import { badRequest, forbidden, notFound } from '@/transport/http/middleware/errors';
+import { errorResponses } from './error-responses';
 import { MEDIA_ROUTE_SPECS } from './http-routes';
 import { mountRestRoutes } from './rest-route';
 
@@ -42,6 +44,40 @@ router.post('/', async (c) => {
     });
     return c.json({ data: media }, 201);
 });
+router.openAPIRegistry.registerPath({
+    method: 'post',
+    path: '/',
+    operationId: 'media.upload',
+    ...summaryOf(mediaDefinition.catalogue.upload),
+    request: {
+        body: {
+            required: true,
+            content: {
+                'multipart/form-data': {
+                    schema: z.object({
+                        file: fileSchema(),
+                        data: z
+                            .object({ fields: jsonObject.optional() })
+                            .optional()
+                            .openapi({
+                                description: 'The media fields, as a JSON object.',
+                            }),
+                    }),
+                    encoding: { data: { contentType: 'application/json' } },
+                },
+            },
+        },
+    },
+    responses: {
+        201: mediaResponse('The uploaded media item.'),
+        ...errorResponses({
+            badRequest: ['the `file` part is missing, or `data` is not a JSON object'],
+            session: true,
+            permission: true,
+            input: true,
+        }),
+    },
+});
 
 // POST /media/:id/replace — bespoke
 // Not in the table: `binaryInput`, plus the same `media.get` pre-flight.
@@ -57,8 +93,51 @@ router.post('/:id/replace', async (c) => {
     const media = await c.var.ctx.media.replace({ id, file: part.file });
     return c.json({ data: media });
 });
+router.openAPIRegistry.registerPath({
+    method: 'post',
+    path: '/{id}/replace',
+    operationId: 'media.replace',
+    ...summaryOf(mediaDefinition.catalogue.replace),
+    request: {
+        params: z.object({ id: z.string() }),
+        body: {
+            required: true,
+            content: {
+                'multipart/form-data': { schema: z.object({ file: fileSchema() }) },
+            },
+        },
+    },
+    responses: {
+        200: mediaResponse('The media item, with its new file.'),
+        ...errorResponses({
+            badRequest: ['the `file` part is missing'],
+            session: true,
+            permission: true,
+            notFound: 'No media item matches the request.',
+            input: false,
+        }),
+    },
+});
 
 export { router as mediaRouter };
+
+/** The multipart `file` part, as the document describes it: the file's bytes. */
+function fileSchema() {
+    return z.string().openapi({ format: 'binary', description: 'The file to store.' });
+}
+
+/** The method's `summary`, as the operation's, when it declares one. */
+function summaryOf(method: ServiceMethodContract): { summary?: string } {
+    return method.summary !== undefined ? { summary: method.summary } : {};
+}
+
+/** A `{ data }` response carrying one media item. */
+function mediaResponse(description: string) {
+    return {
+        description,
+        content: { 'application/json': { schema: z.object({ data: mediaSchema }) } },
+    };
+}
 
 /**
  * The multipart body's `file` part, once the caller's role may call `method`:

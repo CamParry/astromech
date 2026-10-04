@@ -5,7 +5,7 @@ milestone: 1.0
 # Editor locking
 
 Two editors who open the same entry and both save: the second save silently
-overwrites the first. Split out of `planned/write-race-and-data-loss-defects.md`
+overwrites the first. Split out of `in-progress/write-race-and-data-loss-defects.md`
 on 2026-10-02, which guards lifecycle rules only. Decided 2026-10-03.
 
 ## Prior art

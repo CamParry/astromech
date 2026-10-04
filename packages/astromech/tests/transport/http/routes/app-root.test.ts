@@ -165,6 +165,14 @@ describe('the Better Auth catch-all', () => {
         expect(body.code).toBe('INVALID_EMAIL');
     });
 
+    it('serves neither route of the plugin the API document is built from', async () => {
+        const app = await freshApp();
+        const schema = await app.request(`${api}/auth/open-api/generate-schema`);
+        const reference = await app.request(`${api}/auth/reference`);
+
+        expect([schema.status, reference.status]).toEqual([404, 404]);
+    });
+
     it('answers 403 to a sign-up, on an empty install and once a user exists', async () => {
         const app = await freshApp();
         const signUp = (email: string) =>

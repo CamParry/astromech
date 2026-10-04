@@ -96,7 +96,7 @@ this is the editorial model; `roadmap/planned/autosave.md` and
       `apps/docs` once it lands.
 
 **Planned work that assumes staging and must follow this file:**
-`roadmap/planned/hooks.md` (staged events), `roadmap/planned/write-race-and-data-loss-defects.md`
+`roadmap/planned/hooks.md` (staged events), `roadmap/in-progress/write-race-and-data-loss-defects.md`
 (the `stagedFor` unique index), `roadmap/planned/full-text-search-indexing.md`
 and `roadmap/planned/field-value-query-indexing.md` (staged-row predicates),
 `roadmap/planned/naming-conventions.md` and

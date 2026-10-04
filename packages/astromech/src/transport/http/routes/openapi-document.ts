@@ -1,8 +1,7 @@
 /**
- * The API's OpenAPI 3.1 document: the routes the app registered (the route tables
- * and `/me`), plus one path per plugin service method, which no route table
- * describes because `POST /plugins/:name/:method` resolves the method per
- * request (`transport/http/routes/plugins.ts`).
+ * The API's OpenAPI 3.1 document: the routes the app registered, one path per
+ * plugin service method (`POST /plugins/:name/:method` resolves the method per
+ * request), and Better Auth's routes under `/auth` (`auth-document.ts`).
  */
 
 import type { AnyServiceMethod, ResolvedPluginIdentity } from '@/types/index';
@@ -14,6 +13,7 @@ import {
     getPluginServiceMethods,
 } from '@/plugins/runtime/plugin-runtime';
 import { log } from '@/utilities/log';
+import { authDocument } from './auth-document';
 import { accessRefusals, declaresArguments, errorResponses } from './error-responses';
 import { nullableAsUnion } from './rest-route';
 
@@ -37,9 +37,9 @@ type Described = { body: boolean; output: boolean };
 
 /**
  * `app`'s document, its paths relative to the server `api` (the API's mount
- * path), with each plugin service method added at `POST /plugins/<serviceKey>/<method>`.
- * A raw route is left out: its handler takes a Web `Request` and declares no
- * schema to document it from.
+ * path), with each plugin service method added at `POST /plugins/<serviceKey>/<method>`
+ * and each Better Auth route under `/auth`. A raw route is left out: its
+ * handler takes a Web `Request` and declares no schema to document it from.
  *
  * Each method is documented on its own and merged in, so one plugin's schema
  * cannot break the whole document. A schema the generator cannot write (a
@@ -48,10 +48,10 @@ type Described = { body: boolean; output: boolean };
  * or another plugin names for a different schema, since the generator would
  * point both at whichever it met first. Either logs a warning.
  */
-export function openApiDocument<E extends Env>(
+export async function openApiDocument<E extends Env>(
     app: OpenAPIHono<E>,
     api: string
-): Document {
+): Promise<Document> {
     const generated = app.getOpenAPI31Document({
         ...DOCUMENT_CONFIG,
         servers: [{ url: api }],
@@ -89,6 +89,10 @@ export function openApiDocument<E extends Env>(
             }
         }
     }
+
+    const auth = await authDocument('/auth', SESSION_SCHEME);
+    Object.assign((document.paths ??= {}), auth.paths);
+    Object.assign(schemas, auth.schemas);
     return document;
 }
 
