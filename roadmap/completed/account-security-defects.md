@@ -30,13 +30,13 @@ of the system applies (the password, the trusted address, the permission).
 
 ## The work
 
-- [ ] Log the reset URL only in development; in production, log that no
+- [x] Log the reset URL only in development; in production, log that no
       email driver is configured.
-- [ ] Changing your own email needs a confirmed password
+- [x] Changing your own email needs a confirmed password
       (`roadmap/planned/two-factor-and-passkeys.md`); until that lands, refuse
       an email change on the self-access path.
-- [ ] Set `revokeSessionsOnPasswordReset`, and revoke other sessions on a
+- [x] Set `revokeSessionsOnPasswordReset`, and revoke other sessions on a
       password change.
-- [ ] Pass the trusted client address to the spam providers.
-- [ ] Tell a user without admin access why they cannot sign in to the admin.
-- [ ] Tests for each.
+- [x] Pass the trusted client address to the spam providers.
+- [x] Tell a user without admin access why they cannot sign in to the admin.
+- [x] Tests for each.
