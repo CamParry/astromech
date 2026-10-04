@@ -6,9 +6,18 @@ export type ParsedImageParams = {
     version: string | null;
 };
 
-/** Canonical original URL. */
-export function buildMediaUrl(mediaRoute: string, id: string, ext: string): string {
-    return `${mediaRoute}/${id}.${ext}`;
+/**
+ * Canonical original URL. A `version` adds `?v=`, which the media route ignores
+ * on an original, so a cache keyed on the URL tells one file from the next.
+ */
+export function buildMediaUrl(
+    mediaRoute: string,
+    id: string,
+    ext: string,
+    version?: string
+): string {
+    const base = `${mediaRoute}/${id}.${ext}`;
+    return version === undefined ? base : `${base}?v=${version}`;
 }
 
 /** Canonical versioned variant URL. */

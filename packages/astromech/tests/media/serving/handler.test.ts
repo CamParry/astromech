@@ -57,15 +57,17 @@ const VARIANT_BYTES = new TextEncoder().encode('VARIANT');
 
 function makeFakeImageDriver() {
     const calls: { width: number; format: ImageFormat }[] = [];
+    const originUrls: string[] = [];
     const driver: ImageDriver = {
         name: 'fake',
         cachesVariants: false,
-        async transform(_src: ImageSource, opts: { width: number; format: ImageFormat }) {
+        async transform(src: ImageSource, opts: { width: number; format: ImageFormat }) {
             calls.push({ width: opts.width, format: opts.format });
+            originUrls.push(src.originUrl);
             return { body: VARIANT_BYTES, contentType: `image/${opts.format}` };
         },
     };
-    return { driver, calls };
+    return { driver, calls, originUrls };
 }
 
 let storage: StorageDriver;
@@ -185,6 +187,34 @@ describe('handleMediaRequest', () => {
         // Variant was written back to storage
         const vKey = `variants/${media.id}/${version}/320.webp`;
         expect(await storage.stat(vKey)).not.toBeNull();
+    });
+
+    it('hands the driver an origin URL that carries the version and serves the original', async () => {
+        const jpegBytes = makeJpegBytes();
+        const media = await mediaService.upload({
+            file: new File([jpegBytes as BlobPart], 'photo.jpg', { type: 'image/jpeg' }),
+        });
+        const version = media.metadata?.version ?? '';
+
+        await handleMediaRequest({
+            id: media.id,
+            ext: 'jpg',
+            search: new URLSearchParams({ w: '320', f: 'webp', v: version }),
+            origin: 'http://x',
+        });
+
+        expect(fakeDriver.originUrls).toEqual([
+            `http://x/_media/${media.id}.jpg?v=${version}`,
+        ]);
+        const origin = new URL(fakeDriver.originUrls[0] ?? '');
+        const res = await handleMediaRequest({
+            id: media.id,
+            ext: 'jpg',
+            search: origin.searchParams,
+            origin: 'http://x',
+        });
+        expect(res.status).toBe(200);
+        expect(await readBody(res)).toEqual(jpegBytes);
     });
 
     it('6. valid variant cache hit → 200, transform NOT called again', async () => {

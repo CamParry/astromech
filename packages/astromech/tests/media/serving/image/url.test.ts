@@ -18,6 +18,12 @@ describe('buildMediaUrl', () => {
     it('works with a custom route', () => {
         expect(buildMediaUrl('/uploads', 'xyz', 'png')).toBe('/uploads/xyz.png');
     });
+
+    it('adds a version as `v`', () => {
+        expect(buildMediaUrl('/_media', 'abc123', 'jpg', '9f2c')).toBe(
+            '/_media/abc123.jpg?v=9f2c'
+        );
+    });
 });
 
 describe('buildVariantUrl', () => {

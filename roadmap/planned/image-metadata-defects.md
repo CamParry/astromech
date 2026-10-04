@@ -56,7 +56,7 @@ decoded image, which is what the variants are made from.
       and size are unchanged and it needs no image driver. Other metadata
       (camera, date, copyright) is kept.
 - [x] Read dimensions for HEIC, AVIF and TIFF.
-- [ ] Add the version to the Cloudflare driver's origin URL.
+- [x] Add the version to the Cloudflare driver's origin URL.
 - [ ] Every setting that changes a variant's bytes joins its storage key.
 - [ ] Placeholders from the upright image; record whether an image has alpha.
 - [ ] Animated WebP stays animated on sharp.

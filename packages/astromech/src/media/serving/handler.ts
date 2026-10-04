@@ -158,7 +158,8 @@ async function serveMedia(info: MediaRequestInfo): Promise<Response> {
             if (!o) throw new Error('original missing');
             return toBytes(o.body);
         },
-        originUrl: `${origin}${buildMediaUrl(getConfig().mediaRoute, id, ext)}`,
+        // A transform cached under its source URL must not outlive a replace.
+        originUrl: `${origin}${buildMediaUrl(getConfig().mediaRoute, id, ext, version)}`,
     };
 
     let variant: { bytes: Uint8Array; contentType: string };
