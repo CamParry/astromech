@@ -36,9 +36,24 @@ The class: a response or a job that assumed no cache and no build step.
 
 ## The work
 
-- [ ] `set(false)` and `private, no-store` on Astromech's own routes.
-- [ ] Media: `Cache-Control` on the 302 and the 404; the cache tag on variants.
-- [ ] No scheduler and no app boot for a prerendered page.
-- [ ] Migrations before prerendering, or a documented build order.
-- [ ] Pass `ctx` through `scheduled()`.
-- [ ] A test that a preview-token response is never stored.
+- [x] `set(false)` and `private, no-store` on Astromech's own routes.
+- [x] Media: `Cache-Control` on the 302 and the 404; the cache tag on variants.
+- [x] No scheduler and no app boot for a prerendered page.
+- [x] Migrations before prerendering, or a documented build order.
+- [x] Pass `ctx` through `scheduled()`.
+- [x] A test that a preview-token response is never stored.
+
+## Left open
+
+- **Nothing purges a media item's tag.** Every media response carries
+  `Cache-Tag: astromech:media:<id>`, but a replace or delete clears nothing;
+  the media writes in `page-caching.md` are where a purge would go.
+- **Astro's memory provider removes `Cache-Tag`** from every response it
+  handles (`astro/dist/core/cache/handler.js`), so a Node site with
+  `memoryCache()` and a CDN in front sends the CDN no media tag.
+- **A preview read in a streamed component is missed.** The middleware sees
+  the request scope's `noStore` once Astro hands it the response; a read in a
+  component rendered after that does not reach the headers. The docs say to
+  read in the page's frontmatter.
+- **Non-GET requests** are not marked yet; `page-caching.md` adds them to the
+  same `noStore` rule.

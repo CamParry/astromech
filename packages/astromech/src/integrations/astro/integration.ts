@@ -16,6 +16,7 @@ import { runMigrations } from '@/database/migrations';
 import { AstromechError } from '@/errors/astromech-error';
 import { registerRoutes } from '@/integrations/astro/routes';
 import { collectIconNames, createViteConfig } from '@/integrations/astro/vite';
+import { disposeBindings } from '@/integrations/cloudflare/bindings';
 
 export type AstromechIntegrationOptions = {
     /** Path to the site's astromech.config.ts, resolved against the Astro project root. */
@@ -159,15 +160,18 @@ export function astromech(options: AstromechIntegrationOptions = {}): AstroInteg
                 );
             },
 
-            'astro:build:done': async ({ logger }) => {
+            // Before Astro prerenders a page. The wrangler proxy a D1 binding
+            // opened is closed again before the Cloudflare adapter's prerenderer
+            // opens the same local state.
+            'astro:build:start': async ({ logger }) => {
                 const { config, resolved } = getLoadedConfig();
-                logger.info('Astromech build complete');
                 await runMigrations(
                     config.db.getInstance(),
                     logger,
                     config.plugins ?? [],
                     resolved.migrationsDir
                 );
+                await disposeBindings();
             },
         },
     };

@@ -4,7 +4,7 @@ Where the parts live and the rules between them. The contracts are the types in 
 
 ## What it is
 
-A framework-agnostic core plus an Astro integration, which injects the admin SPA, an HTTP API, and a middleware that boots the application on the first request. It runs on Node and on Cloudflare Workers with equal standing: every backend has a driver for each, and nothing in core assumes one. SSR only.
+A framework-agnostic core plus an Astro integration, which injects the admin SPA, an HTTP API, and a middleware that boots the application on the first request rendered on demand; a prerendered page boots nothing. It runs on Node and on Cloudflare Workers with equal standing: every backend has a driver for each, and nothing in core assumes one. SSR only.
 
 ## Repository layout
 

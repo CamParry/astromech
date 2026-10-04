@@ -114,6 +114,33 @@ describe('createWorkerEntry().scheduled', () => {
     });
 });
 
+describe('createWorkerEntry().scheduled and the Worker ctx', () => {
+    beforeEach(async () => {
+        await createAstromech({ config });
+    });
+
+    it('hands the tick to the waitUntil of the ctx it is given, called on that ctx', async () => {
+        const handed: { self: unknown; promise: Promise<unknown> }[] = [];
+        const ctx = {
+            waitUntil(this: unknown, promise: Promise<unknown>): void {
+                handed.push({ self: this, promise });
+            },
+        };
+
+        await worker().scheduled({ scheduledTime: Date.now() }, {}, ctx);
+
+        expect(handed).toHaveLength(1);
+        expect(handed[0]?.self).toBe(ctx);
+        await expect(handed[0]?.promise).resolves.toBeUndefined();
+    });
+
+    it('runs the tick when the trigger passes no ctx', async () => {
+        await expect(
+            worker().scheduled({ scheduledTime: Date.now() }, {})
+        ).resolves.toBeUndefined();
+    });
+});
+
 describe('scheduler driver selection', () => {
     // The registry itself is under test here, so the driver is set by hand.
     it('setSchedulerDriver / getSchedulerDriver round-trips via globalThis', () => {

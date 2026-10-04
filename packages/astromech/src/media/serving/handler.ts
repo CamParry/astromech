@@ -1,5 +1,5 @@
 import type { ImageFormat } from './image/url';
-import type { ImageSource, StorageDriver } from '@/types/index';
+import type { ImageSource, Media, StorageDriver } from '@/types/index';
 import { currentServices } from '@/app-context/services';
 import { getConfig } from '@/config/registry';
 import { getStorageDriver } from '@/storage/registry';
@@ -25,6 +25,12 @@ export type MediaRequestInfo = {
     range?: string | null;
 };
 
+/** Lifetime of an original and of the redirect to a variant: a replace shows within five minutes. */
+const SHORT_CACHE_CONTROL = 'public, max-age=300, must-revalidate';
+
+/** A variant's URL carries the version, so its bytes never change. */
+const VARIANT_CACHE_CONTROL = 'public, max-age=31536000, immutable';
+
 function contentTypeForFormat(format: ImageFormat): string {
     return format === 'avif' ? 'image/avif' : 'image/webp';
 }
@@ -45,14 +51,35 @@ export async function handleMediaRequest(info: MediaRequestInfo): Promise<Respon
     }
 }
 
-/** Serve the original, redirect to the canonical variant, or transform on a cache miss. */
+/**
+ * Serve one media item, every response but a 404 tagged with the item, so a
+ * purge by tag reaches its original and each of its variants on a CDN.
+ */
 async function serveMedia(info: MediaRequestInfo): Promise<Response> {
-    const { id, search, origin, ifNoneMatch, range } = info;
+    const media = await currentServices.media.get({ id: info.id });
+    if (!media) return notFound('Media not found');
 
-    const media = await currentServices.media.get({ id });
-    if (!media) {
-        return new Response('Media not found', { status: 404 });
+    const response = await serveMediaItem(media, info);
+    if (response.status !== 404) {
+        response.headers.set('Cache-Tag', `astromech:media:${media.id}`);
     }
+    return response;
+}
+
+/**
+ * A 404 no cache stores: the id may be uploaded or restored, or the width
+ * allowed, by the next request.
+ */
+function notFound(message: string): Response {
+    return new Response(message, {
+        status: 404,
+        headers: { 'Cache-Control': 'no-store' },
+    });
+}
+
+/** Serve the original, redirect to the canonical variant, or transform on a cache miss. */
+async function serveMediaItem(media: Media, info: MediaRequestInfo): Promise<Response> {
+    const { id, search, origin, ifNoneMatch, range } = info;
 
     const storage = getStorageDriver();
 
@@ -90,7 +117,7 @@ async function serveMedia(info: MediaRequestInfo): Promise<Response> {
 
     // Validate width
     if (params.width == null || !isAllowedWidth(params.width, imageConfig.widths)) {
-        return new Response('Width not allowed', { status: 404 });
+        return notFound('Width not allowed');
     }
 
     const version = media.metadata?.version;
@@ -124,7 +151,10 @@ async function serveMedia(info: MediaRequestInfo): Promise<Response> {
             format: wantFormat,
             version,
         });
-        return new Response(null, { status: 302, headers: { Location: location } });
+        return new Response(null, {
+            status: 302,
+            headers: { Location: location, 'Cache-Control': SHORT_CACHE_CONTROL },
+        });
     }
 
     // All valid: width in allowlist, format explicit, version correct — serve variant.
@@ -141,14 +171,13 @@ async function serveMedia(info: MediaRequestInfo): Promise<Response> {
         format,
     });
     const etag = `"${version}-${params.width}-${format}-${encodeURIComponent(cacheKey)}"`;
-    const variantCacheControl = 'public, max-age=31536000, immutable';
 
     if (ifNoneMatch === etag) {
         // Echo the cache directives on the 304 (RFC 7234 §4.3.4) so the client
         // doesn't downgrade its cached entry's freshness.
         return new Response(null, {
             status: 304,
-            headers: { 'Cache-Control': variantCacheControl, ETag: etag },
+            headers: { 'Cache-Control': VARIANT_CACHE_CONTROL, ETag: etag },
         });
     }
 
@@ -158,7 +187,7 @@ async function serveMedia(info: MediaRequestInfo): Promise<Response> {
             status: 200,
             headers: {
                 'Content-Type': contentTypeForFormat(format),
-                'Cache-Control': variantCacheControl,
+                'Cache-Control': VARIANT_CACHE_CONTROL,
                 ETag: etag,
             },
         });
@@ -208,7 +237,7 @@ async function serveMedia(info: MediaRequestInfo): Promise<Response> {
         status: 200,
         headers: {
             'Content-Type': variant.contentType,
-            'Cache-Control': variantCacheControl,
+            'Cache-Control': VARIANT_CACHE_CONTROL,
             ETag: etag,
         },
     });
@@ -272,7 +301,6 @@ type ServeOriginalInput = {
 async function serveOriginal(input: ServeOriginalInput): Promise<Response> {
     const { key, mimeType, version, storage, ifNoneMatch } = input;
     const etag = version ? `"${version}"` : null;
-    const cacheControl = 'public, max-age=300, must-revalidate';
 
     // Check the conditional request before touching storage — avoids opening a
     // read stream we'd immediately discard on a 304. This runs before any range
@@ -280,7 +308,7 @@ async function serveOriginal(input: ServeOriginalInput): Promise<Response> {
     if (etag && ifNoneMatch === etag) {
         return new Response(null, {
             status: 304,
-            headers: { 'Cache-Control': cacheControl, ETag: etag },
+            headers: { 'Cache-Control': SHORT_CACHE_CONTROL, ETag: etag },
         });
     }
 
@@ -291,7 +319,7 @@ async function serveOriginal(input: ServeOriginalInput): Promise<Response> {
         // the total — which we have no object to read it from.
         const stat = await storage.stat(key);
         if (!stat) {
-            return new Response('Not found', { status: 404 });
+            return notFound('Not found');
         }
 
         const resolved = resolveRange(requested, stat.size);
@@ -301,14 +329,14 @@ async function serveOriginal(input: ServeOriginalInput): Promise<Response> {
                 headers: {
                     'Accept-Ranges': 'bytes',
                     'Content-Range': `bytes */${stat.size}`,
-                    'Cache-Control': cacheControl,
+                    'Cache-Control': SHORT_CACHE_CONTROL,
                 },
             });
         }
 
         const part = await storage.get(key, { range: resolved });
         if (!part) {
-            return new Response('Not found', { status: 404 });
+            return notFound('Not found');
         }
 
         // `size` is the bytes in this body; `totalSize` is the whole object.
@@ -318,7 +346,7 @@ async function serveOriginal(input: ServeOriginalInput): Promise<Response> {
             'Content-Length': String(part.size),
             'Content-Range': `bytes ${resolved.offset}-${last}/${part.totalSize}`,
             'Accept-Ranges': 'bytes',
-            'Cache-Control': cacheControl,
+            'Cache-Control': SHORT_CACHE_CONTROL,
         };
         if (etag) headers['ETag'] = etag;
 
@@ -327,7 +355,7 @@ async function serveOriginal(input: ServeOriginalInput): Promise<Response> {
 
     const obj = await storage.get(key);
     if (!obj) {
-        return new Response('Not found', { status: 404 });
+        return notFound('Not found');
     }
 
     const headers: Record<string, string> = {
@@ -335,7 +363,7 @@ async function serveOriginal(input: ServeOriginalInput): Promise<Response> {
         'Content-Length': String(obj.size),
         // Advertised on a plain 200 too, so a video client knows it may seek.
         'Accept-Ranges': 'bytes',
-        'Cache-Control': cacheControl,
+        'Cache-Control': SHORT_CACHE_CONTROL,
     };
     if (etag) {
         headers['ETag'] = etag;

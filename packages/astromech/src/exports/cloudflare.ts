@@ -9,4 +9,5 @@ export type {
     ScheduledEvent,
     WorkerEntry,
     WorkerEnv,
+    WorkerExecutionContext,
 } from '@/integrations/cloudflare/worker';

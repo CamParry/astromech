@@ -19,10 +19,12 @@ The build writes the server to `dist/server/entry.mjs` and the static files to
 `dist/client`. The server imports your dependencies at runtime, so deploy it
 with the project's `node_modules` installed.
 
-When the build finishes, it applies any pending migrations to the database your
-config names. Unlike the CLI, it does not refuse a remote database, so the
-environment of the machine that builds decides which database is migrated. If
-`DATABASE_URL` points at production there, the build migrates production.
+When the build starts, before it compiles or prerenders anything, it applies
+any pending migrations to the database your config names, so a build that then
+fails has still migrated it. Unlike the CLI, it does not refuse a remote
+database, so the environment of the machine that builds decides which database
+is migrated. If `DATABASE_URL` points at production there, the build migrates
+production.
 
 ## Set the environment
 

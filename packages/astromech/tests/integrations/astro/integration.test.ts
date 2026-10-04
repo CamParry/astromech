@@ -2,16 +2,21 @@
  * `astromech()`, the Astro integration: its two config hooks, driven with
  * recording fakes against a temp project root.
  */
+import type { DB } from '@/database/types';
 import type { VirtualModulePlugin } from '@/integrations/astro/virtual-module';
 import type { HookParameters } from 'astro';
 import { mkdir, mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
+import { LibsqlDialect } from '@libsql/kysely-libsql';
+import { createTempSite, runOk, writeSiteConfig } from '@tests/cli';
 import { findMissingExportTargets } from '@tests/package-exports';
+import { Kysely, sql } from 'kysely';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { AstromechError } from '@/errors/astromech-error';
 import { astromech } from '@/integrations/astro/integration';
+import dbGenerate from '@/transport/cli/commands/db-generate';
 
 type Recorded = {
     updateConfig: { vite: ViteUpdate }[];
@@ -218,6 +223,36 @@ describe('astromech()', () => {
             expect(recorded.warnings).toEqual([]);
         });
     });
+    describe('astro:build:start', () => {
+        it('applies the migrations before Astro prerenders a page', async () => {
+            root = await createTempSite();
+            const database = join(root, 'database.db');
+            const configFile = await writeSiteConfig(root, {
+                database,
+                migrationsDir: join(root, 'migrations'),
+            });
+            await runOk(dbGenerate, ['--config', configFile]);
+            const integration = astromech({ configFile });
+            const { setup, logger } = createFakes();
+            await integration.hooks['astro:config:setup']?.(setup);
+
+            await integration.hooks['astro:build:start']?.({
+                logger,
+            } as unknown as HookParameters<'astro:build:start'>);
+
+            const db = new Kysely<DB>({
+                dialect: new LibsqlDialect({ url: `file:${database}` }),
+            });
+            try {
+                const { rows } = await sql<{
+                    name: string;
+                }>`SELECT name FROM kysely_migration`.execute(db);
+                expect(rows.map((row) => row.name)).toEqual(['0000_migration']);
+            } finally {
+                await db.destroy();
+            }
+        });
+    });
 });
 
 async function runSetup(integrations?: { name: string }[], site: Site = {}) {
@@ -273,7 +308,7 @@ function createFakes(
             recorded.injectTypes.push(types),
     } as unknown as HookParameters<'astro:config:done'>;
 
-    return { recorded, setup, done };
+    return { recorded, setup, done, logger };
 }
 
 /** The source the recorded Vite config serves for `virtual:astromech/config`. */
