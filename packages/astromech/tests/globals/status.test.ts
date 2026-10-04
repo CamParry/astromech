@@ -145,6 +145,19 @@ describe('status through update', () => {
         expect(saved.publishedAt?.getTime()).toBe(future.getTime());
     });
 
+    it('refuses a scheduled status with no publish date', async () => {
+        await api.update({ key: 'contact', data: { fields: {} } });
+
+        await expect(
+            api.update({ key: 'contact', data: { status: 'scheduled' } })
+        ).rejects.toMatchObject({
+            name: 'ValidationError',
+            fields: { publishedAt: [expect.any(String)] },
+        });
+        const stored = await api.get({ key: 'contact', full: true });
+        expect(stored?.status).toBe('unpublished');
+    });
+
     it('writes no version for a status change alone', async () => {
         await api.update({ key: 'contact', data: { fields: { email: 'a@b.dev' } } });
         await api.update({ key: 'contact', data: { status: 'published' } });

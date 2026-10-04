@@ -8,8 +8,8 @@ import { entrySchema, updateEntryPayloadSchema } from '../schema';
 
 /**
  * Takes one `id` or a list of `ids`, written atomically. A locale with no content
- * row is created from the default locale's, firing the create hooks rather than
- * the update hooks; `staged` writes the staged change instead.
+ * row is created from the default locale's, unpublished unless `data` names a
+ * status, firing the create hooks; `staged` writes the staged change instead.
  */
 export const updateEntries = defineServiceMethod({
     summary:

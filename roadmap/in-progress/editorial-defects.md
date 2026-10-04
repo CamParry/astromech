@@ -29,6 +29,11 @@ Found on 2026-10-03 while planning `roadmap/planned/drafts.md`.
   everyone (`packages/admin/src/components/entries/publish-panel.tsx`), the
   new-entry page always shows Publish, and every save sends `status`, so a user
   without `publish` gets a 403 saving a published entry.
+- **Plugins write statuses on trusted handles.** A plugin context's
+  `ctx.entries` and `ctx.globals` are trusted (`createPluginContext`,
+  `packages/astromech/src/plugins/runtime/plugin-runtime.ts`), so a plugin
+  method or route acting for a user without `publish` could write a status. No
+  plugin does today.
 - **`maxVersions` is never applied**, and **a staged write takes a version that
   is deleted when the staged change is merged or discarded**. Both are fixed by
   `roadmap/planned/history.md`; listed here so they are not fixed twice.

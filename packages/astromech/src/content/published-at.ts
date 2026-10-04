@@ -4,6 +4,7 @@
  */
 
 import type { EntryStatus } from '@/types/index';
+import { ValidationError } from '@/errors/validation';
 
 /** What the rule reads: the write's status and date, and the row before it. */
 type PublishedAtInput<S extends EntryStatus | undefined> = {
@@ -17,15 +18,28 @@ type PublishedAtInput<S extends EntryStatus | undefined> = {
 };
 
 /**
- * The `publishedAt` a write stores: the caller's date as given, else by status
- * (`published` keeps an already-published row's date and stamps now on any
- * other, `unpublished` clears, `scheduled` keeps), else `undefined`, leaving it.
+ * The `publishedAt` a write stores: the caller's date, else by status (`published`
+ * keeps a published row's date and stamps now on any other, `unpublished` clears,
+ * `scheduled` keeps), else `undefined`. A row left scheduled with no date is a 422.
  */
 export function resolvePublishedAt(input: PublishedAtInput<EntryStatus>): Date | null;
 export function resolvePublishedAt(
     input: PublishedAtInput<EntryStatus | undefined>
 ): Date | null | undefined;
 export function resolvePublishedAt(
+    input: PublishedAtInput<EntryStatus | undefined>
+): Date | null | undefined {
+    const publishedAt = decidePublishedAt(input);
+    // `schedule` requires the date; a scheduled row without one would never go live.
+    if ((input.status ?? input.current?.status) === 'scheduled' && publishedAt === null) {
+        throw ValidationError.fromFieldErrors({
+            publishedAt: ['A scheduled status needs a publish date'],
+        });
+    }
+    return publishedAt;
+}
+
+function decidePublishedAt(
     input: PublishedAtInput<EntryStatus | undefined>
 ): Date | null | undefined {
     const { status, given, current, now } = input;

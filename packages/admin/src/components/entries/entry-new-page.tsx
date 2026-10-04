@@ -118,15 +118,17 @@ function EntryNewBody({
 
     /**
      * Adding a locale to an existing entry is an `update` on that locale, which
-     * creates the content row; a new entry is a `create`.
+     * creates the content row unpublished; a new entry is a `create`. The update
+     * names a status only when it is not that default, since naming one needs publish.
      */
     function writeEntry(payload: EntryUpdateData): Promise<Entry> {
         if (chosenEntryId !== null) {
+            const { status, ...rest } = payload;
             return astromechUntypedClient.entries.update({
                 type,
                 id: chosenEntryId,
                 locale: requestedLocale,
-                data: payload,
+                data: status === 'unpublished' ? rest : payload,
             });
         }
         return astromechUntypedClient.entries.create({
@@ -153,7 +155,7 @@ function EntryNewBody({
                             setChosenEntryId(sourceId);
                             setModalOpen(false);
                         }}
-                        // The missing row inherits the source's own columns.
+                        // The missing row takes the source's title, slug and shared fields.
                         onChooseTranslate={(source) =>
                             createTranslation.mutate({
                                 id: source.id,

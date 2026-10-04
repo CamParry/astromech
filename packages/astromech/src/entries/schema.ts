@@ -103,6 +103,7 @@ export const duplicateOverridesSchema = z
         locale: z.string().min(1).optional(),
         fields: jsonObject.optional(),
         status: statusSchema.optional(),
+        publishedAt: optionalDate,
     })
     .partial();
 

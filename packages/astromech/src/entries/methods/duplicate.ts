@@ -26,7 +26,9 @@ import { duplicateOverridesSchema, entrySchema } from '../schema';
  * as `create` prepares a row, and the create hooks fire once, with the first.
  */
 export const duplicateEntry = defineServiceMethod({
-    summary: 'Copy an entry into a new one.',
+    summary:
+        'Copy an entry into a new one. An override status other than ' +
+        '`unpublished`, or a `publishedAt`, also needs the publish permission.',
     input: z.strictObject({
         type: z.string(),
         id: z.string(),
@@ -100,6 +102,7 @@ function prepareCopy(params: {
             slug: overrides.slug ?? row.slug ?? undefined,
             fields: { ...row.fields, ...overrides.fields },
             status: overrides.status ?? 'unpublished',
+            publishedAt: overrides.publishedAt,
         },
         // A copy is a new row, so it has no date of its own to keep.
         current: null,

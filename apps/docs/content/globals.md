@@ -150,7 +150,8 @@ they live on the default locale's row and propagate to every other locale, so
 writing the logo once sets it everywhere.
 
 Writing a locale that has no row yet creates it, inheriting the shared fields
-from the default locale:
+from the default locale. The new locale starts unpublished, whatever the
+default locale's status, unless the write names `status`:
 
 ```ts
 await app.globals.update({
@@ -225,7 +226,9 @@ stored as given. Otherwise a global that is already published keeps its date,
 through a re-publish or any save, and one becoming published (from a draft or
 a schedule) is stamped with the current time, so publishing a scheduled global
 puts it live at once.
-Unpublishing clears the date, and scheduling keeps the one it names. A
+Unpublishing clears the date, and scheduling keeps the one it names. A write
+that leaves a global scheduled with no date is refused with a 422 naming
+`publishedAt`. A
 scheduled global goes live on the first run of the built-in `scheduled-publish`
 job after its date, as a scheduled entry does
 ([../configuration/scheduler.md](../configuration/scheduler.md)). The job

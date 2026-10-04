@@ -34,20 +34,68 @@ async function makeSource(fields: Record<string, unknown> = {}): Promise<Entry> 
 }
 
 describe('update into a locale with no row', () => {
-    it('keeps the schedule of a scheduled source', async () => {
+    it.each(['published', 'scheduled'] as const)(
+        'starts unpublished, with no publish date, when the source is %s',
+        async (status) => {
+            const en = await makeSource();
+            await api.update({
+                type: 'post',
+                id: en.id,
+                data: { status, publishedAt: new Date('2999-01-01') },
+            });
+
+            const de = await api.update({
+                type: 'post',
+                id: en.id,
+                locale: 'de',
+                data: { title: 'DE', fields: {} },
+            });
+
+            expect(de).toMatchObject({ status: 'unpublished', publishedAt: null });
+        }
+    );
+
+    it('takes the status the patch names, with a date of its own', async () => {
         const en = await makeSource();
-        const future = new Date(Date.now() + 86_400_000);
-        await api.schedule({ type: 'post', id: en.id, publishedAt: future });
+        const enDate = new Date('2000-01-01T00:00:00.000Z');
+        await api.update({
+            type: 'post',
+            id: en.id,
+            data: { status: 'published', publishedAt: enDate },
+        });
+        const before = Date.now();
 
         const de = await api.update({
             type: 'post',
             id: en.id,
             locale: 'de',
-            data: { title: 'DE', fields: {} },
+            data: { title: 'DE', status: 'published' },
         });
 
-        expect(de.status).toBe('scheduled');
-        expect(de.publishedAt?.getTime()).toBe(future.getTime());
+        expect(de.status).toBe('published');
+        expect(de.publishedAt?.getTime()).toBeGreaterThanOrEqual(before);
+    });
+
+    it('refuses a scheduled status with no publish date, writing nothing', async () => {
+        const en = await makeSource();
+        await api.schedule({
+            type: 'post',
+            id: en.id,
+            publishedAt: new Date('2999-01-01'),
+        });
+
+        await expect(
+            api.update({
+                type: 'post',
+                id: en.id,
+                locale: 'de',
+                data: { title: 'DE', status: 'scheduled' },
+            })
+        ).rejects.toMatchObject({
+            name: 'ValidationError',
+            fields: { publishedAt: [expect.any(String)] },
+        });
+        expect(await api.get({ type: 'post', id: en.id, locale: 'de' })).toBeNull();
     });
 
     it('creates the translation under the same id and inherits shared fields', async () => {

@@ -82,17 +82,27 @@ afterEach(() => {
     adminConfig.entryTypes = {};
 });
 
+/** `POST` with statuses on, for the status a new locale is saved with. */
+const POST_WITH_STATUSES: AdminEntryType = {
+    ...POST,
+    capabilities: { ...POST.capabilities, statuses: true },
+};
+
 /** Mount the create page in French over these English entries; return the modal. */
 async function mountInFrench(
-    sources: Entry[]
+    sources: Entry[],
+    options: { entryType?: AdminEntryType; permissions?: string[] } = {}
 ): Promise<{ page: RenderAdminResult; modal: HTMLElement }> {
-    adminConfig.entryTypes = { post: POST };
+    adminConfig.entryTypes = { post: options.entryType ?? POST };
     entries.query.mockResolvedValue({
         data: sources,
         pagination: { page: 1, pages: 1, total: sources.length, limit: 0 },
     });
     const page = renderAdmin(<EntryNewPage type="post" requestedLocale="fr" />, {
         url: '/entries/post/new?locale=fr',
+        ...(options.permissions !== undefined
+            ? { permissions: options.permissions }
+            : {}),
     });
     const modal = await screen.findByRole('dialog', { name: TITLE });
     return { page, modal };
@@ -195,6 +205,53 @@ describe('the create-in-locale modal', () => {
             data: { title: 'Bonjour', fields: {} },
         });
         expect(entries.create).not.toHaveBeenCalled();
+    });
+
+    it('adds a blank locale without naming a status for a user without publish', async () => {
+        entries.update.mockResolvedValue({ id: 'e1', locale: 'fr' });
+        const { page, modal } = await mountInFrench([makeEntry('e1', 'Hello', ['en'])], {
+            entryType: POST_WITH_STATUSES,
+            permissions: ['entry:post:read', 'entry:post:create', 'entry:post:update'],
+        });
+
+        await chooseSource(page, modal, 'Start blank in this locale', 'Hello');
+        await page.user.click(continueButton(modal));
+        await waitFor(() =>
+            expect(screen.queryByRole('dialog', { name: TITLE })).toBeNull()
+        );
+        await page.user.type(screen.getByLabelText(/Title/), 'Bonjour');
+        await page.user.click(screen.getByRole('button', { name: 'Save' }));
+
+        await waitFor(() => expect(page.location()).toBe('/entries/post/e1?locale=fr'));
+        expect(entries.update).toHaveBeenCalledWith({
+            type: 'post',
+            id: 'e1',
+            locale: 'fr',
+            data: { title: 'Bonjour', fields: {} },
+        });
+    });
+
+    it('publishes a blank locale when a user with publish presses Publish', async () => {
+        entries.update.mockResolvedValue({ id: 'e1', locale: 'fr' });
+        const { page, modal } = await mountInFrench([makeEntry('e1', 'Hello', ['en'])], {
+            entryType: POST_WITH_STATUSES,
+        });
+
+        await chooseSource(page, modal, 'Start blank in this locale', 'Hello');
+        await page.user.click(continueButton(modal));
+        await waitFor(() =>
+            expect(screen.queryByRole('dialog', { name: TITLE })).toBeNull()
+        );
+        await page.user.type(screen.getByLabelText(/Title/), 'Bonjour');
+        await page.user.click(screen.getByRole('button', { name: 'Publish' }));
+
+        await waitFor(() => expect(page.location()).toBe('/entries/post/e1?locale=fr'));
+        expect(entries.update).toHaveBeenCalledWith({
+            type: 'post',
+            id: 'e1',
+            locale: 'fr',
+            data: { title: 'Bonjour', fields: {}, status: 'published' },
+        });
     });
 
     it('creates a standalone entry in the locale', async () => {

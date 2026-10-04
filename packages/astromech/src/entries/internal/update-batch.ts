@@ -339,8 +339,9 @@ function completes(
 }
 
 /**
- * The row a missing locale gets: the default-locale row's columns with the
- * caller's patch over them, prepared as `create` prepares a row.
+ * The row a missing locale gets: the default-locale row's title and slug with the
+ * caller's patch over them, prepared as `create` prepares a row, so it starts
+ * `unpublished` with no date unless the patch names them.
  */
 async function planTranslation(params: {
     config: ResolvedConfig;
@@ -353,8 +354,6 @@ async function planTranslation(params: {
 }): Promise<EntryRowWrite> {
     const { config, entryType, source, locale, data, user } = params;
 
-    // The source row is the current one, so a translation of a scheduled entry
-    // keeps its schedule.
     return prepareEntryRow({
         config,
         entryType,
@@ -364,10 +363,11 @@ async function planTranslation(params: {
             title: data.title ?? source.title,
             slug: data.slug ?? source.slug ?? undefined,
             fields: data.fields,
-            status: data.status ?? source.status,
+            status: data.status,
             publishedAt: data.publishedAt,
         },
-        current: source,
+        // A new locale is a new row: it has no publication of its own to keep.
+        current: null,
         user,
     });
 }

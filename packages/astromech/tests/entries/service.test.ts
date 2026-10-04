@@ -623,6 +623,43 @@ describe('publish / unpublish / schedule', () => {
         // Tier-1 timestamps persist as ISO-TEXT (millisecond precision).
         expect(sch.publishedAt?.getTime()).toBe(future.getTime());
     });
+
+    it('refuses a create that schedules with no publish date', async () => {
+        await expect(
+            api.create({ type: 'post', data: { title: 'S', status: 'scheduled' } })
+        ).rejects.toMatchObject({
+            name: 'ValidationError',
+            fields: { publishedAt: [expect.any(String)] },
+        });
+        const { data } = await api.query({ type: 'post', full: true });
+        expect(data).toEqual([]);
+    });
+
+    it.each([
+        ['schedules an unpublished entry', 'unpublished', { status: 'scheduled' }],
+        ['clears a scheduled entry’s date', 'scheduled', { publishedAt: null }],
+    ] as const)(
+        'refuses an update that %s with no publish date',
+        async (_label, from, data) => {
+            const e = await api.create({ type: 'post', data: { title: 'S' } });
+            if (from === 'scheduled') {
+                await api.schedule({
+                    type: 'post',
+                    id: e.id,
+                    publishedAt: new Date('2999-01-01'),
+                });
+            }
+
+            await expect(
+                api.update({ type: 'post', id: e.id, data })
+            ).rejects.toMatchObject({
+                name: 'ValidationError',
+                fields: { publishedAt: [expect.any(String)] },
+            });
+            const stored = await api.get({ type: 'post', id: e.id, full: true });
+            expect(stored?.status).toBe(from);
+        }
+    );
 });
 
 describe('trash / restore / delete / emptyTrash', () => {
@@ -1222,6 +1259,36 @@ describe('duplicate', () => {
         expect(
             await api.get({ type: 'post', id: deOnly.id, locale: 'de', full: true })
         ).toBeNull();
+    });
+
+    it('schedules the copy for the date overrides name', async () => {
+        const src = await api.create({ type: 'post', data: { title: 'Original' } });
+        const publishedAt = new Date('2999-01-01T00:00:00.000Z');
+
+        const dup = await api.duplicate({
+            type: 'post',
+            id: src.id,
+            overrides: { status: 'scheduled', publishedAt },
+        });
+
+        expect(dup).toMatchObject({ status: 'scheduled', publishedAt });
+    });
+
+    it('refuses a scheduled copy with no publish date, writing nothing', async () => {
+        const src = await api.create({ type: 'post', data: { title: 'Original' } });
+
+        await expect(
+            api.duplicate({
+                type: 'post',
+                id: src.id,
+                overrides: { status: 'scheduled' },
+            })
+        ).rejects.toMatchObject({
+            name: 'ValidationError',
+            fields: { publishedAt: [expect.any(String)] },
+        });
+        const { data } = await api.query({ type: 'post', full: true });
+        expect(data.map((entry) => entry.id)).toEqual([src.id]);
     });
 
     // CHARACTERIZED: duplicate re-uniquifies the source slug ("original" -> "-2").

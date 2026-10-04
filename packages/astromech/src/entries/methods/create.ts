@@ -19,7 +19,9 @@ import { createEntryPayloadSchema, entrySchema } from '../schema';
  * around the write.
  */
 export const createEntry = defineServiceMethod({
-    summary: 'Create an entry.',
+    summary:
+        'Create an entry. A status other than `unpublished`, or a ' +
+        '`publishedAt`, also needs the publish permission.',
     // The titleless payload, since one schema covers every type here; the
     // handler re-parses under the type's own, which is the stricter one.
     input: z.strictObject({ type: z.string(), data: createEntryPayloadSchema }),

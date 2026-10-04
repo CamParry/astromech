@@ -202,10 +202,16 @@ describe('publishing through a write, on the scoped handle', () => {
                 }).entries.duplicate({
                     type: 'post',
                     id: entry.id,
-                    overrides: { status: 'scheduled' },
+                    overrides: {
+                        status: 'scheduled',
+                        publishedAt: new Date('2999-01-01'),
+                    },
                 })
             )
-        ).rejects.toBeInstanceOf(PermissionDeniedError);
+        ).rejects.toMatchObject({
+            name: 'PermissionDeniedError',
+            permission: 'entry:post:publish',
+        });
     });
 
     it('refuses a duplicate whose overrides publish the copy', async () => {
@@ -221,7 +227,58 @@ describe('publishing through a write, on the scoped handle', () => {
                     overrides: { status: 'published' },
                 })
             )
-        ).rejects.toBeInstanceOf(PermissionDeniedError);
+        ).rejects.toMatchObject({
+            name: 'PermissionDeniedError',
+            permission: 'entry:post:publish',
+        });
+    });
+
+    it('adds an unpublished locale to a published entry on the update grant alone', async () => {
+        const entry = await entriesService.create({
+            type: 'post',
+            data: { title: 'EN', status: 'published' },
+        });
+
+        const de = await createServices(contextAs(writer), {
+            overrideAccess: false,
+        }).entries.update({
+            type: 'post',
+            id: entry.id,
+            locale: 'de',
+            data: { title: 'DE' },
+        });
+
+        expect(de).toMatchObject({
+            locale: 'de',
+            status: 'unpublished',
+            publishedAt: null,
+        });
+    });
+
+    it('refuses a new locale that names its status without the publish grant', async () => {
+        const entry = await entriesService.create({
+            type: 'post',
+            data: { title: 'EN', status: 'published' },
+        });
+
+        await expect(
+            attempt(() =>
+                createServices(contextAs(writer), {
+                    overrideAccess: false,
+                }).entries.update({
+                    type: 'post',
+                    id: entry.id,
+                    locale: 'de',
+                    data: { title: 'DE', status: 'published' },
+                })
+            )
+        ).rejects.toMatchObject({
+            name: 'PermissionDeniedError',
+            permission: 'entry:post:publish',
+        });
+        expect(
+            await entriesService.get({ type: 'post', id: entry.id, locale: 'de' })
+        ).toBeNull();
     });
 
     it('lets a write that does not publish through on the write grant alone', async () => {
