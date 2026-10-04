@@ -1,3 +1,7 @@
+---
+milestone: 1.0
+---
+
 # Operations defects
 
 Found on 2026-10-04 while planning `roadmap/planned/site-health.md`,
@@ -53,3 +57,36 @@ a failing test first.
       production D1 from the CLI.
 - [x] The dashboard checks read permission and makes one request.
 - [x] `name` on the database driver.
+
+## Checks on Cloudflare
+
+Merged on 2026-10-04 and run on local workerd (`check:boot:cloudflare`, which
+ticks against the new cron columns); these need a deployed Worker or
+production D1.
+
+- [ ] A deployed Worker whose database lacks a migration logs the pending
+      warning on its first request (bundled migration names).
+- [ ] `d1().isRemote()` answers true for a binding marked `"remote": true` and
+      under `CLOUDFLARE_ENV=production`, and `db:init --allow-remote` reaches
+      production D1 after `wrangler login`.
+- [ ] The cron secret comparison (`timingSafeEqual` from `hono/utils/buffer`)
+      runs on workerd without `nodejs_compat`.
+- [ ] The `last_result` and `last_error` cron columns and `POST /entries/count`
+      on production D1.
+
+## Left open
+
+- **`db:init` against a D1 binding never exits**: it applies the migrations
+  and hangs, with or without `--allow-remote`, because the wrangler platform
+  proxy is never disposed (`disposeBindings` in
+  `packages/astromech/src/integrations/cloudflare/bindings.ts`).
+- **A Worker woken only by a Cron Trigger skips the pending-migration check**:
+  the middleware registers the bundled names, and no request has run it.
+  `createWorkerEntry` would need the names passed in.
+- **Restore cannot run on Workers**: `createMergedProvider` loads the
+  migrations' code from disk, which bundled names do not replace.
+- **No screen shows a cron run's result**: `last_result` and `last_error` are
+  stored and documented, and nothing in the admin or the API reads them yet
+  (`roadmap/planned/site-health.md`).
+- **Undeclared nested keys survive a save** (`projectToSchema`), left to
+  `roadmap/planned/field-rename-command.md` as the defect list says.

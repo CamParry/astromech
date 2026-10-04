@@ -45,3 +45,25 @@ became live.
       entries and globals.
 - [ ] The admin offers status changes and Publish only with `publish`.
 - [ ] Tests for both.
+
+## Progress
+
+Branch `editorial-defects`, two commits, not merged and, as of 2026-10-04, not
+pushed: it exists only in the local checkout it was written in. Nothing above
+is ticked until it merges.
+
+- The server commit makes a status or publish date set through `update`,
+  `create` or `duplicate` need `publish`. Its review found one gap that blocks
+  merging: a new locale copies the source's status, so a user without
+  `publish` can put a translation live. Decided: a new locale starts
+  unpublished. The review's smaller fixes go in the same change.
+- The admin commit sends `status` only when the user changed it, and shows a
+  user without `publish` a read-only status control and no Publish button. It
+  has not been reviewed.
+
+Left before merging: the new-locale fix, the two redirects items, a review of
+the admin commit, the status UI checked in a browser, and `pnpm run verify`.
+Main has moved on since the branch forked: merge it in first, expecting
+conflicts in `packages/astromech/src/entries/methods/query.ts` (`noStore()` and
+the shared list filters) and `packages/admin/src/hooks/entries.ts` (the counts
+query's invalidation).

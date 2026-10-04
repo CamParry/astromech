@@ -112,6 +112,12 @@ item 8 proposed, would protect libsql only.
       document covers every mounted route but the internal ones"). The
       cross-type `POST /entries/query` and `POST /entries/count` were already
       table rows.
+- [ ] **Check the OpenAPI document on workerd.** Signed in,
+      `GET /cms/api/openapi.json` on the Cloudflare demo lists the `/auth/*`
+      paths: Better Auth's `generateOpenAPISchema()` runs only on that request, and
+      `check:boot:cloudflare` cannot make it, having no session. Also confirm
+      the `better-auth/plugins` import adds only `openAPI` to the Worker
+      bundle.
 - [ ] **Refused auth routes in the document.** Better Auth's generator lists
       every endpoint, so the document shows `/auth/sign-up/email`, which
       always answers 403, and `/auth/change-email`, which is off. Decide

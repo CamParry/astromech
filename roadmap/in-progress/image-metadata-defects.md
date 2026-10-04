@@ -1,3 +1,7 @@
+---
+milestone: 1.0
+---
+
 # Image metadata defects
 
 Found on 2026-10-03 by reading the media code while comparing it with Smush
@@ -45,8 +49,9 @@ decoded image, which is what the variants are made from.
 
 ## The work
 
-- [x] Record dimensions after applying EXIF orientation, from the image driver
-      where one is configured, and drop the unused `orientation` key or set it.
+- [x] Record dimensions after applying EXIF orientation, read from the file's
+      header (`media/internal/store-file.ts`), and drop the unused
+      `orientation` key or set it.
 - [x] Remove the GPS data from the stored original on upload and replace,
       blanking it in place in the EXIF and XMP with no re-encode, so the pixels
       and size are unchanged and it needs no image driver. Other metadata
@@ -60,6 +65,18 @@ decoded image, which is what the variants are made from.
 - [x] `size` from the stored bytes.
 - [x] Tests: a rotated JPEG fixture stores upright dimensions; an uploaded
       original with GPS data is served without it.
+
+## Checks on Cloudflare
+
+Merged on 2026-10-04 and run on local workerd (`check:boot:cloudflare`); these
+need a deployed Worker with Image Resizing on.
+
+- [ ] A replaced image gets new variants: Image Resizing fetches
+      `<id>.<ext>?v=<version>` from the media route and caches per version.
+- [ ] `cf.image` keeps an animated WebP animated for `format: 'webp'`.
+- [ ] HEIC input transforms (the Cloudflare driver leaves `canTransform` unset).
+- [ ] The variant ETag, which now ends in the driver's cache key
+      (`-cloudflare-images`), gives 304s through the edge cache.
 
 ## Left open
 

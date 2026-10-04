@@ -6,7 +6,7 @@ milestone: 1.0
 
 Raised on 2026-10-03 from WPMU DEV Smush; decided 2026-10-04.
 
-Prerequisite: `roadmap/completed/image-metadata-defects.md`. Cropping around a
+Prerequisite: `roadmap/in-progress/image-metadata-defects.md`. Cropping around a
 focal point is `roadmap/planned/focal-point.md`.
 
 ## What exists
@@ -59,7 +59,7 @@ height on every image, immutable variant URLs, and originals kept
   `media.image.quality: { avif: 50, webp: 78 }`. Rejected: Astro's single
   number, since AVIF and WebP need different numbers for the same result.
 - **Also in 1.0:** stripping metadata from originals
-  (`roadmap/completed/image-metadata-defects.md`).
+  (`roadmap/in-progress/image-metadata-defects.md`).
 
 **Left out:** recompressing originals, converting PNG to JPG, re-optimising an
 existing library (a CLI later; settings apply to new uploads), and a CDN.

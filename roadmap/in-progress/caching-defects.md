@@ -1,3 +1,7 @@
+---
+milestone: 1.0
+---
+
 # Caching defects
 
 Found on 2026-10-04 while planning `roadmap/planned/page-caching.md`, which
@@ -38,6 +42,20 @@ The class: a response or a job that assumed no cache and no build step.
 - [x] Migrations before prerendering, or a documented build order.
 - [x] Pass `ctx` through `scheduled()`.
 - [x] A test that a preview-token response is never stored.
+
+## Checks on Cloudflare
+
+Merged on 2026-10-04 and run on local workerd (`check:boot:cloudflare`, which
+fires a `scheduled()` tick); these need a deployed Worker.
+
+- [ ] `ctx.waitUntil` holds a tick started by a real Cron Trigger.
+- [ ] Cloudflare's cache honours `Cache-Tag: astromech:media:<id>` with the
+      media `Cache-Control`, and a purge by that tag reaches every variant.
+- [ ] With `cacheCloudflare()`, nothing is stored for the admin, the API, a
+      media 404 or a preview read (`cache.set(false)`).
+- [ ] `astro build` migrates at build start and `disposeBindings()` releases
+      the local D1 before the prerenderer opens it, on a site with prerendered
+      pages (neither demo has one).
 
 ## Left open
 
