@@ -24,6 +24,8 @@ export type IfdEntry = { offset: number; tag: number; type: number; count: numbe
 
 /** The most boxes read at one level of an ISO base media file before giving up. */
 const MAX_BOXES = 64;
+/** The most compatible brands read from an `ftyp` box, which may claim to span the whole file. */
+const MAX_BRANDS = 64;
 
 /** The container format `bytes` opens with, or null when it is none of these. */
 export function detectImageFormat(bytes: Uint8Array): ImageFormat | null {
@@ -62,7 +64,7 @@ const HEIF_BRANDS = new Set([
 
 /** Whether the `ftyp` box at the start of `view` lists a HEIF brand, as its major brand or a compatible one. */
 function hasHeifBrand(view: DataView): boolean {
-    const end = Math.min(view.getUint32(0), view.byteLength);
+    const end = Math.min(view.getUint32(0), view.byteLength, 16 + MAX_BRANDS * 4);
     if (view.byteLength >= 12 && HEIF_BRANDS.has(fourCC(view, 8))) return true;
     // The minor version follows the major brand; the compatible brands follow it.
     for (let offset = 16; offset + 4 <= end; offset += 4) {

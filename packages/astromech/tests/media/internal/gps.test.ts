@@ -362,6 +362,43 @@ describe('removeGpsMetadata', () => {
         expect(ifd0Tags(bytes)).toEqual([]);
     });
 
+    it('zeroes a value block that every entry of five GPS IFDs shares, quickly', async () => {
+        // Five GPS IFDs of 65535 entries each, every entry's value the same 4 MB block.
+        const size = 8 * 1024 * 1024;
+        const valueSize = 4 * 1024 * 1024;
+        const gpsIfdCount = 5;
+        const bytes = new Uint8Array(size);
+        const view = new DataView(bytes.buffer);
+        bytes.set(latin1('II*\0'));
+        view.setUint32(4, 8, true);
+        view.setUint16(8, gpsIfdCount, true);
+        let gpsIfd = 8 + 2 + gpsIfdCount * 12 + 4;
+        for (let k = 0; k < gpsIfdCount; k++) {
+            const pointer = 10 + k * 12;
+            view.setUint16(pointer, TAG_GPS_IFD, true);
+            view.setUint16(pointer + 2, 4, true);
+            view.setUint32(pointer + 4, 1, true);
+            view.setUint32(pointer + 8, gpsIfd, true);
+            view.setUint16(gpsIfd, 65535, true);
+            for (let i = 0; i < 65535; i++) {
+                const entry = gpsIfd + 2 + i * 12;
+                view.setUint16(entry, 0x0002, true);
+                view.setUint16(entry + 2, 1, true);
+                view.setUint32(entry + 4, valueSize, true);
+                view.setUint32(entry + 8, size - valueSize, true);
+            }
+            gpsIfd += 2 + 65535 * 12 + 4;
+        }
+        bytes.fill(0x41, size - valueSize);
+
+        const started = performance.now();
+        await removeGpsMetadata(bytes);
+
+        expect(performance.now() - started).toBeLessThan(1000);
+        expect(bytes.subarray(size - valueSize).some((byte) => byte !== 0)).toBe(false);
+        expect(ifd0Tags(bytes)).toEqual([]);
+    });
+
     it.each([1, 2])(
         'removes the GPS IFD from a HEIF EXIF item stored in an idat box (iloc version %i)',
         async (version) => {
@@ -510,6 +547,129 @@ describe('removeGpsMetadata', () => {
         expect(text).toContain('drone-dji:RelativeAltitude="+30.52"');
         expect(text).toContain('<dc:rights>Example Rights</dc:rights>');
     });
+
+    it('blanks the GPS values in an XMP packet that binds 4000 prefixes to the EXIF namespace, quickly', async () => {
+        let packet = '<x:xmpmeta xmlns:x="adobe:ns:meta/"><rdf:Description ';
+        for (let i = 0; i < 4000; i++) {
+            packet += `xmlns:p${i}="http://ns.adobe.com/exif/1.0/" `;
+        }
+        packet +=
+            'p3999:GPSLatitude="51,30.2N">' +
+            'p'.repeat(200_000) +
+            '</rdf:Description></x:xmpmeta>';
+        const bytes = withPngChunks(await plainPng(), [
+            pngChunk('iTXt', 'XML:com.adobe.xmp\0\0\0\0\0', latin1(packet)),
+        ]);
+
+        const started = performance.now();
+        await removeGpsMetadata(bytes);
+
+        expect(performance.now() - started).toBeLessThan(1000);
+        expect(Buffer.from(bytes).includes('51,30.2N')).toBe(false);
+        expect(Buffer.from(bytes).includes('p3999:GPSLatitude="        "')).toBe(true);
+    });
+
+    it.each([
+        ['no end tag', (i: number) => `<exif:GPS${i}>v`],
+        ['no closing bracket', (i: number) => `<exif:GPS${i} `],
+    ])(
+        'blanks the GPS values in an XMP packet after 50000 GPS elements with %s, quickly',
+        async (_, element) => {
+            const packet =
+                Array.from({ length: 50_000 }, (_, i) => element(i)).join('') +
+                '<exif:GPSLatitude>51,30.2N</exif:GPSLatitude>';
+            const bytes = withPngChunks(await plainPng(), [
+                pngChunk('iTXt', 'XML:com.adobe.xmp\0\0\0\0\0', latin1(packet)),
+            ]);
+
+            const started = performance.now();
+            await removeGpsMetadata(bytes);
+
+            expect(performance.now() - started).toBeLessThan(1000);
+            expect(
+                Buffer.from(bytes).includes(
+                    '<exif:GPSLatitude>        </exif:GPSLatitude>'
+                )
+            ).toBe(true);
+        }
+    );
+
+    it.each([
+        [
+            'a namespace URI of 1 MB',
+            `<x:xmpmeta xmlns:x="adobe:ns:meta/"><rdf:Description xmlns:y="${'a'.repeat(1_000_000)}" ` +
+                'xmlns:exif="http://ns.adobe.com/exif/1.0/" exif:GPSLatitude="51,30.2N"/></x:xmpmeta>',
+        ],
+        [
+            'a namespace prefix of 1 MB',
+            `<x:xmpmeta xmlns:x="adobe:ns:meta/"><rdf:Description xmlns:${'q'.repeat(1_000_000)}=` +
+                `"http://ns.adobe.com/exif/1.0/" ${'q'.repeat(1_000_000)}:GPSLatitude="51,30.2N"/></x:xmpmeta>`,
+        ],
+    ])('blanks the GPS values in an XMP packet with %s', async (_, packet) => {
+        const bytes = withPngChunks(await plainPng(), [
+            pngChunk('iTXt', 'XML:com.adobe.xmp\0\0\0\0\0', latin1(packet)),
+        ]);
+
+        await removeGpsMetadata(bytes);
+
+        expect(Buffer.from(bytes).includes('51,30.2N')).toBe(false);
+        expect(hasValidCrcs(bytes)).toBe(true);
+    });
+
+    it('blanks the GPS values in a PNG text chunk after one whose keyword is 1 MB long', async () => {
+        const bytes = withPngChunks(await plainPng(), [
+            pngChunk('tEXt', `${'k'.repeat(1_000_000)}\0`, latin1('value')),
+            pngChunk('tEXt', 'exif:GPSLatitude\0', latin1('51/1,30/1,1234/100')),
+        ]);
+
+        await removeGpsMetadata(bytes);
+
+        expect(Buffer.from(bytes).includes('51/1,30/1,1234/100')).toBe(false);
+        expect(hasValidCrcs(bytes)).toBe(true);
+    });
+
+    // At zlib's default level the blanked text fits only compressed whole; at level 1 its header fits uncompressed.
+    it.each([
+        ['tEXt', 0],
+        ['zTXt', 6],
+        ['zTXt', 1],
+    ] as const)(
+        'blanks the GPS values in ImageMagick’s raw XMP profile in a %s chunk (level %i), keeping the rest of the packet',
+        async (type, level) => {
+            const packet =
+                '<?xpacket begin="" id="W5M0MpCehiHzreSzNTczkc9d"?>' +
+                '<x:xmpmeta xmlns:x="adobe:ns:meta/">' +
+                '<rdf:RDF xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#">' +
+                '<rdf:Description xmlns:exif="http://ns.adobe.com/exif/1.0/" ' +
+                'exif:GPSLatitude="51,30.2N"/></rdf:RDF></x:xmpmeta>';
+            const text = rawProfile('xmp', latin1(packet));
+            const keyword = 'Raw profile type xmp\0';
+            const bytes = withPngChunks(await plainPng(), [
+                type === 'zTXt'
+                    ? pngChunk('zTXt', `${keyword}\0`, deflateSync(text, { level }))
+                    : pngChunk('tEXt', keyword, text),
+            ]);
+            const length = bytes.length;
+
+            await removeGpsMetadata(bytes);
+
+            const chunk = readPngChunks(bytes).find((c) => c.type === type);
+            const data = Buffer.from(chunk?.data ?? '', 'latin1').subarray(
+                keyword.length + (type === 'zTXt' ? 1 : 0)
+            );
+            const after = (type === 'zTXt' ? inflateSync(data) : data).toString('latin1');
+            // Read as exiftool reads a raw profile; ImageMagick's reader accepts more.
+            const match = /^\n(.*?)\n\s*(\d+)\n(.*)/s.exec(after);
+            expect(match?.[1]).toBe('xmp');
+            expect(match?.[2]).toBe(String(packet.length));
+            const hex = (match?.[3] ?? '').replace(/\s/g, '');
+            expect(Buffer.from(hex, 'hex').toString('latin1')).toBe(
+                packet.replace('51,30.2N', ' '.repeat(8))
+            );
+            expect(bytes.length).toBe(length);
+            expect(hasValidCrcs(bytes)).toBe(true);
+        }
+    );
 
     it.each([
         ['zTXt', 'XML:com.adobe.xmp\0\0'],

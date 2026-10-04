@@ -48,6 +48,11 @@ const DJI_LOCATION_PROPERTIES = [
     'GpsLongtitude',
     'AbsoluteAltitude',
 ];
+/** The longest PNG text keyword, and the longest namespace URI compared with the ones above. */
+const MAX_KEYWORD_LENGTH = 79;
+const MAX_NAMESPACE_URI_LENGTH = 256;
+/** How many bytes are turned into a string at a time, to stay within the engine's argument limit. */
+const DECODE_SLICE = 8192;
 /** The most bytes the compressed text chunks of one PNG inflate to, together. */
 const MAX_INFLATED_BYTES = 16 * 1024 * 1024;
 /** The most spaces added to the end of a text to make it compress to the length it had. */
@@ -56,6 +61,8 @@ const MAX_TRAILING_SPACES = 8;
 const MAX_STORED_BLOCK = 0xffff;
 
 const XMLNS = asciiBytes('xmlns');
+const GPS = asciiBytes('GPS');
+const DJI_LOCATION_NAMES = DJI_LOCATION_PROPERTIES.map(asciiBytes);
 const HEX_DIGITS = asciiBytes('0123456789abcdef');
 
 const NEWLINE = 0x0a;
@@ -74,20 +81,32 @@ type Range = { start: number; end: number };
 /** How many more bytes the compressed text in one file may inflate to. */
 type Budget = { left: number };
 
+/** The XMP prefixes bound to the EXIF and DJI namespaces; '' stands for a default namespace. */
+type XmpPrefixes = { exif: Set<string>; dji: Set<string> };
+
+/** An XML name: where it starts and ends, and where the colon after its prefix is (-1 when it has none). */
+type QualifiedName = { start: number; colon: number; end: number };
+
+/** Finds where an element's start tag ends and where an end tag of `name` starts, at or after `from`, or -1. */
+type TagFinder = {
+    tagEnd: (from: number) => number;
+    endTag: (name: string, from: number) => number;
+};
+
 /**
- * A location property's name in XMP. `isPrefix` matches every longer name it
- * starts; `elementOnly` skips attributes, for a name in a default namespace.
+ * An edited text laid out to be compressed again: `head` stays first,
+ * uncompressed, then spaces fill the room left over, then `body`. An `exact`
+ * split takes no spaces before its body, so it fits only with no room left over.
  */
-type XmpName = { name: Uint8Array; isPrefix: boolean; elementOnly: boolean };
+type Split = { head: Uint8Array; body: Uint8Array; exact?: boolean };
 
 /**
  * How to remove the GPS data from one kind of text: `blank` edits it in place,
- * and `head` says how much of its start must stay first when it is compressed
- * again, and whether that may become spaces when it does not fit.
+ * and `splits` lists the ways to lay out the edited text to compress it again, best first.
  */
 type TextEdit = {
     blank: (bytes: Uint8Array, start: number, end: number) => boolean;
-    head: (text: Uint8Array) => { length: number; optional: boolean };
+    splits: (text: Uint8Array) => Split[];
 };
 
 /**
@@ -135,8 +154,8 @@ function removeFromJpeg(view: DataView, bytes: Uint8Array): void {
         }
     }
     // An extended XMP segment may rely on the namespaces the main packet declares.
-    const names = xmpLocationNames(bytes, xmp);
-    for (const { start, end } of xmp) blankXmpGps(bytes, start, end, names);
+    const prefixes = readLocationPrefixes(bytes, xmp);
+    for (const { start, end } of xmp) blankXmpGps(bytes, start, end, prefixes);
 }
 
 /**
@@ -168,7 +187,12 @@ async function removeFromPngText(
     { type, start, end }: Chunk,
     budget: Budget
 ): Promise<boolean> {
-    const keywordEnd = indexOfByte(bytes, 0, start, end);
+    const keywordEnd = indexOfByte(
+        bytes,
+        0,
+        start,
+        Math.min(end, start + MAX_KEYWORD_LENGTH + 1)
+    );
     const edit = keywordEnd === -1 ? null : pngTextEdit(latin1(bytes, start, keywordEnd));
     if (!edit) return false;
     if (type === 'tEXt') return edit.blank(bytes, keywordEnd + 1, end);
@@ -203,7 +227,17 @@ function pngTextEdit(keyword: string): TextEdit | null {
 
 const XMP_EDIT: TextEdit = {
     blank: (bytes, start, end) => blankXmpGps(bytes, start, end),
-    head: (text) => ({ length: xmlDeclarationLength(text), optional: true }),
+    // An XML declaration only restates the defaults, so it is dropped when it does not fit first.
+    splits: (text) => {
+        const declaration = xmlDeclarationLength(text);
+        const body = text.subarray(declaration);
+        return declaration === 0
+            ? [{ head: new Uint8Array(), body }]
+            : [
+                  { head: text.subarray(0, declaration), body },
+                  { head: new Uint8Array(), body },
+              ];
+    },
 };
 
 const VALUE_EDIT: TextEdit = {
@@ -212,7 +246,7 @@ const VALUE_EDIT: TextEdit = {
         bytes.fill(SPACE, start, end);
         return changed;
     },
-    head: () => ({ length: 0, optional: false }),
+    splits: (text) => [{ head: new Uint8Array(), body: text }],
 };
 
 const RAW_EXIF_EDIT: TextEdit = {
@@ -220,10 +254,7 @@ const RAW_EXIF_EDIT: TextEdit = {
         editRawProfile(bytes, start, end, (profile) =>
             removeFromExif(new DataView(profile.buffer), profile, 0, profile.length)
         ),
-    head: (text) => ({
-        length: readRawProfileHeader(text)?.hexStart ?? 0,
-        optional: false,
-    }),
+    splits: rawProfileSplits,
 };
 
 const RAW_XMP_EDIT: TextEdit = {
@@ -231,8 +262,20 @@ const RAW_XMP_EDIT: TextEdit = {
         editRawProfile(bytes, start, end, (profile) =>
             blankXmpGps(profile, 0, profile.length)
         ),
-    head: RAW_EXIF_EDIT.head,
+    splits: rawProfileSplits,
 };
+
+/**
+ * A raw profile opens with its header, so spaces never go before it: the header
+ * stays first uncompressed, or the whole text compresses again with no room left over.
+ */
+function rawProfileSplits(text: Uint8Array): Split[] {
+    const hexStart = readRawProfileHeader(text)?.hexStart ?? 0;
+    return [
+        { head: text.subarray(0, hexStart), body: text.subarray(hexStart) },
+        { head: new Uint8Array(), body: text, exact: true },
+    ];
+}
 
 /** The length of the XML declaration a text opens with, or 0 when it has none. */
 function xmlDeclarationLength(text: Uint8Array): number {
@@ -486,24 +529,50 @@ function removeGpsIfd(view: DataView, bytes: Uint8Array, tiff: Tiff): boolean {
     const gpsIfds = new Set(
         pointers.map((entry) => view.getUint32(entry.offset + 8, tiff.littleEndian))
     );
+    const values: Range[] = [];
     // In order, so an IFD inside one already zeroed reads as empty: overlapping IFDs cost no more than one.
     for (const gpsIfd of [...gpsIfds].sort((a, b) => a - b)) {
         // An offset inside the 8-byte header is malformed; zeroing there would erase the header.
-        if (gpsIfd >= 8) zeroIfd(view, bytes, tiff, gpsIfd);
+        if (gpsIfd >= 8) zeroIfd(view, bytes, tiff, gpsIfd, values);
     }
+    // Entries may share their values, so each byte is zeroed once.
+    for (const { start, end } of mergeRanges(values)) bytes.fill(0, start, end);
     deleteIfdEntries(view, bytes, tiff, ifd0, TAG_GPS_IFD);
     return true;
 }
 
-/** Zero an IFD's entries, its next-IFD offset, and the values its entries point at. */
-function zeroIfd(view: DataView, bytes: Uint8Array, tiff: Tiff, offset: number): void {
+/**
+ * Zero an IFD's entries and its next-IFD offset, adding to `values` where the
+ * values its entries point at lie.
+ */
+function zeroIfd(
+    view: DataView,
+    bytes: Uint8Array,
+    tiff: Tiff,
+    offset: number,
+    values: Range[]
+): void {
     const entries = readIfdEntries(view, tiff, offset);
     for (const entry of entries) {
         const range = readIfdValueRange(view, tiff, entry);
-        if (range && range.end - range.start > 4) bytes.fill(0, range.start, range.end);
+        if (range && range.end - range.start > 4) values.push(range);
     }
     const ifd = tiff.start + offset;
     bytes.fill(0, ifd, Math.min(ifd + 2 + entries.length * 12 + 4, tiff.end));
+}
+
+/** `ranges` sorted, with the ones that overlap or touch joined. */
+function mergeRanges(ranges: Range[]): Range[] {
+    const merged: Range[] = [];
+    for (const range of [...ranges].sort((a, b) => a.start - b.start)) {
+        const last = merged.at(-1);
+        if (last && range.start <= last.end) {
+            last.end = Math.max(last.end, range.end);
+        } else {
+            merged.push({ ...range });
+        }
+    }
+    return merged;
 }
 
 /**
@@ -541,54 +610,62 @@ function deleteIfdEntries(
 /**
  * Overwrite with spaces the values of the location properties in the XMP
  * between `start` and `end`: an attribute's quoted value, or an element's
- * content. Returns whether anything changed.
+ * content. Reads each name once. Returns whether anything changed.
  */
 function blankXmpGps(
     bytes: Uint8Array,
     start: number,
     end: number,
-    names = xmpLocationNames(bytes, [{ start, end }])
+    prefixes = readLocationPrefixes(bytes, [{ start, end }])
 ): boolean {
+    const tags = createTagFinder(bytes, start, end, prefixes);
     let changed = false;
-    for (const name of names) {
-        if (blankXmpProperty(bytes, start, end, name)) changed = true;
+    for (let at = start; at < end; ) {
+        if (!isNameByte(bytes[at] ?? 0)) {
+            at++;
+            continue;
+        }
+        const name = readQualifiedName(bytes, at, end);
+        const before = at > start ? (bytes[at - 1] ?? 0) : 0;
+        // A name in a default namespace is an element's; attributes have no default namespace.
+        const value = !isLocationName(bytes, name, prefixes)
+            ? null
+            : before === LESS_THAN
+              ? elementContent(bytes, name, tags)
+              : before === SLASH || before === COLON || name.colon === -1
+                ? null
+                : attributeValue(bytes, name.end, end);
+        if (value) {
+            for (let i = value.start; i < value.end; i++) {
+                if (bytes[i] !== SPACE) changed = true;
+                bytes[i] = SPACE;
+            }
+        }
+        at = value ? value.end : name.end;
     }
     return changed;
 }
 
 /**
- * The property names that hold a location in the XMP packets in `ranges`:
- * `GPS*` under each prefix bound to the EXIF namespace, and DJI's coordinates
- * and altitude under each prefix bound to its namespace, the usual prefixes included.
+ * The prefixes bound to the EXIF and DJI namespaces in the XMP packets in
+ * `ranges`, the usual prefixes included.
  */
-function xmpLocationNames(bytes: Uint8Array, ranges: Range[]): XmpName[] {
-    const exifPrefixes = new Set(['exif']);
-    const djiPrefixes = new Set(['drone-dji']);
+function readLocationPrefixes(bytes: Uint8Array, ranges: Range[]): XmpPrefixes {
+    const exif = new Set(['exif']);
+    const dji = new Set(['drone-dji']);
     for (const { start, end } of ranges) {
         for (const [prefix, uri] of readNamespaces(bytes, start, end)) {
-            if (uri === EXIF_NAMESPACE) exifPrefixes.add(prefix);
-            if (uri === DJI_NAMESPACE) djiPrefixes.add(prefix);
+            if (uri === EXIF_NAMESPACE) exif.add(prefix);
+            if (uri === DJI_NAMESPACE) dji.add(prefix);
         }
     }
-    // An unprefixed name is in a default namespace, which binds elements only.
-    const names: XmpName[] = [...exifPrefixes].map((prefix) => ({
-        name: asciiBytes(prefix === '' ? 'GPS' : `${prefix}:GPS`),
-        isPrefix: true,
-        elementOnly: prefix === '',
-    }));
-    for (const prefix of djiPrefixes) {
-        for (const property of DJI_LOCATION_PROPERTIES) {
-            names.push({
-                name: asciiBytes(prefix === '' ? property : `${prefix}:${property}`),
-                isPrefix: false,
-                elementOnly: prefix === '',
-            });
-        }
-    }
-    return names;
+    return { exif, dji };
 }
 
-/** Each `xmlns` declaration between `start` and `end`, as its prefix (empty for a default namespace) and URI. */
+/**
+ * Each `xmlns` declaration between `start` and `end`, as its prefix (empty for
+ * a default namespace) and URI. A URI too long to be one of ours is skipped.
+ */
 function* readNamespaces(
     bytes: Uint8Array,
     start: number,
@@ -608,65 +685,127 @@ function* readNamespaces(
         const value = isNameByte(bytes[at - 1] ?? 0)
             ? null
             : attributeValue(bytes, nameEnd, end);
-        if (value) yield [prefix, latin1(bytes, value.start, value.end)];
+        if (value && value.end - value.start <= MAX_NAMESPACE_URI_LENGTH) {
+            yield [prefix, latin1(bytes, value.start, value.end)];
+        }
         at = indexOfBytes(bytes, XMLNS, value ? value.end : nameEnd, end);
     }
 }
 
-/** Blank the values of the properties `name` matches between `start` and `end`. */
-function blankXmpProperty(
+/** The XML name starting at `at`: name bytes, then a colon and more name bytes when it has a prefix. */
+function readQualifiedName(bytes: Uint8Array, at: number, end: number): QualifiedName {
+    let nameEnd = at;
+    while (nameEnd < end && isNameByte(bytes[nameEnd] ?? 0)) nameEnd++;
+    let colon = -1;
+    if (
+        bytes[nameEnd] === COLON &&
+        nameEnd + 1 < end &&
+        isNameByte(bytes[nameEnd + 1] ?? 0)
+    ) {
+        colon = nameEnd;
+        nameEnd++;
+        while (nameEnd < end && isNameByte(bytes[nameEnd] ?? 0)) nameEnd++;
+    }
+    return { start: at, colon, end: nameEnd };
+}
+
+/**
+ * Whether `name` is a whole name that holds a location: `GPS*` under a prefix
+ * bound to the EXIF namespace, or one of DJI's properties under a prefix bound to DJI's.
+ */
+function isLocationName(
+    bytes: Uint8Array,
+    { start, colon, end }: QualifiedName,
+    prefixes: XmpPrefixes
+): boolean {
+    // Followed by a colon, it is part of a longer name.
+    if (bytes[end] === COLON || isNameByte(bytes[end] ?? 0)) return false;
+    const localStart = colon === -1 ? start : colon + 1;
+    const isGps = startsWithBytes(bytes, localStart, end, GPS);
+    const isDji = DJI_LOCATION_NAMES.some(
+        (property) =>
+            end - localStart === property.length &&
+            startsWithBytes(bytes, localStart, end, property)
+    );
+    if (!isGps && !isDji) return false;
+    const prefix = colon === -1 ? '' : latin1(bytes, start, colon);
+    return (isGps && prefixes.exif.has(prefix)) || (isDji && prefixes.dji.has(prefix));
+}
+
+/**
+ * A tag finder for the XMP between `start` and `end`. Its searches move forward
+ * through the packet, so together they read it about once.
+ */
+function createTagFinder(
     bytes: Uint8Array,
     start: number,
     end: number,
-    { name, isPrefix, elementOnly }: XmpName
-): boolean {
-    let changed = false;
-    let at = indexOfBytes(bytes, name, start, end);
-    while (at !== -1) {
-        let nameEnd = at + name.length;
-        while (isPrefix && nameEnd < end && isNameByte(bytes[nameEnd] ?? 0)) nameEnd++;
-        const before = at > start ? (bytes[at - 1] ?? 0) : 0;
-        // The match is a whole name, not part of a longer one.
-        const whole =
-            !isNameByte(before) &&
-            before !== COLON &&
-            !isNameByte(bytes[nameEnd] ?? 0) &&
-            bytes[nameEnd] !== COLON;
-        const value = !whole
-            ? null
-            : before === LESS_THAN
-              ? elementContent(bytes, at, nameEnd, end)
-              : before === SLASH || elementOnly
-                ? null
-                : attributeValue(bytes, nameEnd, end);
-        if (value) {
-            for (let i = value.start; i < value.end; i++) {
-                if (bytes[i] !== SPACE) changed = true;
-                bytes[i] = SPACE;
+    prefixes: XmpPrefixes
+): TagFinder {
+    // The first `>` at or after `searchedFrom`, or -1 when there is none.
+    let searchedFrom = end;
+    let found = -1;
+    let endTags: Map<string, number[]> | null = null;
+    return {
+        tagEnd: (from) => {
+            if (from < searchedFrom || (found !== -1 && found < from)) {
+                searchedFrom = from;
+                found = indexOfByte(bytes, GREATER_THAN, from, end);
             }
-        }
-        at = indexOfBytes(bytes, name, value ? value.end : nameEnd, end);
-    }
-    return changed;
+            return found;
+        },
+        endTag: (name, from) => {
+            endTags ??= indexEndTags(bytes, start, end, prefixes);
+            const positions = endTags.get(name) ?? [];
+            // The first position at or after `from`, by binary search.
+            let low = 0;
+            let high = positions.length;
+            while (low < high) {
+                const middle = (low + high) >> 1;
+                if ((positions[middle] ?? 0) < from) low = middle + 1;
+                else high = middle;
+            }
+            return positions[low] ?? -1;
+        },
+    };
 }
 
-/** The content of the element whose name runs from `nameStart` to `nameEnd`, up to its end tag. */
+/** Where each end tag of a location property starts, in order, by the property's name. */
+function indexEndTags(
+    bytes: Uint8Array,
+    start: number,
+    end: number,
+    prefixes: XmpPrefixes
+): Map<string, number[]> {
+    const endTags = new Map<string, number[]>();
+    for (let at = indexOfByte(bytes, LESS_THAN, start, end); at !== -1; ) {
+        let next = at + 1;
+        if (bytes[at + 1] === SLASH && at + 2 < end && isNameByte(bytes[at + 2] ?? 0)) {
+            const name = readQualifiedName(bytes, at + 2, end);
+            if (isLocationName(bytes, name, prefixes)) {
+                const key = latin1(bytes, name.start, name.end);
+                const positions = endTags.get(key) ?? [];
+                positions.push(at);
+                endTags.set(key, positions);
+            }
+            next = name.end;
+        }
+        at = indexOfByte(bytes, LESS_THAN, next, end);
+    }
+    return endTags;
+}
+
+/** The content of the element `name` opens, up to its end tag. */
 function elementContent(
     bytes: Uint8Array,
-    nameStart: number,
-    nameEnd: number,
-    end: number
+    name: QualifiedName,
+    tags: TagFinder
 ): Range | null {
-    const tagEnd = indexOfByte(bytes, GREATER_THAN, nameEnd, end);
+    const tagEnd = tags.tagEnd(name.end);
     if (tagEnd === -1) return null;
     // A self-closing element carries its value in attributes, which are blanked whole.
-    if (bytes[tagEnd - 1] === SLASH) return { start: nameEnd, end: tagEnd - 1 };
-    const endTag = new Uint8Array([
-        LESS_THAN,
-        SLASH,
-        ...bytes.subarray(nameStart, nameEnd),
-    ]);
-    const close = indexOfBytes(bytes, endTag, tagEnd + 1, end);
+    if (bytes[tagEnd - 1] === SLASH) return { start: name.end, end: tagEnd - 1 };
+    const close = tags.endTag(latin1(bytes, name.start, name.end), tagEnd + 1);
     return close === -1 ? null : { start: tagEnd + 1, end: close };
 }
 
@@ -683,8 +822,8 @@ function attributeValue(bytes: Uint8Array, nameEnd: number, end: number): Range 
 
 /**
  * Blank the GPS data in a zlib-compressed text between `start` and `end`,
- * compressing it again into exactly the same number of bytes. The text is
- * padded with spaces after its head; when it no longer fits it becomes all spaces.
+ * compressing it again into exactly the same number of bytes, laid out by the
+ * first of the edit's splits that fits. When none fits it becomes all spaces.
  */
 async function blankCompressedText(
     bytes: Uint8Array,
@@ -695,18 +834,15 @@ async function blankCompressedText(
 ): Promise<boolean> {
     const text = await inflate(bytes.subarray(start, end), budget);
     if (!text || !edit.blank(text, 0, text.length)) return false;
-    const length = end - start;
-    const head = edit.head(text);
-    let stream = await zlibStreamOfLength(text, head.length, length);
-    // An XML declaration only restates the defaults, so it may become spaces.
-    if (!stream && head.length > 0 && head.optional) {
-        text.fill(SPACE, 0, head.length);
-        stream = await zlibStreamOfLength(text, 0, length);
+    const empty = new Uint8Array();
+    for (const split of [...edit.splits(text), { head: empty, body: empty }]) {
+        const stream = await zlibStreamOfLength(split, end - start);
+        if (stream) {
+            bytes.set(stream, start);
+            return true;
+        }
     }
-    stream ??= await zlibStreamOfLength(new Uint8Array(), 0, length);
-    if (!stream) return false;
-    bytes.set(stream, start);
-    return true;
+    return false;
 }
 
 /**
@@ -741,31 +877,33 @@ async function inflate(data: Uint8Array, budget: Budget): Promise<Uint8Array | n
 }
 
 /**
- * A zlib stream exactly `length` bytes long that inflates to `text` with spaces
- * after its first `headLength` bytes, or null. A few bytes off, it tries again
- * with spaces added to the end of the text, which change its compressed length.
+ * A zlib stream exactly `length` bytes long that inflates to the split's head,
+ * spaces, then its body, or null. A few bytes off, it tries again with spaces
+ * added to the end of the body, which change its compressed length.
  */
 async function zlibStreamOfLength(
-    text: Uint8Array,
-    headLength: number,
+    { head, body, exact = false }: Split,
     length: number
 ): Promise<Uint8Array | null> {
     for (let padding = 0; padding <= MAX_TRAILING_SPACES; padding++) {
-        const body = new Uint8Array(text.length - headLength + padding).fill(SPACE);
-        body.set(text.subarray(headLength));
+        const padded = new Uint8Array(body.length + padding).fill(SPACE);
+        padded.set(body);
         const compressed = new Uint8Array(
             await new Response(
-                new Blob([body]).stream().pipeThrough(new CompressionStream('deflate'))
+                new Blob([padded]).stream().pipeThrough(new CompressionStream('deflate'))
             ).arrayBuffer()
         );
         // Drop the 2-byte zlib header and 4-byte checksum to leave the raw deflate data.
         const deflated = compressed.subarray(2, compressed.length - 4);
         const room = length - 6 - deflated.length;
-        const head = text.subarray(0, headLength);
-        const stream = buildZlibStream(head, room, body, deflated);
+        const stream =
+            exact && room !== 0 ? null : buildZlibStream(head, room, padded, deflated);
         if (stream) return stream;
         // How far it is from fitting: past the length, or short of a stored block's 5 bytes.
-        const gap = headLength === 0 && room < 0 ? -room : headLength + 5 - room;
+        const gap =
+            head.length === 0 && (room < 0 || exact)
+                ? Math.abs(room)
+                : head.length + 5 - room;
         if (gap > 4) return null;
     }
     return null;
@@ -857,8 +995,26 @@ function asciiBytes(text: string): Uint8Array {
     return Uint8Array.from(text, (char) => char.charCodeAt(0));
 }
 
+/** The bytes from `start` to `end` as a Latin-1 string. */
 function latin1(bytes: Uint8Array, start: number, end: number): string {
-    return String.fromCharCode(...bytes.subarray(start, end));
+    let text = '';
+    for (let at = start; at < end; at += DECODE_SLICE) {
+        text += String.fromCharCode(
+            ...bytes.subarray(at, Math.min(at + DECODE_SLICE, end))
+        );
+    }
+    return text;
+}
+
+/** Whether the bytes from `start` to `end` start with `prefix`. */
+function startsWithBytes(
+    bytes: Uint8Array,
+    start: number,
+    end: number,
+    prefix: Uint8Array
+): boolean {
+    if (end - start < prefix.length) return false;
+    return prefix.every((byte, i) => bytes[start + i] === byte);
 }
 
 function startsWith(bytes: Uint8Array, at: number, prefix: string): boolean {

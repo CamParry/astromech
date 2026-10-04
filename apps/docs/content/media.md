@@ -116,8 +116,8 @@ before storing it, since the original is public at its media URL. It removes:
 - in XMP, every `exif:GPS*` property (under whatever prefix the file gives the
   EXIF namespace), and a DJI drone's `GpsLatitude`, `GpsLongitude` and
   `AbsoluteAltitude`;
-- in a PNG, the `exif:GPS*` text chunks ImageMagick writes, and the GPS block in
-  its raw EXIF profiles.
+- in a PNG, the `exif:GPS*` text chunks ImageMagick writes, the GPS block in
+  its raw EXIF profiles, and the XMP values above in its raw XMP profile.
 
 The file is recognised by its bytes, so an image uploaded with another or no
 content type is cleaned too; its `mimeType` stays the type it was uploaded with.

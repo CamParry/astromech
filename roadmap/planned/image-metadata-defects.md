@@ -79,6 +79,10 @@ decoded image, which is what the variants are made from.
   left alone, as is a GPS pointer in a TIFF page IFD after the first, XMP in a
   GIF, an XMP property split across two extended-XMP segments in a JPEG, and a
   location in a camera maker's MakerNotes.
+- **A camera raw declared as another type is buffered whole.** A TIFF-based
+  raw (DNG, CR2, NEF, ARW) uploaded with a non-image content type is read
+  into memory for GPS removal, on top of the copy `formData()` already holds,
+  so it takes twice its size. This adds to the missing upload size limit above.
 - **A compressed text past the first 16 MB is left alone.** A PNG's compressed
   text chunks inflate to at most 16 MB in all, so a chunk beyond that keeps its
   GPS data.
