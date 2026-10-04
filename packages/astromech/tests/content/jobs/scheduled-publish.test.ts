@@ -261,6 +261,80 @@ describe('scheduledPublishJob', () => {
         ).toBeNull();
     });
 
+    it('skips a row unpublished after the job read it and before it loaded the row, with no hook', async () => {
+        const past = new Date(Date.now() - 60_000);
+        const first = await scheduledPost('First', past);
+        const second = await scheduledPost('Second', past);
+        for (const key of ['legal', 'contact']) {
+            await globalRepository.create(
+                { key },
+                { fields: {}, status: 'scheduled', publishedAt: past }
+            );
+        }
+        // Publishing whichever row comes first unpublishes the other of its kind,
+        // so the job reaches that one with a stale read.
+        const published: string[] = [];
+        probe([
+            defineHook('entry:beforeUpdate', async (ctx) => {
+                if (ctx.data.status !== 'published') return;
+                published.push(ctx.entry.id);
+                const other = ctx.entry.id === first.id ? second.id : first.id;
+                await currentServices.entries.unpublish({ type: 'post', id: other });
+            }),
+            defineHook('global:beforeUpdate', async (ctx) => {
+                if (ctx.data.status !== 'published') return;
+                published.push(ctx.key);
+                const other = ctx.key === 'legal' ? 'contact' : 'legal';
+                await currentServices.globals.unpublish({ key: other });
+            }),
+        ]);
+        expectConsole(
+            'error',
+            /entry post\/\w+ \(en\) skipped\. .* is not scheduled for the time this publish was due/
+        );
+        expectConsole(
+            'error',
+            /global (legal|contact) \(en\) skipped\. .* is not scheduled for the time this publish was due/
+        );
+
+        await scheduledPublishJob.handler(systemAppContext());
+
+        // One hook call per kind: the skipped row was refused before its hook.
+        expect(published).toHaveLength(2);
+        const statuses = [await postStatus(first.id), await postStatus(second.id)];
+        expect(statuses.sort()).toEqual(['published', 'unpublished']);
+        const globals = [
+            (await globalRepository.findByKey('legal'))?.status,
+            (await globalRepository.findByKey('contact'))?.status,
+        ];
+        expect(globals.sort()).toEqual(['published', 'unpublished']);
+    });
+
+    it('names the schedule when the row is scheduled again by the time the refusal is explained', async () => {
+        const past = new Date(Date.now() - 60_000);
+        await globalRepository.create(
+            { key: 'legal' },
+            { fields: { terms: 'Terms' }, status: 'scheduled', publishedAt: past }
+        );
+        probe([
+            defineHook('global:beforeUpdate', async (ctx) => {
+                if (ctx.data.status !== 'published') return;
+                await currentServices.globals.unpublish({ key: ctx.key });
+            }),
+        ]);
+        // A row rescheduled for the same time between the refused write and the
+        // read that explains it.
+        vi.spyOn(globalRepository, 'explainConflict').mockResolvedValueOnce(null);
+        expectConsole(
+            'error',
+            "global legal (en) skipped. Global 'legal' is not scheduled for the time this publish was due"
+        );
+
+        await scheduledPublishJob.handler(systemAppContext());
+
+        expect((await globalRepository.findByKey('legal'))?.status).toBe('unpublished');
+    });
+
     // An import or raw SQL may store the same instant without milliseconds or
     // with an offset; the job's write compares instants, not spellings.
     it.each(['2020-01-01T10:00:00Z', '2020-01-01T12:00:00+02:00'])(

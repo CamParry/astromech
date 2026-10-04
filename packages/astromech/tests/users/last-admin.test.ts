@@ -8,7 +8,13 @@
 
 import type { Db } from '@/database/types';
 import { adminRole } from '@tests/fixtures';
-import { contextAs, createTestDb, createTestUser, setupTestConfig } from '@tests/harness';
+import {
+    contextAs,
+    createTestDb,
+    createTestUser,
+    makeTestConfig,
+    setupTestConfig,
+} from '@tests/harness';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { createServices, currentServices } from '@/app-context/services';
 import { ResourceNotFoundError } from '@/errors/resource';
@@ -132,5 +138,46 @@ describe('a user deleted while an update runs', () => {
             })
         ).rejects.toBeInstanceOf(ResourceNotFoundError);
         expect(await usersService.get({ id: editor.id })).toBeNull();
+    });
+
+    /** A user with a `bio`, deleted by another call just after the update reads it. */
+    async function deletedAfterRead(): Promise<string> {
+        setupTestConfig({
+            ...makeTestConfig(),
+            users: { fields: [{ name: 'bio', type: 'text', label: 'Bio' }] },
+        });
+        const editor = await createTestUser(db, {
+            role: 'editor',
+            fields: { bio: 'Old' },
+        });
+        const findOne = userRepository.findOne;
+        vi.spyOn(userRepository, 'findOne').mockImplementationOnce(async (...args) => {
+            const found = await findOne(...args);
+            await usersService.delete({ id: editor.id });
+            return found;
+        });
+        return editor.id;
+    }
+
+    // With no `users` row write, the version snapshot is the first guarded write.
+    it('is not found by an update that changes only fields', async () => {
+        const id = await deletedAfterRead();
+
+        await expect(
+            usersService.update({ id, data: { fields: { bio: 'New' } } })
+        ).rejects.toBeInstanceOf(ResourceNotFoundError);
+        expect(await usersService.get({ id })).toBeNull();
+    });
+
+    // Unchanged fields write no version, so the unguarded content write meets the
+    // deleted row and throws the repository's `AstromechError` (a 500). The
+    // "Caller errors" item in `roadmap/planned/write-race-and-data-loss-defects.md`
+    // makes it a 404. Media's update has the same path.
+    it.fails('is not found by an update that keeps its fields', async () => {
+        const id = await deletedAfterRead();
+
+        await expect(
+            usersService.update({ id, data: { fields: { bio: 'Old' } } })
+        ).rejects.toBeInstanceOf(ResourceNotFoundError);
     });
 });

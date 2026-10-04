@@ -7,9 +7,10 @@
 import type { Resource } from '@/content/repository/types';
 import type { GlobalContentRow, GlobalTableRow } from '@/globals/tables';
 import type { EntryStatus, JsonObject } from '@/types/index';
+import type { NotNull } from 'kysely';
 import { getDefaultContentLocale } from '@/config/content-locale';
 import { createContentRepository, lastUpdate } from '@/content/repository/content-table';
-import { decodeWith, kyselyTableKey } from '@/database/codec';
+import { kyselyTableKey } from '@/database/codec';
 import { getDb } from '@/database/registry';
 import { createRepository } from '@/database/repository/create-repository';
 import { globalContentTable, globalsTable, globalVersionsTable } from '@/database/tables';
@@ -116,14 +117,10 @@ function createGlobalRepository() {
                     eb('globalContent.stagedFor', 'is', null),
                 ])
             )
+            // `compareTimestamps` is false for a null date, so every row has one.
+            .$narrowType<{ publishedAt: NotNull }>()
             .execute();
-        // A null date is never due; the check narrows the type.
-        return rows.flatMap((row) => {
-            const { publishedAt } = decodeWith(globalContentTable, {
-                publishedAt: row.publishedAt,
-            });
-            return publishedAt ? [{ ...row, publishedAt }] : [];
-        });
+        return rows.map((row) => ({ ...row, publishedAt: new Date(row.publishedAt) }));
     }
 
     return {

@@ -887,11 +887,11 @@ export function createContentRepository<
         },
 
         create: async (
-            ref: ContentRef,
+            ref: { id: string; locale: string },
             data: ContentWrite,
             guard: WriteGuard
         ): Promise<R | null> => {
-            const locale = ref.locale ?? defaultLocale();
+            const { locale } = ref;
             return transaction(async () => {
                 const contentId = await insertFrom(guard, {
                     ...insertDefaults,

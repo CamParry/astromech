@@ -415,6 +415,24 @@ describe('versioning (on)', () => {
         expect(saved.snapshot.title).toBe('Changed');
         expect(saved.snapshot.fields).toEqual({ body: 'changed' });
     });
+
+    it('stores the title, slug and fields of the row it replaces, and not its status', async () => {
+        const e = await api.create({
+            type: 'post',
+            data: { title: 'Orig', slug: 'orig', fields: { body: 'orig' } },
+        });
+        await api.publish({ type: 'post', id: e.id });
+        await api.update({ type: 'post', id: e.id, data: { title: 'Changed' } });
+
+        const [stored] = await getDb().selectFrom('entryVersions').selectAll().execute();
+        expect(stored).toMatchObject({
+            version: 1,
+            title: 'Orig',
+            slug: 'orig',
+            fields: '{"body":"orig"}',
+        });
+        expect(stored).not.toHaveProperty('status');
+    });
 });
 
 describe('versioning (off)', () => {

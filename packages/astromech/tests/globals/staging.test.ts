@@ -16,6 +16,7 @@ import {
     StagedChangeExistsError,
 } from '@/errors/resource';
 import { ValidationError } from '@/errors/validation';
+import { globalRepository } from '@/globals/repository';
 import { makeGlobalsConfig } from './globals-config';
 
 const api = currentServices.globals;
@@ -79,6 +80,24 @@ describe('createStaged', () => {
     it('refuses a second staged change for the same locale', async () => {
         await saveSite();
         await api.createStaged({ key: 'site' });
+
+        await expect(api.createStaged({ key: 'site' })).rejects.toThrow(
+            StagedChangeExistsError
+        );
+    });
+
+    it('names the staged change when it is gone again by the time the refusal is explained', async () => {
+        await saveSite();
+        // Another create lands after this one checked for a staged change, and
+        // is discarded before the refusal is explained.
+        const { staging } = globalRepository;
+        const findOne = staging.findOne;
+        vi.spyOn(staging, 'findOne').mockImplementationOnce(async (...args) => {
+            const read = await findOne(...args);
+            await api.createStaged({ key: 'site' });
+            return read;
+        });
+        vi.spyOn(globalRepository, 'explainConflict').mockResolvedValueOnce(null);
 
         await expect(api.createStaged({ key: 'site' })).rejects.toThrow(
             StagedChangeExistsError

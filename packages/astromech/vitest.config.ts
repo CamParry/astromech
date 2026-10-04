@@ -94,7 +94,7 @@ export default defineConfig({
                     lines: 99,
                     functions: 99,
                     branches: 93,
-                    statements: 97,
+                    statements: 98,
                 },
                 'src/cron/**': { lines: 89, functions: 94, branches: 71, statements: 89 },
                 'src/database/**': {

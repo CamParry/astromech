@@ -235,7 +235,11 @@ export type ContentRepository<
          * the guard names with `data` over it, and stamp the resource row, while
          * the guard's conditions hold; null when they do not, with nothing written.
          */
-        create(ref: ContentRef, data: ContentWrite, guard: WriteGuard): Promise<R | null>;
+        create(
+            ref: { id: string; locale: string },
+            data: ContentWrite,
+            guard: WriteGuard
+        ): Promise<R | null>;
     };
 
     staging: {
