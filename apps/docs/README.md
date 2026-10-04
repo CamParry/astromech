@@ -37,8 +37,8 @@ This is a living reference; it grows as the project does.
   equivalent.
 - [deployment/caching.md](deployment/caching.md): what Astromech's own
   routes tell Astro's route cache and a CDN: the admin and API responses no
-  cache stores, each media response's lifetime and cache tag, and what a
-  prerendered page can read.
+  cache stores, why a preview is never stored, each media response's lifetime
+  and cache tag, and what a prerendered page can read.
 - [configuration/trust-proxy.md](configuration/trust-proxy.md) — where the
   connecting address of a request comes from, the sign-in rate limits and
   session record that use it, the `security.trustProxy` option for a site

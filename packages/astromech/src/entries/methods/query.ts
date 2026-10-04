@@ -17,7 +17,8 @@ import { entryReadKeys, entrySchema } from '../schema';
 /**
  * `type` names one type or several. Paginated unless `limit` is `'all'`, and
  * filtered to the caller's visibility shape; a `previewToken` reads past the
- * publish gate. Asking for `trashed` rows in the public shape throws.
+ * publish gate, and no cache may store the response to the request it serves.
+ * Asking for `trashed` rows in the public shape throws.
  */
 export const queryEntries = defineServiceMethod({
     summary: 'List entries.',
@@ -43,7 +44,10 @@ export const queryEntries = defineServiceMethod({
         const shape: VisibilityShape = full ? 'full' : 'public';
         const now = new Date();
 
-        if (params.previewToken) return queryPreviewEntries(config, params);
+        if (params.previewToken) {
+            ctx.noStore();
+            return queryPreviewEntries(config, params);
+        }
         if (trashed === true && shape === 'public') throw new PublicTrashedReadError();
         const references = where?.['references'];
         if (references !== undefined) assertReferencesFilter(references, types, config);

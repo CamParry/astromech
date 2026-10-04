@@ -8,6 +8,7 @@ import type { AstromechConfig, SchedulerDriver } from '@/types/index';
 import type { APIContext } from 'astro';
 import { createTestDb, makeBootConfig } from '@tests/harness';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { currentServices } from '@/app-context/services';
 import { getAstromech } from '@/astromech';
 import { clearEnvSource, setEnvSource } from '@/env';
 import { onRequest } from '@/integrations/astro/middleware';
@@ -231,5 +232,70 @@ describe('caching on Astromech routes', () => {
 
         expect(cache.calls).toBe(0);
         expect(response.headers.get('Cache-Control')).toBe('private, no-store');
+    });
+});
+
+describe('caching on a page that read with a preview token', () => {
+    beforeEach(() => {
+        setEnvSource({ NODE_ENV: 'production', BETTER_AUTH_SECRET: SECRET });
+    });
+
+    /** A page that reads as `read` does while it renders, after a `routeRules` entry set a lifetime. */
+    function pageReading(cache: RouteCache, read: () => Promise<unknown>) {
+        return async (): Promise<Response> => {
+            cache.set({ maxAge: 3600 });
+            await read();
+            return new Response('page');
+        };
+    }
+
+    it.each([
+        [
+            'get',
+            () =>
+                currentServices.entries.get({
+                    type: 'post',
+                    id: 'any',
+                    previewToken: 'token-from-the-query-string',
+                }),
+        ],
+        [
+            'query',
+            () =>
+                currentServices.entries.query({
+                    type: 'post',
+                    previewToken: 'token-from-the-query-string',
+                }),
+        ],
+    ])(
+        'turns the route cache off and sends private, no-store after a %s',
+        async (_label, read) => {
+            const cache = routeCache();
+
+            const response = await responseOf(
+                onRequest(
+                    context({
+                        path: '/blog/post?preview=token-from-the-query-string',
+                        cache,
+                    }),
+                    pageReading(cache, read)
+                )
+            );
+
+            expect(cache.disabled).toBe(true);
+            expect(response.headers.get('Cache-Control')).toBe('private, no-store');
+        }
+    );
+
+    it('leaves the cache to the site for a read without a preview token', async () => {
+        const cache = routeCache();
+        const read = () => currentServices.entries.query({ type: 'post' });
+
+        const response = await responseOf(
+            onRequest(context({ path: '/blog', cache }), pageReading(cache, read))
+        );
+
+        expect(cache.disabled).toBe(false);
+        expect(response.headers.get('Cache-Control')).toBeNull();
     });
 });

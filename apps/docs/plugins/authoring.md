@@ -1412,7 +1412,10 @@ left undescribed and the server logs a warning.
 plugin's own layer over it:
 
 - **The app context.** `db` (the query handle), `user` and `role` (who is
-  calling, both `null` outside a request), `clientAddress`, `config`
+  calling, both `null` outside a request), `clientAddress`, `noStore()` (call
+  it from a read whose answer belongs to this caller alone, so no cache stores
+  the page that made it; see
+  [../deployment/caching.md](../deployment/caching.md)), `config`
   ([the projection above](#runtime-identity)), the content services `entries`,
   `globals`, `media`, `users` and `notifications`
   ([reaching them](#reaching-the-content-services)), `notify`, `email` and

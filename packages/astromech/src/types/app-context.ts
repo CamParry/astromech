@@ -41,6 +41,12 @@ export type AppContext = {
      * meter traffic by, never proof of who the caller is.
      */
     clientAddress?: string | undefined;
+    /**
+     * Mark the response to this context's request as one no cache may store,
+     * because it answers this caller alone, as a preview read does. Does
+     * nothing outside an HTTP request.
+     */
+    noStore: () => void;
     entries: EntriesService;
     globals: GlobalsService;
     media: MediaService;

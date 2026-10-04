@@ -17,6 +17,18 @@ route has rendered, so a broad `routeRules` pattern such as `'/**'` cannot
 cache them. It makes no cache call when your Astro config names no cache
 provider.
 
+## A preview is never stored
+
+A page that reads an entry with a `previewToken` (`entries.get` or
+`entries.query`) answers whoever holds the token, and the token travels in the
+query string, which is part of every cache key. So after such a page renders,
+the middleware calls `cache.set(false)` and sends
+`Cache-Control: private, no-store`, whatever lifetime the page or your
+`routeRules` set. A plugin method marks its own reads the same way, with
+`ctx.noStore()`. A read only counts once Astro has the response, so make the
+preview read in the page's frontmatter, not in a component Astro streams after
+the response has started.
+
 ## Media
 
 The media route serves public files, so its responses may be stored, each for

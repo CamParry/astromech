@@ -4,6 +4,7 @@
  * because Workers forbid I/O outside a request context.
  */
 
+import type { RequestScope } from '@/request-scope/request-scope';
 import type { MiddlewareHandler } from 'astro';
 import { rawConfig } from 'virtual:astromech/config';
 import { createAstromech } from '@/astromech';
@@ -24,14 +25,16 @@ export const onRequest: MiddlewareHandler = async (context, next) => {
     // what starts the in-process ticker. A no-op on Workers.
     await app.startScheduler();
 
-    const response = await runInRequestScope({ request: context.request }, () => next());
+    const scope: RequestScope = { request: context.request };
+    const response = await runInRequestScope(scope, () => next());
 
     const route = resolveInjectedRoute(app.config, context.url.pathname);
-    if (route === undefined) return response;
+    if (route === undefined && scope.noStore !== true) return response;
     // After the page, since a later `set()` would undo it. Astro warns on any
     // call when the site configures no cache provider.
     if (context.cache.enabled) context.cache.set(false);
-    // A media file is public and keeps the media route's own lifetime.
+    // A media file is public and keeps the media route's own lifetime; a page
+    // that read with a preview token answers one visitor.
     return route === 'media' ? response : withCacheControl(response, PRIVATE_NO_STORE);
 };
 
