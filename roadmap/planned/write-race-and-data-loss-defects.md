@@ -108,7 +108,14 @@ item 8 proposed, would protect libsql only.
       the class. A user or media update whose row is deleted after the read,
       sending unchanged fields, answers 500 (`it.fails` in
       `packages/astromech/tests/users/last-admin.test.ts`).
-- [ ] **OpenAPI coverage** as decided above.
+- [x] **OpenAPI coverage** as decided above (`DECISIONS.md`, "The OpenAPI
+      document covers every mounted route but the internal ones"). The
+      cross-type `POST /entries/query` and `POST /entries/count` were already
+      table rows.
+- [ ] **Refused auth routes in the document.** Better Auth's generator lists
+      every endpoint, so the document shows `/auth/sign-up/email`, which
+      always answers 403, and `/auth/change-email`, which is off. Decide
+      whether `transport/http/routes/auth-document.ts` leaves them out.
 - [x] **Plugin versions.** Each `packages/plugins/*/src/index.ts` reads its
       version from its `package.json` with a JSON import, which tsup inlines,
       and the plugin contract

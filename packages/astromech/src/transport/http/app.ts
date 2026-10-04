@@ -223,7 +223,7 @@ export function createHttpApp(config: ResolvedConfig): OpenAPIHono<AppEnv> {
 
     // Not `app.doc`: the document adds the plugin methods, and `app.doc` answers
     // a failure as `{}` with no log where this one reaches `onError`.
-    app.get(`${api}/openapi.json`, (c) => c.json(openApiDocument(app, api)));
+    app.get(`${api}/openapi.json`, async (c) => c.json(await openApiDocument(app, api)));
 
     if (resolveNodeEnv() === 'development') {
         app.get(`${api}/docs`, swaggerUI({ url: `${api}/openapi.json` }));

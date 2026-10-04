@@ -50,8 +50,8 @@ export function describePluginContract(
             expect(openInputObjects(inputs)).toEqual([]);
         });
 
-        it('documents every method in the OpenAPI document without a warning', () => {
-            const { document, warnings } = servedDocument([definition]);
+        it('documents every method in the OpenAPI document without a warning', async () => {
+            const { document, warnings } = await servedDocument([definition]);
             const documented = methods.filter(
                 (method) =>
                     document.paths[`/plugins/${key}/${method}`]?.['post'] !== undefined
