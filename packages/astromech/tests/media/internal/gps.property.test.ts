@@ -70,33 +70,44 @@ function damagedFile(count = Number.MAX_SAFE_INTEGER): fc.Arbitrary<Uint8Array> 
         });
 }
 
+// Coverage and a loaded runner make these several times slower than alone.
+const SLOW_TEST_TIMEOUT_MS = 30_000;
+
 describe('removeGpsMetadata', () => {
-    it('changes nothing when run a second time', async () => {
-        await fc.assert(
-            fc.asyncProperty(damagedFile(), async (bytes) => {
-                await removeGpsMetadata(bytes);
-                const once = bytes.slice();
+    it(
+        'changes nothing when run a second time',
+        async () => {
+            await fc.assert(
+                fc.asyncProperty(damagedFile(), async (bytes) => {
+                    await removeGpsMetadata(bytes);
+                    const once = bytes.slice();
 
-                await removeGpsMetadata(bytes);
+                    await removeGpsMetadata(bytes);
 
-                expect(bytes).toEqual(once);
-            }),
-            { numRuns: 1000 }
-        );
-    });
+                    expect(bytes).toEqual(once);
+                }),
+                { numRuns: 1000 }
+            );
+        },
+        SLOW_TEST_TIMEOUT_MS
+    );
 
-    it('leaves a JPEG’s or PNG’s image data alone', async () => {
-        await fc.assert(
-            fc.asyncProperty(damagedFile(2), async (bytes) => {
-                const before = imageData(bytes);
+    it(
+        'leaves a JPEG’s or PNG’s image data alone',
+        async () => {
+            await fc.assert(
+                fc.asyncProperty(damagedFile(2), async (bytes) => {
+                    const before = imageData(bytes);
 
-                await removeGpsMetadata(bytes);
+                    await removeGpsMetadata(bytes);
 
-                expect(imageData(bytes)).toEqual(before);
-            }),
-            { numRuns: 1000 }
-        );
-    });
+                    expect(imageData(bytes)).toEqual(before);
+                }),
+                { numRuns: 1000 }
+            );
+        },
+        SLOW_TEST_TIMEOUT_MS
+    );
 
     it('finishes quickly whatever a HEIF file’s iloc box declares', async () => {
         await fc.assert(

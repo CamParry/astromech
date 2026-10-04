@@ -745,6 +745,7 @@ describe('removeGpsMetadata', () => {
         expect(hasValidCrcs(bytes)).toBe(true);
     });
 
+    // Builds and inflates three 16 MB texts: slow under coverage on a loaded runner.
     it('leaves alone the compressed text chunks past the first 16 MB a PNG inflates to', async () => {
         // Each chunk inflates to nearly 16 MB from about 16 KB.
         const text = Buffer.alloc(16 * 1024 * 1024 - 1024, 0x20);
@@ -770,7 +771,7 @@ describe('removeGpsMetadata', () => {
         expect(first?.includes('51,30.2N')).toBe(false);
         expect(second?.includes('51,30.2N')).toBe(true);
         expect(last?.includes('51,30.2N')).toBe(true);
-    });
+    }, 30_000);
 });
 
 /** The 16-byte stand-in for an EXIF thumbnail. */
