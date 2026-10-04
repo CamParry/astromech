@@ -20,7 +20,7 @@ import { assertLocalDatabase, loadConfig, withApplication } from '@/transport/cl
 function configWith(db: Partial<DatabaseDriver>): AstromechConfig {
     return {
         db: {
-            type: 'test',
+            name: 'test',
             getInstance: () => {
                 throw new Error('getInstance must not be called by the guard');
             },
@@ -42,13 +42,13 @@ afterEach(() => {
 });
 
 describe('assertLocalDatabase', () => {
-    it('refuses a remote driver, naming the type and --allow-remote', async () => {
+    it('refuses a remote driver, naming the driver and --allow-remote', async () => {
         const exit = catchExit();
         const error = vi.spyOn(console, 'error').mockImplementation(() => undefined);
 
         await expect(
             assertLocalDatabase(
-                configWith({ type: 'libsql', isRemote: () => true }),
+                configWith({ name: 'libsql', isRemote: () => true }),
                 false
             )
         ).rejects.toThrow('exit:1');
@@ -65,7 +65,7 @@ describe('assertLocalDatabase', () => {
 
         await expect(
             assertLocalDatabase(
-                configWith({ type: 'd1', isRemote: () => Promise.resolve(true) }),
+                configWith({ name: 'd1', isRemote: () => Promise.resolve(true) }),
                 false
             )
         ).rejects.toThrow('exit:1');
@@ -76,7 +76,7 @@ describe('assertLocalDatabase', () => {
         const exit = catchExit();
 
         await expect(
-            assertLocalDatabase(configWith({ type: 'd1', isRemote: () => true }), true)
+            assertLocalDatabase(configWith({ name: 'd1', isRemote: () => true }), true)
         ).resolves.toBeUndefined();
         expect(exit).not.toHaveBeenCalled();
     });
@@ -86,7 +86,7 @@ describe('assertLocalDatabase', () => {
 
         await expect(
             assertLocalDatabase(
-                configWith({ type: 'libsql', isRemote: () => false }),
+                configWith({ name: 'libsql', isRemote: () => false }),
                 false
             )
         ).resolves.toBeUndefined();
@@ -131,7 +131,7 @@ describe('loadConfig', () => {
         await writeFile(
             file,
             `export default {
-                db: { type: 'd1', supportsTransactions: false, getInstance: () => ({}) },
+                db: { name: 'd1', supportsTransactions: false, getInstance: () => ({}) },
                 entries: {},
             };`
         );

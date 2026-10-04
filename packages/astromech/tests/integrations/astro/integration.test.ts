@@ -40,7 +40,7 @@ const unused = () => {
 
 export default {
     basePath: '/admin',
-    db: { type: 'test', getInstance: unused },
+    db: { name: 'test', getInstance: unused },
     storage: {
         name: 'test-noop',
         put: async () => undefined,

@@ -43,7 +43,7 @@ vi.mock('@/app-context/services', async (importOriginal) => {
 });
 
 const driver: DatabaseDriver = {
-    type: 'test',
+    name: 'test',
     getInstance() {
         throw new Error('not called');
     },

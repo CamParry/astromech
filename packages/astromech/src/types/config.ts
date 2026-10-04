@@ -27,7 +27,8 @@ export type DbDump = {
 };
 
 export type DatabaseDriver = {
-    type: string;
+    /** The driver's name, as `libsql` or `d1`. */
+    name: string;
     getInstance(): Kysely<DB>;
     /**
      * Whether the driver supports interactive transactions (`BEGIN`/`COMMIT`

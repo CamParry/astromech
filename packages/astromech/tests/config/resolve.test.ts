@@ -11,7 +11,7 @@ import { resolveConfig } from '@/config/resolve';
 import { block, blocks, group, repeater, tab, tabs, text, tree } from '@/fields/builder';
 
 const driver: DatabaseDriver = {
-    type: 'test',
+    name: 'test',
     getInstance() {
         throw new Error('not called');
     },

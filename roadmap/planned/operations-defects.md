@@ -56,4 +56,4 @@ a failing test first.
 - [x] A remote guard that means something on D1, and docs for reaching
       production D1 from the CLI.
 - [x] The dashboard checks read permission and makes one request.
-- [ ] `name` on the database driver.
+- [x] `name` on the database driver.

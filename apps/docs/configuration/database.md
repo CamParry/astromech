@@ -165,9 +165,10 @@ writes the migration files, and none of that touches the database.
 
 ```ts
 type DatabaseDriver = {
-    type: string;
+    name: string;
     getInstance(): Kysely<DB>;
     supportsTransactions?: boolean;
+    isRemote?(): boolean | Promise<boolean>;
     dump?(): Promise<DbDump>;
     restore?(source, opts): Promise<void>;
 };
@@ -183,8 +184,15 @@ better-auth queries through this same instance with its plugins stripped
 (`withoutPlugins()`), because it names its own snake_case columns. One instance
 serves the whole CMS, so a driver needs nothing extra to back auth.
 
+`name` identifies the driver in messages, as it does for storage, image, email
+and scheduler drivers.
+
 `supportsTransactions` is how a driver says it cannot do interactive
 transactions. Absent or `true` means it can.
+
+`isRemote` says whether the driver reaches a database your machine does not
+own. The CLI refuses such a database unless a command passes `--allow-remote`;
+a driver that omits it counts as local.
 
 `dump` and `restore` are optional and feature-detected by consumers. Omit them
 rather than throwing — the backups plugin reads their presence as a capability

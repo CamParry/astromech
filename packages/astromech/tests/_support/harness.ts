@@ -133,7 +133,7 @@ export function resetRuntime(): void {
  * which `setupTestConfig()` registers in its place.
  */
 const testDatabase: DatabaseDriver = {
-    type: 'test',
+    name: 'test',
     getInstance(): Kysely<DB> {
         throw new Error('the test config has no database of its own');
     },

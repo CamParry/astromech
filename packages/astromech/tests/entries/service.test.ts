@@ -924,7 +924,7 @@ describe('the trash is read-only', () => {
         const base = await createTestDb();
         const resolved = setupTestConfig({
             ...makeTestConfig(),
-            db: { type: 'no-tx', getInstance: () => base, supportsTransactions: false },
+            db: { name: 'no-tx', getInstance: () => base, supportsTransactions: false },
         });
         registerTestPlugins(
             [onceBeforeUpdate((id) => api.trash({ type: 'post', id }))],

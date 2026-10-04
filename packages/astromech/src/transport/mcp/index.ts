@@ -81,7 +81,7 @@ export async function runMcpServer(
             `confirm: ${describeConfirm(confirm)}`
     );
     console.error(
-        `[astromech mcp] database: ${db?.type ?? 'unknown'} ` +
+        `[astromech mcp] database: ${db?.name ?? 'unknown'} ` +
             `(${(await db?.isRemote?.()) === true ? 'remote' : 'local'})`
     );
 

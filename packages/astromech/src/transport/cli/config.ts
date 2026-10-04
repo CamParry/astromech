@@ -91,7 +91,7 @@ export async function assertLocalDatabase(
     if ((await config.db.isRemote?.()) !== true) return;
 
     log.error(
-        `refusing to open the "${config.db.type}" database: it is remote, ` +
+        `refusing to open the "${config.db.name}" database: it is remote, ` +
             'and a CLI command run against a remote database writes to whatever it ' +
             'is pointed at. Re-run with --allow-remote if that is what you intend.'
     );

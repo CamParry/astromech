@@ -14,7 +14,7 @@ import { resolveConfig } from '@/config/resolve';
 import { cloudflareImages } from '@/media/serving/image/drivers/cloudflare';
 
 const dbDriver: DatabaseDriver = {
-    type: 'test',
+    name: 'test',
     getInstance() {
         throw new Error('not called');
     },
