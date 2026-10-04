@@ -1,5 +1,7 @@
 import type { ImageFormat } from '@/media/serving/image/url';
 import type { ImageDriver, ImageSource, StorageDriver } from '@/types/index';
+import { readFile } from 'node:fs/promises';
+import { join } from 'node:path';
 import {
     createTestDb,
     createTestStorage,
@@ -314,6 +316,43 @@ describe('handleMediaRequest', () => {
             `/_media/${media.id}.webp?w=320&f=webp&v=${version}`
         );
         expect(fakeDriver.calls).toEqual([]);
+    });
+
+    it('serves the original, without transforming, a type the driver cannot decode', async () => {
+        const undecodable = makeFakeImageDriver();
+        setupTestConfig({
+            ...makeTestConfig(),
+            storage,
+            media: {
+                image: {
+                    driver: {
+                        ...undecodable.driver,
+                        canTransform: async (type) => type !== 'image/heic',
+                    },
+                    widths: [320, 640],
+                    avif: true,
+                },
+            },
+        });
+        const heic = await readFile(
+            join(import.meta.dirname, 'image', 'fixtures', 'grid-1200x800.heic')
+        );
+        const media = await mediaService.upload({
+            file: new File([new Uint8Array(heic)], 'photo.heic', { type: 'image/heic' }),
+        });
+        const version = media.metadata?.version ?? '';
+
+        const res = await handleMediaRequest({
+            id: media.id,
+            ext: 'heic',
+            search: new URLSearchParams({ w: '320', f: 'webp', v: version }),
+            origin: 'http://x',
+        });
+
+        expect(res.status).toBe(200);
+        expect(res.headers.get('Content-Type')).toBe('image/heic');
+        expect(await readBody(res)).toEqual(new Uint8Array(heic));
+        expect(undecodable.calls).toEqual([]);
     });
 
     it('7. non-optimisable type → serves original, transform not called', async () => {

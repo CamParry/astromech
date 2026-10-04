@@ -73,6 +73,25 @@ describe('sharp driver — transform avif', () => {
     });
 });
 
+describe('sharp driver — canTransform', () => {
+    it('accepts HEIC only when its libvips build can decode HEVC', async () => {
+        // libvips lists the .heic suffix only when libheif has an HEVC decoder.
+        const decodesHevc =
+            sharpLib.format.heif.input.fileSuffix?.includes('.heic') ?? false;
+        const driver = sharp();
+
+        expect(await driver.canTransform?.('image/heic')).toBe(decodesHevc);
+        expect(await driver.canTransform?.('image/heif')).toBe(decodesHevc);
+    });
+
+    it.each(['image/jpeg', 'image/png', 'image/webp', 'image/avif', 'image/tiff'])(
+        'accepts %s',
+        async (type) => {
+            expect(await sharp().canTransform?.(type)).toBe(true);
+        }
+    );
+});
+
 describe('sharp driver — cache key', () => {
     it('names the encoder and the quality of each format', () => {
         expect(sharp().cacheKey).toBe('sharp-avif50-webp78');

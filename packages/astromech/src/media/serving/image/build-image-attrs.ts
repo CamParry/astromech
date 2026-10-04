@@ -18,6 +18,11 @@ export type ImageAttrsInput = {
     height?: number | null;
     version?: string | null;
     blurhash?: string | null;
+    /**
+     * Whether the image driver can make variants of this file (`canTransformImage`,
+     * server-side). False gives a bare `<img>`; absent, an optimisable type can.
+     */
+    transformable?: boolean;
     /** Whether the image is animated (`metadata.animated`), which leaves out the AVIF source. */
     animated?: boolean | null;
     /**
@@ -77,7 +82,10 @@ export function buildImageAttrs(
     const version = input.version;
 
     const optimisable =
-        isOptimisableImage(input.mimeType) && version != null && ctx.widths.length > 0;
+        isOptimisableImage(input.mimeType) &&
+        input.transformable !== false &&
+        version != null &&
+        ctx.widths.length > 0;
 
     if (!optimisable || version == null) {
         return bareImg;

@@ -3,8 +3,9 @@
  * Astromech responsive image component.
  *
  * Renders a <picture> with avif/webp <source> elements when the media item is
- * an optimisable raster image with a version; falls back to a bare <img> for
- * SVG, video, PDF, GIF, or images without a version.
+ * an optimisable raster image with a version that the image driver can
+ * transform; falls back to a bare <img> for SVG, video, PDF, GIF, or images
+ * without a version.
  *
  * <!-- TODO: blur-up from attrs.blurhash -->
  */
@@ -12,6 +13,7 @@ import type { Media } from '@/types/index';
 import { getConfig } from '@/config/registry';
 import { buildImageAttrs } from './build-image-attrs.js';
 import { getImageConfig } from './registry.js';
+import { canTransformImage } from './transformable.js';
 
 interface Props {
     src: Media;
@@ -41,6 +43,7 @@ const attrs = buildImageAttrs(
         version: src.metadata?.version,
         blurhash: src.metadata?.blurhash,
         animated: src.metadata?.animated,
+        transformable: await canTransformImage(src.mimeType),
         url: src.url,
     },
     { sizes, widths },

@@ -148,6 +148,11 @@ export type ImageDriver = {
         src: ImageSource,
         opts: { width: number; format: ImageFormat }
     ): Promise<{ body: ReadableStream | Uint8Array; contentType: string }>;
+    /**
+     * Whether the driver can make variants of a file of this content type. A
+     * type it cannot is served as the original with no srcset; absent, it can.
+     */
+    canTransform?(contentType: string): Promise<boolean>;
     placeholder?(bytes: Uint8Array): Promise<string | null>;
     cachesVariants?: boolean;
 };

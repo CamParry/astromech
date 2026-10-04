@@ -87,7 +87,8 @@ export function readImageDimensions(bytes: Uint8Array): Dimensions | null {
     }
 }
 
-function normaliseMimeType(mimeType: string): string {
+/** A content type's media type alone, lower-cased, without parameters such as `charset`. */
+export function normaliseMimeType(mimeType: string): string {
     return (mimeType.split(';')[0] ?? '').trim().toLowerCase();
 }
 

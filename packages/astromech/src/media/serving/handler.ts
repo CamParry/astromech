@@ -5,8 +5,8 @@ import { getConfig } from '@/config/registry';
 import { getStorageDriver } from '@/storage/registry';
 import { toBytes } from '@/utilities/bytes';
 import { extOf, originalKey } from '../internal/keys';
-import { isOptimisableImage } from './image/dimensions';
 import { getImageConfig } from './image/registry';
+import { canTransformImage } from './image/transformable';
 import {
     buildMediaUrl,
     buildVariantUrl,
@@ -76,8 +76,8 @@ async function serveMedia(info: MediaRequestInfo): Promise<Response> {
 
     const imageConfig = getImageConfig();
 
-    // No image driver or non-optimisable type — serve original, ignore params
-    if (!imageConfig || !isOptimisableImage(media.mimeType)) {
+    // No image driver, or a type it cannot transform — serve original, ignore params
+    if (!imageConfig || !(await canTransformImage(media.mimeType))) {
         return serveOriginal({
             key,
             mimeType: media.mimeType,

@@ -60,7 +60,7 @@ decoded image, which is what the variants are made from.
 - [x] Every setting that changes a variant's bytes joins its storage key.
 - [x] Placeholders from the upright image; record whether an image has alpha.
 - [x] Animated WebP stays animated on sharp.
-- [ ] HEIC: not resizable on sharp unless the build can decode it.
+- [x] HEIC: not resizable on sharp unless the build can decode it.
 - [x] `size` from the stored bytes.
 - [x] Tests: a rotated JPEG fixture stores upright dimensions; an uploaded
       original with GPS data is served without it.
@@ -78,7 +78,13 @@ decoded image, which is what the variants are made from.
   `media.image.quality` lands (`roadmap/planned/image-optimisation.md`, which
   expects a new URL), the URL needs the setting too, as a focal point's `fp`.
 - **HEIC variants fall back to the original.** The prebuilt sharp cannot decode
-  HEVC, so a HEIC upload records its dimensions but gets no resized variants.
+  HEVC, so a HEIC upload records its dimensions but gets no resized variants
+  and no placeholder, and most browsers cannot show the original. Converting
+  HEIC to JPEG at upload would fix it, but needs a decoder sharp lacks.
+- **The admin's thumbnails do not ask the driver.** `MediaThumb` builds a
+  variant srcset for every image with a version, so a HEIC thumbnail on sharp
+  requests a variant and gets the original back, without an error. The admin
+  config carries no per-type answer from `canTransform`.
 - **Rows uploaded before this work keep swapped dimensions** until their file
   is replaced: nothing rereads the stored originals.
 - **Core sets no upload size limit.** An image is buffered whole to read its
