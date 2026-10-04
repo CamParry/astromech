@@ -280,6 +280,34 @@ describe('PUT /users/:id', () => {
         expect(res.status).toBe(403);
     });
 
+    it('403s a self-edit that changes email, and keeps the email', async () => {
+        const self = await makeUser('self@test.dev', 'Self');
+        const res = await app(roleWith([]), self).request(`/users/${self.id}`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ email: 'taken-over@test.dev' }),
+        });
+        expect(res.status).toBe(403);
+        expect(((await res.json()) as { error: { code: string } }).error.code).toBe(
+            'FORBIDDEN'
+        );
+        expect((await usersService.get({ id: self.id }))?.email).toBe('self@test.dev');
+    });
+
+    it('lets a caller with users:update change their own email', async () => {
+        const self = await makeUser('self@test.dev', 'Self');
+        const res = await app(roleWith(['users:update']), self).request(
+            `/users/${self.id}`,
+            {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ email: 'moved@test.dev' }),
+            }
+        );
+        expect(res.status).toBe(200);
+        expect(((await res.json()) as { data: User }).data.email).toBe('moved@test.dev');
+    });
+
     it('422s an invalid body', async () => {
         const user = await makeUser('a@test.dev', 'Ann');
         const res = await app().request(`/users/${user.id}`, {

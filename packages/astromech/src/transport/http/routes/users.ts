@@ -45,9 +45,9 @@ router.get('/:id', async (c) => {
 });
 
 // PUT /users/:id — bespoke
-// Not in the table: self-access, and a `role` change that still demands
-// `users:update`. The method parses the body and guards the last admin; its
-// input failure is reported under the wire's names, as the table's routes do.
+// Not in the table: self-access, and a `role` or `email` change that still
+// demands `users:update`. The method parses the body and guards the last admin;
+// its input failure is reported under the wire's names, as the table's routes do.
 router.put('/:id', async (c) => {
     const id = c.req.param('id');
     const locale = c.req.query('locale');
@@ -59,11 +59,12 @@ router.put('/:id', async (c) => {
 
     const raw = await c.req.json<unknown>().catch(() => undefined);
     if (raw === undefined) return badRequest(c, 'Invalid JSON body');
-    const changesRole =
-        typeof raw === 'object' &&
-        raw !== null &&
-        (raw as { role?: unknown }).role !== undefined;
-    if (changesRole && !canUpdateUsers) return forbidden(c);
+    const body = typeof raw === 'object' && raw !== null ? raw : {};
+    if (!canUpdateUsers && 'role' in body && body.role !== undefined) return forbidden(c);
+    // A stolen session could change the email and then reset the password, so
+    // self-access cannot change it until the change asks for the password.
+    if (!canUpdateUsers && 'email' in body && body.email !== undefined)
+        return forbidden(c, 'Changing your email requires the "users:update" permission');
 
     try {
         const user = await c.var.ctx.users.update({

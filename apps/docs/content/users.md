@@ -183,8 +183,16 @@ Users have four permissions:
 
 `get` and `update` have a self-access rule beside the permission: a caller
 reading or updating their own user row passes without `users:read` or
-`users:update`. The version methods have no such rule and always need the
-permission, even for the caller's own row.
+`users:update`. The rule covers `name` and `fields` only. A change to the
+caller's own `role` or `email` still needs `users:update`, and without it
+`PUT /api/users/:id` answers 403 `FORBIDDEN`: a stolen session could otherwise
+change the email and then reset the password. The version methods have no such
+rule and always need the permission, even for the caller's own row.
+
+The rule belongs to the REST route. The same method called through the RPC
+route, MCP or a plugin's scoped handle always needs `users:update`. Better
+Auth's own `/api/auth/change-email` route is turned off, and its
+`/api/auth/update-user` refuses an email.
 
 `create` takes an optional `password` of at least eight characters, and with
 one writes the credential account the user signs in with; without one the user
