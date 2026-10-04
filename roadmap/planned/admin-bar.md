@@ -63,12 +63,14 @@ code, but the session carries over. The bar uses that.
     Rejected: the first entry the render read, which a related-posts list can
     get wrong.
 
-- **Never cached.** A response with the bar injected gets
-  `Cache-Control: private, no-store`, so a CDN cannot serve it to a visitor.
-- **Static pages opt in with one `<script>`.** Sign-in sets a cookie scripts can
-  read holding only "signed in"; the script loads the bar only when it is
-  present, so an anonymous visitor makes no request. The same tag serves other
-  frameworks.
+- **Loaded by a script on every page, never rendered by the server**
+  (revised 2026-10-04 for `roadmap/planned/page-caching.md`). On a page-cache
+  hit no middleware runs, so a bar the server injected would either be served
+  to visitors or never appear. Sign-in sets a cookie scripts can read holding
+  only "signed in"; the script loads the bar only when it is present, so an
+  anonymous visitor makes no request, and it finds this page's entry by
+  sending the page's path. The page itself stays the same for every visitor
+  and can be cached. The same tag serves static pages and other frameworks.
 - **Previews** show the bar with "Leave preview". A reviewer with only a preview
   link and no session sees nothing.
 
@@ -80,9 +82,9 @@ code, but the session carries over. The bar uses that.
       Check whether `url` templates carry the locale (`/fr/blog/x`) and match
       it either way (`packages/astromech/src/entries/entry-url.ts`).
 - [ ] Astro: the integration's middleware (`addMiddleware` in
-      `packages/astromech/src/integrations/astro/integration.ts`) injects the
-      tag into HTML responses for a signed-in session with `admin:access` and
-      the preference on, and marks them `private, no-store`.
+      `packages/astromech/src/integrations/astro/integration.ts`) adds the
+      `<script>` to every HTML response; the bar, the permission checks and
+      the preference are resolved from the browser.
 - [ ] The "signed in" cookie, set and cleared with the session, and the
       `<script>` for static pages and other frameworks, documented in
       `apps/docs`.

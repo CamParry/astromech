@@ -10,7 +10,7 @@ after 1.0**, as a first-party plugin once `roadmap/planned/hooks.md` lands.
   **Contentful** and **Storyblok** ship webhooks in core.
 - **Payload** has none: its hooks are code.
 - Static sites on Netlify, Vercel or Cloudflare Pages rebuild from a deploy
-  hook, so a site built ahead of time (`roadmap/proposed/page-caching.md`)
+  hook, so a site built ahead of time (`roadmap/planned/page-caching.md`)
   needs one.
 
 ## Open questions

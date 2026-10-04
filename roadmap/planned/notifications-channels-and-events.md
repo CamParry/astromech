@@ -40,6 +40,9 @@ channels, params, text })` for core, exported for plugins. `channels` is the
   routes in config for an address no user owns, e.g.
   `notifications.routes: [{ channel: 'slack', categories: ['job'] }]`, as
   Laravel's on-demand notifications.
+- **Targets:** a user, a role, everyone, or the users holding a permission
+  (`{ permission: 'entry:post:publish' }`, resolved over roles with the
+  matcher; decided 2026-10-04 for `roadmap/proposed/request-review.md`).
 - **A row stores `type` and `params`**, replacing `title` and `message`. The
   bell renders at read time in the reader's language. Email renders on the
   server at send time in the recipient's language, a route in the site's. Both
@@ -65,7 +68,8 @@ channels, params, text })` for core, exported for plugins. `channels` is the
 ## The work
 
 - [ ] `defineNotification`, `defineNotificationChannel`, the channel registry,
-      and `notify(type, params, target)` resolving recipients, rendering per
+      and `notify(type, params, target)` resolving recipients (including the
+      permission target), rendering per
       channel and delivering after commit.
 - [ ] Replace `title` and `message` with `params` on `notifications`. Run
       `pnpm run db:generate` and hand-apply the change to `apps/demo-cloudflare`'s

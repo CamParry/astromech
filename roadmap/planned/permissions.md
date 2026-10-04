@@ -32,6 +32,10 @@ Paths are under `packages/astromech/src/` unless they name a package.
 - **Permission strings:** `user:`, not `users:`; the full-shape read is per type,
   as globals already are.
 - **Roles** become an array of `defineRole({ slug, name, permissions })`.
+- **A built-in `contributor` role** (WordPress's name; decided 2026-10-04):
+  the editor's permissions without `publish`, so a site can let someone write
+  without publishing. No built-in role lacks `publish` today
+  (`packages/astromech/src/permissions/roles.ts`).
 - **`media.access: 'private'`** requires `media:read` on the media route.
 - **A `public: true` global** is readable anonymously over HTTP.
 - **Write results respect read access**, as Payload's do.
@@ -101,5 +105,6 @@ Groups 1 to 4 change no behaviour.
           (`packages/admin/src/hooks/author-names.ts`), and the audit trail's
           read path uses it. WordPress editors cannot list users either, but
           see author names. Remove the matching `roadmap/backlog.md` item.
+    - [ ] The built-in `contributor` role.
     - [ ] Drop the unused `roles` table: a migration, plus a hand edit to the
           Cloudflare baseline.

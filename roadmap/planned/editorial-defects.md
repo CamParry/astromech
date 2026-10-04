@@ -17,6 +17,14 @@ Found on 2026-10-03 while planning `roadmap/planned/drafts.md`.
   `unpublish` need `publish`, but `update` with `status: 'scheduled'` or
   `'unpublished'` passes with `update`
   (`packages/astromech/src/entries/internal/access.ts`).
+- **Globals publish with `update` alone.** `globals.update` accepts `status`
+  and `publishedAt` (`packages/astromech/src/globals/schema.ts`) and checks
+  only `update` (`packages/astromech/src/globals/methods/update.ts`); the tests
+  cover only the dedicated status routes.
+- **The admin ignores `publish`.** The status select offers every status to
+  everyone (`packages/admin/src/components/entries/publish-panel.tsx`), the
+  new-entry page always shows Publish, and every save sends `status`, so a user
+  without `publish` gets a 403 saving a published entry.
 - **`maxVersions` is never applied**, and **a staged write takes a version that
   is deleted when the staged change is merged or discarded**. Both are fixed by
   `roadmap/planned/history.md`; listed here so they are not fixed twice.
@@ -29,5 +37,7 @@ became live.
 - [ ] The redirects plugin records a redirect only when a published entry's
       live slug changes (on publish, once drafts land).
 - [ ] Redirect paths include the locale prefix.
-- [ ] A status in `update` needs `publish`, as the status methods do.
+- [ ] A status in `update` needs `publish`, as the status methods do, for
+      entries and globals.
+- [ ] The admin offers status changes and Publish only with `publish`.
 - [ ] Tests for both.

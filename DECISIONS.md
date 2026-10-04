@@ -274,6 +274,8 @@ Plugins are the exception. A plugin reaches the database only through `ctx.db`, 
 
 **No GraphQL, multi-site, newsletters or memberships before 1.0** (decided 2026-10-03, from a comparison with ten other CMSs). GraphQL would be a second query language to keep in step with permissions, when an Astro site calls Astromech in process and the typed client (`astromech/fetch`) serves everyone else. Multi-site and multi-tenant change every table's scope and wait until after 1.0. Newsletters and memberships, which Ghost builds in, are products of their own that hosted services already provide. Rejected for 1.0: GraphQL (Payload, Directus, Contentful), multi-site (WordPress Multisite, Craft) and Ghost's newsletters and memberships.
 
+**Any change to live content clears the whole page cache** (decided 2026-10-04, `roadmap/planned/page-caching.md`). Astromech tags every response it serves through Astro's route cache with one tag and clears it after any write that changes what a public read returns; the site sets lifetimes with `routeRules`. Ghost clears everything (`/*`) whenever published content changes. Rejected: tags per entry, type and query (EmDash), and WordPress cache plugins' lists of pages to clear (Hummingbird leaves the home page, WP Rocket any page outside its list), which miss pages that show the changed content, such as a home-page list or a related-posts block. The cost, every page rendering again after a publish, is accepted for 1.0; targeted tags can come later without changing the site-facing API.
+
 ## Toolchain
 
 **The Node floor is 22.13**, in every published package's `engines`, and CI tests the floor and the Active LTS. Rejected: an unverified `>=20`, and inheriting the floor from peer dependencies.

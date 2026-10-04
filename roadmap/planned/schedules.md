@@ -42,12 +42,19 @@ proposal.
 - **A manual publish or unpublish cancels that locale's pending schedules.**
 - **The run re-checks the creator's `publish` permission** and records who ran
   it; a failure is logged and the schedule kept.
-- Caches are cleared when a schedule runs (`roadmap/proposed/page-caching.md`).
+- **A future `publishedAt` no longer hides a published row** (decided
+  2026-10-04). Going live later is a publish schedule; `publishedAt` is the
+  date shown. Today such a row goes live with no write, so nothing clears the
+  page cache. Revise `DECISIONS.md`, "One rule decides the `publishedAt` a
+  write stores", when this lands.
+- The page cache is cleared when a schedule runs
+  (`roadmap/planned/page-caching.md`).
 
 ## The work
 
 - [ ] The schedules table, with `pnpm run db:generate` and the Cloudflare
-      baseline hand-applied; migrate rows with status `scheduled`; drop the
+      baseline hand-applied; migrate rows with status `scheduled`, and
+      published rows with a future `publishedAt`, into schedules; drop the
       status.
 - [ ] Schedule, reschedule and cancel methods; the cron job reads schedules.
 - [ ] The admin: publish and unpublish times in the publish panel, the notice
