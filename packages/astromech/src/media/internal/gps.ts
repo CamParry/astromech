@@ -53,8 +53,11 @@ const MAX_KEYWORD_LENGTH = 79;
 const MAX_NAMESPACE_URI_LENGTH = 256;
 /** How many bytes are turned into a string at a time, to stay within the engine's argument limit. */
 const DECODE_SLICE = 8192;
-/** The most bytes the compressed text chunks of one PNG inflate to, together. */
-const MAX_INFLATED_BYTES = 16 * 1024 * 1024;
+/**
+ * The most bytes the compressed text chunks of one PNG inflate to, together.
+ * A real XMP packet or raw profile is well under 1 MB.
+ */
+const MAX_INFLATED_BYTES = 2 * 1024 * 1024;
 /** The most spaces added to the end of a text to make it compress to the length it had. */
 const MAX_TRAILING_SPACES = 8;
 /** The most data bytes one stored deflate block holds. */
@@ -378,15 +381,27 @@ function removeFromHeif(view: DataView, bytes: Uint8Array): void {
     const items = readMetadataItems(view, bytes, iinf);
     if (items.size === 0) return;
     const idat = findBox(view, meta.start + 4, meta.end, IDAT);
+    const xmp: Range[] = [];
+    const exif: Range[] = [];
+    for (const [id, range] of readItemLocations(view, iloc, idat, items)) {
+        if (range.start < 0 || range.end > bytes.length) continue;
+        (items.get(id) === 'xmp' ? xmp : exif).push(range);
+    }
 
-    for (const [id, { start, end }] of readItemLocations(view, iloc, idat, items)) {
-        if (start < 0 || end > bytes.length) continue;
-        if (items.get(id) === 'xmp') {
-            blankXmpGps(bytes, start, end);
-        } else if (start + 4 <= end) {
-            // An Exif item opens with the offset from after itself to the TIFF header.
-            removeFromExif(view, bytes, start + 4 + view.getUint32(start), end);
-        }
+    // Many items may share bytes, so each byte of XMP is read once.
+    const merged = mergeRanges(xmp);
+    const prefixes = readLocationPrefixes(bytes, merged);
+    for (const { start, end } of merged) blankXmpGps(bytes, start, end, prefixes);
+
+    // An Exif item is read only inside its own bytes, so skipping each one that
+    // overlaps an item already read reads each byte about once.
+    exif.sort((a, b) => a.start - b.start || b.end - a.end);
+    let readTo = 0;
+    for (const { start, end } of exif) {
+        if (start < readTo || start + 4 > end) continue;
+        readTo = end;
+        // An Exif item opens with the offset from after itself to the TIFF header.
+        removeFromExif(view, bytes, start + 4 + view.getUint32(start), end);
     }
 }
 

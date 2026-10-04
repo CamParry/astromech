@@ -448,6 +448,89 @@ describe('removeGpsMetadata', () => {
         expect(bytes).toEqual(original);
     });
 
+    it('blanks the GPS values in an XMP packet that 1000 HEIF items share, quickly', async () => {
+        // 200 KB of GPS elements with no end tag after the packet, read again by each item.
+        const packet = latin1(xmp + '<exif:GPSA>'.repeat(18_000));
+        const bytes = heifWithItems('mime', packet, sharedExtents(1000, packet));
+
+        const started = performance.now();
+        await removeGpsMetadata(bytes);
+
+        expect(performance.now() - started).toBeLessThan(3000);
+        const text = Buffer.from(bytes).toString('latin1');
+        expect(text).not.toContain('51,30.2N');
+        expect(text).not.toContain('0,7.0W');
+        expect(text).toContain('<dc:rights>Example Rights</dc:rights>');
+    }, 30_000);
+
+    it('removes the GPS IFD from an EXIF block that 10000 HEIF items share, quickly', async () => {
+        // IFD0 holds the GPS pointer and 65534 other entries, read again by each item.
+        const count = 65535;
+        const gpsIfd = 8 + 2 + count * 12 + 4;
+        const tiff = new Uint8Array(gpsIfd + 2 + 12 + 4 + 24);
+        const view = new DataView(tiff.buffer);
+        tiff.set(latin1('MM\0*'));
+        view.setUint32(4, 8);
+        view.setUint16(8, count);
+        view.setUint16(10, TAG_GPS_IFD);
+        view.setUint16(12, 4);
+        view.setUint32(14, 1);
+        view.setUint32(18, gpsIfd);
+        for (let i = 1; i < count; i++) {
+            view.setUint16(10 + i * 12, TAG_MODEL);
+            view.setUint16(10 + i * 12 + 2, 3);
+            view.setUint32(10 + i * 12 + 4, 1);
+        }
+        // The GPS IFD: one GPSLatitude entry, whose three rationals follow it.
+        view.setUint16(gpsIfd, 1);
+        view.setUint16(gpsIfd + 2, 0x0002);
+        view.setUint16(gpsIfd + 4, 5);
+        view.setUint32(gpsIfd + 6, 3);
+        view.setUint32(gpsIfd + 10, gpsIfd + 18);
+        LATITUDE.forEach((value, i) => view.setUint32(gpsIfd + 18 + i * 4, value));
+        // An Exif item opens with the offset from after itself to the TIFF header.
+        const payload = concat(u32(6), latin1('Exif\0\0'), tiff);
+        const bytes = heifWithItems('Exif', payload, sharedExtents(10_000, payload));
+        expect(holdsLatitude(bytes)).toBe(true);
+
+        const started = performance.now();
+        await removeGpsMetadata(bytes);
+
+        expect(performance.now() - started).toBeLessThan(3000);
+        expect(holdsLatitude(bytes)).toBe(false);
+        const tags = ifd0Tags(bytes.subarray(bytes.length - payload.length + 4));
+        expect(tags).toHaveLength(count - 1);
+        expect(tags).not.toContain(TAG_GPS_IFD);
+    }, 30_000);
+
+    it('finishes quickly on 3000 HEIF EXIF items whose IFD0s overlap, two bytes apart', async () => {
+        // Each item is its own TIFF header, pointing into one run of 0xff bytes,
+        // which reads as an IFD0 of 65535 entries wherever it starts.
+        const count = 3000;
+        const headers = new Uint8Array(count * 12);
+        const view = new DataView(headers.buffer);
+        for (let i = 0; i < count; i++) {
+            const at = i * 12;
+            // A 0 offset to the TIFF header, then the header, its IFD0 2 * i bytes into the run.
+            headers.set(latin1('MM\0*'), at + 4);
+            view.setUint32(at + 8, headers.length + 2 * i - (at + 4));
+        }
+        const run = new Uint8Array(65535 * 12 + 2 * count + 16).fill(0xff);
+        const payload = concat(headers, run);
+        const extents = Array.from({ length: count }, (_, i) => ({
+            offset: i * 12,
+            length: payload.length - i * 12,
+        }));
+        const bytes = heifWithItems('Exif', payload, extents);
+        const original = bytes.slice();
+
+        const started = performance.now();
+        await removeGpsMetadata(bytes);
+
+        expect(performance.now() - started).toBeLessThan(3000);
+        expect(bytes).toEqual(original);
+    }, 30_000);
+
     it('blanks the values of ImageMagick’s exif:GPS text chunks and keeps the others', async () => {
         const bytes = withPngChunks(await plainPng(), [
             pngChunk('tEXt', 'exif:GPSLatitude\0', latin1('51/1,30/1,1234/100')),
@@ -573,10 +656,10 @@ describe('removeGpsMetadata', () => {
         ['no end tag', (i: number) => `<exif:GPS${i}>v`],
         ['no closing bracket', (i: number) => `<exif:GPS${i} `],
     ])(
-        'blanks the GPS values in an XMP packet after 50000 GPS elements with %s, quickly',
+        'blanks the GPS values in an XMP packet after 200000 GPS elements with %s, quickly',
         async (_, element) => {
             const packet =
-                Array.from({ length: 50_000 }, (_, i) => element(i)).join('') +
+                Array.from({ length: 200_000 }, (_, i) => element(i)).join('') +
                 '<exif:GPSLatitude>51,30.2N</exif:GPSLatitude>';
             const bytes = withPngChunks(await plainPng(), [
                 pngChunk('iTXt', 'XML:com.adobe.xmp\0\0\0\0\0', latin1(packet)),
@@ -745,10 +828,10 @@ describe('removeGpsMetadata', () => {
         expect(hasValidCrcs(bytes)).toBe(true);
     });
 
-    // Builds and inflates three 16 MB texts: slow under coverage on a loaded runner.
-    it('leaves alone the compressed text chunks past the first 16 MB a PNG inflates to', async () => {
-        // Each chunk inflates to nearly 16 MB from about 16 KB.
-        const text = Buffer.alloc(16 * 1024 * 1024 - 1024, 0x20);
+    // Builds and inflates three 2 MB texts: slow under coverage on a loaded runner.
+    it('leaves alone the compressed text chunks past the first 2 MB a PNG inflates to', async () => {
+        // Each chunk inflates to nearly 2 MB from about 2 KB.
+        const text = Buffer.alloc(2 * 1024 * 1024 - 1024, 0x20);
         text.write(' exif:GPSLatitude="51,30.2N" ', 0, 'latin1');
         const chunk = pngChunk(
             'zTXt',
@@ -937,6 +1020,55 @@ function heifWithExifItem({
     if (method === 1) return concat(ftyp, meta(0));
     const offset = ftyp.length + meta(0).length + 8;
     return concat(ftyp, meta(offset), box('mdat', payload));
+}
+
+/**
+ * A HEIF file of items of `type`, one for each of `extents`, which the `iloc`
+ * box places in `payload` in an `mdat` box. A `mime` item is declared as uncompressed XMP.
+ */
+function heifWithItems(
+    type: 'Exif' | 'mime',
+    payload: Uint8Array,
+    extents: { offset: number; length: number }[]
+): Uint8Array {
+    const ids = extents.map((_, i) => i + 1);
+    // An empty item name, then for XMP the content type, each ending in 0.
+    const names = latin1(type === 'mime' ? '\0application/rdf+xml\0' : '\0');
+    const ftyp = box('ftyp', latin1('heic'), u32(0), latin1('mif1heic'));
+    const meta = (base: number): Uint8Array =>
+        fullBox(
+            'meta',
+            0,
+            fullBox(
+                'iinf',
+                0,
+                u16(ids.length),
+                ...ids.map((id) =>
+                    fullBox('infe', 2, u16(id), u16(0), latin1(type), names)
+                )
+            ),
+            fullBox(
+                'iloc',
+                0,
+                // Offset and length sizes 4; base offset and index sizes 0.
+                new Uint8Array([0x44, 0x00]),
+                u16(ids.length),
+                // Each item: its id, data reference index 0, one extent of offset and length.
+                ...extents.map(({ offset, length }, i) =>
+                    concat(u16(i + 1), u16(0), u16(1), u32(base + offset), u32(length))
+                )
+            )
+        );
+    const base = ftyp.length + meta(0).length + 8;
+    return concat(ftyp, meta(base), box('mdat', payload));
+}
+
+/** `count` extents that each cover the whole of `payload`. */
+function sharedExtents(
+    count: number,
+    payload: Uint8Array
+): { offset: number; length: number }[] {
+    return Array.from({ length: count }, () => ({ offset: 0, length: payload.length }));
 }
 
 /** An ImageMagick raw profile: a newline, the name, the length padded to 8, then hex lines of 72 digits. */

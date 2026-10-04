@@ -76,13 +76,22 @@ decoded image, which is what the variants are made from.
   host's request limit.
 - **Some GPS data is out of reach of in-place removal.** A HEIF `Exif` item
   stored in several extents or by construction method 2 (an item reference) is
-  left alone, as is a GPS pointer in a TIFF page IFD after the first, XMP in a
-  GIF, an XMP property split across two extended-XMP segments in a JPEG, and a
-  location in a camera maker's MakerNotes.
+  left alone, as is a HEIF `Exif` item whose bytes overlap an `Exif` item
+  earlier in the file, a GPS pointer in a TIFF page IFD after the first, XMP in
+  a GIF, an XMP property split across two extended-XMP segments in a JPEG, and
+  a location in a camera maker's MakerNotes.
 - **A camera raw declared as another type is buffered whole.** A TIFF-based
   raw (DNG, CR2, NEF, ARW) uploaded with a non-image content type is read
   into memory for GPS removal, on top of the copy `formData()` already holds,
   so it takes twice its size. This adds to the missing upload size limit above.
-- **A compressed text past the first 16 MB is left alone.** A PNG's compressed
-  text chunks inflate to at most 16 MB in all, so a chunk beyond that keeps its
-  GPS data.
+- **A compressed text past the first 2 MB is left alone.** A PNG's compressed
+  text chunks inflate to at most 2 MB in all, so a chunk beyond that keeps its
+  GPS data. A real XMP packet or raw profile is well under 1 MB; the limit
+  keeps a small compressed upload from costing seconds of work.
+- **The XMP scan does not parse XML.** It finds names and brackets in the
+  bytes, so a GPS element inside an XML comment blanks the text up to the next
+  real end tag of that name, which can take other properties (`dc:rights`)
+  with it. A `>` inside the value of a GPS element's attribute ends the start
+  tag early, so the blanking breaks the packet. A prefix bound to the EXIF
+  namespace that holds a non-ASCII character is not matched, so its GPS
+  properties are kept.
