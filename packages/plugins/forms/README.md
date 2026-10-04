@@ -169,11 +169,11 @@ turnstile({ siteKey, secretKey });
 recaptcha({ siteKey, secretKey, minScore: 0.5 }); // minScore is v3 only
 ```
 
-`clientAddress` is the connecting address the HTTP transport trusts, sent to the
-provider as `remoteip`; it is absent when there is none, and never the `ip` a
-caller puts in `meta`. The secret key never leaves the server — only `name` and
-`siteKey` are published to the browser. The check runs as an ordinary `forms:beforeSubmit` subscriber,
-through the same extension point a third party would use.
+[Spam protection](../../../apps/docs/plugins/forms.md#spam-protection) says
+which address `clientAddress` carries. The secret key never leaves the server —
+only `name` and `siteKey` are published to the browser. The check runs as an
+ordinary `forms:beforeSubmit` subscriber, through the same extension point a
+third party would use.
 
 ## Service methods
 
@@ -230,10 +230,10 @@ updatedAt }`. `getSubmission` returns `null` for an unknown id, and
 
 ## Hooks
 
-| event                | when                                | behaviour                                                   |
-| -------------------- | ----------------------------------- | ----------------------------------------------------------- |
-| `forms:beforeSubmit` | after validation, before the insert | **Gating** — a subscriber that throws aborts the submission |
-| `forms:afterSubmit`  | after the row is committed          | Swallow-and-logged; carries `submissionId`                  |
+| event                | when                                | behaviour                                                                                          |
+| -------------------- | ----------------------------------- | -------------------------------------------------------------------------------------------------- |
+| `forms:beforeSubmit` | after validation, before the insert | **Gating** — a subscriber that throws aborts the submission                                        |
+| `forms:afterSubmit`  | after the row is committed          | A throw fails the call, though the row stays stored; carries `submissionId` and no `clientAddress` |
 
 ```ts
 defineHook('forms:beforeSubmit', async (payload) => {

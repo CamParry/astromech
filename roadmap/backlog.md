@@ -86,6 +86,7 @@ not be re-derived.
 - [ ] A frontend form component/helper. v1 deliberately exposes data only (`forms.get`) and lets the site author own the markup, following the redirects precedent — revisit if hand-rendering proves tedious in practice
 - [ ] Per-form success redirect, once there is a frontend story to redirect within
 - [ ] More notification providers now the seam exists — Slack, Mailchimp, a generic webhook. Each is one file in `notifications/providers/` plus a `registry.ts` entry; the editor block and the delivery come as a pair
+- [ ] An Astro page or action that calls forms `submit` on the server passes no visitor address, so the spam providers get no `remoteip` and the forms rate limit has no key. The Astro middleware could put Astro's `clientAddress` on the request scope when it is trusted.
 - [ ] Notification providers are a closed built-in list. A site can write a `SpamProvider` and pass it through config, but there is no equivalent option for a `NotificationProvider` — the registry is compiled in. Open it up if a site needs a kind we don't ship
 
 ### `@astromech/backups` follow-ups
