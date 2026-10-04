@@ -4,7 +4,8 @@
  * An upload asks for the media fields only when a required one has no default,
  * or when the server refuses the fields: the dialog sends what the author fills
  * in as each file's `data.fields`, a 422 lands on the field it names while the
- * dialog stays open, and a retry sends only the files not yet uploaded.
+ * dialog stays open, a retry sends only the files not yet uploaded, and
+ * closing over filled-in fields asks first.
  */
 
 import type { UserEvent } from '@testing-library/user-event';
@@ -104,6 +105,19 @@ function unprocessable(fields: Record<string, string[]>): AstromechApiError {
     });
 }
 
+/** Answer the unsaved-changes dialog with the button labelled `label`. */
+async function answerDiscard(
+    user: UserEvent,
+    label: 'Keep editing' | 'Discard changes'
+): Promise<void> {
+    const dialog = await screen.findByRole('alertdialog', {
+        name: 'Discard unsaved changes?',
+    });
+    await user.click(within(dialog).getByRole('button', { name: label }));
+    await waitFor(() => expect(dialog.isConnected).toBe(false));
+    expect(screen.queryByRole('alertdialog')).toBeNull();
+}
+
 async function fillCreditAndUpload(user: UserEvent): Promise<HTMLElement> {
     const dialog = await screen.findByRole('dialog', { name: 'Upload 1 file' });
     await user.type(within(dialog).getByLabelText(/Credit/), 'Ann');
@@ -138,6 +152,29 @@ describe('an upload with media fields', () => {
             expect(screen.queryByRole('dialog', { name: 'Upload 1 file' })).toBeNull()
         );
         expect(await screen.findByText('1 file uploaded.')).toBeDefined();
+        expect(screen.queryByRole('alertdialog')).toBeNull();
+    });
+
+    it('asks before Cancel drops the fields filled in', async () => {
+        adminConfig.media.fields = [credit];
+
+        const user = await uploadPhoto();
+        const dialog = await screen.findByRole('dialog', { name: 'Upload 1 file' });
+        const field = within(dialog).getByLabelText(/Credit/) as HTMLInputElement;
+        await user.type(field, 'Ann');
+        await user.click(within(dialog).getByRole('button', { name: 'Cancel' }));
+        await answerDiscard(user, 'Keep editing');
+
+        expect(screen.getByRole('dialog', { name: 'Upload 1 file' })).toBe(dialog);
+        expect(field.value).toBe('Ann');
+
+        await user.click(within(dialog).getByRole('button', { name: 'Cancel' }));
+        await answerDiscard(user, 'Discard changes');
+
+        await waitFor(() =>
+            expect(screen.queryByRole('dialog', { name: 'Upload 1 file' })).toBeNull()
+        );
+        expect(uploadMedia).not.toHaveBeenCalled();
     });
 
     it('shows a 422 field error on the field it names and stays open', async () => {

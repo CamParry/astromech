@@ -24,10 +24,13 @@ export function useUnsavedChangesGuard(isDirty: () => boolean): {
     isDirtyRef.current = isDirty;
     const askRef = useRef(askToDiscard);
     askRef.current = askToDiscard;
+    // The open prompt's answer. The confirm dialog shows one prompt at a time,
+    // so a second request while it is open waits on the same answer.
+    const pendingRef = useRef<Promise<boolean> | null>(null);
 
-    /** Open the confirm dialog; resolves true when the editor discards. */
+    /** Open the confirm dialog, or join the open one; resolves true when the editor discards. */
     function askToDiscard(): Promise<boolean> {
-        return new Promise((resolve) => {
+        pendingRef.current ??= new Promise<boolean>((resolve) => {
             confirm({
                 title: t('common.discardChangesTitle'),
                 description: t('common.discardChangesMessage'),
@@ -37,7 +40,10 @@ export function useUnsavedChangesGuard(isDirty: () => boolean): {
                 onConfirm: () => resolve(true),
                 onCancel: () => resolve(false),
             });
+        }).finally(() => {
+            pendingRef.current = null;
         });
+        return pendingRef.current;
     }
 
     const shouldBlockFn = useCallback(async (): Promise<boolean> => {

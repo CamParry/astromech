@@ -83,8 +83,13 @@ function MediaUploadForm({
             onClose();
         },
     });
-    const { mutation, handleSubmit, showError } = uploadForm;
+    const { mutation, handleSubmit, showError, confirmDiscard } = uploadForm;
     const isPending = mutation.isPending;
+
+    /** Close unless an upload is running, asking first over filled-in fields. */
+    function handleClose(): void {
+        if (!isPending) confirmDiscard(onClose);
+    }
 
     // The refusal that opened the dialog shows on its fields, as a submit's would.
     useEffect(() => {
@@ -94,13 +99,15 @@ function MediaUploadForm({
     return (
         <Modal
             open
-            onClose={() => {
-                if (!isPending) onClose();
-            }}
+            onClose={handleClose}
             title={t('media.uploadFieldsTitle', { count: remaining.length })}
             footer={
                 <>
-                    <Button variant="secondary" onClick={onClose} disabled={isPending}>
+                    <Button
+                        variant="secondary"
+                        onClick={handleClose}
+                        disabled={isPending}
+                    >
                         {t('common.cancel')}
                     </Button>
                     <Button

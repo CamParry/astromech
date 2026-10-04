@@ -68,6 +68,36 @@ function RedirectForm({
     );
 }
 
+/**
+ * A form whose one button asks to drop it twice at once: a switch through
+ * `confirmDiscard` and a navigation the blocker holds.
+ */
+function SwitchAndLeaveForm({ onSwitch }: { onSwitch: () => void }): React.ReactElement {
+    const navigate = useNavigate();
+    const form = useFieldsForm({
+        fieldDefinitions: FIELDS,
+        operation: 'update',
+        defaultValues: { fields: { from: '/old', to: '' } },
+        onSubmit: async () => ({ id: 'r1' }),
+    });
+    return (
+        <FieldsForm
+            form={form}
+            sidebar={
+                <button
+                    type="button"
+                    onClick={() => {
+                        form.confirmDiscard(onSwitch);
+                        void navigate({ to: '/users' });
+                    }}
+                >
+                    Switch and leave
+                </button>
+            }
+        />
+    );
+}
+
 /** Render the form at `/`, once its fields are on screen. */
 async function mount(
     onSubmit: Write,
@@ -253,6 +283,7 @@ describe('FieldsForm', () => {
         );
 
         await waitFor(() => expect(dialog.isConnected).toBe(false));
+        expect(screen.queryByRole('alertdialog')).toBeNull();
         expect(page.pathname()).toBe('/');
         expect(inputNamed('to').value).toBe('/new');
     });
@@ -287,6 +318,52 @@ describe('FieldsForm', () => {
         await page.user.click(screen.getByRole('button', { name: 'Save' }));
 
         await waitFor(() => expect(page.pathname()).toBe('/saved'));
+        expect(screen.queryByRole('alertdialog')).toBeNull();
+    });
+
+    it('keeps edits typed while a save is in flight unsaved', async () => {
+        let finishSave: (saved: unknown) => void = () => undefined;
+        const onSubmit = vi.fn<Write>(
+            () =>
+                new Promise((resolve) => {
+                    finishSave = resolve;
+                })
+        );
+        const page = await mount(onSubmit, { redirect: '/saved' });
+
+        await page.user.type(inputNamed('to'), '/new');
+        await page.user.click(screen.getByRole('button', { name: 'Save' }));
+        await waitFor(() => expect(onSubmit).toHaveBeenCalledOnce());
+        await page.user.type(inputNamed('to'), '-2');
+        finishSave({ id: 'r1' });
+
+        // The redirect after the save asks, since '-2' was never saved.
+        const dialog = await discardDialog();
+        await page.user.click(
+            within(dialog).getByRole('button', { name: 'Keep editing' })
+        );
+        await waitFor(() => expect(dialog.isConnected).toBe(false));
+        expect(page.pathname()).toBe('/');
+        expect(inputNamed('to').value).toBe('/new-2');
+        expect(unloadIsBlocked()).toBe(true);
+    });
+
+    it('shares one prompt between two requests to drop the form', async () => {
+        const onSwitch = vi.fn();
+        const page = renderAdmin(<SwitchAndLeaveForm onSwitch={onSwitch} />);
+        await waitFor(() => inputNamed('to'));
+
+        await page.user.type(inputNamed('to'), '/new');
+        await page.user.click(screen.getByRole('button', { name: 'Switch and leave' }));
+        const dialog = await discardDialog();
+        expect(screen.getAllByRole('alertdialog')).toHaveLength(1);
+        await page.user.click(
+            within(dialog).getByRole('button', { name: 'Discard changes' })
+        );
+
+        // One answer settles both: the switch runs and the link leaves.
+        await waitFor(() => expect(page.pathname()).toBe('/users'));
+        expect(onSwitch).toHaveBeenCalledOnce();
         expect(screen.queryByRole('alertdialog')).toBeNull();
     });
 

@@ -5,8 +5,8 @@
  * on demand, so a `null` read is an empty form whose first save is the write
  * that creates it. One `update` carries the fields and the status the publish
  * panel asks for, a locale with no row is opened, not written, the merge
- * confirm warns when the staged read reports `diverged`, and staging or
- * merging over unsaved edits asks first.
+ * confirm warns when the staged read reports `diverged`, staging over unsaved
+ * edits asks first, and merging over them asks once.
  */
 
 import type { RenderAdminResult } from '../../_support/render-admin';
@@ -371,18 +371,24 @@ describe('the global edit page', () => {
         });
     });
 
-    it('asks about unsaved edits before the merge confirm', async () => {
+    it('asks once before merging over unsaved edits, saying they will be lost', async () => {
         const { mergeStaged, page } = await mountStaged();
 
         await page.user.type(await tagline(), ' edited');
         await page.user.click(screen.getByRole('button', { name: MERGE }));
-        await confirmDialog(page, 'Discard changes');
+        const dialog = await screen.findByRole('alertdialog', {
+            name: 'Merge staged change?',
+        });
+        expect(dialog.textContent).toContain(MERGE_MESSAGE);
+        expect(dialog.textContent).toContain(
+            'Your changes have not been saved and will be lost.'
+        );
+        await page.user.click(within(dialog).getByRole('button', { name: MERGE }));
 
-        expect(await screen.findByText(MERGE_MESSAGE)).toBeDefined();
-        await confirmDialog(page, MERGE);
         await waitFor(() => {
             expect(mergeStaged).toHaveBeenCalledWith({ key: KEY, locale: 'en' });
         });
+        expect(screen.queryByRole('alertdialog')).toBeNull();
     });
 
     it('discards the staged change from the staged view', async () => {

@@ -251,6 +251,7 @@ describe('MediaDetailModal unsaved changes', () => {
         );
 
         await waitFor(() => expect(dialog.isConnected).toBe(false));
+        expect(screen.queryByRole('alertdialog')).toBeNull();
         expect(page.location()).toBe(`/media?item=${ITEM.id}`);
         expect((screen.getByLabelText('Alt text') as HTMLInputElement).value).toBe(
             'A cat'
@@ -280,6 +281,49 @@ describe('MediaDetailModal unsaved changes', () => {
         expect(screen.queryByRole('alertdialog')).toBeNull();
     });
 
+    it('keeps edits typed while a save is in flight unsaved', async () => {
+        const page = await openLibrary();
+        let finishSave: (saved: Media) => void = () => undefined;
+        media.update.mockImplementation(
+            () =>
+                new Promise((resolve) => {
+                    finishSave = resolve;
+                })
+        );
+
+        const alt = screen.getByLabelText('Alt text') as HTMLInputElement;
+        await page.user.type(alt, 'A cat');
+        await page.user.click(saveButton());
+        await waitFor(() => expect(media.update).toHaveBeenCalledOnce());
+        await page.user.type(alt, ' on a mat');
+        finishSave(ITEM);
+        await screen.findByText('Media updated.');
+
+        await page.user.click(screen.getByRole('button', { name: 'Cancel' }));
+        const dialog = await discardDialog();
+        await page.user.click(
+            within(dialog).getByRole('button', { name: 'Keep editing' })
+        );
+        await waitFor(() => expect(dialog.isConnected).toBe(false));
+        expect(page.location()).toBe(`/media?item=${ITEM.id}`);
+        expect(alt.value).toBe('A cat on a mat');
+        expect(saveButton().disabled).toBe(false);
+    });
+
+    it('keeps the modal open when Escape dismisses the question', async () => {
+        const page = await openLibrary();
+
+        await page.user.type(screen.getByLabelText('Alt text'), 'A cat');
+        await page.user.click(screen.getByRole('button', { name: 'Cancel' }));
+        const dialog = await discardDialog();
+        await page.user.keyboard('{Escape}');
+
+        await waitFor(() => expect(dialog.isConnected).toBe(false));
+        expect(screen.queryByRole('alertdialog')).toBeNull();
+        expect(page.location()).toBe(`/media?item=${ITEM.id}`);
+        expect(screen.getByRole('dialog', { name: 'cat.png' })).toBeDefined();
+    });
+
     it('asks before a locale switch drops unsaved edits', async () => {
         adminConfig.media.translatable = true;
         const page = await openLibrary();
@@ -292,6 +336,7 @@ describe('MediaDetailModal unsaved changes', () => {
         );
 
         await waitFor(() => expect(dialog.isConnected).toBe(false));
+        expect(screen.queryByRole('alertdialog')).toBeNull();
         expect(requestedLocale.current).toBe('en');
         expect((screen.getByLabelText('Alt text') as HTMLInputElement).value).toBe(
             'A cat'

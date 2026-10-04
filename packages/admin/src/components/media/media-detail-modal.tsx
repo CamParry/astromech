@@ -6,6 +6,7 @@
 
 import type { Media } from 'astromech';
 import { useForm, useStore } from '@tanstack/react-form';
+import { deepEqual } from 'astromech/shared';
 import React, { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import adminConfig from 'virtual:astromech/admin-config';
@@ -133,8 +134,12 @@ function MediaDetailBody({
         },
     });
 
+    // An edit typed while the save was in flight was not saved, so it keeps
+    // the form dirty.
     const updateMutation = useAdminMutation(mediaMutations().update, {
-        onSuccess: () => form.reset(form.state.values),
+        onSuccess: (_saved, { data }) => {
+            if (deepEqual(form.state.values, data)) form.reset(form.state.values);
+        },
     });
 
     const deleteMutation = useAdminMutation(mediaMutations().delete, {

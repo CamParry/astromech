@@ -246,20 +246,24 @@ export function useEditController<TRecord extends EditRecord, TAddress>(
         form.confirmDiscard(() => createStaged.mutate(resource.address));
     }
 
-    /** A merge takes the saved staged row, so unsaved edits are dropped first. */
+    /**
+     * A merge takes the saved staged row, so its one confirm also says that
+     * unsaved edits will be lost.
+     */
     function handleMerge(): void {
-        form.confirmDiscard(() =>
-            confirm({
-                title: t('staging.confirmMergeTitle'),
-                description:
-                    stagedChange.data?.diverged === true
-                        ? t('staging.confirmMergeDivergedMessage')
-                        : t('staging.confirmMergeMessage'),
-                variant: 'primary',
-                confirmLabel: t('staging.merge'),
-                onConfirm: () => mergeStaged.mutate(resource.address),
-            })
-        );
+        const message =
+            stagedChange.data?.diverged === true
+                ? t('staging.confirmMergeDivergedMessage')
+                : t('staging.confirmMergeMessage');
+        confirm({
+            title: t('staging.confirmMergeTitle'),
+            description: form.isDirty
+                ? `${message} ${t('common.discardChangesMessage')}`
+                : message,
+            variant: 'primary',
+            confirmLabel: t('staging.merge'),
+            onConfirm: () => mergeStaged.mutate(resource.address),
+        });
     }
 
     function handleDiscard(): void {

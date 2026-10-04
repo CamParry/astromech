@@ -483,13 +483,17 @@ a dialog, passes `saveHotkey: false`, so one key press saves one form.
 
 While the form has unsaved changes it asks before they are lost: the browser
 asks before the tab closes, and the admin's confirm dialog asks before any
-in-app navigation, from a link, Back or your own `navigate`. A save resets the
-form before your `onSuccess` runs, so a redirect from `onSuccess` leaves without
-asking. A navigation that follows a write which leaves nothing to save, such as
-a delete, passes TanStack Router's `ignoreBlocker: true`. A switch that drops
-the form without navigating, such as a locale held in state that remounts it,
-goes through the returned `confirmDiscard(action)`, which runs `action` at once
-on a clean form and only after the editor agrees otherwise.
+in-app navigation, from a link, Back or your own `navigate`. A save marks the
+form clean before your `onSuccess` runs, so a redirect from `onSuccess` leaves
+without asking. An edit typed while the save was in flight was not saved, so it
+keeps the form dirty and that redirect asks. A navigation that follows a write
+which leaves nothing to save, such as a delete, passes TanStack Router's
+`ignoreBlocker: true`. A switch that drops the form without navigating, such as
+a locale held in state that remounts it, goes through the returned
+`confirmDiscard(action)`, which runs `action` at once on a clean form and only
+after the editor agrees otherwise. So does a write that drops the form, such as
+one that creates a row and then opens it: it asks before anything is written,
+and its navigation passes `ignoreBlocker: true` so it does not ask again.
 
 ```tsx
 // admin/pages/redirect-form.tsx

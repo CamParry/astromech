@@ -29,7 +29,7 @@ import { EntryTypeIcon } from '../ui/entry-type-icon';
 import { NotificationBell } from './notification-bell';
 
 export function Topbar() {
-    const { user, logout } = useAuth();
+    const { user } = useAuth();
     const { sidebarOpen, toggleSidebar, setSidebarOpen, setShortcutsOpen } = useUi();
     const { theme, setTheme } = useTheme();
     const { setOpen: openCommandPalette } = useCommandPalette();
@@ -39,11 +39,6 @@ export function Topbar() {
     const entryTypes = Object.entries(adminConfig.entryTypes).filter(
         ([, entryType]) => entryType.plugin === undefined
     );
-
-    async function handleLogout() {
-        await logout();
-        void navigate({ to: '/login' });
-    }
 
     return (
         <header className="am-topbar">
@@ -192,7 +187,9 @@ export function Topbar() {
                                     <Menu.Separator className="am-topbar-menu-separator" />
                                     <Menu.Item
                                         className="am-topbar-menu-item am-topbar-menu-item-danger"
-                                        onClick={handleLogout}
+                                        // A navigation, so a form with unsaved
+                                        // changes asks before the session ends.
+                                        onClick={() => void navigate({ to: '/logout' })}
                                     >
                                         <span className="am-topbar-menu-item-icon">
                                             <LogOut size={14} />
