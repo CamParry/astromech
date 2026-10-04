@@ -293,16 +293,16 @@ describe('PUT /users/:id', () => {
         );
     });
 
-    it('400s demoting the last administrator', async () => {
+    it('409s demoting the last administrator', async () => {
         const onlyAdmin = await makeUser('admin@test.dev', 'Admin', 'admin');
         const res = await app().request(`/users/${onlyAdmin.id}`, {
             method: 'PUT',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ role: 'editor' }),
         });
-        expect(res.status).toBe(400);
+        expect(res.status).toBe(409);
         const body = (await res.json()) as { error: { code: string; message: string } };
-        expect(body.error.code).toBe('BAD_REQUEST');
+        expect(body.error.code).toBe('CONFLICT');
         expect(body.error.message).toBe('Cannot remove the last administrator');
     });
 
@@ -347,10 +347,10 @@ describe('DELETE /users/:id', () => {
         expect(res.status).toBe(403);
     });
 
-    it('400s deleting the last administrator', async () => {
+    it('409s deleting the last administrator', async () => {
         const onlyAdmin = await makeUser('admin@test.dev', 'Admin', 'admin');
         const res = await app().request(`/users/${onlyAdmin.id}`, { method: 'DELETE' });
-        expect(res.status).toBe(400);
+        expect(res.status).toBe(409);
         const body = (await res.json()) as { error: { message: string } };
         expect(body.error.message).toBe('Cannot delete the last administrator');
     });

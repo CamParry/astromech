@@ -6,17 +6,13 @@
  */
 
 import type { ContentRowId, ContentVersions } from './repository/types';
+import type { GuardedRepository, WriteGuard } from './write-guard';
 import type { JsonObject, ResourceType, User, VersionMetadata } from '@/types/index';
 import { transaction } from '@/database/transaction';
 import { ResourceNotFoundError } from '@/errors/resource';
 import { deepEqual } from '@/utilities/deep-equal';
 import { RESOURCE_CONFIG } from './resources';
-
-/** A content row as the helpers read it: its row id, fields and own columns. */
-type VersionedRecord = { contentId: ContentRowId; fields: JsonObject } & Record<
-    string,
-    unknown
->;
+import { writeGuarded } from './write-guard';
 
 /** A stored version as the read and the restore take it. */
 type StoredVersion = {
@@ -77,24 +73,28 @@ export async function readVersion<S extends object>(params: {
 }
 
 /**
- * Saves the content row's current state as its next version, credited to the
- * acting user. The caller decides whether a version is warranted; this numbers
- * and writes it. Outside a request (a CLI job, a seed script) there is no author.
+ * Saves the content row the guard names, as the database holds it, as its next
+ * version, credited to the acting user. The caller decides whether a version is
+ * warranted. A guard that fails throws the 409, or the 404 for a row gone.
  */
 export async function snapshotVersion(
     resource: ResourceType,
-    versions: ContentVersions<unknown>,
-    record: VersionedRecord,
+    repository: GuardedRepository & {
+        versions: Pick<ContentVersions<unknown>, 'snapshot'>;
+    },
+    guard: WriteGuard,
     /** Who the version is credited to; null outside a request. */
-    user: User | null
+    user: User | null,
+    /** The id (a global's key) and locale the call addressed, for the errors. */
+    address: { id: string; locale: string }
 ): Promise<void> {
-    const latestNumber = await versions.latestNumber(record.contentId);
-    await versions.create({
-        ...pick(record, RESOURCE_CONFIG[resource].versionedColumns),
-        contentId: record.contentId,
-        version: latestNumber + 1,
-        fields: record.fields,
-        createdBy: user?.id ?? null,
+    await writeGuarded({
+        kind: resource,
+        address,
+        guard,
+        repository,
+        write: async () =>
+            (await repository.versions.snapshot(guard, user?.id ?? null)) ? true : null,
     });
 }
 
@@ -118,32 +118,41 @@ export function changesVersionedContent(
  * Restores one content row to a saved version, found by its number. A number
  * the row has no version for is not found. In one transaction it snapshots the
  * row as it stands, so a restore is itself reversible, then hands `write` the
- * version's fields and versioned columns; `write` updates the row and
- * re-indexes it.
+ * version's fields and versioned columns. Both writes carry `guard`; `write`
+ * answers null when its update refused it, and otherwise re-indexes the row.
  */
 export async function restoreVersion<R, V extends StoredVersion>(params: {
     resource: ResourceType;
-    versions: ContentVersions<V>;
-    current: VersionedRecord & { locale: string };
+    repository: GuardedRepository & { versions: ContentVersions<V> };
+    current: AddressedRecord & { fields: JsonObject };
     version: number;
-    /** The id (a global's key) the call addressed, for the 404. */
+    /** The id (a global's key) the call addressed, for the errors. */
     address: Address;
     user: User | null;
-    write: (restored: {
-        fields: JsonObject;
-        columns: Record<string, unknown>;
-    }) => Promise<R>;
+    /** The conditions both writes carry, the content row first among them. */
+    guard: WriteGuard;
+    write: (
+        restored: { fields: JsonObject; columns: Record<string, unknown> },
+        guard: WriteGuard
+    ) => Promise<R | null>;
 }): Promise<R> {
-    const { resource, versions, current } = params;
-    const version = await findVersion(versions, current, params.version, {
+    const { resource, repository, current, guard } = params;
+    const version = await findVersion(repository.versions, current, params.version, {
         kind: resource,
         id: params.address.id,
     });
     const fields = (version.fields as JsonObject | null) ?? current.fields;
     const columns = pick(version, RESOURCE_CONFIG[resource].versionedColumns);
+    const address = { id: params.address.id, locale: current.locale };
     return transaction(async () => {
-        await snapshotVersion(resource, versions, current, params.user);
-        return params.write({ fields, columns });
+        await snapshotVersion(resource, repository, guard, params.user, address);
+        return writeGuarded({
+            kind: resource,
+            address,
+            guard,
+            repository,
+            write: () => params.write({ fields, columns }, guard),
+        });
     });
 }
 

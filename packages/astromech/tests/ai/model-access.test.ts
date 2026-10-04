@@ -5,6 +5,7 @@ import type {
     LanguageModelV4StreamResult,
     LanguageModelV4Usage,
 } from '@ai-sdk/provider';
+import { expectConsole } from '@tests/console';
 import { resetRuntime } from '@tests/harness';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { buildAiModels, getModel, hasModel } from '@/ai/models';
@@ -52,8 +53,13 @@ describe('getModel / hasModel', () => {
 });
 
 describe('logging middleware', () => {
+    // stderr: stdout belongs to the MCP server and `--json` output.
     it('reaches the underlying model and logs one line per generate', async () => {
-        const info = vi.spyOn(console, 'info').mockImplementation(() => undefined);
+        expectConsole(
+            'error',
+            /\[Astromech\] ai: cheap test\/test-cheap generate \d+ms in=11 out=22/
+        );
+        const error = vi.spyOn(console, 'error');
         const underlying = fakeModel('test-cheap');
         setAiModels(
             await buildAiModels({
@@ -65,14 +71,15 @@ describe('logging middleware', () => {
         const result = await getModel('cheap')!.doGenerate(callOptions());
 
         expect(result.content).toEqual([{ type: 'text', text: 'from test-cheap' }]);
-        expect(info).toHaveBeenCalledTimes(1);
-        const line = info.mock.calls[0]![0] as string;
-        expect(line).toContain('[astromech:ai] cheap test/test-cheap generate');
-        expect(line).toContain('in=11 out=22');
+        expect(error).toHaveBeenCalledTimes(1);
     });
 
     it('passes every stream chunk through unchanged and logs once on flush', async () => {
-        const info = vi.spyOn(console, 'info').mockImplementation(() => undefined);
+        expectConsole(
+            'error',
+            /\[Astromech\] ai: default test\/test-default stream \d+ms in=11 out=22/
+        );
+        const error = vi.spyOn(console, 'error');
         setAiModels(await buildAiModels({ model: fakeModel('test-default') }));
 
         const { stream } = await getModel()!.doStream(callOptions());
@@ -85,10 +92,7 @@ describe('logging middleware', () => {
         }
 
         expect(chunks).toEqual(streamParts());
-        expect(info).toHaveBeenCalledTimes(1);
-        const line = info.mock.calls[0]![0] as string;
-        expect(line).toContain('[astromech:ai] default test/test-default stream');
-        expect(line).toContain('in=11 out=22');
+        expect(error).toHaveBeenCalledTimes(1);
     });
 });
 

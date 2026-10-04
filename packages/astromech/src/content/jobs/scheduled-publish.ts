@@ -1,13 +1,17 @@
 /**
  * Built-in cron job: publishes each scheduled entry and global whose `publishedAt`
- * has passed through `update`, so the update hooks fire and the row keeps its
- * scheduled date. A row that fails is logged and stays scheduled for the next run.
+ * has passed through the update path, so the update hooks fire and the row keeps
+ * its scheduled date. A row changed or deleted since the job read it is skipped;
+ * a row that fails is logged and stays scheduled for the next run.
  */
 
 import type { CronJob } from '@/cron/registry';
 import type { AppContext } from '@/types/index';
 import { entryMaintenanceRepository } from '@/entries/repository/maintenance';
+import { publishScheduledEntry } from '@/entries/scheduled-publish';
+import { ResourceConflictError, ResourceNotFoundError } from '@/errors/resource';
 import { globalRepository } from '@/globals/repository';
+import { publishScheduledGlobal } from '@/globals/scheduled-publish';
 
 export const scheduledPublishJob: CronJob = {
     name: 'scheduled-publish',
@@ -16,25 +20,16 @@ export const scheduledPublishJob: CronJob = {
         const now = new Date();
 
         const entries = await entryMaintenanceRepository.findDueScheduled(now);
-        for (const { type, id, locale, publishedAt } of entries) {
-            await publishOne(ctx, `entry ${type}/${id} (${locale})`, () =>
-                ctx.entries.update({
-                    type,
-                    id,
-                    locale,
-                    data: { status: 'published', publishedAt },
-                })
+        for (const due of entries) {
+            await publishOne(ctx, `entry ${due.type}/${due.id} (${due.locale})`, () =>
+                publishScheduledEntry(ctx, due)
             );
         }
 
         const globals = await globalRepository.findDueScheduled(now);
-        for (const { key, locale, publishedAt } of globals) {
-            await publishOne(ctx, `global ${key} (${locale})`, () =>
-                ctx.globals.update({
-                    key,
-                    locale,
-                    data: { status: 'published', publishedAt },
-                })
+        for (const due of globals) {
+            await publishOne(ctx, `global ${due.key} (${due.locale})`, () =>
+                publishScheduledGlobal(ctx, due)
             );
         }
     },
@@ -44,11 +39,20 @@ export const scheduledPublishJob: CronJob = {
 async function publishOne(
     ctx: AppContext,
     label: string,
-    write: () => Promise<unknown>
+    write: () => Promise<void>
 ): Promise<void> {
     try {
         await write();
     } catch (err) {
+        // Unscheduled, rescheduled, trashed or deleted since the job read it:
+        // the later change wins, so the skip is not a failure.
+        if (
+            err instanceof ResourceConflictError ||
+            err instanceof ResourceNotFoundError
+        ) {
+            ctx.logger.debug(`scheduled-publish: ${label} skipped. ${err.message}`);
+            return;
+        }
         ctx.logger.error(`scheduled-publish: ${label} stays scheduled.`, err);
     }
 }

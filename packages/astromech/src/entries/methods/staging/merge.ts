@@ -1,7 +1,9 @@
 import type { EntryResource } from '../../repository/types';
+import type { WriteGuard } from '@/content/write-guard';
 import { z } from '@hono/zod-openapi';
 import { requireStagedChange } from '@/content/staging';
 import { snapshotVersion } from '@/content/versions';
+import { assertGuardHolds, writeGuarded } from '@/content/write-guard';
 import { transaction } from '@/database/transaction';
 import { resolveEntryType } from '@/entries/entry-types';
 import { defineServiceMethod } from '@/services/define-service-method';
@@ -18,7 +20,7 @@ import { entrySchema } from '../../schema';
  * when the type keeps versions, overwrites its title and fields, and discards the
  * staged change. A staged slug that differs from the canonical's replaces it, or
  * the next free one if a live entry took it meanwhile. The status stays:
- * publishing is a separate call.
+ * publishing is a separate call. An entry in the trash answers 409.
  */
 export const mergeStagedEntry = defineServiceMethod({
     summary: 'Merge the staged change into an entry.',
@@ -40,6 +42,8 @@ export const mergeStagedEntry = defineServiceMethod({
 
         const canonical = await getEntryOfType(type, id, params.locale);
         const { locale } = canonical;
+        const guard: WriteGuard = { contentId: canonical.contentId, trash: 'live' };
+        assertGuardHolds('entry', { canonical }, guard, { id, locale });
         const staged = await requireStagedChange(entryRepository.staging, 'entry', {
             rowId: id,
             id,
@@ -62,12 +66,23 @@ export const mergeStagedEntry = defineServiceMethod({
 
         return transaction(async () => {
             if (versioning) {
-                await snapshotVersion('entry', entryRepository.versions, canonical, user);
+                await snapshotVersion('entry', entryRepository, guard, user, {
+                    id,
+                    locale,
+                });
             }
-            const updated = await entryRepository.update(
-                { id, locale },
-                { title: staged.title, slug, fields, updatedBy: userId }
-            );
+            const updated = await writeGuarded({
+                kind: 'entry',
+                address: { id, locale },
+                guard,
+                repository: entryRepository,
+                write: () =>
+                    entryRepository.update(
+                        { id, locale },
+                        { title: staged.title, slug, fields, updatedBy: userId },
+                        guard
+                    ),
+            });
             // Deleted before the re-index, so references only the staged change
             // held are dropped.
             await entryRepository.staging.delete({ id, locale });

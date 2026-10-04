@@ -15,10 +15,14 @@ import type { Db } from '@/database/types';
 import { decodeWith } from '@/database/codec';
 import { createRepository } from '@/database/repository/create-repository';
 
+/**
+ * The versions group without `snapshot`, which reads the content table and so
+ * belongs to the content repository.
+ */
 export function createVersionsRepository<V extends Table>(
     table: V,
     db?: Db
-): ContentVersions<TableSelect<V>> {
+): Omit<ContentVersions<TableSelect<V>>, 'snapshot'> {
     // Pass `db` straight through: `createRepository`'s `handle()` resolves
     // `db ?? getDb()` per call, so a repository built before `transaction()`
     // opens still binds to the open scope (`DECISIONS.md`).

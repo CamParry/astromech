@@ -93,6 +93,41 @@ const WRITES: AtomicWrite[] = [
         },
     },
     {
+        // Versioned: the snapshot of the replaced state rolls back with the write.
+        name: 'entries.update',
+        failing: 'insert',
+        async arrange() {
+            const target = await post();
+            const entry = await entriesService.create({
+                type: 'post',
+                data: { title: 'Orig', fields: { body: 'orig' } },
+            });
+            return {
+                act: () =>
+                    entriesService.update({
+                        type: 'post',
+                        id: entry.id,
+                        data: {
+                            title: 'Changed',
+                            fields: { body: 'changed', related: [target] },
+                        },
+                    }),
+                async expectUnchanged() {
+                    const read = await entriesService.get({
+                        type: 'post',
+                        id: entry.id,
+                        full: true,
+                    });
+                    expect(read?.title).toBe('Orig');
+                    expect(read?.fields['body']).toBe('orig');
+                    expect(
+                        await entriesService.versions({ type: 'post', id: entry.id })
+                    ).toEqual([]);
+                },
+            };
+        },
+    },
+    {
         name: 'entries.restoreVersion',
         failing: 'insert',
         async arrange() {

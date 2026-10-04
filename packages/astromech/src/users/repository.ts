@@ -7,14 +7,21 @@
 import type { NewUserTableRow, UserContentRow, UserTableRow } from './tables';
 import type { ContentWrite, JoinedWhere, Resource } from '@/content/repository/types';
 import type { Patch } from '@/database/repository/create-repository';
+import type { BuiltInRoleSlug } from '@/permissions/roles';
 import type { JsonObject, SortOption } from '@/types/index';
+import type { Expression, SqlBool } from 'kysely';
 import { sql } from 'kysely';
 import { getDefaultContentLocale } from '@/config/content-locale';
 import { buildOrderBy } from '@/content/list';
 import { createContentRepository } from '@/content/repository/content-table';
 import { relationshipRepository } from '@/content/repository/relationships';
 import { sortableColumns } from '@/content/resources';
-import { decodeWith, encodeWith, kyselyTableKey } from '@/database/codec';
+import {
+    decodeWith,
+    encodeUpdateWith,
+    encodeWith,
+    kyselyTableKey,
+} from '@/database/codec';
 import { createRepository } from '@/database/repository/create-repository';
 import {
     accountsTable,
@@ -42,6 +49,9 @@ export type UserListParams = {
     limit?: number | undefined;
     offset?: number | undefined;
 };
+
+/** The role a write may not take from the last user holding it. */
+const ADMIN_ROLE: BuiltInRoleSlug = 'admin';
 
 /** The `users` row columns a profile write may change. */
 type UserRowPatch = Pick<Patch<typeof usersTable>, 'name' | 'email' | 'role'>;
@@ -209,15 +219,61 @@ function createUserRepository() {
     }
 
     /**
-     * Drops the user and every relationship pointing at (or from) them. Call it
-     * inside a transaction: an index outliving a failed delete would name a user
-     * who is gone.
+     * The condition a write that takes the `admin` role from `id` adds: the user
+     * is not an admin, or another user is. Kept in the write's own `WHERE`, so two
+     * calls that each counted two admins cannot remove both.
      */
-    async function del(id: string): Promise<void> {
-        // Relationship rows first: deleting the user row is what orphans them.
+    function keepsAnAdmin(id: string): Expression<SqlBool> {
+        return sql<SqlBool>`(${sql.ref('role')} <> ${ADMIN_ROLE} OR exists (
+            select 1 from ${sql.table(resourceKey)} as other
+            where other.role = ${ADMIN_ROLE} and other.id <> ${id}
+        ))`;
+    }
+
+    /** Why a guarded write to `id` changed no row: the user is gone, or is the last admin. */
+    async function explainRefusal(id: string): Promise<'missing' | 'last-admin'> {
+        return (await resourceRows.findOne({ id })) ? 'last-admin' : 'missing';
+    }
+
+    /**
+     * Write the `users` row columns, whatever the locale. Kept per resource: the
+     * patch type names this table's columns. A `role` other than `admin` writes
+     * only while another user holds `admin`.
+     */
+    async function updateUserRow(
+        id: string,
+        patch: UserRowPatch
+    ): Promise<'updated' | 'missing' | 'last-admin'> {
+        const { db, table } = resourceRows.kysely();
+        const demotes = patch.role !== undefined && patch.role !== ADMIN_ROLE;
+        const changed = await db
+            .updateTable(table)
+            .set(encodeUpdateWith(usersTable, patch))
+            .where('id', '=', id)
+            .$if(demotes, (query) => query.where(keepsAnAdmin(id)))
+            .returning('id')
+            .execute();
+        return changed.length > 0 ? 'updated' : explainRefusal(id);
+    }
+
+    /**
+     * Drops the user, unless they are the last admin, then every relationship
+     * pointing at (or from) them. Call it inside a transaction. On D1, which opens
+     * none, a failed second statement leaves index rows naming a gone user; the
+     * other order would wipe a last admin's rows on an ordinary refusal.
+     */
+    async function del(id: string): Promise<'deleted' | 'missing' | 'last-admin'> {
+        const { db, table } = resourceRows.kysely();
+        const deleted = await db
+            .deleteFrom(table)
+            .where('id', '=', id)
+            .where(keepsAnAdmin(id))
+            .returning('id')
+            .execute();
+        if (deleted.length === 0) return explainRefusal(id);
         // Not in `content.delete`: entries drop theirs in their services instead.
         await relationshipRepository.deleteByResource(id, 'user');
-        await content.delete(id);
+        return 'deleted';
     }
 
     // Hand-picked, never spread (`DECISIONS.md`, "Resource repositories do not
@@ -246,13 +302,8 @@ function createUserRepository() {
         createIfEmpty,
         createCredentialAccount,
         update: content.update,
-        /**
-         * Write the `users` row columns, whatever the locale. Kept per resource: the
-         * patch type names this table's columns.
-         */
-        updateUserRow: async (id: string, patch: UserRowPatch): Promise<void> => {
-            await resourceRows.update(id, patch);
-        },
+        explainConflict: content.explainConflict,
+        updateUserRow,
         delete: del,
         versions: content.versions,
         translatable: content.translatable,

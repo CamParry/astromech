@@ -42,7 +42,12 @@ const OPTIONS: ResolvedAssistantOptions = {
     instructions: '',
 };
 
-const logger: PluginLogger = { info: vi.fn(), warn: vi.fn(), error: vi.fn() };
+const logger: PluginLogger = {
+    debug: vi.fn(),
+    info: vi.fn(),
+    warn: vi.fn(),
+    error: vi.fn(),
+};
 
 /** A tool that records its invocations. */
 function toolFor(name: string, readOnly: boolean): ToolDefinition {

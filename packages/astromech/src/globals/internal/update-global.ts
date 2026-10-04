@@ -1,19 +1,21 @@
 import type { GlobalResource } from '../repository';
+import type { WriteGuard } from '@/content/write-guard';
 import type {
     AppContext,
     EntryStatus,
     JsonObject,
-    MethodContext,
     ParsedGlobalUpdateData,
     ResolvedConfig,
     ResolvedGlobal,
 } from '@/types/index';
+import type { MethodContext } from '@/types/methods';
 import { assertCapability } from '@/content/capabilities';
 import { resolveResourceLocale } from '@/content/locale';
 import { patchedFieldNames } from '@/content/prepare-fields';
 import { resolvePublishedAt } from '@/content/published-at';
 import { propagateSharedFields } from '@/content/translatable';
 import { changesVersionedContent, snapshotVersion } from '@/content/versions';
+import { assertGuardHolds, writeGuarded } from '@/content/write-guard';
 import { transaction } from '@/database/transaction';
 import { entryValidationMode } from '@/entries/validation-mode';
 import { ResourceNotFoundError, ResourceValidationError } from '@/errors/resource';
@@ -40,10 +42,17 @@ export async function updateGlobalLocale(
          * it: a status change addresses a row that must already exist.
          */
         createMissingLocale?: boolean | undefined;
+        /** The caller's name for its error messages: the method, or the job. */
+        method: string;
         /** The patch, as `globals.update` parsed it. */
         data: ParsedGlobalUpdateData;
+        /**
+         * The scheduled-publish job's condition: the row must still be scheduled
+         * for this time. Checked at load and again in the write.
+         */
+        scheduledFor?: Date | undefined;
     },
-    ctx: AppContext & MethodContext
+    ctx: AppContext
 ): Promise<GlobalResource> {
     const { key } = params;
     const { config, user } = ctx;
@@ -66,6 +75,14 @@ export async function updateGlobalLocale(
     if ((staged || params.createMissingLocale === false) && (id === null || !current)) {
         throw new ResourceNotFoundError('global', { id: key, locale });
     }
+    // A write to an existing row is conditional on the row it was decided from.
+    const guard: WriteGuard | null =
+        current === null
+            ? null
+            : { contentId: current.contentId, scheduledFor: params.scheduledFor };
+    if (current !== null && guard !== null) {
+        assertGuardHolds('global', { canonical: current }, guard, { id: key, locale });
+    }
 
     // Before the fields are prepared, not only before the writes: the hook may
     // replace the patch that is written.
@@ -81,28 +98,40 @@ export async function updateGlobalLocale(
     });
     // `input` already parsed the caller's `data`, so a failure here is the hook's.
     const data = parseHookOutput(updateGlobalSchema, context.data, 'global:beforeUpdate');
-    assertWritableStatus(global, data, staged, ctx.method.name);
+    assertWritableStatus(global, data, staged, params.method);
 
     const fields = await fieldsToStore({ global, id, locale, current, data, ctx });
     const patchedNames = data.fields ? patchedFieldNames(data.fields) : [];
 
     const updated = await transaction(async () => {
-        if (staged && id !== null) {
+        if (staged && id !== null && guard !== null) {
             // No version and no propagation: both belong to the canonical row,
             // which the merge writes.
-            const stagedRow = await globalRepository.staging.update(
-                { id, locale },
-                { fields, updatedBy: userId }
-            );
+            const stagedRow = await writeGuarded({
+                kind: 'global',
+                address: { id: key, locale, staged },
+                guard,
+                repository: globalRepository,
+                write: () =>
+                    globalRepository.staging.update(
+                        { id, locale },
+                        { fields, updatedBy: userId },
+                        guard
+                    ),
+            });
             if (fields) await syncGlobalRelationships(config, stagedRow.id);
             return stagedRow;
         }
         if (
             current &&
+            guard !== null &&
             global.capabilities.versioning &&
             changesVersionedContent('global', current, { fields })
         ) {
-            await snapshotVersion('global', globalRepository.versions, current, user);
+            await snapshotVersion('global', globalRepository, guard, user, {
+                id: key,
+                locale,
+            });
         }
         const row = await writeRow({
             config,
@@ -111,6 +140,7 @@ export async function updateGlobalLocale(
             id,
             locale,
             current,
+            guard,
             fields,
             status: data.status,
             publishedAt: data.publishedAt,
@@ -130,6 +160,30 @@ export async function updateGlobalLocale(
     });
 
     return updated;
+}
+
+/**
+ * Moves one locale of a global to `status`, for the status methods: an update of
+ * the status alone, so the update hooks fire, on a row that must already exist.
+ * `publishedAt` is a schedule's time; publish and unpublish derive it.
+ */
+export function changeGlobalStatus(
+    params: { key: string; locale?: string | undefined; publishedAt?: Date | undefined },
+    status: EntryStatus,
+    ctx: AppContext & MethodContext
+): Promise<GlobalResource> {
+    const { key, publishedAt } = params;
+
+    return updateGlobalLocale(
+        {
+            key,
+            locale: params.locale,
+            createMissingLocale: false,
+            method: ctx.method.name,
+            data: { status, ...(publishedAt === undefined ? {} : { publishedAt }) },
+        },
+        ctx
+    );
 }
 
 /**
@@ -181,13 +235,15 @@ async function writeRow(params: {
     id: string | null;
     locale: string;
     current: GlobalResource | null;
+    /** Set when the write patches an existing canonical row. */
+    guard: WriteGuard | null;
     fields: JsonObject | undefined;
     status: EntryStatus | undefined;
     publishedAt: Date | null | undefined;
     userId: string | null;
     patchedNames: string[];
 }): Promise<GlobalResource> {
-    const { config, global, id, locale, current, fields, userId } = params;
+    const { config, global, id, locale, current, guard, fields, userId } = params;
     // The global's first row takes a status whether or not the write names one.
     const status = id === null ? (params.status ?? 'unpublished') : params.status;
     const publishedAt = resolvePublishedAt({
@@ -197,6 +253,13 @@ async function writeRow(params: {
         now: new Date(),
     });
 
+    const write = {
+        fields,
+        status,
+        publishedAt,
+        updatedBy: userId,
+        ...(current ? {} : { createdBy: userId }),
+    };
     const row =
         id === null
             ? await globalRepository.create(
@@ -210,16 +273,15 @@ async function writeRow(params: {
                       updatedBy: userId,
                   }
               )
-            : await globalRepository.update(
-                  { id, locale },
-                  {
-                      fields,
-                      status,
-                      publishedAt,
-                      updatedBy: userId,
-                      ...(current ? {} : { createdBy: userId }),
-                  }
-              );
+            : guard === null
+              ? await globalRepository.update({ id, locale }, write)
+              : await writeGuarded({
+                    kind: 'global',
+                    address: { id: params.key, locale },
+                    guard,
+                    repository: globalRepository,
+                    write: () => globalRepository.update({ id, locale }, write, guard),
+                });
     if (fields) {
         await propagateSharedFields('global', config, {
             target: global.id,

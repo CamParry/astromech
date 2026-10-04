@@ -1,4 +1,5 @@
 import { z } from '@hono/zod-openapi';
+import { ResourceConflictError, ResourceNotFoundError } from '@/errors/resource';
 import { defineServiceMethod } from '@/services/define-service-method';
 import { entryAccess } from '../../internal/access';
 import {
@@ -11,9 +12,9 @@ import { entryRepository } from '../../repository/entries-table';
 import { previewTokenSchema } from '../../schema';
 
 /**
- * Opens every locale of the entry, replacing any earlier token. The plaintext is
- * answered once and only its hash is stored. An omitted `expiresAt` lasts seven
- * days and `null` never expires. An entry that reads as a staged change throws.
+ * Opens every locale of the entry, replacing any earlier token, and answers the
+ * plaintext once; only its hash is stored. An omitted `expiresAt` lasts seven
+ * days, `null` never expires. A staged read throws; a trashed entry answers 409.
  */
 export const issuePreviewToken = defineServiceMethod({
     summary: 'Issue a preview token for an entry.',
@@ -35,6 +36,9 @@ export const issuePreviewToken = defineServiceMethod({
                 `Entry '${id}' read as a staged change; issue the preview token on its canonical row.`
             );
         }
+        if (canonical.deletedAt !== null) {
+            throw new ResourceConflictError('entry', { id, reason: 'trashed' });
+        }
 
         const token = generatePreviewSecret();
         const hash = await hashPreviewToken(token);
@@ -43,7 +47,11 @@ export const issuePreviewToken = defineServiceMethod({
                 ? new Date(Date.now() + DEFAULT_PREVIEW_TOKEN_TTL_MS)
                 : expiresAt;
 
-        await entryRepository.previewToken.set(id, hash, expiry);
+        const stored = await entryRepository.previewToken.set(id, hash, expiry);
+        if (stored === 'missing') throw new ResourceNotFoundError('entry', { id });
+        if (stored === 'trashed') {
+            throw new ResourceConflictError('entry', { id, reason: 'trashed' });
+        }
 
         return { token };
     },

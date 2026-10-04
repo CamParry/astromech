@@ -33,7 +33,7 @@ item 8 proposed, would protect libsql only.
   is restored.
 - **A scheduled publish whose row is no longer scheduled is skipped**, logged at
   debug level and not counted as a failure: the editor's later change wins.
-- **Unique indexes are the backstop.** A partial unique index on `stagedFor`
+- **Unique indexes are the backstop** (cancelled 2026-10-04, see the work list). A partial unique index on `stagedFor`
   where it is not null, and a unique `(contentId, version)` index on all four
   versions tables. A violation answers 409, with no retry.
 - **Restore migrates a copy of the backup, then swaps it in** (revised
@@ -72,10 +72,10 @@ item 8 proposed, would protect libsql only.
 
 ## The work
 
-- [ ] **Scheduled publish.** `content/jobs/scheduled-publish.ts` (`publishOne`)
+- [x] **Scheduled publish.** `content/jobs/scheduled-publish.ts` (`publishOne`)
       writes on condition `status = 'scheduled'` and skips on zero rows. Globals
       too.
-- [ ] **The write guard.** Add `content/write-guard.ts`. Update
+- [x] **The write guard.** Add `content/write-guard.ts`. Update
       (`entries/internal/update-batch.ts`), staging create and merge
       (`entries/methods/staging/`), restore, and the last-admin check
       (`users/methods/update.ts`, `users/methods/delete.ts`) write on its
@@ -83,11 +83,11 @@ item 8 proposed, would protect libsql only.
       reads the row the write changed, not the one loaded before the hooks ran.
       Change the order in `.claude/skills/code/SKILL.md` ("load and check"
       before "the writes, in one transaction") to match.
-- [ ] **The trash is read-only**, tested for update, publish and status changes.
-- [ ] **Unique indexes.** Add both, run `pnpm run db:generate`, and hand-apply
-      the change to `apps/demo-cloudflare`'s migration and snapshot. Map the
-      violation to 409 by index name, since SQLite's message names the index
-      for an expression or partial index.
+- [x] **The trash is read-only**, tested for update, publish and status changes.
+- [ ] ~~**Unique indexes.**~~ Cancelled 2026-10-04: drafts
+      (`roadmap/planned/drafts.md`) remove `stagedFor`, and history replaces
+      the versions tables, so both indexes would target tables that are going.
+      The guarded writes already refuse both races. Revisit on the new tables.
 - [x] **Backup restore.** Done 2026-10-03: libsql restore compares migration
       names as sets, migrates a copy and swaps it in, refusing (409) a live
       database whose migrations differ from the copy's and (422) an unusable
@@ -101,7 +101,9 @@ item 8 proposed, would protect libsql only.
       `content/repository/content-table.ts`; `onError` unwraps any `ApiError`
       inside a `BulkOperationError` (`transport/http/middleware/errors.ts`).
       Grep `throw new Error` under `methods/` and `internal/` for the rest of
-      the class.
+      the class. A user or media update whose row is deleted after the read,
+      sending unchanged fields, answers 500 (`it.fails` in
+      `packages/astromech/tests/users/last-admin.test.ts`).
 - [ ] **OpenAPI coverage** as decided above.
 - [ ] **Plugin versions.** Each `packages/plugins/*/src/index.ts` reads its
       version from its `package.json` with a JSON import, and a test checks the

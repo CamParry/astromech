@@ -1,6 +1,7 @@
 import type { GlobalResource } from '../../repository';
+import type { WriteGuard } from '@/content/write-guard';
+import { assertGuardHolds, writeGuarded } from '@/content/write-guard';
 import { transaction } from '@/database/transaction';
-import { StagedChangeExistsError } from '@/errors/resource';
 import { defineServiceMethod } from '@/services/define-service-method';
 import { globalAccess } from '../../internal/access';
 import { getCanonicalGlobal } from '../../internal/canonical-global';
@@ -9,9 +10,10 @@ import { globalRepository } from '../../repository';
 import { globalSchema, localised } from '../../schema';
 
 /**
- * Copies one locale's fields into an unpublished staged change, which
- * `update({ staged: true })` edits and `mergeStaged` makes live. Throws when the
- * locale has no row, or already has a staged change.
+ * Copies one locale's fields, as stored when the copy is made, into an
+ * unpublished staged change, which `update({ staged: true })` edits and
+ * `mergeStaged` makes live. Throws when the locale has no row, or already has a
+ * staged change.
  */
 export const createStagedGlobal = defineServiceMethod({
     summary: 'Stage a change to a global.',
@@ -26,20 +28,31 @@ export const createStagedGlobal = defineServiceMethod({
         const userId = user?.id ?? null;
 
         const { id, locale, current } = await getCanonicalGlobal(config, params);
-        const existing = await globalRepository.staging.findOne({ id, locale });
-        if (existing) throw new StagedChangeExistsError('global', { id: key, locale });
+        const staged = await globalRepository.staging.findOne({ id, locale });
+        const guard: WriteGuard = { contentId: current.contentId, stagedAbsent: true };
+        assertGuardHolds('global', { canonical: current, staged }, guard, {
+            id: key,
+            locale,
+        });
 
         return transaction(async () => {
-            const created = await globalRepository.staging.create(
-                { id, locale },
-                {
-                    fields: current.fields,
-                    status: 'unpublished',
-                    publishedAt: null,
-                    createdBy: userId,
-                    updatedBy: userId,
-                }
-            );
+            const created = await writeGuarded({
+                kind: 'global',
+                address: { id: key, locale },
+                guard,
+                repository: globalRepository,
+                write: () =>
+                    globalRepository.staging.create(
+                        { id, locale },
+                        {
+                            status: 'unpublished',
+                            publishedAt: null,
+                            createdBy: userId,
+                            updatedBy: userId,
+                        },
+                        guard
+                    ),
+            });
             await syncGlobalRelationships(config, id);
             return created;
         });

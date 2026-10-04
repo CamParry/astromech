@@ -24,6 +24,6 @@ export const updateGlobal = defineServiceMethod({
     mutates: true,
     idempotent: true,
     handler(params, ctx): Promise<GlobalResource> {
-        return updateGlobalLocale(params, ctx);
+        return updateGlobalLocale({ ...params, method: ctx.method.name }, ctx);
     },
 });

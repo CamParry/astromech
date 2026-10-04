@@ -533,25 +533,37 @@ describe('the documented error statuses', () => {
         ).toBe(
             'Conflict: the entry type does not declare `staging` ' +
                 '(`capability_not_supported`); the locale already has a staged change ' +
-                '(`staged_change_exists`).'
+                '(`staged_change_exists`); the entry is in the trash (`CONFLICT`, ' +
+                'reason `trashed`).'
         );
         expect(paths['/entries/{type}']?.['post']?.responses['409']?.description).toBe(
             'Conflict: the body sets `status` or `publishedAt` on a type without ' +
                 '`statuses`, or `slug` on one without `slug` (`capability_not_supported`).'
         );
+        expect(
+            paths['/entries/{type}/{id}/publish']?.['post']?.responses['409']?.description
+        ).toBe(
+            'Conflict: the entry type does not declare `statuses` ' +
+                '(`capability_not_supported`); the entry is in the trash ' +
+                '(`CONFLICT`, reason `trashed`).'
+        );
         // A read with neither answers none.
         expect(statuses(paths['/entries/{type}/{id}']?.['get'])).not.toContain('409');
     });
 
-    it('document the 400 for the last admin on the user writes that can lose one', () => {
+    it('document the 409 for the last admin on the user writes that can lose one', () => {
         const paths = document().paths;
-        expect(paths['/users/{id}']?.['delete']?.responses['400']?.description).toBe(
-            'Bad request: the user is the last admin.'
+        expect(paths['/users/{id}']?.['delete']?.responses['409']?.description).toBe(
+            'Conflict: the user is the last admin (`CONFLICT`, reason `last-admin`).'
+        );
+        expect(paths['/users/{id}']?.['put']?.responses['409']?.description).toBe(
+            'Conflict: the new `role` leaves the site with no admin (`CONFLICT`, ' +
+                'reason `last-admin`).'
         );
         expect(paths['/users/{id}']?.['put']?.responses['400']?.description).toBe(
-            'Bad request: the body is not valid JSON; the new `role` leaves the site ' +
-                'with no admin.'
+            'Bad request: the body is not valid JSON.'
         );
+        expect(statuses(paths['/users/{id}']?.['delete'])).not.toContain('400');
     });
 
     it('document the cross-type query’s `type` as one type or a list, and each status it answers', () => {

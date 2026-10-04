@@ -6,10 +6,11 @@
 import type { PluginHooks } from '@/types/index';
 import { expectConsole } from '@tests/console';
 import { createTestDb, registerTestPlugins, setupTestConfig } from '@tests/harness';
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { systemAppContext } from '@/app-context/app-context';
 import { currentServices } from '@/app-context/services';
 import { scheduledPublishJob } from '@/content/jobs/scheduled-publish';
+import { getDb } from '@/database/registry';
 import { globalRepository } from '@/globals/repository';
 import { defineHook } from '@/plugins/define-hook';
 import { makeGlobalsConfig } from '../../globals/globals-config';
@@ -17,6 +18,10 @@ import { makeGlobalsConfig } from '../../globals/globals-config';
 beforeEach(async () => {
     await createTestDb();
     setupTestConfig(makeGlobalsConfig());
+});
+
+afterEach(() => {
+    vi.useRealTimers();
 });
 
 /** Register a probe plugin's hooks against the live runtime. */
@@ -165,4 +170,235 @@ describe('scheduledPublishJob', () => {
         expect(await postStatus(blocked.id)).toBe('scheduled');
         expect(await postStatus(due.id)).toBe('published');
     });
+
+    it('skips a row unscheduled after the job read it, logging at debug', async () => {
+        const past = new Date(Date.now() - 60_000);
+        const entry = await scheduledPost('Due', past);
+        await globalRepository.create(
+            { key: 'legal' },
+            { fields: { terms: 'Terms' }, status: 'scheduled', publishedAt: past }
+        );
+        // An editor unpublishes each row while the job's own update is under way.
+        probe([
+            defineHook('entry:beforeUpdate', async (ctx) => {
+                if (ctx.data.status !== 'published') return;
+                await currentServices.entries.unpublish({
+                    type: 'post',
+                    id: ctx.entry.id,
+                });
+            }),
+            defineHook('global:beforeUpdate', async (ctx) => {
+                if (ctx.data.status !== 'published') return;
+                await currentServices.globals.unpublish({ key: ctx.key });
+            }),
+        ]);
+        expectConsole('error', `entry post/${entry.id} (en) skipped`);
+        expectConsole('error', 'global legal (en) skipped');
+
+        await scheduledPublishJob.handler(systemAppContext());
+
+        expect(await postStatus(entry.id)).toBe('unpublished');
+        expect((await globalRepository.findByKey('legal'))?.status).toBe('unpublished');
+    });
+
+    it('skips a row rescheduled for later after the job read it', async () => {
+        const past = new Date(Date.now() - 60_000);
+        const later = new Date(Date.now() + 60 * 60_000);
+        const entry = await scheduledPost('Due', past);
+        await globalRepository.create(
+            { key: 'legal' },
+            { fields: { terms: 'Terms' }, status: 'scheduled', publishedAt: past }
+        );
+        probe([
+            defineHook('entry:beforeUpdate', async (ctx) => {
+                if (ctx.data.status !== 'published') return;
+                await currentServices.entries.schedule({
+                    type: 'post',
+                    id: ctx.entry.id,
+                    publishedAt: later,
+                });
+            }),
+            defineHook('global:beforeUpdate', async (ctx) => {
+                if (ctx.data.status !== 'published') return;
+                await currentServices.globals.schedule({
+                    key: ctx.key,
+                    publishedAt: later,
+                });
+            }),
+        ]);
+        expectConsole('error', `entry post/${entry.id} (en) skipped`);
+        expectConsole('error', 'global legal (en) skipped');
+
+        await scheduledPublishJob.handler(systemAppContext());
+
+        const rescheduled = await currentServices.entries.get({
+            type: 'post',
+            id: entry.id,
+            full: true,
+        });
+        expect(rescheduled?.status).toBe('scheduled');
+        expect(rescheduled?.publishedAt?.getTime()).toBe(later.getTime());
+        const global = await globalRepository.findByKey('legal');
+        expect(global?.status).toBe('scheduled');
+        expect(global?.publishedAt?.getTime()).toBe(later.getTime());
+    });
+
+    it('skips a row deleted after the job read it, logging at debug', async () => {
+        const past = new Date(Date.now() - 60_000);
+        const entry = await scheduledPost('Due', past);
+        probe([
+            defineHook('entry:beforeUpdate', async (ctx) => {
+                if (ctx.data.status !== 'published') return;
+                await currentServices.entries.delete({ type: 'post', id: ctx.entry.id });
+            }),
+        ]);
+        expectConsole('error', `entry post/${entry.id} (en) skipped`);
+
+        await scheduledPublishJob.handler(systemAppContext());
+
+        expect(
+            await currentServices.entries.get({ type: 'post', id: entry.id, full: true })
+        ).toBeNull();
+    });
+
+    it('skips a row unpublished after the job read it and before it loaded the row, with no hook', async () => {
+        const past = new Date(Date.now() - 60_000);
+        const first = await scheduledPost('First', past);
+        const second = await scheduledPost('Second', past);
+        for (const key of ['legal', 'contact']) {
+            await globalRepository.create(
+                { key },
+                { fields: {}, status: 'scheduled', publishedAt: past }
+            );
+        }
+        // Publishing whichever row comes first unpublishes the other of its kind,
+        // so the job reaches that one with a stale read.
+        const published: string[] = [];
+        probe([
+            defineHook('entry:beforeUpdate', async (ctx) => {
+                if (ctx.data.status !== 'published') return;
+                published.push(ctx.entry.id);
+                const other = ctx.entry.id === first.id ? second.id : first.id;
+                await currentServices.entries.unpublish({ type: 'post', id: other });
+            }),
+            defineHook('global:beforeUpdate', async (ctx) => {
+                if (ctx.data.status !== 'published') return;
+                published.push(ctx.key);
+                const other = ctx.key === 'legal' ? 'contact' : 'legal';
+                await currentServices.globals.unpublish({ key: other });
+            }),
+        ]);
+        expectConsole(
+            'error',
+            /entry post\/\w+ \(en\) skipped\. .* is not scheduled for the time this publish was due/
+        );
+        expectConsole(
+            'error',
+            /global (legal|contact) \(en\) skipped\. .* is not scheduled for the time this publish was due/
+        );
+
+        await scheduledPublishJob.handler(systemAppContext());
+
+        // One hook call per kind: the skipped row was refused before its hook.
+        expect(published).toHaveLength(2);
+        const statuses = [await postStatus(first.id), await postStatus(second.id)];
+        expect(statuses.sort()).toEqual(['published', 'unpublished']);
+        const globals = [
+            (await globalRepository.findByKey('legal'))?.status,
+            (await globalRepository.findByKey('contact'))?.status,
+        ];
+        expect(globals.sort()).toEqual(['published', 'unpublished']);
+    });
+
+    it('names the schedule when the row is scheduled again by the time the refusal is explained', async () => {
+        const past = new Date(Date.now() - 60_000);
+        await globalRepository.create(
+            { key: 'legal' },
+            { fields: { terms: 'Terms' }, status: 'scheduled', publishedAt: past }
+        );
+        probe([
+            defineHook('global:beforeUpdate', async (ctx) => {
+                if (ctx.data.status !== 'published') return;
+                await currentServices.globals.unpublish({ key: ctx.key });
+            }),
+        ]);
+        // A row rescheduled for the same time between the refused write and the
+        // read that explains it.
+        vi.spyOn(globalRepository, 'explainConflict').mockResolvedValueOnce(null);
+        expectConsole(
+            'error',
+            "global legal (en) skipped. Global 'legal' is not scheduled for the time this publish was due"
+        );
+
+        await scheduledPublishJob.handler(systemAppContext());
+
+        expect((await globalRepository.findByKey('legal'))?.status).toBe('unpublished');
+    });
+
+    // An import or raw SQL may store the same instant without milliseconds or
+    // with an offset; the job's write compares instants, not spellings.
+    it.each(['2020-01-01T10:00:00Z', '2020-01-01T12:00:00+02:00'])(
+        'publishes a row whose publishedAt is stored as %s',
+        async (stored) => {
+            const due = new Date('2020-01-01T10:00:00.000Z');
+            const entry = await scheduledPost('Due', due);
+            await globalRepository.create(
+                { key: 'legal' },
+                { fields: { terms: 'Terms' }, status: 'scheduled', publishedAt: due }
+            );
+            await getDb()
+                .updateTable('entryContent')
+                .set({ publishedAt: stored })
+                .where('entryId', '=', entry.id)
+                .execute();
+            await getDb()
+                .updateTable('globalContent')
+                .set({ publishedAt: stored })
+                .execute();
+
+            await scheduledPublishJob.handler(systemAppContext());
+
+            const live = await currentServices.entries.get({
+                type: 'post',
+                id: entry.id,
+                full: true,
+            });
+            expect(live?.status).toBe('published');
+            expect(live?.publishedAt?.getTime()).toBe(due.getTime());
+            expect((await globalRepository.findByKey('legal'))?.status).toBe('published');
+        }
+    );
+
+    // Due exactly now, and an hour ago: as strings, both sort after the job's
+    // `now` (`Z` after `.000Z`, `12:00+02:00` after `11:00Z`).
+    it.each(['2020-01-01T11:00:00Z', '2020-01-01T12:00:00+02:00'])(
+        'finds a row due by now whose publishedAt is stored as %s',
+        async (stored) => {
+            vi.useFakeTimers({ toFake: ['Date'] });
+            vi.setSystemTime(new Date('2020-01-01T11:00:00.000Z'));
+            const entry = await scheduledPost('Due', new Date('2019-12-31T00:00:00Z'));
+            await globalRepository.create(
+                { key: 'legal' },
+                {
+                    fields: { terms: 'Terms' },
+                    status: 'scheduled',
+                    publishedAt: new Date('2019-12-31T00:00:00Z'),
+                }
+            );
+            await getDb()
+                .updateTable('entryContent')
+                .set({ publishedAt: stored })
+                .where('entryId', '=', entry.id)
+                .execute();
+            await getDb()
+                .updateTable('globalContent')
+                .set({ publishedAt: stored })
+                .execute();
+
+            await scheduledPublishJob.handler(systemAppContext());
+
+            expect(await postStatus(entry.id)).toBe('published');
+            expect((await globalRepository.findByKey('legal'))?.status).toBe('published');
+        }
+    );
 });

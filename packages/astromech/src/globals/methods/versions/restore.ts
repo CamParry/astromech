@@ -27,16 +27,19 @@ export const restoreGlobalVersion = defineServiceMethod({
 
         return restoreVersion({
             resource: 'global',
-            versions: globalRepository.versions,
+            repository: globalRepository,
             current,
             version,
             address: { id: key },
             user,
-            write: async ({ fields }) => {
+            guard: { contentId: current.contentId },
+            write: async ({ fields }, guard) => {
                 const restored = await globalRepository.update(
                     { id, locale },
-                    { fields, updatedBy: userId }
+                    { fields, updatedBy: userId },
+                    guard
                 );
+                if (restored === null) return null;
                 await syncGlobalRelationships(config, id);
                 return restored;
             },

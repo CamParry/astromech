@@ -1,14 +1,25 @@
 /**
  * The last-admin guard holds in the users service, so demoting or deleting the
- * only admin is refused over the scoped handle and the trusted service alike.
+ * only admin is refused over the scoped handle and the trusted service alike,
+ * and in the write's own `WHERE`, so two calls that each counted two admins
+ * cannot remove both. The same guarded write answers 404 for a user deleted
+ * after the update read them.
  */
 
 import type { Db } from '@/database/types';
 import { adminRole } from '@tests/fixtures';
-import { contextAs, createTestDb, createTestUser, setupTestConfig } from '@tests/harness';
-import { beforeEach, describe, expect, it } from 'vitest';
+import {
+    contextAs,
+    createTestDb,
+    createTestUser,
+    makeTestConfig,
+    setupTestConfig,
+} from '@tests/harness';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { createServices, currentServices } from '@/app-context/services';
+import { ResourceNotFoundError } from '@/errors/resource';
 import { LastAdminError } from '@/users/errors';
+import { userRepository } from '@/users/repository';
 
 const usersService = currentServices.users;
 
@@ -66,5 +77,107 @@ describe('an admin with another beside it', () => {
         );
         await usersService.delete({ id: first.id });
         expect(await usersService.get({ id: first.id })).toBeNull();
+    });
+});
+
+/**
+ * Two admins, each written by a call that counted both: the second call's write
+ * runs after the first demoted the other admin, so its own `WHERE` refuses it.
+ * The spy lets the count read the real table, then demotes the other admin
+ * before the call writes, as a concurrent request would.
+ */
+describe('two admins written at once', () => {
+    function demoteBetweenCountAndWrite(otherId: string): void {
+        const countByRole = userRepository.countByRole;
+        vi.spyOn(userRepository, 'countByRole').mockImplementationOnce(async (role) => {
+            const count = await countByRole(role);
+            await usersService.update({ id: otherId, data: { role: 'editor' } });
+            return count;
+        });
+    }
+
+    it('refuses the demotion that would leave none', async () => {
+        const first = await createTestUser(db, { role: 'admin' });
+        const second = await createTestUser(db, { role: 'admin' });
+        demoteBetweenCountAndWrite(second.id);
+
+        await expect(
+            usersService.update({ id: first.id, data: { role: 'editor' } })
+        ).rejects.toBeInstanceOf(LastAdminError);
+        expect((await usersService.get({ id: first.id }))?.role).toBe('admin');
+        expect(await userRepository.countByRole('admin')).toBe(1);
+    });
+
+    it('refuses the delete that would leave none', async () => {
+        const first = await createTestUser(db, { role: 'admin' });
+        const second = await createTestUser(db, { role: 'admin' });
+        demoteBetweenCountAndWrite(second.id);
+
+        await expect(usersService.delete({ id: first.id })).rejects.toBeInstanceOf(
+            LastAdminError
+        );
+        expect((await usersService.get({ id: first.id }))?.role).toBe('admin');
+        expect(await userRepository.countByRole('admin')).toBe(1);
+    });
+});
+
+describe('a user deleted while an update runs', () => {
+    it('is not found by the update', async () => {
+        const editor = await createTestUser(db, { role: 'editor' });
+        const findOne = userRepository.findOne;
+        vi.spyOn(userRepository, 'findOne').mockImplementationOnce(async (...args) => {
+            const found = await findOne(...args);
+            await usersService.delete({ id: editor.id });
+            return found;
+        });
+
+        await expect(
+            usersService.update({
+                id: editor.id,
+                data: { name: 'Renamed', fields: {} },
+            })
+        ).rejects.toBeInstanceOf(ResourceNotFoundError);
+        expect(await usersService.get({ id: editor.id })).toBeNull();
+    });
+
+    /** A user with a `bio`, deleted by another call just after the update reads it. */
+    async function deletedAfterRead(): Promise<string> {
+        setupTestConfig({
+            ...makeTestConfig(),
+            users: { fields: [{ name: 'bio', type: 'text', label: 'Bio' }] },
+        });
+        const editor = await createTestUser(db, {
+            role: 'editor',
+            fields: { bio: 'Old' },
+        });
+        const findOne = userRepository.findOne;
+        vi.spyOn(userRepository, 'findOne').mockImplementationOnce(async (...args) => {
+            const found = await findOne(...args);
+            await usersService.delete({ id: editor.id });
+            return found;
+        });
+        return editor.id;
+    }
+
+    // With no `users` row write, the version snapshot is the first guarded write.
+    it('is not found by an update that changes only fields', async () => {
+        const id = await deletedAfterRead();
+
+        await expect(
+            usersService.update({ id, data: { fields: { bio: 'New' } } })
+        ).rejects.toBeInstanceOf(ResourceNotFoundError);
+        expect(await usersService.get({ id })).toBeNull();
+    });
+
+    // Unchanged fields write no version, so the unguarded content write meets the
+    // deleted row and throws the repository's `AstromechError` (a 500). The
+    // "Caller errors" item in `roadmap/planned/write-race-and-data-loss-defects.md`
+    // makes it a 404. Media's update has the same path.
+    it.fails('is not found by an update that keeps its fields', async () => {
+        const id = await deletedAfterRead();
+
+        await expect(
+            usersService.update({ id, data: { fields: { bio: 'Old' } } })
+        ).rejects.toBeInstanceOf(ResourceNotFoundError);
     });
 });

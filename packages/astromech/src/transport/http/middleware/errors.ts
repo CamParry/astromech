@@ -44,7 +44,7 @@ const validationDetailsSchema = z.object({
     form: z.array(z.string()).optional(),
     /** The id a batch write failed on. */
     failedId: z.string().optional(),
-    /** The ids a batch write finished before it failed, all rolled back. */
+    /** The ids a batch write finished before it failed: rolled back, except on D1. */
     succeededBefore: z.array(z.string()).optional(),
 });
 
@@ -162,8 +162,8 @@ function fieldErrorsFrom(err: ValidationError): Record<string, string[]> {
 
 /**
  * Hono's app-level error handler: canonicalises HTTPException, every
- * `ApiError` under the status and code it carries, ValidationError (bare, or
- * wrapped by a batch write's BulkOperationError) and unknown errors alike.
+ * `ApiError` and ValidationError (bare, or wrapped by a batch write's
+ * BulkOperationError) and unknown errors alike.
  *
  * `ResourceValidationError` needs no case of its own: it extends
  * `ValidationError`, so it maps to the same 422.
@@ -185,10 +185,18 @@ export const onError: ErrorHandler = (err, c) => {
         return validationFailed(c, fieldErrorsFrom(err), err.form);
     }
 
-    // A batch write reports its validation failure through the envelope, whose
-    // `failedId` is the only thing naming the row the client must point at.
+    // A batch write reports its failure through the envelope, whose `failedId`
+    // is the only thing naming the row the client must point at.
     if (err instanceof BulkOperationError && err.cause instanceof ValidationError) {
         return validationFailed(c, fieldErrorsFrom(err.cause), err.cause.form, {
+            failedId: err.failedId,
+            succeededBefore: err.succeededBefore,
+        });
+    }
+    if (err instanceof BulkOperationError && err.cause instanceof ApiError) {
+        const { status, code, message, details } = err.cause;
+        return apiError(c, status, code, message, {
+            ...details,
             failedId: err.failedId,
             succeededBefore: err.succeededBefore,
         });

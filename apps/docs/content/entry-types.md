@@ -63,10 +63,16 @@ The same applies to `Astromech.users.update()` and `Astromech.media.update()`.
 `Astromech.entries.trash()` moves an entry to the trash with every locale, and
 `restore()` brings it back. A trashed entry gives up its slug: a new entry
 titled "Same" takes `same` even while an older "Same" is in the trash.
+A trashed entry is read-only until it is restored: an update, a status change,
+a new locale, a new staged change, a staged merge, a version restore or a
+preview token answers 409 `CONFLICT` with `details.reason` `trashed` and the
+entry's `details.id`, including when the entry is trashed while the write runs.
 Restoring sets every locale `unpublished`, through the same update path as any
-status change, so the update hooks fire. A locale whose slug another entry took
-meanwhile gets the next free one (`same-2`). The admin's restore message says the
-entry is unpublished and names any new slug. Emptying the trash deletes its entries for good.
+status change, so the update hooks fire. A locale whose
+slug another entry took meanwhile gets the next free one (`same-2`). An entry
+that another call restores while the restore runs is left as that call left it.
+The admin's restore message says the entry is unpublished and names any new
+slug. Emptying the trash deletes its entries for good.
 
 ## Splitting a type into its own module
 

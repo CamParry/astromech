@@ -230,11 +230,13 @@ export function getPluginRawRoutes(): RegisteredRawRoute[] {
     return state().rawRoutes;
 }
 
+/** A plugin's logger: every level to stderr, as core's `log` writes. */
 function makeLogger(name: string): PluginLogger {
     const tag = `[plugin:${name}]`;
     return {
-        info: (message) => console.info(`${tag} ${message}`),
-        warn: (message) => console.warn(`${tag} ${message}`),
+        debug: (message) => console.error(`${tag} ${message}`),
+        info: (message) => console.error(`${tag} ${message}`),
+        warn: (message) => console.error(`${tag} ${message}`),
         error: (message, error) => console.error(`${tag} ${message}`, error ?? ''),
     };
 }

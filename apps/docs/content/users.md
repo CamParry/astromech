@@ -192,6 +192,9 @@ sets a password through the reset link.
 
 `update` and `delete` refuse to take the `admin` role from the only user
 holding it, whether the call comes from the admin, the CLI, MCP or a plugin.
+The refusal answers 409 `CONFLICT` with `details.reason` `last-admin`. The
+write itself repeats the check, so two calls that each demote or delete one
+of two admins cannot both succeed.
 
 Grant them in a role like any other permission:
 

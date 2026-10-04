@@ -7,6 +7,7 @@ import type {
     ResolvedConfig,
     User,
 } from '@/types/index';
+import { expectConsole } from '@tests/console';
 import { adminRole } from '@tests/fixtures';
 import {
     createTestDb,
@@ -145,6 +146,30 @@ describe('createPluginContext', () => {
         expect(ctx.config.entryTypesWithField('seo-meta')).toEqual(['posts']);
         expect(ctx.config.entryTypesWithField('body')).toEqual(['posts', 'pages']);
         expect(ctx.config.entryTypesWithField('nope')).toEqual([]);
+    });
+
+    // Stdout belongs to the MCP stdio server and `--json` output.
+    it('writes every logger level to stderr, tagged with the plugin', () => {
+        registerPlugins([def({ package: '@astromech/seo' })], config);
+        const ctx = createPluginContext(
+            resolvePluginIdentity(def({ package: '@astromech/seo' })),
+            createAppContext({ user, role: null })
+        );
+        const stdout = [
+            vi.spyOn(console, 'log'),
+            vi.spyOn(console, 'info'),
+            vi.spyOn(console, 'debug'),
+        ];
+        for (const level of ['debug', 'info', 'warn', 'error'] as const) {
+            expectConsole('error', `[plugin:seo] a ${level} line`);
+        }
+
+        ctx.logger.debug('a debug line');
+        ctx.logger.info('a info line');
+        ctx.logger.warn('a warn line');
+        ctx.logger.error('a error line');
+
+        for (const spy of stdout) expect(spy).not.toHaveBeenCalled();
     });
 
     it('has a null role when the caller names none', () => {

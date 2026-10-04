@@ -226,9 +226,12 @@ scheduled global goes live on the first run of the built-in `scheduled-publish`
 job after its date, as a scheduled entry does
 ([../configuration/scheduler.md](../configuration/scheduler.md)). The job
 publishes each row as an update, so the update hooks fire, and it keeps the
-scheduled date. A row the job cannot publish, such as one whose fields have
-since become incomplete, is logged and stays scheduled, and the next run tries
-it again.
+scheduled date. The write holds only while the row is still scheduled for the
+date the job read: a row unscheduled, rescheduled or deleted meanwhile (by an
+editor, or by a `global:beforeUpdate` hook) is skipped, and the skip is logged
+at debug level rather than as an error, since the later change wins. A row the job
+cannot publish, such as one whose fields have since become incomplete, is
+logged as an error and stays scheduled, and the next run tries it again.
 
 ## Staged changes
 
@@ -247,8 +250,9 @@ await app.globals.mergeStaged({ key: 'site', locale: 'en' });
 ```
 
 `createStaged` copies the live locale as it stands and takes no field values;
-edit the copy with `update` and `staged: true`, which validates like any other
-write. `getStaged` reads it, `deleteStaged` discards it. A staged change is never
+a locale that already has a staged change answers 409 `staged_change_exists`,
+also when two calls race. Edit the copy with `update` and `staged: true`, which
+validates like any other write. `getStaged` reads it, `deleteStaged` discards it. A staged change is never
 published, so reading one needs `full: true` and the read permission.
 `getStaged` also answers `diverged: true` when the live version in that locale
 was saved after the staged change was made, so a merge would overwrite that

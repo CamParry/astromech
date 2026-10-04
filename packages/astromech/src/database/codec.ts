@@ -145,6 +145,22 @@ export function encodePatchWith<D extends Table>(
     return serializeTable(table, values) as Updateable<KyselyOf<D>>;
 }
 
+/**
+ * JS → encoded for an UPDATE a repository writes: the patch, plus `now` for each
+ * `col.timestamp({ onUpdate })` column it leaves out, then serialized.
+ */
+export function encodeUpdateWith<D extends Table>(
+    table: D,
+    values: Record<string, unknown>
+): Updateable<KyselyOf<D>> {
+    const out: Record<string, unknown> = { ...values };
+    const now = new Date();
+    for (const [key, col] of Object.entries(table.columns)) {
+        if (col.onUpdate && out[key] === undefined) out[key] = now;
+    }
+    return encodePatchWith(table, out);
+}
+
 function serializeTable(
     table: Table,
     values: Record<string, unknown>

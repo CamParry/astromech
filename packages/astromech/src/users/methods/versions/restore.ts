@@ -30,16 +30,19 @@ export const restoreUserVersion = defineServiceMethod({
 
         return restoreVersion({
             resource: 'user',
-            versions: userRepository.versions,
+            repository: userRepository,
             current,
             version,
             address: { id },
             user,
-            write: async ({ fields }) => {
+            guard: { contentId: current.contentId },
+            write: async ({ fields }, guard) => {
                 const restored = await userRepository.update(
                     { id, locale: current.locale },
-                    { fields, updatedBy: userId }
+                    { fields, updatedBy: userId },
+                    guard
                 );
+                if (restored === null) return null;
                 await syncUserRelationships(config, id);
                 return restored;
             },

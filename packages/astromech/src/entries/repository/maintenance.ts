@@ -4,15 +4,17 @@
  * the per-type repository contract; keeping them here keeps raw DB out of jobs.
  */
 
+import { decodeWith } from '@/database/codec';
 import { createRepository } from '@/database/repository/create-repository';
 import { entriesTable, entryContentTable } from '@/database/tables';
+import { compareTimestamps } from '@/database/timestamps';
 
 /** One locale of one entry, as `findDueScheduled` names it, with its publish time. */
 type DueScheduledEntry = {
     type: string;
     id: string;
     locale: string;
-    publishedAt: Date | null;
+    publishedAt: Date;
 };
 
 export type EntryMaintenanceRepository = ReturnType<
@@ -28,21 +30,30 @@ function createEntryMaintenanceRepository() {
      * publish time has passed, for the `scheduled-publish` job to publish.
      */
     async function findDueScheduled(now: Date): Promise<DueScheduledEntry[]> {
-        const rows = await contents.findMany({
-            where: {
-                status: 'scheduled',
-                publishedAt: { lte: now },
-                // Canonical rows only: a staged change publishes at its merge.
-                stagedFor: null,
-                trashed: false,
-            },
+        const { db, table, where } = contents.kysely();
+        const raw = await db
+            .selectFrom(table)
+            .selectAll()
+            .where((eb) =>
+                eb.and([
+                    where({
+                        status: 'scheduled',
+                        // Canonical rows only: a staged change publishes at its merge.
+                        stagedFor: null,
+                        trashed: false,
+                    })(eb),
+                    compareTimestamps(`${table}.publishedAt`, '<=', now),
+                ])
+            )
+            .execute();
+        // A null date is never due; the check narrows the type.
+        return raw.flatMap((row) => {
+            const { type, entryId, locale, publishedAt } = decodeWith(
+                entryContentTable,
+                row
+            );
+            return publishedAt ? [{ type, id: entryId, locale, publishedAt }] : [];
         });
-        return rows.map((row) => ({
-            type: row.type,
-            id: row.entryId,
-            locale: row.locale,
-            publishedAt: row.publishedAt,
-        }));
     }
 
     /**

@@ -20,7 +20,7 @@ import { getDb } from '@/database/registry';
 import { entriesTable } from '@/database/tables';
 import { entryRepository } from '@/entries/repository/entries-table';
 import { HookOutputValidationError } from '@/errors/output-validation';
-import { ResourceNotFoundError } from '@/errors/resource';
+import { ResourceConflictError, ResourceNotFoundError } from '@/errors/resource';
 import { ValidationError } from '@/errors/validation';
 import { defineHook } from '@/plugins/define-hook';
 
@@ -415,6 +415,24 @@ describe('versioning (on)', () => {
         expect(saved.snapshot.title).toBe('Changed');
         expect(saved.snapshot.fields).toEqual({ body: 'changed' });
     });
+
+    it('stores the title, slug and fields of the row it replaces, and not its status', async () => {
+        const e = await api.create({
+            type: 'post',
+            data: { title: 'Orig', slug: 'orig', fields: { body: 'orig' } },
+        });
+        await api.publish({ type: 'post', id: e.id });
+        await api.update({ type: 'post', id: e.id, data: { title: 'Changed' } });
+
+        const [stored] = await getDb().selectFrom('entryVersions').selectAll().execute();
+        expect(stored).toMatchObject({
+            version: 1,
+            title: 'Orig',
+            slug: 'orig',
+            fields: '{"body":"orig"}',
+        });
+        expect(stored).not.toHaveProperty('status');
+    });
 });
 
 describe('versioning (off)', () => {
@@ -637,15 +655,18 @@ describe('trash / restore / delete / emptyTrash', () => {
         expect(second.slug).toBe('same');
     });
 
-    it('frees the slug of a translation added while the entry is in the trash', async () => {
-        const first = await api.create({ type: 'post', data: { title: 'Same' } });
-        await api.trash({ type: 'post', id: first.id });
+    it("gives a new entry the slug of a trashed entry's other locale", async () => {
+        const first = await api.create({
+            type: 'post',
+            data: { title: 'Same', locale: 'en' },
+        });
         await api.update({
             type: 'post',
             id: first.id,
             locale: 'de',
             data: { title: 'Same' },
         });
+        await api.trash({ type: 'post', id: first.id });
 
         const second = await api.create({
             type: 'post',
@@ -749,6 +770,239 @@ describe('trash / restore / delete / emptyTrash', () => {
             .where('id', '=', a.id)
             .execute();
         expect(rows).toEqual([]);
+    });
+});
+
+describe('the trash is read-only', () => {
+    /** The one trashed `post`, as the trash list reads it back. */
+    async function readTrashed(): Promise<Entry | undefined> {
+        const trashed = await api.query({ type: 'post', full: true, trashed: true });
+        return trashed.data[0];
+    }
+
+    /** A probe whose `entry:beforeUpdate` runs `act` once, between the read and the write. */
+    function onceBeforeUpdate(act: (id: string) => Promise<unknown>): PluginDefinition {
+        let done = false;
+        return {
+            package: '@test/probe',
+            hooks: [
+                defineHook('entry:beforeUpdate', async (ctx) => {
+                    if (done) return;
+                    done = true;
+                    await act(ctx.entry.id);
+                }),
+            ],
+        };
+    }
+
+    it.each([
+        {
+            write: 'update',
+            call: (id: string) => api.update({ type: 'post', id, data: { title: 'B' } }),
+        },
+        { write: 'publish', call: (id: string) => api.publish({ type: 'post', id }) },
+        { write: 'unpublish', call: (id: string) => api.unpublish({ type: 'post', id }) },
+        {
+            write: 'schedule',
+            call: (id: string) =>
+                api.schedule({
+                    type: 'post',
+                    id,
+                    publishedAt: new Date(Date.now() + 60_000),
+                }),
+        },
+        {
+            write: 'add a locale to',
+            call: (id: string) =>
+                api.update({ type: 'post', id, locale: 'de', data: { title: 'B' } }),
+        },
+    ])('refuses to $write a trashed entry', async ({ call }) => {
+        const entry = await api.create({
+            type: 'post',
+            data: { title: 'A', status: 'published' },
+        });
+        await api.trash({ type: 'post', id: entry.id });
+
+        const refused = await call(entry.id).catch((err: unknown) => err);
+
+        expect(refused).toBeInstanceOf(ResourceConflictError);
+        expect(refused).toMatchObject({
+            status: 409,
+            code: 'CONFLICT',
+            details: { reason: 'trashed' },
+        });
+        expect(await readTrashed()).toMatchObject({
+            title: 'A',
+            status: 'published',
+            locales: ['en'],
+        });
+    });
+
+    it('refuses an update when the entry is trashed between the read and the write', async () => {
+        const resolved = setupTestConfig();
+        registerTestPlugins(
+            [onceBeforeUpdate((id) => api.trash({ type: 'post', id }))],
+            resolved
+        );
+        const entry = await api.create({ type: 'post', data: { title: 'A' } });
+
+        const refused = api.update({ type: 'post', id: entry.id, data: { title: 'B' } });
+
+        await expect(refused).rejects.toBeInstanceOf(ResourceConflictError);
+        await expect(refused).rejects.toMatchObject({ details: { reason: 'trashed' } });
+        expect(await readTrashed()).toMatchObject({ id: entry.id, title: 'A' });
+    });
+
+    it('refuses a new locale when the entry is trashed between the read and the write', async () => {
+        const resolved = setupTestConfig();
+        const entry = await api.create({ type: 'post', data: { title: 'A' } });
+        let done = false;
+        registerTestPlugins(
+            [
+                {
+                    package: '@test/probe',
+                    hooks: [
+                        defineHook('entry:beforeCreate', async () => {
+                            if (done) return;
+                            done = true;
+                            await api.trash({ type: 'post', id: entry.id });
+                        }),
+                    ],
+                },
+            ],
+            resolved
+        );
+
+        const refused = api.update({
+            type: 'post',
+            id: entry.id,
+            locale: 'de',
+            data: { title: 'B' },
+        });
+
+        await expect(refused).rejects.toBeInstanceOf(ResourceConflictError);
+        await expect(refused).rejects.toMatchObject({ details: { reason: 'trashed' } });
+        expect(await readTrashed()).toMatchObject({ id: entry.id, locales: ['en'] });
+    });
+
+    it('names the trash when the entry is out of it again by the time the refusal is explained', async () => {
+        const resolved = setupTestConfig();
+        registerTestPlugins(
+            [onceBeforeUpdate((id) => api.trash({ type: 'post', id }))],
+            resolved
+        );
+        const entry = await api.create({ type: 'post', data: { title: 'A' } });
+        // A row restored between the refused write and the read that explains it.
+        vi.spyOn(entryRepository, 'explainConflict').mockResolvedValueOnce(null);
+
+        const refused = api.update({ type: 'post', id: entry.id, data: { title: 'B' } });
+
+        await expect(refused).rejects.toMatchObject({ details: { reason: 'trashed' } });
+        expect(await readTrashed()).toMatchObject({ id: entry.id, title: 'A' });
+    });
+
+    // `note` keeps no versions; `post` does, so its snapshot meets the deleted
+    // row before the update does.
+    it.each(['note', 'post'])(
+        'answers 404 for a %s deleted between the read and the write',
+        async (type) => {
+            const resolved = setupTestConfig();
+            registerTestPlugins(
+                [onceBeforeUpdate((id) => api.delete({ type, id }))],
+                resolved
+            );
+            const entry = await api.create({ type, data: { title: 'A' } });
+
+            const refused = api.update({ type, id: entry.id, data: { title: 'B' } });
+
+            await expect(refused).rejects.toBeInstanceOf(ResourceNotFoundError);
+            expect(await api.get({ type, id: entry.id, full: true })).toBeNull();
+        }
+    );
+
+    it('refuses the same update on a driver with no transactions', async () => {
+        const base = await createTestDb();
+        const resolved = setupTestConfig({
+            ...makeTestConfig(),
+            db: { type: 'no-tx', getInstance: () => base, supportsTransactions: false },
+        });
+        registerTestPlugins(
+            [onceBeforeUpdate((id) => api.trash({ type: 'post', id }))],
+            resolved
+        );
+        const entry = await api.create({ type: 'post', data: { title: 'A' } });
+
+        const refused = api.update({ type: 'post', id: entry.id, data: { title: 'B' } });
+
+        await expect(refused).rejects.toMatchObject({ details: { reason: 'trashed' } });
+        expect(await readTrashed()).toMatchObject({ id: entry.id, title: 'A' });
+        // With no transaction to roll it back, a version written before the
+        // refused update would stay.
+        expect(await base.selectFrom('entryVersions').selectAll().execute()).toEqual([]);
+    });
+
+    it('refuses to restore a version of a trashed entry', async () => {
+        const entry = await api.create({ type: 'post', data: { title: 'A' } });
+        await api.update({ type: 'post', id: entry.id, data: { title: 'B' } });
+        await api.trash({ type: 'post', id: entry.id });
+
+        const refused = api.restoreVersion({ type: 'post', id: entry.id, version: 1 });
+
+        await expect(refused).rejects.toBeInstanceOf(ResourceConflictError);
+        await expect(refused).rejects.toMatchObject({
+            status: 409,
+            details: { reason: 'trashed' },
+        });
+        expect(await readTrashed()).toMatchObject({ id: entry.id, title: 'B' });
+    });
+
+    it('keeps the republish of a competing restore that ran inside the restore', async () => {
+        const resolved = setupTestConfig();
+        registerTestPlugins(
+            [
+                onceBeforeUpdate(async (id) => {
+                    await api.restore({ type: 'post', id });
+                    await api.publish({ type: 'post', id });
+                }),
+            ],
+            resolved
+        );
+        const entry = await api.create({
+            type: 'post',
+            data: { title: 'A', status: 'published' },
+        });
+        await api.trash({ type: 'post', id: entry.id });
+
+        const restored = await api.restore({ type: 'post', id: entry.id });
+
+        expect(restored).toMatchObject({ status: 'published', deletedAt: null });
+        const live = await api.get({ type: 'post', id: entry.id, full: true });
+        expect(live).toMatchObject({ status: 'published', deletedAt: null });
+    });
+
+    it('keeps the republish of a competing restore that ran before its first write', async () => {
+        const entry = await api.create({
+            type: 'post',
+            data: { title: 'A', status: 'published' },
+        });
+        await api.trash({ type: 'post', id: entry.id });
+        const findRows = entryRepository.findContentRowsByEntry.bind(entryRepository);
+        // The restore reads the rows it will unpublish, then a competing call
+        // restores and republishes the entry before the first write.
+        vi.spyOn(entryRepository, 'findContentRowsByEntry').mockImplementationOnce(
+            async (id) => {
+                const rows = await findRows(id);
+                await api.restore({ type: 'post', id });
+                await api.publish({ type: 'post', id });
+                return rows;
+            }
+        );
+
+        const restored = await api.restore({ type: 'post', id: entry.id });
+
+        expect(restored).toMatchObject({ status: 'published', deletedAt: null });
+        const live = await api.get({ type: 'post', id: entry.id, full: true });
+        expect(live).toMatchObject({ status: 'published', deletedAt: null });
     });
 });
 

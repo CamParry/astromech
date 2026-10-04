@@ -226,6 +226,7 @@ function createMediaRepository() {
         findFiles: content.findResourceRows,
         create,
         update: content.update,
+        explainConflict: content.explainConflict,
         /**
          * Write the file-row columns, whatever the locale. Kept per resource: the
          * patch type names this table's columns.

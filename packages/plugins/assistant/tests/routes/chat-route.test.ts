@@ -9,6 +9,7 @@ import type { ChatEvent, ChatMessage } from '../../src/types';
 import type { AiConfig, Role, User } from '@/types/index';
 import type { PluginTestApp } from '@tests/plugin-app';
 import type * as AiModule from 'ai';
+import { expectConsole } from '@tests/console';
 import { roleWith } from '@tests/fixtures';
 import { makeTestConfig } from '@tests/harness';
 import { createPluginTestApp } from '@tests/plugin-app';
@@ -128,6 +129,7 @@ async function holdUpdate(owner: User): Promise<string> {
 
 describe('POST /plugins/assistant/chat', () => {
     it('streams the turn to a user holding the permission and stores it as their session', async () => {
+        expectConsole('error', '[plugin:assistant] Chat request running against');
         modelReplies('hello');
 
         const res = await postChat({ user, role: ROLE }, { messages: [GREETING] });
@@ -188,6 +190,7 @@ describe('POST /plugins/assistant/chat', () => {
     });
 
     it("sends the site's instructions after the fixed system prompt", async () => {
+        expectConsole('error', '[plugin:assistant] Chat request running against');
         app = await createPluginTestApp('assistant', {
             ...makeTestConfig(),
             plugins: [assistant({ instructions: 'Write in British English.' })],
@@ -211,6 +214,7 @@ describe('POST /plugins/assistant/chat', () => {
     // The body carries no session id: the session is the signed-in user's, so
     // a body naming another user changes nothing of theirs.
     it("stores the caller's session, never the one a body names", async () => {
+        expectConsole('error', '[plugin:assistant] Chat request running against');
         const theirs: ChatMessage[] = [
             { role: 'user', content: [{ type: 'text', text: 'private' }] },
         ];
@@ -232,6 +236,7 @@ describe('POST /plugins/assistant/chat', () => {
     });
 
     it("declines an approval that belongs to another user's session, leaving it held", async () => {
+        expectConsole('error', '[plugin:assistant] Chat request running against');
         const approvalId = await holdUpdate(otherUser);
         modelReplies('ok');
         const paused: ChatMessage = {

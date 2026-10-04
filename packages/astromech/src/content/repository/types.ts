@@ -10,6 +10,7 @@
  */
 
 import type { SortClause } from '@/content/list';
+import type { GuardFailure, WriteGuard } from '@/content/write-guard';
 import type { Table, TableSelect } from '@/database/define-table';
 import type { GenericDb } from '@/database/repository/create-repository';
 import type { Db } from '@/database/types';
@@ -199,6 +200,13 @@ export type ContentRepository<
      * stamp the resource row's `updatedAt` (and `updatedBy`, where it has one).
      */
     update(ref: ContentRef, data: ContentWrite): Promise<R>;
+    /**
+     * Write the content row `guard.contentId` names, only while the guard's
+     * conditions hold; null when they do not, with nothing written.
+     */
+    update(ref: ContentRef, data: ContentWrite, guard: WriteGuard): Promise<R | null>;
+    /** Why a guarded write changed nothing: see `GuardedRepository`. */
+    explainConflict(guard: WriteGuard): Promise<GuardFailure | null>;
     /** Hard-delete the resource row; content rows and versions cascade. */
     delete(id: string): Promise<void>;
     /** The canonical locales of each id, sorted. */
@@ -222,18 +230,39 @@ export type ContentRepository<
             excludeLocale: string,
             values: JsonObject
         ): Promise<void>;
+        /**
+         * Entries only: add the locale `ref` names, copied from the content row
+         * the guard names with `data` over it, and stamp the resource row, while
+         * the guard's conditions hold; null when they do not, with nothing written.
+         */
+        create(
+            ref: { id: string; locale: string },
+            data: ContentWrite,
+            guard: WriteGuard
+        ): Promise<R | null>;
     };
 
     staging: {
         /** The staged change for one locale, or null. */
         findOne(ref: ContentRef): Promise<R | null>;
         /**
-         * Add a second content row for that locale, staged for the canonical.
-         * Staging writes leave the resource row alone.
+         * Add a second content row for that locale, staged for the canonical:
+         * a copy of the canonical as stored, with `data` over it. Staging
+         * writes leave the resource row alone.
          */
         create(ref: ContentRef, data: ContentWrite): Promise<R>;
+        /**
+         * The same copy of the canonical row `guard.contentId` names, only
+         * while the guard's conditions hold; null when they do not.
+         */
+        create(ref: ContentRef, data: ContentWrite, guard: WriteGuard): Promise<R | null>;
         /** Write that locale's staged content row; it must already exist. */
         update(ref: ContentRef, data: ContentWrite): Promise<R>;
+        /**
+         * Write the staged content row `guard.contentId` names, only while the
+         * guard's conditions hold; null when they do not.
+         */
+        update(ref: ContentRef, data: ContentWrite, guard: WriteGuard): Promise<R | null>;
         /** Discard the staged content row for that locale. */
         delete(ref: ContentRef): Promise<void>;
     };
@@ -299,6 +328,12 @@ export type ContentVersions<Row = Record<string, unknown>> = {
     create(snapshot: NewVersionSnapshot): Promise<void>;
     /** The highest version number for a content row; 0 when it has none. */
     latestNumber(contentId: ContentRowId): Promise<number>;
+    /**
+     * Save the content row `guard.contentId` names, as stored, as its next
+     * version, while the guard's conditions hold; false when they do not, with
+     * nothing written. One statement reads the row and numbers the version.
+     */
+    snapshot(guard: WriteGuard, createdBy: string | null): Promise<boolean>;
 };
 
 /**

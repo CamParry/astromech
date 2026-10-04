@@ -46,11 +46,11 @@ export type HttpRouteSpec = {
      */
     notFound?: string;
     /**
-     * A 400 or 409 the method answers for a reason neither its schemas nor its
+     * A 409 the method answers for a reason neither its schemas nor its
      * `requires` state, worded for the OpenAPI document (the last admin, a
-     * staged change that already exists).
+     * staged change that already exists, an entry in the trash).
      */
-    refusals?: { badRequest?: string; conflict?: string };
+    refusals?: { conflict?: string };
     /** Marks a route whose server handler is written by hand, not generated. */
     handler?: 'bespoke';
     /**
@@ -83,9 +83,30 @@ const UNKEPT_ENTRY_COLUMN = {
         '`slug` on one without `slug` (`capability_not_supported`)',
 };
 
+/** The 409 a write to an entry answers while it is in the trash. */
+const ENTRY_TRASHED = {
+    conflict: 'the entry is in the trash (`CONFLICT`, reason `trashed`)',
+};
+
+/** An update's 409s: a column the type does not keep, or an entry in the trash. */
+const ENTRY_UPDATE_CONFLICTS = {
+    conflict: `${UNKEPT_ENTRY_COLUMN.conflict}; ${ENTRY_TRASHED.conflict}`,
+};
+
+/** The 409 `restore` answers when an entry leaves the trash while it runs. */
+const ENTRY_NOT_TRASHED = {
+    conflict:
+        'the entry left the trash while the restore ran (`CONFLICT`, reason `not-trashed`)',
+};
+
 /** The 409 `createStaged` answers when the locale already has a staged change. */
 const STAGED_CHANGE_EXISTS = {
     conflict: 'the locale already has a staged change (`staged_change_exists`)',
+};
+
+/** An entry's `createStaged` 409s: a staged change already, or an entry in the trash. */
+const ENTRY_STAGE_CONFLICTS = {
+    conflict: `${STAGED_CHANGE_EXISTS.conflict}; ${ENTRY_TRASHED.conflict}`,
 };
 
 export const ENTRIES_ROUTE_SPECS = [
@@ -115,7 +136,7 @@ export const ENTRIES_ROUTE_SPECS = [
         id: 'entries.update',
         queryArgs: ['locale', 'staged'],
         client: 'list',
-        refusals: UNKEPT_ENTRY_COLUMN,
+        refusals: ENTRY_UPDATE_CONFLICTS,
     },
     {
         verb: 'put',
@@ -123,7 +144,7 @@ export const ENTRIES_ROUTE_SPECS = [
         id: 'entries.update',
         bodyKey: 'data',
         queryArgs: ['locale', 'staged'],
-        refusals: UNKEPT_ENTRY_COLUMN,
+        refusals: ENTRY_UPDATE_CONFLICTS,
     },
     {
         verb: 'post',
@@ -144,6 +165,7 @@ export const ENTRIES_ROUTE_SPECS = [
         path: '/:type/bulk-restore',
         id: 'entries.restore',
         client: 'list',
+        refusals: ENTRY_NOT_TRASHED,
     },
     {
         verb: 'post',
@@ -151,6 +173,7 @@ export const ENTRIES_ROUTE_SPECS = [
         id: 'entries.publish',
         queryArgs: ['locale'],
         client: 'list',
+        refusals: ENTRY_TRASHED,
     },
     {
         verb: 'post',
@@ -158,6 +181,7 @@ export const ENTRIES_ROUTE_SPECS = [
         id: 'entries.unpublish',
         queryArgs: ['locale'],
         client: 'list',
+        refusals: ENTRY_TRASHED,
     },
     {
         verb: 'post',
@@ -165,6 +189,7 @@ export const ENTRIES_ROUTE_SPECS = [
         id: 'entries.schedule',
         queryArgs: ['locale'],
         client: 'list',
+        refusals: ENTRY_TRASHED,
     },
     {
         verb: 'post',
@@ -172,7 +197,12 @@ export const ENTRIES_ROUTE_SPECS = [
         id: 'entries.trash',
         envelope: 'success',
     },
-    { verb: 'post', path: '/:type/:id/restore', id: 'entries.restore' },
+    {
+        verb: 'post',
+        path: '/:type/:id/restore',
+        id: 'entries.restore',
+        refusals: ENTRY_NOT_TRASHED,
+    },
     {
         verb: 'post',
         path: '/:type/:id/duplicate',
@@ -193,18 +223,21 @@ export const ENTRIES_ROUTE_SPECS = [
         path: '/:type/:id/publish',
         id: 'entries.publish',
         queryArgs: ['locale'],
+        refusals: ENTRY_TRASHED,
     },
     {
         verb: 'post',
         path: '/:type/:id/unpublish',
         id: 'entries.unpublish',
         queryArgs: ['locale'],
+        refusals: ENTRY_TRASHED,
     },
     {
         verb: 'post',
         path: '/:type/:id/schedule',
         id: 'entries.schedule',
         queryArgs: ['locale'],
+        refusals: ENTRY_TRASHED,
     },
     {
         verb: 'get',
@@ -222,6 +255,7 @@ export const ENTRIES_ROUTE_SPECS = [
         path: '/:type/:id/versions/:version/restore',
         id: 'entries.restoreVersion',
         queryArgs: ['locale'],
+        refusals: ENTRY_TRASHED,
     },
     { verb: 'get', path: '/:type/:id/used-by', id: 'entries.usedBy' },
     {
@@ -230,7 +264,7 @@ export const ENTRIES_ROUTE_SPECS = [
         id: 'entries.createStaged',
         status: 201,
         queryArgs: ['locale'],
-        refusals: STAGED_CHANGE_EXISTS,
+        refusals: ENTRY_STAGE_CONFLICTS,
     },
     {
         verb: 'get',
@@ -242,6 +276,7 @@ export const ENTRIES_ROUTE_SPECS = [
         path: '/:type/:id/staged/merge',
         id: 'entries.mergeStaged',
         queryArgs: ['locale'],
+        refusals: ENTRY_TRASHED,
     },
     {
         verb: 'delete',
@@ -254,6 +289,7 @@ export const ENTRIES_ROUTE_SPECS = [
         path: '/:type/:id/preview-token',
         id: 'entries.issuePreviewToken',
         status: 201,
+        refusals: ENTRY_TRASHED,
     },
     {
         verb: 'delete',
@@ -365,14 +401,19 @@ export const USERS_ROUTE_SPECS = [
         bodyKey: 'data',
         handler: 'bespoke',
         queryArgs: ['locale'],
-        refusals: { badRequest: 'the new `role` leaves the site with no admin' },
+        refusals: {
+            conflict:
+                'the new `role` leaves the site with no admin (`CONFLICT`, reason `last-admin`)',
+        },
     },
     {
         verb: 'delete',
         path: '/:id',
         id: 'users.delete',
         envelope: 'success',
-        refusals: { badRequest: 'the user is the last admin' },
+        refusals: {
+            conflict: 'the user is the last admin (`CONFLICT`, reason `last-admin`)',
+        },
     },
     {
         verb: 'get',

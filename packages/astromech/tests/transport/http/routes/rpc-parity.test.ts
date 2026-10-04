@@ -304,7 +304,7 @@ describe('POST /rpc/:id', () => {
         );
     });
 
-    it('400s demoting the last admin', async () => {
+    it('409s demoting the last admin', async () => {
         const app = await freshApp();
         const admin = await usersService.create({
             data: { email: 'admin@test.dev', name: 'Admin', role: 'admin' },
@@ -313,10 +313,10 @@ describe('POST /rpc/:id', () => {
             id: admin.id,
             data: { role: 'editor' },
         });
-        expect(res.status).toBe(400);
+        expect(res.status).toBe(409);
         const body = (await res.json()) as ErrorBody;
         expect(body.error).toMatchObject({
-            code: 'BAD_REQUEST',
+            code: 'CONFLICT',
             message: 'Cannot remove the last administrator',
         });
     });
