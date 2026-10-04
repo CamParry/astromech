@@ -83,12 +83,21 @@ export function request(url) {
     });
 }
 
-/** Fail unless `url` answers with the `expected` status. */
+/** How much of an unexpected response's body a failure prints. */
+const BODY_EXCERPT_LENGTH = 2000;
+
+/**
+ * Fail unless `url` answers with the `expected` status. The failure carries
+ * the start of the response body, which is often the only place the cause is.
+ */
 export async function expectStatus(url, expected, description) {
     const response = await request(url);
     if (response.status !== expected) {
+        const body = await response.text().catch((error) => `(unreadable: ${error})`);
+        const excerpt = body.trim().slice(0, BODY_EXCERPT_LENGTH);
         throw new Error(
-            `${url} returned ${response.status}, expected ${expected} — ${description}`
+            `${url} returned ${response.status}, expected ${expected} — ${description}` +
+                (excerpt ? `\nresponse body:\n${excerpt}` : '')
         );
     }
     console.log(`  ok  ${expected} ${url} — ${description}`);
