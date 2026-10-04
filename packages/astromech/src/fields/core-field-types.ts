@@ -377,6 +377,17 @@ const dataFieldTypes: CoreDataFieldType[] = [
             `Array<import('astromech').JsonObject & { ${reservedKeyLines(BLOCKS_KEYS, shape).join(' ')} }>`,
         defaultValue: [],
         validate: validateBlockTypes,
+        // A block whose type is no longer declared has no fields to show.
+        toPublic: (field, value) =>
+            Array.isArray(value)
+                ? value.filter(
+                      (item) =>
+                          !isPlainObject(item) ||
+                          field.blocks?.some(
+                              (block) => block.type === item[RESERVED_KEY.type]
+                          ) === true
+                  )
+                : value,
         children: (field, value) =>
             arrayChildren(field, value, (item) => {
                 const block = field.blocks?.find(

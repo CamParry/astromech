@@ -47,7 +47,7 @@ a failing test first.
 
 ## The work
 
-- [ ] Public reads drop undeclared keys.
+- [x] Public reads drop undeclared keys.
 - [ ] Sync cron schedules from config on boot; fix the Cloudflare docs.
 - [ ] Constant-time comparison of the cron secret.
 - [ ] A result and error on each cron run.
