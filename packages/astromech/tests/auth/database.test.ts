@@ -48,8 +48,8 @@ function wait(ms: number): Promise<void> {
 
 describe('Better Auth beside an open app transaction', () => {
     it('writes once the transaction commits instead of failing with SQLITE_BUSY', async () => {
-        // The config names no email driver, so the reset link is logged instead.
-        expectConsole('error', `Password reset URL for ${EMAIL}`);
+        // The config names no email driver, so the request logs that instead.
+        expectConsole('error', `password reset email to ${EMAIL} was not sent`);
         await usersService.create({
             data: { email: EMAIL, name: 'Reset', role: DEFAULT_ROLE_SLUG },
         });

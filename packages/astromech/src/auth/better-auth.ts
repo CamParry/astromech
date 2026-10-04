@@ -192,8 +192,16 @@ function buildAuth(): Auth<BetterAuthOptions> {
                     await import('@/email/components/password-reset');
                 const { getEmailOverride } = await import('@/email/email-overrides');
                 const driver = getEmailDriver();
+                // The link signs in as the user, so it reaches the log only in
+                // development, where the log is the developer's own terminal.
                 if (!driver) {
-                    log.info(`Password reset URL for ${user.email}: ${url}`);
+                    if (resolveNodeEnv() === 'development') {
+                        log.info(`Password reset URL for ${user.email}: ${url}`);
+                    } else {
+                        log.warn(
+                            `No email driver is configured, so the password reset email to ${user.email} was not sent. Set \`email\` in astromech.config.ts.`
+                        );
+                    }
                     return;
                 }
                 const subject = 'Reset your password';

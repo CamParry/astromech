@@ -190,6 +190,11 @@ permission, even for the caller's own row.
 one writes the credential account the user signs in with; without one the user
 sets a password through the reset link.
 
+The reset link goes out through the config's `email` driver. With no driver,
+Astromech logs the link instead when `NODE_ENV` is `development`. Anywhere
+else it logs only that the email was not sent, because the link signs in as
+the user and anyone who can read the logs could use it.
+
 `update` and `delete` refuse to take the `admin` role from the only user
 holding it, whether the call comes from the admin, the CLI, MCP or a plugin.
 The refusal answers 409 `CONFLICT` with `details.reason` `last-admin`. The
