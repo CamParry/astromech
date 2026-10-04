@@ -226,6 +226,7 @@ describe('manifest ↔ MCP tool coverage', () => {
 
         expect(posts).toEqual(
             [
+                'count',
                 'create',
                 'createStaged',
                 'delete',

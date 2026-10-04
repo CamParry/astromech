@@ -83,6 +83,7 @@ describe('methods', () => {
         ]);
 
         expect(stdout).toEqual([
+            'entries.recipe.count  (permission: entry:recipe:read)',
             'entries.recipe.get  (permission: entry:recipe:read)',
             'entries.recipe.query  (permission: entry:recipe:read)',
             'entries.recipe.usedBy  (permission: entry:recipe:read)',
@@ -115,7 +116,7 @@ describe('methods', () => {
         ]);
 
         expect(JSON.parse(stdout.join('\n'))).toMatchObject({
-            methods: [],
+            methods: [{ id: 'entries.recipe.count' }],
             excluded: [
                 {
                     id: 'entries.recipe.create',

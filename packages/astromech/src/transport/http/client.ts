@@ -273,10 +273,11 @@ export function createEntriesService(
         return { ...params, ...(full !== undefined ? { full } : {}) };
     }
 
-    // Only the two reads are overridden, and only for the shape default: the
+    // Only the reads are overridden, and only for the shape default: the
     // route each takes still comes from the table.
     return restService<EntriesService>('entries', call, {
         query: (params) => call('entries.query', withFull(params)),
+        count: (params) => call('entries.count', withFull(params)),
         get: (params) => call('entries.get', withFull(params)),
     });
 }

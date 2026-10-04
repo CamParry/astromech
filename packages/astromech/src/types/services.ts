@@ -108,6 +108,14 @@ export type EntriesService = {
         params: EntryQueryParams & { type: string | readonly string[] }
     ): Promise<QueryResult<Entry>>;
 
+    /** How many entries of each type `query` would list, keyed by type. */
+    count(params: {
+        type: string | readonly string[];
+        locale?: string;
+        /** Count in the full (admin) shape, every status, instead of the public one. */
+        full?: boolean;
+    }): Promise<Record<string, number>>;
+
     get(params: {
         type: string;
         id: string;
