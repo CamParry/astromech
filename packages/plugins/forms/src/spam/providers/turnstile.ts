@@ -21,7 +21,7 @@ export function turnstile(options: TurnstileOptions): SpamProvider {
                 VERIFY_URL,
                 options.secretKey,
                 token,
-                context.ip
+                context.clientAddress
             );
             if (!result.ok) return result;
             return { ok: true };

@@ -155,7 +155,7 @@ export type SpamProvider = {
     siteKey: string;
     verify(
         token: string | undefined,
-        context: { ip?: string | undefined }
+        context: { clientAddress?: string | undefined }
     ): Promise<{ ok: true } | { ok: false; reason: string }>;
 };
 ```
@@ -169,8 +169,10 @@ turnstile({ siteKey, secretKey });
 recaptcha({ siteKey, secretKey, minScore: 0.5 }); // minScore is v3 only
 ```
 
-The secret key never leaves the server — only `name` and `siteKey` are published
-to the browser. The check runs as an ordinary `forms:beforeSubmit` subscriber,
+`clientAddress` is the connecting address the HTTP transport trusts, sent to the
+provider as `remoteip`; it is absent when there is none, and never the `ip` a
+caller puts in `meta`. The secret key never leaves the server — only `name` and
+`siteKey` are published to the browser. The check runs as an ordinary `forms:beforeSubmit` subscriber,
 through the same extension point a third party would use.
 
 ## Service methods

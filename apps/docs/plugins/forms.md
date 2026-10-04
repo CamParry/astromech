@@ -66,6 +66,20 @@ failure, so it renders where your other errors do:
 }
 ```
 
+## Spam protection
+
+With `spam` set, every form whose **Spam protection** toggle is on checks the
+token the caller sends with `submit`, after the fields pass validation. The
+check runs as a `forms:beforeSubmit` subscriber, and a failed check refuses the
+submission with nothing stored.
+
+`turnstile()` and `recaptcha()` send the provider the connecting address (the
+one the rate limit counts) as `remoteip`. With no connecting address, they leave
+`remoteip` out, which both providers accept. They never send the `ip` a caller
+puts in `meta`. Your own provider's `verify(token, { clientAddress })` receives
+the same address, and the `forms:beforeSubmit` payload carries it as
+`clientAddress`.
+
 ## Submissions
 
 Each accepted submission is a row in the plugin's own table,

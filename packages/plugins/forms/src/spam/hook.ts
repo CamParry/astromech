@@ -17,7 +17,9 @@ export function spamHook(spam: SpamProvider): Hook {
         const event = payload as FormsBeforeSubmitPayload;
         if (!event.form.spamProtection) return;
 
-        const verdict = await spam.verify(event.token, { ip: event.meta?.ip });
+        const verdict = await spam.verify(event.token, {
+            clientAddress: event.clientAddress,
+        });
         if (verdict.ok) return;
 
         // Throwing is the gate: this propagates and aborts the submission.

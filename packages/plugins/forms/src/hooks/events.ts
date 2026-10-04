@@ -15,6 +15,12 @@ export type FormsBeforeSubmitPayload = {
     data: Record<string, unknown>;
     /** Spam-provider token supplied by the client, if any. */
     token?: string;
+    /**
+     * The connecting address the HTTP transport trusts (`ctx.clientAddress`).
+     * Absent for an in-process caller or where no trusted source exists.
+     */
+    clientAddress?: string;
+    /** Caller-supplied metadata: stored, never trusted. */
     meta?: SubmissionMeta;
 };
 

@@ -1448,7 +1448,10 @@ Declare a contract, ship implementations of it, and take one as an option:
 export type SpamProvider = {
     name: string;
     siteKey: string;
-    verify(token: string | undefined, context: { ip?: string }): Promise<SpamVerdict>;
+    verify(
+        token: string | undefined,
+        context: { clientAddress?: string }
+    ): Promise<SpamVerdict>;
 };
 
 export function turnstile(options: TurnstileOptions): SpamProvider {

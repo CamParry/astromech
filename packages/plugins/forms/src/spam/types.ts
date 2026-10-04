@@ -6,8 +6,11 @@
 /** The outcome of checking one submission's token. */
 export type SpamVerdict = { ok: true } | { ok: false; reason: string };
 
-/** Request metadata a provider may use to strengthen its check. */
-export type SpamContext = { ip?: string | undefined };
+/**
+ * What a provider may use to strengthen its check. `clientAddress` is the
+ * connecting address the HTTP transport trusts, never one the caller supplied.
+ */
+export type SpamContext = { clientAddress?: string | undefined };
 
 /**
  * One spam provider. `name` and `siteKey` are published to the browser through
