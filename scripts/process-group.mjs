@@ -20,13 +20,18 @@ export async function stopProcessGroup(child, graceMs) {
     }
 }
 
-/** Signal a process group. False when no process in it is left. */
+/**
+ * Signal a process group. False when no live process in it is left. macOS
+ * answers EPERM, not ESRCH, when the group holds only exited processes their
+ * parents have not reaped yet, and every process here runs as this user, so
+ * EPERM means the same as ESRCH.
+ */
 function signalGroup(pid, signal) {
     try {
         process.kill(-pid, signal);
         return true;
     } catch (error) {
-        if (error.code === 'ESRCH') return false;
+        if (error.code === 'ESRCH' || error.code === 'EPERM') return false;
         throw error;
     }
 }

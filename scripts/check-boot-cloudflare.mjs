@@ -101,15 +101,22 @@ async function main() {
         401,
         'the API rejects an anonymous read'
     );
-    await expectSignInLimited(base);
+
     // The endpoint wrangler exposes to fire `scheduled()` by hand. A 200 means
     // the Worker entry exported the handler and the tick reached the cron
-    // table, which is the whole of the Cron Trigger path.
+    // table, which is the whole of the Cron Trigger path. A 500 carries the
+    // outcome (`exception` when the tick threw, logged above as an uncaught
+    // error) or the error that kept the tick from reaching the Worker.
     await expectStatus(
         `${base}/cdn-cgi/local/scheduled`,
         200,
         'the Cron Trigger runs a tick'
     );
+    // Last, because the 429 answers before the request body is read. Wrangler's
+    // dev proxy can then send the next request down the connection workerd
+    // closed for it, and that request fails with a 500 "Network connection
+    // lost." without reaching the Worker. A loaded machine makes it likely.
+    await expectSignInLimited(base);
 }
 
 /**
