@@ -20,11 +20,18 @@ Found on 2026-10-03 while planning `roadmap/planned/core-security.md`.
   (`packages/admin/src/pages/_protected/route.tsx`), and the login page does not
   say why.
 
+- **With no email driver, the password reset link is logged in production.**
+  `sendResetPassword` in `packages/astromech/src/auth/better-auth.ts` writes
+  the live reset URL to the log at `info` whatever the environment, so anyone
+  who can read the logs can take over the account. Found 2026-10-04.
+
 The class: an account change or a trust decision that skips the check the rest
 of the system applies (the password, the trusted address, the permission).
 
 ## The work
 
+- [ ] Log the reset URL only in development; in production, log that no
+      email driver is configured.
 - [ ] Changing your own email needs a confirmed password
       (`roadmap/planned/two-factor-and-passkeys.md`); until that lands, refuse
       an email change on the self-access path.

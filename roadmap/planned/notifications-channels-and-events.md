@@ -82,6 +82,8 @@ channels, params, text })` for core, exported for plugins. `channels` is the
 - [ ] **First emitters, needing no hooks:** scheduled publish done (to the
       author), scheduled publish failed (author and admins), cron job failed
       (admins).
+      The cron failure goes through Site health's stored check row, so a
+      job failing every minute notifies once (`roadmap/planned/site-health.md`).
 - [ ] **After hooks lands:** new user (admins), role changed (that user),
       password changed (that user, email, mandatory), backup failed (admins),
       and a long task or bulk import finished (whoever started it).
