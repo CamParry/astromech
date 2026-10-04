@@ -16,3 +16,33 @@ Astromech's middleware also calls `cache.set(false)` on these routes after the
 route has rendered, so a broad `routeRules` pattern such as `'/**'` cannot
 cache them. It makes no cache call when your Astro config names no cache
 provider.
+
+## Media
+
+The media route serves public files, so its responses may be stored, each for
+as long as its `Cache-Control` says:
+
+| Response                                                | `Cache-Control`                        |
+| ------------------------------------------------------- | -------------------------------------- |
+| A variant (`?w=…&f=…&v=…`), and its 304                 | `public, max-age=31536000, immutable`  |
+| An original, its 304, 206 and 416                       | `public, max-age=300, must-revalidate` |
+| The 302 from any other variant URL to the canonical one | `public, max-age=300, must-revalidate` |
+| A 404                                                   | `no-store`                             |
+| A 500                                                   | `no-store`                             |
+
+A variant's URL carries the image's version, so replacing the file gives it new
+URLs and a stored variant is never stale. The redirect to the canonical variant
+names the current version, so it lives as long as an original: a replace shows
+everywhere within five minutes. A 404 is not stored because the next request
+may find the file: an id restored from a backup, or a width added to
+`media.image.widths`.
+
+Every response for an existing media item but a 404 carries the tag
+`astromech:media:<id>` in a `Cache-Tag` header, the one Cloudflare reads, so
+purging that tag clears the item's original and every variant from Cloudflare's
+cache. A CDN that reads another header, such as Fastly's `Surrogate-Key`, needs
+the tag copied into it. Astromech purges nothing itself.
+
+The middleware calls `cache.set(false)` on the media route as on the admin, so
+Astro's route cache never holds a file and a `routeRules` lifetime never
+replaces the ones above.

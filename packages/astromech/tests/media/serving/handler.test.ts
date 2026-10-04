@@ -597,3 +597,103 @@ describe('handleMediaRequest failures', () => {
         expect(errors).toHaveBeenCalledOnce();
     });
 });
+
+describe('handleMediaRequest cache headers', () => {
+    async function uploadJpeg(): Promise<{ id: string; version: string }> {
+        const media = await mediaService.upload({
+            file: new File([makeJpegBytes() as BlobPart], 'photo.jpg', {
+                type: 'image/jpeg',
+            }),
+        });
+        return { id: media.id, version: media.metadata?.version ?? '' };
+    }
+
+    function request(id: string, params: Record<string, string> = {}): Promise<Response> {
+        return handleMediaRequest({
+            id,
+            ext: 'jpg',
+            search: new URLSearchParams(params),
+            origin: 'http://x',
+        });
+    }
+
+    it('lets the redirect to the canonical variant live as long as an original', async () => {
+        const { id } = await uploadJpeg();
+
+        const res = await request(id, { w: '320', f: 'webp' });
+
+        expect(res.status).toBe(302);
+        expect(res.headers.get('Cache-Control')).toBe(
+            'public, max-age=300, must-revalidate'
+        );
+    });
+
+    it('stores no 404 for an unknown id', async () => {
+        const res = await request('nonexistent-id');
+
+        expect(res.status).toBe(404);
+        expect(res.headers.get('Cache-Control')).toBe('no-store');
+    });
+
+    it('stores no 404 for a width the config does not allow', async () => {
+        const { id, version } = await uploadJpeg();
+
+        const res = await request(id, { w: '999', f: 'webp', v: version });
+
+        expect(res.status).toBe(404);
+        expect(res.headers.get('Cache-Control')).toBe('no-store');
+    });
+
+    it.each([
+        ['whole', null],
+        ['ranged', 'bytes=0-1'],
+    ])(
+        'stores no 404 when the original is missing from storage (%s)',
+        async (_label, range) => {
+            const { id } = await uploadJpeg();
+            await storage.delete(`${id}.jpg`);
+
+            const res = await handleMediaRequest({
+                id,
+                ext: 'jpg',
+                search: new URLSearchParams(),
+                origin: 'http://x',
+                range,
+            });
+
+            expect(res.status).toBe(404);
+            expect(res.headers.get('Cache-Control')).toBe('no-store');
+        }
+    );
+
+    it('tags the original, the redirect, and each variant on a miss, a hit and a 304 with the media item', async () => {
+        const { id, version } = await uploadJpeg();
+        const variant = { w: '320', f: 'webp', v: version };
+
+        const original = await request(id);
+        const redirect = await request(id, { w: '320', f: 'webp' });
+        const miss = await request(id, variant);
+        const hit = await request(id, variant);
+        const notModified = await handleMediaRequest({
+            id,
+            ext: 'jpg',
+            search: new URLSearchParams(variant),
+            origin: 'http://x',
+            ifNoneMatch: miss.headers.get('ETag'),
+        });
+
+        expect(
+            [original, redirect, miss, hit, notModified].map((res) => [
+                res.status,
+                res.headers.get('Cache-Tag'),
+            ])
+        ).toEqual([
+            [200, `astromech:media:${id}`],
+            [302, `astromech:media:${id}`],
+            [200, `astromech:media:${id}`],
+            [200, `astromech:media:${id}`],
+            [304, `astromech:media:${id}`],
+        ]);
+        expect(fakeDriver.calls).toHaveLength(1);
+    });
+});
