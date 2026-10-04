@@ -21,7 +21,9 @@ every relative path in the config, it resolves against the working directory, so
 `migrationsDir: './database/migrations'` puts it in `database/migrations` under
 the directory you run `astro` and `astromech` from. `db:generate` writes to it,
 and `db:init`, `astro dev`, `astro build` and the built server's check for
-pending migrations read from it. It holds these files:
+pending migrations read from it. The build also bundles the migration names, so
+a server that cannot read the folder, such as a Cloudflare Worker, still warns
+on its first request when the database is behind. It holds these files:
 
 | File             | Written by | What it is                                            |
 | ---------------- | ---------- | ----------------------------------------------------- |

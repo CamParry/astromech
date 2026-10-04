@@ -3,7 +3,8 @@
  *
  * Every entry type is served here, addressed by the type id the entries
  * service itself uses — bare for a root type, qualified for a plugin type.
- * The routes are rows in `http-routes.ts`; one gets a bespoke handler.
+ * The routes are rows in `http-routes.ts`; the two cross-type ones get a
+ * bespoke handler.
  */
 import type { AuthVariables } from '@/transport/http/middleware/auth';
 import type { EntryQueryParams } from '@/types/index';
@@ -23,12 +24,13 @@ type Env = { Variables: AuthVariables };
  * Build the entries router. There is exactly ONE in production; this is a
  * factory so tests can mount an isolated instance.
  *
- * Hono matches in registration order, so the cross-type `POST /query` mounts
- * before the table's `POST /:type` would take it.
+ * Hono matches in registration order, so the cross-type `POST /query` and
+ * `POST /count` mount before the table's `POST /:type` would take them.
  */
 export function createEntriesRouter(): OpenAPIHono<Env> {
     const router = new OpenAPIHono<Env>();
-    mountCrossTypeQuery(router);
+    mountCrossType(router, '/query', 'query');
+    mountCrossType(router, '/count', 'count');
     // A route addressing a type by path param is documented for `{type}` rather
     // than any one type, with the titled schemas as default; the cross-type
     // query names its types in the body, as the method's own input does.
@@ -56,14 +58,18 @@ function bodyTypes(body: Record<string, unknown>): string[] | null {
         : null;
 }
 
-/** The cross-type query, which the table cannot express. */
-function mountCrossTypeQuery(router: OpenAPIHono<Env>): void {
-    // POST /entries/query (cross-type)
+/** A cross-type read, `query` or `count`, which the table cannot express. */
+function mountCrossType(
+    router: OpenAPIHono<Env>,
+    path: '/query' | '/count',
+    method: 'query' | 'count'
+): void {
+    // POST /entries/query and POST /entries/count (cross-type)
     // Not in the table: `type` arrives in the body and may be a list, and each
     // type's permission is checked before the method runs, so `type` is read
     // here. A missing or malformed one is an input failure like any other, and
     // the rest of the body is the method's to parse.
-    router.post('/query', async (c) => {
+    router.post(path, async (c) => {
         const body = await c.req.json<unknown>().catch(() => undefined);
         if (body === undefined) return badRequest(c, 'Invalid JSON body');
         if (typeof body !== 'object' || body === null || Array.isArray(body)) {
@@ -83,7 +89,7 @@ function mountCrossTypeQuery(router: OpenAPIHono<Env>): void {
         for (const type of types) {
             const denied = routeAccess(
                 c,
-                entriesDefinition.catalogue.query.access,
+                entriesDefinition.catalogue[method].access,
                 { type, full },
                 missingEntryType
             );
@@ -91,6 +97,10 @@ function mountCrossTypeQuery(router: OpenAPIHono<Env>): void {
         }
 
         const { entries } = createServices(c.var.ctx, { overrideAccess: false });
+        if (method === 'count') {
+            const params = { ...(body as { locale?: string }), type: types, full };
+            return c.json({ data: await entries.count(params) });
+        }
         return c.json(
             await entries.query({
                 ...(body as EntryQueryParams),

@@ -149,6 +149,72 @@ describe('private fields under layout fields', () => {
     });
 });
 
+describe('undeclared keys', () => {
+    it('drops a root key with no definition in public shape and keeps it in full', () => {
+        const fields: Field[] = [{ name: 'title', type: 'text' }];
+        const entry = publishedEntry({
+            fields: { title: 'Hello', removed_secret: 'was private' },
+        });
+        expect(applyVisibility(entry, publicOpts(fields))?.fields).toEqual({
+            title: 'Hello',
+        });
+        expect(applyVisibility(entry, fullOpts(fields))?.fields).toEqual({
+            title: 'Hello',
+            removed_secret: 'was private',
+        });
+    });
+
+    it('drops undeclared keys inside groups, repeater items and tree nodes', () => {
+        const fields: Field[] = [
+            { name: 'meta', type: 'group', fields: [{ name: 'shown', type: 'text' }] },
+            { name: 'rows', type: 'repeater', fields: [{ name: 'label', type: 'text' }] },
+            { name: 'nav', type: 'tree', fields: [{ name: 'label', type: 'text' }] },
+        ];
+        const entry = publishedEntry({
+            fields: {
+                meta: { shown: 'yes', old: 'no' },
+                rows: [{ _id: 'r1', label: 'A', old: 'no' }],
+                nav: [
+                    {
+                        _id: 'n1',
+                        label: 'Top',
+                        old: 'no',
+                        _children: [{ _id: 'n2', label: 'Child', old: 'no' }],
+                    },
+                ],
+            },
+        });
+        expect(applyVisibility(entry, publicOpts(fields))?.fields).toEqual({
+            meta: { shown: 'yes' },
+            rows: [{ _id: 'r1', label: 'A' }],
+            nav: [
+                { _id: 'n1', label: 'Top', _children: [{ _id: 'n2', label: 'Child' }] },
+            ],
+        });
+    });
+
+    it('drops a block whose type is no longer declared', () => {
+        const fields: Field[] = [
+            {
+                name: 'body',
+                type: 'blocks',
+                blocks: [{ type: 'text', fields: [{ name: 'content', type: 'text' }] }],
+            },
+        ];
+        const entry = publishedEntry({
+            fields: {
+                body: [
+                    { _id: 'b1', _type: 'text', content: 'kept', old: 'no' },
+                    { _id: 'b2', _type: 'removed', secret: 'no' },
+                ],
+            },
+        });
+        expect(applyVisibility(entry, publicOpts(fields))?.fields).toEqual({
+            body: [{ _id: 'b1', _type: 'text', content: 'kept' }],
+        });
+    });
+});
+
 // (b) _disabled item removed; _disabled/_title deleted on survivors; _type/_id kept
 
 describe('structural strip (_disabled items)', () => {

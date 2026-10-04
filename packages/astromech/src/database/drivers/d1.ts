@@ -6,7 +6,7 @@
 import type { D1DatabaseLike } from './d1-dialect';
 import type { DB } from '@/database/types';
 import { CamelCasePlugin, Kysely } from 'kysely';
-import { resolveBinding } from '@/integrations/cloudflare/bindings';
+import { isRemoteD1Binding, resolveBinding } from '@/integrations/cloudflare/bindings';
 import { D1Dialect } from './d1-dialect';
 
 export type D1Options =
@@ -54,12 +54,14 @@ export function d1(options: D1Options) {
     }
 
     return {
-        type: 'd1' as const,
+        name: 'd1' as const,
         getInstance,
         supportsTransactions: false,
 
-        // Always remote: D1 is only reachable through a binding, and nothing
-        // here distinguishes a dev binding from the production database.
-        isRemote: () => true,
+        // A database object could be anything, so it counts as remote.
+        isRemote: (): Promise<boolean> =>
+            'binding' in options
+                ? isRemoteD1Binding(options.binding)
+                : Promise.resolve(true),
     };
 }

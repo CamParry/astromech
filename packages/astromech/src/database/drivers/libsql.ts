@@ -336,7 +336,7 @@ export function libsql(options?: LibsqlOptions) {
     }
 
     return {
-        type: 'libsql' as const,
+        name: 'libsql' as const,
         getInstance,
         supportsTransactions: true,
         isRemote,

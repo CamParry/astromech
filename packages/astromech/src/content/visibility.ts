@@ -13,6 +13,8 @@ import { getFieldType } from '@/fields/field-type-registry';
 import { flattenFieldNodes } from '@/fields/flatten';
 import { PUBLIC_STRIPPED_KEYS, RESERVED_KEY } from '@/fields/reserved-keys';
 
+const RESERVED_KEYS: ReadonlySet<string> = new Set(Object.values(RESERVED_KEY));
+
 /**
  * The record shape the filter reads. Every member but `fields` is optional: a
  * resource without statuses, scheduling or a trash carries none of them, and an
@@ -111,10 +113,16 @@ function structuralStrip(value: JsonValue): JsonValue {
  * Strip private fields from one value scope, in place, and give each kept value
  * its public form. Nested scopes come from the field type's `children`, so a
  * container of any type, core or plugin, is stripped the same way. A key with
- * no definition (a system or unknown plugin field) is kept as it is.
+ * no definition (a field since renamed or removed) is dropped; reserved item keys stay.
  */
 function stripPrivateFields(values: Record<string, unknown>, definitions: Field[]): void {
-    for (const field of flattenFieldNodes(definitions)) {
+    const dataFields = flattenFieldNodes(definitions);
+    const declared = new Set(dataFields.map((field) => field.name));
+    for (const key of Object.keys(values)) {
+        if (!declared.has(key) && !RESERVED_KEYS.has(key))
+            Reflect.deleteProperty(values, key);
+    }
+    for (const field of dataFields) {
         if (!(field.name in values)) continue;
         if (field.private === true) {
             Reflect.deleteProperty(values, field.name);

@@ -81,8 +81,8 @@ export async function runMcpServer(
             `confirm: ${describeConfirm(confirm)}`
     );
     console.error(
-        `[astromech mcp] database: ${db?.type ?? 'unknown'} ` +
-            `(${db?.isRemote?.() === true ? 'remote' : 'local'})`
+        `[astromech mcp] database: ${db?.name ?? 'unknown'} ` +
+            `(${(await db?.isRemote?.()) === true ? 'remote' : 'local'})`
     );
 
     // Skipped and excluded stay distinct: a skip is a method that could not be

@@ -28,6 +28,17 @@ export async function loadAppMigrations(dir: string): Promise<MigrationProvider>
     return mod.migrationProvider;
 }
 
+/**
+ * The names of the migrations in `<dir>/index.ts`, or null when there is none.
+ * The Astro integration bundles them, so a runtime with no file system can
+ * still check the database for pending migrations.
+ */
+export async function listAppMigrationNames(dir: string): Promise<string[] | null> {
+    if (!(await hasAppMigrations(dir))) return null;
+    const provider = await loadAppMigrations(dir);
+    return Object.keys(await provider.getMigrations());
+}
+
 /** Whether `<dir>/index.ts` exists. False where the runtime has no filesystem to look in. */
 export async function hasAppMigrations(dir: string): Promise<boolean> {
     try {

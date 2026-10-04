@@ -10,6 +10,7 @@ import {
     loadAppMigrations,
     resolveMigrationsDir,
 } from '@/database/app-migrations';
+import { resolveBundledMigrationNames } from '@/database/migration-registry';
 import { collectPluginMigrations } from '@/database/plugin-migrations';
 import { AstromechError } from '@/errors/astromech-error';
 import { log } from '@/utilities/log';
@@ -81,26 +82,31 @@ export async function runMigrations(
 /**
  * Warn when the database is behind the migration chain. Reads only: applying
  * the difference is `db:init`'s job, and a serving process that migrates itself
- * races every other replica. `migrationsDir` is the resolved config's.
+ * races every other replica. Where `migrationsDir` cannot be read, as on a
+ * Worker, the app migration names the build bundled stand in for it.
  */
 export async function checkMigrationDrift(
     db: Kysely<DB>,
     plugins: PluginDefinition[],
     migrationsDir: string
 ): Promise<void> {
+    const bundled = resolveBundledMigrationNames();
     let provider: MigrationProvider;
     try {
         provider = await loadMergedProvider(plugins, migrationsDir);
     } catch (error) {
-        // Quiet when there is no chain: a bundled runtime ships none, and a new
-        // site may not have run `db:generate` yet.
-        if (await hasAppMigrations(resolveMigrationsDir(migrationsDir))) {
-            log.error(
-                'could not load the migrations, so the database was not checked ' +
-                    `for pending ones: ${describe(error)}`
-            );
+        if (bundled === undefined) {
+            // Quiet when there is no chain: a new site may not have run
+            // `db:generate` yet.
+            if (await hasAppMigrations(resolveMigrationsDir(migrationsDir))) {
+                log.error(
+                    'could not load the migrations, so the database was not checked ' +
+                        `for pending ones: ${describe(error)}`
+                );
+            }
+            return;
         }
-        return;
+        provider = bundledProvider(bundled, plugins);
     }
 
     const pending = await listPendingMigrations(db, provider);
@@ -160,6 +166,27 @@ export function createMergedProvider(
             return provider.getMigrations();
         },
     };
+}
+
+/**
+ * The bundled app migration names with each plugin's chain merged in. Names
+ * are all a pending check reads; an app migration here cannot be applied.
+ */
+function bundledProvider(
+    names: readonly string[],
+    plugins: PluginDefinition[]
+): MigrationProvider {
+    const notBundled = (): Promise<void> =>
+        Promise.reject(
+            new AstromechError('only the names of the app migrations are bundled')
+        );
+    const app: MigrationProvider = {
+        getMigrations: () =>
+            Promise.resolve(
+                Object.fromEntries(names.map((name) => [name, { up: notBundled }]))
+            ),
+    };
+    return mergeMigrationProviders(app, collectPluginMigrations(plugins));
 }
 
 function describe(error: unknown): string {

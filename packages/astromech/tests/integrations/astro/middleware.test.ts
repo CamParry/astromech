@@ -5,19 +5,27 @@
 
 import type { AstromechConfig, SchedulerDriver } from '@/types/index';
 import type { APIContext } from 'astro';
+import { expectConsole } from '@tests/console';
 import { createTestDb, makeBootConfig } from '@tests/harness';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { getAstromech } from '@/astromech';
+import { getMigrationProvider } from '@/database/migration-registry';
 import { clearEnvSource, setEnvSource } from '@/env';
 import { onRequest } from '@/integrations/astro/middleware';
 
 // The site config the middleware boots, set per test. Read through a getter
 // because the mock is built before any test runs.
-const site = vi.hoisted(() => ({ config: undefined as AstromechConfig | undefined }));
+const site = vi.hoisted(() => ({
+    config: undefined as AstromechConfig | undefined,
+    migrationNames: null as readonly string[] | null,
+}));
 
 vi.mock('virtual:astromech/config', () => ({
     get rawConfig() {
         return site.config;
+    },
+    get migrationNames() {
+        return site.migrationNames;
     },
 }));
 
@@ -29,6 +37,7 @@ const noScheduler: SchedulerDriver = { name: 'none', start: () => undefined };
 beforeEach(async () => {
     await createTestDb();
     site.config = { ...makeBootConfig(), scheduler: noScheduler };
+    site.migrationNames = null;
     clearEnvSource();
     // A secret in the shell running the suite would otherwise satisfy the check.
     vi.stubEnv('BETTER_AUTH_SECRET', undefined);
@@ -80,6 +89,19 @@ describe('the Astro middleware', () => {
 
     it('serves a request in development without the secret', async () => {
         setEnvSource({ NODE_ENV: 'development' });
+
+        expect(await bodyOf(onRequest(context(), page))).toBe('page');
+    });
+
+    // A Worker has no file system to read the migrations folder from.
+    it('checks the database against the migration names bundled at build time', async () => {
+        setEnvSource({ NODE_ENV: 'development' });
+        const applied = Object.keys(await getMigrationProvider().getMigrations());
+        site.migrationNames = [...applied, '9999_not-applied'];
+        expectConsole(
+            'error',
+            '1 migration has not been applied to this database: 9999_not-applied'
+        );
 
         expect(await bodyOf(onRequest(context(), page))).toBe('page');
     });

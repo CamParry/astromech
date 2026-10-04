@@ -26,6 +26,14 @@ export const queryKeys = {
             ['entries', type, 'staged', id, locale] as const,
         /** What references one entry, from any resource. */
         usedBy: (type: string, id: string) => ['entries', type, 'used-by', id] as const,
+        /**
+         * The counts of several types, read in one request. Every entry
+         * mutation invalidates all of them, with no `types`.
+         */
+        counts: (types?: readonly string[]) =>
+            types === undefined
+                ? (['entry-counts'] as const)
+                : (['entry-counts', types] as const),
     },
 
     globals: {

@@ -7,6 +7,7 @@
  */
 
 import { OpenAPIHono } from '@hono/zod-openapi';
+import { timingSafeEqual } from 'hono/utils/buffer';
 import { currentAppContext, systemAppContext } from '@/app-context/app-context';
 import { onTick } from '@/cron/runner';
 import { resolveEnv } from '@/env';
@@ -24,7 +25,11 @@ function cronSecret(): string | undefined {
 router.post('/run', async (c) => {
     const secret = cronSecret();
     const authHeader = c.req.header('authorization');
-    const bearerOk = secret !== undefined && authHeader === `Bearer ${secret}`;
+    // Compared in constant time, so the response time leaks nothing of the secret.
+    const bearerOk =
+        secret !== undefined &&
+        authHeader !== undefined &&
+        (await timingSafeEqual(authHeader, `Bearer ${secret}`));
 
     // Short-circuits: a bearer poke carries no session, so asking for a role
     // would resolve one nobody sent.

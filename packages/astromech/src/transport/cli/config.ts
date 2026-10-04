@@ -28,7 +28,7 @@ export async function bootApplication(
     options?: LoadOptions
 ): Promise<Astromech> {
     const config = await loadConfigFile(process.cwd(), configPath);
-    assertLocalDatabase(config, options?.allowRemote === true);
+    await assertLocalDatabase(config, options?.allowRemote === true);
     return createAstromech({ config });
 }
 
@@ -58,7 +58,7 @@ export async function loadConfig(
     options?: LoadOptions
 ): Promise<{ config: AstromechConfig; resolved: ResolvedConfig }> {
     const loaded = await loadConfigWithoutDrivers(configPath);
-    assertLocalDatabase(loaded.config, options?.allowRemote === true);
+    await assertLocalDatabase(loaded.config, options?.allowRemote === true);
     // The raw config: `resolveConfig` strips the drivers from its result.
     registerDrivers(loaded.config);
     return loaded;
@@ -83,12 +83,15 @@ export async function loadConfigWithoutDrivers(
  * meant for a dev machine cannot write to production through an exported
  * `DATABASE_URL`. A driver with no `isRemote` reads as local.
  */
-export function assertLocalDatabase(config: AstromechConfig, allowRemote: boolean): void {
+export async function assertLocalDatabase(
+    config: AstromechConfig,
+    allowRemote: boolean
+): Promise<void> {
     if (allowRemote) return;
-    if (config.db.isRemote?.() !== true) return;
+    if ((await config.db.isRemote?.()) !== true) return;
 
     log.error(
-        `refusing to open the "${config.db.type}" database: it is remote, ` +
+        `refusing to open the "${config.db.name}" database: it is remote, ` +
             'and a CLI command run against a remote database writes to whatever it ' +
             'is pointed at. Re-run with --allow-remote if that is what you intend.'
     );

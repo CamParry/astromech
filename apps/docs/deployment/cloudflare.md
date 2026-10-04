@@ -65,8 +65,7 @@ same entry works under any framework whose server entry exports `fetch`.
     "compatibility_date": "2026-02-14",
     "compatibility_flags": ["nodejs_compat"],
     "assets": { "directory": "./dist/client" },
-    // Only the poke. The real cadence lives in the `_astromech_cron` table, so
-    // an admin can change a schedule without a deploy.
+    // Only the poke. Each job's own `schedule` decides whether a tick runs it.
     "triggers": { "crons": ["* * * * *"] },
     "d1_databases": [{ "binding": "DB", "database_name": "my-site", "database_id": "…" }],
     "r2_buckets": [{ "binding": "MEDIA", "bucket_name": "my-site-media" }],
@@ -103,15 +102,54 @@ locally, below, covers `wrangler dev`.
 
 ## Migrations
 
-Migrations are applied by command, never on boot. D1 reports itself remote
-whether it is the real database or wrangler's local emulation, and the CLI
-refuses to open a remote database by default, so `db:init` needs
-`--allow-remote`. `db:generate` never opens the database and takes no flag:
+Migrations are applied by command, never on boot. `db:generate` never opens
+the database. `db:init` and every other command that opens one reaches D1 the
+way your Worker's code would in `wrangler dev`: through wrangler's
+`getPlatformProxy()`, which reads the `wrangler.jsonc` in the directory you run
+the command from (and the environment `CLOUDFLARE_ENV` names). A binding is
+wrangler's local emulation, kept under `.wrangler/state`, unless its entry sets
+`"remote": true`; then the command reaches the database on Cloudflare, which
+needs `wrangler login` or a `CLOUDFLARE_API_TOKEN`.
 
 ```
 astromech db:generate
-astromech db:init --allow-remote
+astromech db:init                  # local emulation
 ```
+
+The CLI refuses to open a remote database unless you pass `--allow-remote`. It
+counts a D1 binding as remote when it sets `"remote": true`, and also when it
+cannot tell: when wrangler is not installed, the config cannot be read or does
+not declare the binding, or the config passes `d1({ database })` an object
+rather than a binding name. To migrate production, point a binding at the
+production database and mark it remote, in its own wrangler environment so
+everyday commands stay local:
+
+```jsonc
+{
+    "d1_databases": [{ "binding": "DB", "database_name": "my-site", "database_id": "…" }],
+    "env": {
+        "production": {
+            "d1_databases": [
+                {
+                    "binding": "DB",
+                    "database_name": "my-site",
+                    "database_id": "…",
+                    "remote": true,
+                },
+            ],
+        },
+    },
+}
+```
+
+```
+CLOUDFLARE_ENV=production astromech db:init --allow-remote
+```
+
+A Worker cannot read your migrations folder, so the build bundles the names of
+its migrations. The first request a Worker serves compares them with the
+database and logs a warning when migrations are pending. A Worker woken only by
+a Cron Trigger skips the check.
 
 ## Running it locally
 

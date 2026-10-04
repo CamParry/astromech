@@ -142,24 +142,32 @@ describe('POST /cron/run — auth branches', () => {
         expect(ref.ran).toBe(true);
     });
 
-    it('401 with wrong bearer token when secret is set — handler does NOT run', async () => {
-        process.env.ASTROMECH_CRON_SECRET = SECRET;
+    it.each([
+        ['a wrong token', 'Bearer wrong-secret'],
+        ['a prefix of the secret', `Bearer ${SECRET.slice(0, -1)}`],
+        ['the secret with a suffix', `Bearer ${SECRET}x`],
+        ['the secret without the scheme', SECRET],
+    ])(
+        '401 with %s when secret is set — handler does NOT run',
+        async (_label, header) => {
+            process.env.ASTROMECH_CRON_SECRET = SECRET;
 
-        let ran = false;
-        registerCronJob({
-            name: 'probe',
-            schedule: '* * * * *',
-            handler: async () => {
-                ran = true;
-            },
-        });
+            let ran = false;
+            registerCronJob({
+                name: 'probe',
+                schedule: '* * * * *',
+                handler: async () => {
+                    ran = true;
+                },
+            });
 
-        const app = makeApp();
-        const res = await poke(app, signedOut, 'Bearer wrong-secret');
+            const app = makeApp();
+            const res = await poke(app, signedOut, header);
 
-        expect(res.status).toBe(401);
-        expect(ran).toBe(false);
-    });
+            expect(res.status).toBe(401);
+            expect(ran).toBe(false);
+        }
+    );
 
     it('200 with admin session (no bearer) — due handler RUNS', async () => {
         const admin = await currentServices.users.create({

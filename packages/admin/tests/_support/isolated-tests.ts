@@ -12,6 +12,7 @@
  */
 export const isolatedTests = [
     'tests/components/admin-resources/admin-resource-pages.test.tsx',
+    'tests/pages/_protected/index.test.tsx',
     'tests/components/globals/global-versions-page.test.tsx',
     'tests/components/entries/locale-switcher.test.tsx',
     'tests/components/entries/entry-edit-cache-invalidation.test.tsx',

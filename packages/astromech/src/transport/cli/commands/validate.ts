@@ -52,7 +52,10 @@ function describe(finding: ValidationFinding): string {
         finding.type !== null
             ? `${finding.kind} ${finding.type}/${finding.id}`
             : `${finding.kind} ${finding.id}`;
-    const locale = finding.locale !== null ? ` (${finding.locale})` : '';
+    const where = [finding.locale, finding.staged ? 'staged' : null].filter(
+        (part) => part !== null
+    );
+    const locale = where.length > 0 ? ` (${where.join(', ')})` : '';
     const path = finding.fieldPath !== null ? `${finding.fieldPath} — ` : '';
     return `${subject}${locale}: ${path}${finding.message}`;
 }

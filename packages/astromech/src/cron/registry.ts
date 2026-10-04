@@ -14,9 +14,8 @@ import { createRegistry } from '@/registry';
 export type CronJob = {
     name: string;
     /**
-     * Seed/default cadence written to the `_astromech_cron` table on first
-     * boot. The table is the source of truth thereafter — this field is not
-     * re-read on subsequent starts. Keep the field; do not change its type.
+     * The job's cron expression. Each tick writes it to the `_astromech_cron`
+     * row when it differs, so a changed schedule takes effect after a deploy.
      */
     schedule?: string;
     /** Runs as the system: `ctx` has no user and no role. */

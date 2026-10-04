@@ -36,6 +36,7 @@ function makeValidateConfig(): AstromechConfig {
             article: {
                 single: 'Article',
                 plural: 'Articles',
+                staging: true,
                 fields: [
                     {
                         name: 'rating',
@@ -80,6 +81,7 @@ function makeValidateConfig(): AstromechConfig {
             {
                 key: 'branding',
                 label: 'Branding',
+                staging: true,
                 fields: [
                     {
                         name: 'company',
@@ -194,6 +196,7 @@ describe('validateStoredContent', () => {
                 type: 'article',
                 id: article.id,
                 locale: 'en',
+                staged: false,
                 fieldPath: 'rating',
                 message: 'Must be at most 5',
             },
@@ -231,6 +234,7 @@ describe('validateStoredContent', () => {
                 type: 'article',
                 id: article.id,
                 locale: 'en',
+                staged: false,
                 fieldPath: 'summary',
                 message: 'This field is required',
             },
@@ -266,6 +270,7 @@ describe('validateStoredContent', () => {
                 type: null,
                 id: user.id,
                 locale: 'en',
+                staged: false,
                 fieldPath: 'nickname',
                 message: 'Must be at most 5 characters',
             },
@@ -303,6 +308,7 @@ describe('validateStoredContent', () => {
                 type: null,
                 id: 'branding',
                 locale: 'en',
+                staged: false,
                 fieldPath: 'company',
                 message: 'Must be at most 5 characters',
             },
@@ -337,8 +343,65 @@ describe('validateStoredContent', () => {
                 type: null,
                 id: 'site',
                 locale: 'en',
+                staged: false,
                 fieldPath: 'tagline',
                 message: 'This field is required',
+            },
+        ]);
+        expect(report.rowsChecked).toBe(2);
+    });
+});
+
+describe('validateStoredContent and staged changes', () => {
+    it('reports a staged entry row apart from its live row', async () => {
+        const article = await api.create({
+            type: 'article',
+            data: { title: 'Staged', fields: { rating: 3 } },
+        });
+        await api.createStaged({ type: 'article', id: article.id });
+        await createRepository(entryContentTable).updateMany(
+            { entryId: article.id, stagedFor: { ne: null } },
+            { fields: { rating: 9 } }
+        );
+
+        const report = await validateStoredContent(systemAppContext());
+
+        expect(report.findings).toEqual([
+            {
+                kind: 'entry',
+                type: 'article',
+                id: article.id,
+                locale: 'en',
+                staged: true,
+                fieldPath: 'rating',
+                message: 'Must be at most 5',
+            },
+        ]);
+        expect(report.rowsChecked).toBe(2);
+    });
+
+    it('checks a staged global', async () => {
+        await globalsService.update({
+            key: 'branding',
+            data: { fields: { company: 'Acme' }, status: 'published' },
+        });
+        await globalsService.createStaged({ key: 'branding' });
+        await createRepository(globalContentTable).updateMany(
+            { stagedFor: { ne: null } },
+            { fields: { company: 'Far too long' } }
+        );
+
+        const report = await validateStoredContent(systemAppContext());
+
+        expect(report.findings).toEqual([
+            {
+                kind: 'global',
+                type: null,
+                id: 'branding',
+                locale: 'en',
+                staged: true,
+                fieldPath: 'company',
+                message: 'Must be at most 5 characters',
             },
         ]);
         expect(report.rowsChecked).toBe(2);

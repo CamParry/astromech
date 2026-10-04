@@ -39,6 +39,26 @@
           "primaryKey": false
         },
         {
+          "key": "lastResult",
+          "name": "last_result",
+          "kind": "enum",
+          "type": "text",
+          "notNull": false,
+          "primaryKey": false,
+          "enumValues": [
+            "ok",
+            "error"
+          ]
+        },
+        {
+          "key": "lastError",
+          "name": "last_error",
+          "kind": "text",
+          "type": "text",
+          "notNull": false,
+          "primaryKey": false
+        },
+        {
           "key": "nextRun",
           "name": "next_run",
           "kind": "timestamp",

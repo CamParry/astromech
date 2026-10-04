@@ -140,7 +140,8 @@ invalidate rows already in the database.
 ### Writing back what you read
 
 A `public`-shape read is a projection, not a round-trippable record: private
-fields are stripped and rich text is rendered to HTML. Writing one straight back
+fields, keys no field declares (a field since renamed or removed) and blocks of
+an undeclared type are stripped, and rich text is rendered to HTML. Writing one straight back
 is refused rather than silently accepted — `richtext` rejects the rendered
 string, and `relationship`/`media` reject a populated record from an expanded
 read.
