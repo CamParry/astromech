@@ -124,9 +124,9 @@ export type RelationshipRow = TableSelect<typeof relationshipsTable>;
 export type NewRelationshipRow = TableInsert<typeof relationshipsTable>;
 
 /**
- * Scheduler state — single source of truth for cron cadence and the
- * multi-instance lock, seeded from jobs' default `schedule` on first tick.
- * `lock` is a claim-EXPIRY timestamp; a crashed claim auto-expires for retry.
+ * Scheduler state: each job's schedule, synced from config every tick, its run
+ * state and the multi-instance lock. `lock` is a claim-EXPIRY timestamp; a
+ * crashed claim auto-expires for retry.
  */
 export const cronTable = defineTable('_astromech_cron', ({ col }) => ({
     name: col.text({ primaryKey: true }),

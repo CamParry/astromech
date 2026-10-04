@@ -65,8 +65,7 @@ same entry works under any framework whose server entry exports `fetch`.
     "compatibility_date": "2026-02-14",
     "compatibility_flags": ["nodejs_compat"],
     "assets": { "directory": "./dist/client" },
-    // Only the poke. The real cadence lives in the `_astromech_cron` table, so
-    // an admin can change a schedule without a deploy.
+    // Only the poke. Each job's own `schedule` decides whether a tick runs it.
     "triggers": { "crons": ["* * * * *"] },
     "d1_databases": [{ "binding": "DB", "database_name": "my-site", "database_id": "…" }],
     "r2_buckets": [{ "binding": "MEDIA", "bucket_name": "my-site-media" }],

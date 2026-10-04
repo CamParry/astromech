@@ -84,14 +84,37 @@ describe('seeding', () => {
         });
     });
 
-    it('keeps a schedule edited after seeding', async () => {
-        countedJob('test-job');
-        await onTick(new Date('2024-06-01T00:00:00.000Z'), systemAppContext());
-        await setCronRow('test-job', { schedule: '0 12 * * *' });
+    it('takes a schedule changed in config, keeping the run state', async () => {
+        const job = {
+            name: 'test-job',
+            schedule: '* * * * *',
+            handler: () => Promise.resolve(),
+        };
+        registerCronJob(job);
+        await onTick(SEED, systemAppContext());
+        await setCronRow('test-job', { lastRun: SEED, enabled: false });
+        // A redeploy with a new schedule in config.
+        job.schedule = '0 0 * * *';
 
-        await onTick(new Date('2024-06-01T00:02:00.000Z'), systemAppContext());
+        await onTick(NOW, systemAppContext());
 
-        expect((await cronRow('test-job'))?.schedule).toBe('0 12 * * *');
+        expect(await cronRow('test-job')).toMatchObject({
+            schedule: '0 0 * * *',
+            nextRun: new Date('2024-06-02T00:00:00.000Z'),
+            lastRun: SEED,
+            enabled: false,
+        });
+    });
+
+    it('leaves the row of a job no longer registered in place', async () => {
+        await getDb()
+            .insertInto('_astromech_cron')
+            .values({ name: 'removed-job', schedule: '* * * * *', enabled: 1 })
+            .execute();
+
+        await onTick(NOW, systemAppContext());
+
+        expect(await cronRow('removed-job')).toMatchObject({ schedule: '* * * * *' });
     });
 });
 
@@ -132,22 +155,6 @@ describe('due evaluation', () => {
 
         expect(job.runs).toBe(1);
         expect((await cronRow('test-job'))?.nextRun).toEqual(MINUTE_ON);
-    });
-
-    it('recomputes nextRun from a schedule edited since the last run', async () => {
-        countedJob('test-job');
-        await onTick(NOW, systemAppContext());
-        await setCronRow('test-job', {
-            schedule: '0 0 * * *',
-            nextRun: MINUTE_AGO,
-            lock: null,
-        });
-
-        await onTick(NOW, systemAppContext());
-
-        expect((await cronRow('test-job'))?.nextRun).toEqual(
-            new Date('2024-06-02T00:00:00.000Z')
-        );
     });
 
     it('reads its schedule in the configured timezone', async () => {

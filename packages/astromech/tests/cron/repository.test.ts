@@ -9,9 +9,12 @@
  * `runDue` passes; these assert the single-winner election on its own.
  */
 
+import type { NewCronRow } from '@/database/tables';
 import { createTestDb } from '@tests/harness';
 import { beforeEach, describe, expect, it } from 'vitest';
 import { cronRepository } from '@/cron/repository';
+import { createRepository } from '@/database/repository/create-repository';
+import { cronTable } from '@/database/tables';
 
 const NOW = new Date('2024-06-01T12:00:00.000Z');
 const EXPIRY = new Date('2024-06-01T12:05:00.000Z');
@@ -20,41 +23,26 @@ beforeEach(async () => {
     await createTestDb();
 });
 
-describe('seedJob', () => {
-    it('inserts the row, then leaves a stored one alone', async () => {
-        await cronRepository.seedJob({
-            name: 'job',
-            schedule: '* * * * *',
-            enabled: true,
-        });
-        await cronRepository.seedJob({
-            name: 'job',
-            schedule: '0 12 * * *',
-            enabled: false,
-        });
-
-        const rows = await cronRepository.due(NOW);
-        expect(rows).toHaveLength(1);
-        expect(rows[0]?.schedule).toBe('* * * * *');
-        expect(rows[0]?.enabled).toBe(true);
-    });
-});
+/** Store a job's row in the state a test needs. */
+async function insertJob(row: NewCronRow): Promise<void> {
+    await createRepository(cronTable).create(row);
+}
 
 describe('due', () => {
     beforeEach(async () => {
         // A null nextRun (never computed) is due; the rest are seeded explicitly.
-        await cronRepository.seedJob({ name: 'never-run', schedule: '* * * * *' });
-        await cronRepository.seedJob({
+        await insertJob({ name: 'never-run', schedule: '* * * * *' });
+        await insertJob({
             name: 'overdue',
             schedule: '* * * * *',
             nextRun: new Date(NOW.getTime() - 1000),
         });
-        await cronRepository.seedJob({
+        await insertJob({
             name: 'future',
             schedule: '* * * * *',
             nextRun: new Date(NOW.getTime() + 1000),
         });
-        await cronRepository.seedJob({
+        await insertJob({
             name: 'disabled',
             schedule: '* * * * *',
             enabled: false,
@@ -77,7 +65,7 @@ describe('due', () => {
 
 describe('claim', () => {
     beforeEach(async () => {
-        await cronRepository.seedJob({ name: 'job', schedule: '* * * * *' });
+        await insertJob({ name: 'job', schedule: '* * * * *' });
     });
 
     it('elects exactly one winner among concurrent claims', async () => {
@@ -110,7 +98,7 @@ describe('claim', () => {
 
 describe('recordRunAndRelease', () => {
     beforeEach(async () => {
-        await cronRepository.seedJob({ name: 'job', schedule: '* * * * *' });
+        await insertJob({ name: 'job', schedule: '* * * * *' });
         await cronRepository.claim('job', NOW, EXPIRY);
     });
 

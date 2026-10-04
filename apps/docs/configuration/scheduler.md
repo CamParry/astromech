@@ -7,12 +7,13 @@ Cloudflare Worker needs. Declaring a job itself is a plugin concern — see
 
 ## How scheduling works
 
-A job's cadence lives in the database, not in deploy config, so an admin can
-edit a schedule without a redeploy. Whatever triggers the scheduler is a dumb
-frequent ticker: every trigger converges on the same contract, a frequent poke
-into core's due-evaluation, which fires only the jobs whose stored schedule is
-due. A job's declared `schedule` is a seed written on first boot; the stored
-row wins thereafter.
+A job's cadence is its declared `schedule`, so changing it takes a deploy.
+Whatever triggers the scheduler is a dumb frequent ticker: every trigger
+converges on the same contract, a frequent poke into core's due-evaluation,
+which fires only the jobs whose schedule is due. Each tick first writes every
+registered job's schedule to the database, keeping when it last ran, so a
+changed schedule takes effect on the first tick after the deploy. A job you
+remove keeps its row and is skipped.
 
 That is why trigger cadence and job cadence are independent: ticking every
 minute does not run every job every minute, it gives due-evaluation a

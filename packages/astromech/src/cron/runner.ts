@@ -1,9 +1,8 @@
 /**
- * CRON due-evaluator. `onTick(now)` seeds the cron table from registered
+ * CRON due-evaluator. `onTick(now)` syncs the cron table from registered
  * jobs, finds jobs due, CAS-claims each against the shared lock, runs the
  * handler, then records the run and releases the claim.
  */
-import type { CronRepository } from '@/cron/repository';
 import type { AppContext } from '@/types/index';
 import { Cron } from 'croner';
 import { getCronJobs } from '@/cron/registry';
@@ -20,30 +19,25 @@ function nextRunFrom(schedule: string, from: Date, timezone: string): Date | nul
 }
 
 /**
- * Seed the table from registered jobs. Idempotent: seeding never overwrites a
- * stored (possibly admin-edited) row. Jobs with no seed schedule and no existing
- * row are not scheduled — warn once.
+ * Sync the table from registered jobs: config is the source of truth for a
+ * schedule. A job with no schedule is not scheduled (warned once); the row of
+ * a job no longer registered is left alone, and the runner skips it.
  */
-async function seed(
-    repository: CronRepository,
-    now: Date,
-    timezone: string
-): Promise<void> {
+async function syncJobs(now: Date, timezone: string): Promise<void> {
     const warned = (globals().cronUnscheduledWarned ??= new Set<string>());
     for (const job of getCronJobs()) {
         if (!job.schedule) {
             if (!warned.has(job.name)) {
                 console.warn(
-                    `[astromech/cron] Job "${job.name}" has no schedule and no table row — not scheduled.`
+                    `[astromech/cron] Job "${job.name}" has no schedule — not scheduled.`
                 );
                 warned.add(job.name);
             }
             continue;
         }
-        await repository.seedJob({
+        await cronRepository.syncJob({
             name: job.name,
             schedule: job.schedule,
-            enabled: true,
             nextRun: nextRunFrom(job.schedule, now, timezone),
         });
     }
@@ -58,7 +52,7 @@ export async function runDue(now: Date, ctx: AppContext): Promise<void> {
     const config = ctx.config;
     const timezone = config.timezone ?? 'UTC';
 
-    await seed(cronRepository, now, timezone);
+    await syncJobs(now, timezone);
 
     const handlers = new Map(getCronJobs().map((j) => [j.name, j]));
 
@@ -78,7 +72,7 @@ export async function runDue(now: Date, ctx: AppContext): Promise<void> {
 
         // Record + release, gated on our exact claim token (see `claim`'s ABA
         // note). next_run recomputes from `now` — missed runs fire once, no
-        // backfill — using the row's CURRENT (possibly admin-edited) schedule.
+        // backfill — using the row's schedule as synced from config.
         await cronRepository.recordRunAndRelease(row.name, expiry, {
             lastRun: now,
             nextRun: nextRunFrom(row.schedule, now, timezone),
