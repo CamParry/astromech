@@ -38,6 +38,7 @@ export function sharp(): ImageDriver {
         async placeholder(bytes: Uint8Array): Promise<string | null> {
             try {
                 const { data, info } = await sharpLib(Buffer.from(bytes))
+                    .rotate()
                     .raw()
                     .ensureAlpha()
                     .resize(32, 32, { fit: 'inside' })

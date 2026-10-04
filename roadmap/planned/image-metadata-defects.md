@@ -49,17 +49,51 @@ decoded image, which is what the variants are made from.
 
 ## The work
 
-- [ ] Record dimensions after applying EXIF orientation, from the image driver
+- [x] Record dimensions after applying EXIF orientation, from the image driver
       where one is configured, and drop the unused `orientation` key or set it.
-- [ ] Strip metadata from the stored original on upload when an image driver
-      can (sharp; the Cloudflare driver cannot rewrite the original, so say so
-      in its docs).
-- [ ] Read dimensions for HEIC, AVIF and TIFF.
+- [x] Remove the GPS data from the stored original on upload and replace,
+      blanking it in place in the EXIF and XMP with no re-encode, so the pixels
+      and size are unchanged and it needs no image driver. Other metadata
+      (camera, date, copyright) is kept.
+- [x] Read dimensions for HEIC, AVIF and TIFF.
 - [ ] Add the version to the Cloudflare driver's origin URL.
 - [ ] Every setting that changes a variant's bytes joins its storage key.
 - [ ] Placeholders from the upright image; record whether an image has alpha.
 - [ ] Animated WebP stays animated on sharp.
 - [ ] HEIC: not resizable on sharp unless the build can decode it.
 - [ ] `size` from the stored bytes.
-- [ ] Tests: a rotated JPEG fixture stores upright dimensions; an uploaded
+- [x] Tests: a rotated JPEG fixture stores upright dimensions; an uploaded
       original with GPS data is served without it.
+
+## Left open
+
+- **HEIC variants fall back to the original.** The prebuilt sharp cannot decode
+  HEVC, so a HEIC upload records its dimensions but gets no resized variants.
+- **Rows uploaded before this work keep swapped dimensions** until their file
+  is replaced: nothing rereads the stored originals.
+- **Core sets no upload size limit.** An image is buffered whole to read its
+  header, so the largest upload is bounded only by the runtime's memory and the
+  host's request limit.
+- **Some GPS data is out of reach of in-place removal.** A HEIF `Exif` item
+  stored in several extents or by construction method 2 (an item reference) is
+  left alone, as is a HEIF `Exif` item that starts inside the declared bytes
+  of an earlier `Exif` item with a valid TIFF header (an earlier item of
+  length 0, or one running past its data, ends where the next one starts), a
+  GPS pointer in a TIFF page IFD after the first, XMP in a GIF, an XMP property
+  split across two extended-XMP segments in a JPEG, and a location in a camera
+  maker's MakerNotes.
+- **A camera raw declared as another type is buffered whole.** A TIFF-based
+  raw (DNG, CR2, NEF, ARW) uploaded with a non-image content type is read
+  into memory for GPS removal, on top of the copy `formData()` already holds,
+  so it takes twice its size. This adds to the missing upload size limit above.
+- **A compressed text past the first 2 MB is left alone.** A PNG's compressed
+  text chunks inflate to at most 2 MB in all, so a chunk beyond that keeps its
+  GPS data. A real XMP packet or raw profile is well under 1 MB; the limit
+  keeps a small compressed upload from costing seconds of work.
+- **The XMP scan does not parse XML.** It finds names and brackets in the
+  bytes, so a GPS element inside an XML comment blanks the text up to the next
+  real end tag of that name, which can take other properties (`dc:rights`)
+  with it. A `>` inside the value of a GPS element's attribute ends the start
+  tag early, so the blanking breaks the packet. A prefix bound to the EXIF
+  namespace that holds a non-ASCII character is not matched, so its GPS
+  properties are kept.

@@ -92,4 +92,26 @@ describe('sharp driver — placeholder', () => {
         expect(typeof hash).toBe('string');
         expect((hash as string).length).toBeGreaterThan(0);
     });
+
+    it('hashes a photo upright when its EXIF orientation rotates it', async () => {
+        // Black on the left, white on the right, tagged "rotate 90 degrees clockwise".
+        const half = await sharpLib({
+            create: { width: 20, height: 20, channels: 3, background: '#000000' },
+        })
+            .png()
+            .toBuffer();
+        const stored = await sharpLib({
+            create: { width: 40, height: 20, channels: 3, background: '#ffffff' },
+        })
+            .composite([{ input: half, left: 0, top: 0 }])
+            .jpeg()
+            .withMetadata({ orientation: 6 })
+            .toBuffer();
+        const upright = await sharpLib(stored).rotate().png().toBuffer();
+
+        const driver = sharp();
+        expect(await driver.placeholder?.(new Uint8Array(stored))).toBe(
+            await driver.placeholder?.(new Uint8Array(upright))
+        );
+    });
 });

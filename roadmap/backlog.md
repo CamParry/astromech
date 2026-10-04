@@ -17,6 +17,8 @@ Finished items are deleted rather than ticked; the record of what shipped is in
 - [ ] `ConfirmProvider` (`components/ui/confirm.tsx`) runs `handleCancel` twice on Close (its `onClick` and `onOpenChange`), and a second `confirm()` replaces an open one and drops its callbacks. The user menu reads "Logout" (`topbar.logout`) where `nav.logout` says "Log out".
 - [ ] Deleting a user lists the entries whose `relationship` fields name them before it confirms, as `entries/methods/used-by.ts` does for an entry, since the delete empties those fields (`DECISIONS.md`, "Users are deleted, not archived").
 
+- [ ] The admin's login, forgot-password and reset-password pages hard-code "Sign in", "Email address", "Password" and "Signing in…" although i18n keys exist for them. A session that ends mid-use (`onUnauthorized` in `main.tsx`) lands on `/login` with no message; it could reuse the `error` search param that `access_denied` uses.
+
 ### Fields
 
 - [ ] `columns.field(name, { sortable: true })` sends a sort the entries repository refuses with a 400 (`UnknownSortKeyError`), and `entries-list-page.tsx` re-sorts each page in the browser by string comparison. Implement field sort in the repository or drop `sortable`; delete the client sort either way
@@ -86,6 +88,7 @@ not be re-derived.
 - [ ] A frontend form component/helper. v1 deliberately exposes data only (`forms.get`) and lets the site author own the markup, following the redirects precedent — revisit if hand-rendering proves tedious in practice
 - [ ] Per-form success redirect, once there is a frontend story to redirect within
 - [ ] More notification providers now the seam exists — Slack, Mailchimp, a generic webhook. Each is one file in `notifications/providers/` plus a `registry.ts` entry; the editor block and the delivery come as a pair
+- [ ] The forms `afterSubmit` payload carries the caller-supplied `meta` and the spam `token` whatever `storeMeta` says; decide whether `storeMeta: false` should keep them from subscribers too.
 - [ ] An Astro page or action that calls forms `submit` on the server passes no visitor address, so the spam providers get no `remoteip` and the forms rate limit has no key. The Astro middleware could put Astro's `clientAddress` on the request scope when it is trusted.
 - [ ] Notification providers are a closed built-in list. A site can write a `SpamProvider` and pass it through config, but there is no equivalent option for a `NotificationProvider` — the registry is compiled in. Open it up if a site needs a kind we don't ship
 

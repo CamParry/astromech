@@ -17,7 +17,6 @@ export const mediaMetadataSchema = z.object({
     blurhash: withFallback(z.string().nullable().optional(), undefined),
     /** The content hash of an optimisable image, which versions its URLs. */
     version: withFallback(z.string().optional(), undefined),
-    orientation: withFallback(z.number().optional(), undefined),
     duration: withFallback(z.number().optional(), undefined),
     pageCount: withFallback(z.number().optional(), undefined),
 });

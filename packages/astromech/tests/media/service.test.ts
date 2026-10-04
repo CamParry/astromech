@@ -8,6 +8,7 @@ import {
     makeTestConfig,
     setupTestConfig,
 } from '@tests/harness';
+import sharpLib from 'sharp';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { currentServices } from '@/app-context/services';
 import { mediaTable } from '@/database/tables';
@@ -82,6 +83,44 @@ describe('mediaService.upload', () => {
         expect(media.metadata?.version).toMatch(/^[0-9a-f]{12}$/);
         // Image path buffers (Uint8Array put), not streamed.
         expect(lastPutStreamed(put)).toBe(false);
+    });
+
+    it('records upright dimensions for a photo its EXIF orientation rotates', async () => {
+        // Stored 40 wide and 20 high, tagged "rotate 90 degrees clockwise to display".
+        const rotated = await sharpLib({
+            create: { width: 40, height: 20, channels: 3, background: '#808080' },
+        })
+            .jpeg()
+            .withMetadata({ orientation: 6 })
+            .toBuffer();
+
+        const media = await mediaService.upload({
+            file: new File([new Uint8Array(rotated)], 'portrait.jpg', {
+                type: 'image/jpeg',
+            }),
+        });
+
+        expect({ width: media.width, height: media.height }).toEqual({
+            width: 20,
+            height: 40,
+        });
+    });
+
+    it('records the dimensions of a GIF, which it does not optimise', async () => {
+        const gif = await sharpLib({
+            create: { width: 30, height: 10, channels: 3, background: '#808080' },
+        })
+            .gif()
+            .toBuffer();
+
+        const media = await mediaService.upload({
+            file: new File([new Uint8Array(gif)], 'banner.gif', { type: 'image/gif' }),
+        });
+
+        expect({ width: media.width, height: media.height }).toEqual({
+            width: 30,
+            height: 10,
+        });
     });
 
     it('mints a ULID id, not a UUID', async () => {
