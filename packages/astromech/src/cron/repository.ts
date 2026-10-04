@@ -3,22 +3,31 @@
  * table. Every method goes through `createRepository(cronTable)`: the
  * scheduler's due/claim predicates are ORs the `where` DSL now expresses.
  */
-import type { CronRow, NewCronRow } from '@/database/tables';
+import type { CronRow } from '@/database/tables';
 import { createRepository } from '@/database/repository/create-repository';
 import { cronTable } from '@/database/tables';
-
-export type CronRepository = ReturnType<typeof createCronRepository>;
 
 function createCronRepository() {
     const repository = createRepository(cronTable);
 
     /**
-     * Insert a job's seed row, or leave an existing one alone. ON CONFLICT DO
-     * NOTHING rather than an upsert: a stored (possibly admin-edited) row is
-     * authoritative and must never be overwritten by the registry's defaults.
+     * Store a job's schedule from config: insert its row, or, when the stored
+     * schedule differs, replace the schedule and its next run. The run state
+     * (`enabled`, `lastRun`, `lock`) is kept.
      */
-    async function seedJob(row: NewCronRow): Promise<void> {
-        await repository.createMany([row], { onConflict: 'ignore' });
+    async function syncJob(row: {
+        name: string;
+        schedule: string;
+        nextRun: Date | null;
+    }): Promise<void> {
+        const { name, schedule, nextRun } = row;
+        await repository.createMany([{ name, schedule, enabled: true, nextRun }], {
+            onConflict: 'ignore',
+        });
+        await repository.updateMany(
+            { name, schedule: { ne: schedule } },
+            { schedule, nextRun }
+        );
     }
 
     /** Enabled jobs whose next run has arrived, or was never computed. */
@@ -49,12 +58,12 @@ function createCronRepository() {
     async function recordRunAndRelease(
         name: string,
         token: Date,
-        run: { lastRun: Date; nextRun: Date | null }
+        run: Pick<CronRow, 'lastRun' | 'lastResult' | 'lastError' | 'nextRun'>
     ): Promise<void> {
         await repository.updateMany({ name, lock: token }, { ...run, lock: null });
     }
 
-    return { seedJob, due, claim, recordRunAndRelease };
+    return { syncJob, due, claim, recordRunAndRelease };
 }
 
 /** The cron repository. Stateless: the db handle resolves per call. */

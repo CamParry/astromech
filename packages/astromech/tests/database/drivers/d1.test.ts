@@ -329,3 +329,18 @@ describe('d1()', () => {
         });
     });
 });
+
+describe('d1', () => {
+    it('names itself, as every driver does', () => {
+        expect(d1({ binding: 'DB' }).name).toBe('d1');
+    });
+});
+
+describe('d1 isRemote', () => {
+    it('reports a database object as remote, since nothing says where it lives', async () => {
+        const client = createClient({ url: ':memory:' });
+
+        expect(await d1({ database: makeFakeD1(client) }).isRemote()).toBe(true);
+        client.close();
+    });
+});

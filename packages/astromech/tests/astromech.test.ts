@@ -59,7 +59,7 @@ describe('createAstromech — the application registry', () => {
         const failing: AstromechConfig = {
             ...makeConfig(),
             db: {
-                type: 'unreachable',
+                name: 'unreachable',
                 getInstance: () => {
                     throw new Error('database unreachable');
                 },

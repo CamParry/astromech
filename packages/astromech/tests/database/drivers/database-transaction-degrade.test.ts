@@ -16,7 +16,7 @@ describe('transaction() degradation', () => {
         const base = await createTestDb();
         setupTestConfig({
             ...makeTestConfig(),
-            db: { type: 'no-tx', getInstance: () => base, supportsTransactions: false },
+            db: { name: 'no-tx', getInstance: () => base, supportsTransactions: false },
         });
 
         let seen: unknown;

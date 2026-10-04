@@ -25,6 +25,15 @@ export function useEntriesQuery(params: EntryQueryParams & { type: string }) {
     return useQuery(entriesQueryOptions(params));
 }
 
+/** How many entries each of `types` holds, keyed by type, in one request. */
+export function entryCountsQueryOptions(types: readonly string[]) {
+    return queryOptions({
+        queryKey: queryKeys.entries.counts(types),
+        queryFn: () => astromechUntypedClient.entries.count({ type: [...types] }),
+        enabled: types.length > 0,
+    });
+}
+
 export function entryQueryOptions(type: string, id: string, locale: string) {
     return queryOptions({
         queryKey: queryKeys.entries.get(type, id, locale),
@@ -83,13 +92,14 @@ type EntryLocale = { id: string; locale: string };
 
 /**
  * Every write the admin makes to one entry type. Each invalidates the type's
- * keys, which hold its lists, rows, versions and staged changes. `name` is
+ * keys, which hold its lists, rows, versions and staged changes, and the
+ * dashboard's counts. `name` is
  * what the toasts call the type.
  */
 export function entryMutations(type: string, name: string = type) {
     const entries = astromechUntypedClient.entries;
     const all = queryKeys.entries.all(type);
-    const invalidates = [all];
+    const invalidates = [all, queryKeys.entries.counts()];
     const messageValues = { name };
     return {
         trash: mutationOptions({

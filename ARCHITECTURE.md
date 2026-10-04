@@ -107,7 +107,7 @@ Fields are shared by entry types, globals, media, users and plugin tables. `fiel
 
 ## Database and migrations
 
-`database/` wraps Kysely. Core tables are declared with `defineTable` and gathered in `database/tables.ts`; plugins use `definePluginTable`. Migrations are an app artifact: `astromech db:generate` diffs the declared tables against `snapshot.json` in the config's `migrationsDir` and writes a migration there, and `astromech db:init` applies the chain. A plugin generates its own chain with `astromech plugin:generate`. Core merges the plugin chains into the app's with `mergeMigrationProviders` from `@astromech/schema-engine`, in `database/migrations.ts`, which boot and the `db:init` and `db:status` commands use. At boot, `checkMigrationDrift` warns when the database is behind the chain, and boot registers the merged chain in `database/migration-registry.ts`, which a restore runs forward on a backup recording other migrations than the database before swapping its tables in. `packages/astromech/tests/database/drift.test.ts` checks the committed demo snapshot against the core tables.
+`database/` wraps Kysely. Core tables are declared with `defineTable` and gathered in `database/tables.ts`; plugins use `definePluginTable`. Migrations are an app artifact: `astromech db:generate` diffs the declared tables against `snapshot.json` in the config's `migrationsDir` and writes a migration there, and `astromech db:init` applies the chain. A plugin generates its own chain with `astromech plugin:generate`. Core merges the plugin chains into the app's with `mergeMigrationProviders` from `@astromech/schema-engine`, in `database/migrations.ts`, which boot and the `db:init` and `db:status` commands use. At boot, `checkMigrationDrift` warns when the database is behind the chain (where the folder cannot be read, as on Workers, it reads the app migration names the Astro integration bundled into `virtual:astromech/config`, which the middleware registers), and boot registers the merged chain in `database/migration-registry.ts`, which a restore runs forward on a backup recording other migrations than the database before swapping its tables in. `packages/astromech/tests/database/drift.test.ts` checks the committed demo snapshot against the core tables.
 
 ## Plugins
 
@@ -133,7 +133,7 @@ The admin runs in the browser and reaches core through three entries only: `astr
 
 ## Scheduler
 
-Cadence lives in the `_astromech_cron` table, not in deploy config, so an admin edit takes effect on the next tick. A `SchedulerDriver` only triggers a tick; `cron/runner.ts` decides which jobs are due and runs each in its own try/catch, with the system `AppContext`. The table is also the lock against concurrent ticks.
+A job's schedule comes from config: each tick syncs it into the `_astromech_cron` table, which also holds each job's run state. A `SchedulerDriver` only triggers a tick; `cron/runner.ts` decides which jobs are due and runs each in its own try/catch, with the system `AppContext`, recording on the job's row when it ran, its result (`ok` or `error`) and the error message. The table is also the lock against concurrent ticks.
 
 ## Public entry points
 

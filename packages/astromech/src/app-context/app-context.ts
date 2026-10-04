@@ -100,7 +100,7 @@ export function createAppContext(input: AppContextInput): AppContext {
             const dump = driver?.dump?.bind(driver);
             const restore = driver?.restore?.bind(driver);
             return {
-                dialect: driver?.type ?? 'unknown',
+                dialect: driver?.name ?? 'unknown',
                 ...(dump ? { dump } : {}),
                 ...(restore
                     ? {

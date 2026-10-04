@@ -163,8 +163,9 @@ astromech validate                 # every row
 astromech validate --type post     # limit to one entry type
 ```
 
-Each finding names the row, the field path and the message a write would have
-returned; the command exits 1 when there is at least one, so it can gate a
+It checks every locale of every entry, global, media item and user, and each
+staged change on its own, marked `staged` beside the locale. Each finding names
+the row, the field path and the message a write would have returned; the command exits 1 when there is at least one, so it can gate a
 deploy. A clean run prints `All rows valid (N rows checked).`
 
 Every row is judged the way a write to it today would be: a draft entry is

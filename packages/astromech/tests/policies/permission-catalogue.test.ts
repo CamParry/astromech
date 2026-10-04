@@ -13,7 +13,7 @@ import { buildPermissionCatalogue } from '@/policies/permission-catalogue';
 
 describe('buildPermissionCatalogue', () => {
     const driver: DatabaseDriver = {
-        type: 'test',
+        name: 'test',
         getInstance() {
             throw new Error('not called');
         },

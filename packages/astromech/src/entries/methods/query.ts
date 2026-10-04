@@ -1,4 +1,4 @@
-import type { EntryResource, ListParams } from '../repository/types';
+import type { EntryResource } from '../repository/types';
 import type { VisibilityShape } from '@/content/visibility';
 import type { Field, QueryResult, ReferencesFilter, ResolvedConfig } from '@/types/index';
 import { z } from '@hono/zod-openapi';
@@ -10,6 +10,7 @@ import { collectRelationshipSchemaPaths } from '@/fields/references';
 import { defineServiceMethod } from '@/services/define-service-method';
 import { InvalidReferencesFilterError, PublicTrashedReadError } from '../errors';
 import { entryAccess } from '../internal/access';
+import { entryListFilters } from '../internal/list-filters';
 import { queryPreviewEntries } from '../internal/preview';
 import { entryRepository } from '../repository/entries-table';
 import { entryReadKeys, entrySchema } from '../schema';
@@ -38,8 +39,6 @@ export const queryEntries = defineServiceMethod({
         const { type, where, trashed, search, sort, full } = params;
         const { config } = ctx;
         const types = Array.isArray(type) ? Array.from(type) : [type];
-        const singleType = types.length === 1 ? (types[0] ?? null) : null;
-        const entryType = singleType ? resolveEntryType(config, singleType) : undefined;
         const shape: VisibilityShape = full ? 'full' : 'public';
         const now = new Date();
 
@@ -48,19 +47,12 @@ export const queryEntries = defineServiceMethod({
         const references = where?.['references'];
         if (references !== undefined) assertReferencesFilter(references, types, config);
 
-        // The public row filter's status and publish time go into the SQL, so the
-        // count matches the rows; `applyVisibility` still projects the fields and
-        // repeats the check. A type without statuses has neither column.
-        const hasStatuses = entryType ? entryType.capabilities.statuses !== false : true;
-        const filtersPublished = shape === 'public' && hasStatuses;
-        const filters: ListParams = {
-            type: singleType ?? types,
-            locale: params.locale,
-            trashed: trashed ?? false,
-            search,
-            where: filtersPublished ? { ...where, status: 'published' } : where,
-            ...(filtersPublished ? { publishedAsOf: now } : {}),
-        };
+        // `applyVisibility` still projects the fields and repeats the row check.
+        const filters = entryListFilters(
+            config,
+            { types, locale: params.locale, trashed, search, where, shape },
+            now
+        );
 
         const { data, pagination } = await queryPage(params, {
             list: (page) => entryRepository.findMany({ ...filters, sort, ...page }),

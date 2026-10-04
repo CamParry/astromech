@@ -8,6 +8,8 @@ export async function up(db: Kysely<unknown>): Promise<void> {
             \`schedule\` text NOT NULL,
             \`enabled\` integer DEFAULT 1 NOT NULL,
             \`last_run\` text,
+            \`last_result\` text CHECK (\`last_result\` IN ('ok', 'error')),
+            \`last_error\` text,
             \`next_run\` text,
             \`lock\` text
         )

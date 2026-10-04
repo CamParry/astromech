@@ -22,6 +22,7 @@ const admin: Role = {
 /** The permission one entry type's catalogue fixes each method to. */
 const PERMISSIONS: Record<keyof EntriesService, string> = {
     query: 'entry:posts:read',
+    count: 'entry:posts:read',
     get: 'entry:posts:read',
     create: 'entry:posts:create',
     update: 'entry:posts:update',

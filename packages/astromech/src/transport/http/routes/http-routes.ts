@@ -70,8 +70,8 @@ export type MountedRoute = HttpRouteSpec & { base: string };
  * Every entry type is served here, addressed by the type id the entries service
  * uses, URL-encoded into the `:type` segment.
  *
- * One row is bespoke; `transport/http/routes/entries.ts` records the reason
- * against its handler.
+ * Two rows are bespoke; `transport/http/routes/entries.ts` records the reason
+ * against their handler.
  */
 /**
  * The 409 an entry write answers when its body carries a column the type does
@@ -122,6 +122,7 @@ export const ENTRIES_ROUTE_SPECS = [
         client: 'list',
         listArg: 'type',
     },
+    { verb: 'post', path: '/count', id: 'entries.count', handler: 'bespoke' },
     {
         verb: 'post',
         path: '/:type',

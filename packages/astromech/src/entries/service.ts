@@ -9,6 +9,7 @@ import type { EntriesService } from '@/types/index';
 import { defineService } from '@/services/define-service';
 import { assertTypeCapability } from './capabilities';
 import { typeOf } from './internal/access';
+import { countEntries } from './methods/count';
 import { createEntry } from './methods/create';
 import { deleteEntries } from './methods/delete';
 import { duplicateEntry } from './methods/duplicate';
@@ -36,6 +37,7 @@ export const entriesDefinition = defineService<EntriesService>(
     'entries',
     {
         query: queryEntries,
+        count: countEntries,
         get: getEntry,
         create: createEntry,
         update: updateEntries,

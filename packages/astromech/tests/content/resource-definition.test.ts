@@ -50,6 +50,7 @@ const ROWS: Record<ResourceType, Row> = {
         declares: 'requires',
         declared: {
             query: undefined,
+            count: undefined,
             get: undefined,
             create: undefined,
             update: undefined,

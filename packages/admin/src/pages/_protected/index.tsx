@@ -2,9 +2,10 @@
  * Dashboard page — summary stat cards and recent activity.
  */
 
-import type { Entry } from 'astromech';
-import { useQueries } from '@tanstack/react-query';
+import type { AdminEntryType, Entry } from 'astromech';
+import { useQueries, useQuery } from '@tanstack/react-query';
 import { createFileRoute, Link } from '@tanstack/react-router';
+import { entryPermission } from 'astromech/shared';
 import React from 'react';
 import { useTranslation } from 'react-i18next';
 import adminConfig from 'virtual:astromech/admin-config';
@@ -21,20 +22,19 @@ import { Panel } from '../../components/ui/panel';
 import { Skeleton } from '../../components/ui/spinner';
 import { StatusBadge } from '../../components/ui/status-badge';
 import { useAiContext } from '../../context/ai-context';
-import { entriesQueryOptions, useEntriesQuery } from '../../hooks/entries';
+import { entriesQueryOptions, entryCountsQueryOptions } from '../../hooks/entries';
+import { usePermissions } from '../../hooks/use-permissions';
 import { formatDate } from '../../utilities/dates';
 
 function StatCard({
-    typeId,
     label,
+    total,
+    isLoading,
 }: {
-    typeId: string;
     label: string;
+    total: number;
+    isLoading: boolean;
 }): React.ReactElement {
-    const { data, isLoading } = useEntriesQuery({ type: typeId, limit: 1 });
-
-    const total = data?.pagination?.total ?? 0;
-
     return (
         <Panel>
             <div className="am-stat-card">
@@ -57,26 +57,32 @@ type RecentActivityResult = {
 };
 
 /** The site's own entry types; a plugin's are summarised on its own pages. */
-const siteEntryTypes = Object.fromEntries(
-    Object.entries(adminConfig.entryTypes).filter(
-        ([, entryType]) => entryType.plugin === undefined
-    )
+const siteEntryTypes = Object.entries(adminConfig.entryTypes).filter(
+    ([, entryType]) => entryType.plugin === undefined
 );
 
+/** The site's entry types the signed-in user may read, as `[id, config]` pairs. */
+function useReadableEntryTypes(): [string, AdminEntryType][] {
+    const { hasPermission } = usePermissions();
+    return siteEntryTypes.filter(([type]) =>
+        hasPermission(entryPermission(type, 'read'))
+    );
+}
+
 /**
- * The five most recently updated entries across the site's types. Each type is
- * its own list query, so an entry mutation refreshes the type it touched.
+ * The five most recently updated entries across `types`. Each type is its own
+ * list query, so an entry mutation refreshes the type it touched.
  */
-function useRecentEntries(): RecentActivityResult {
+function useRecentEntries(types: [string, AdminEntryType][]): RecentActivityResult {
     return useQueries({
-        queries: Object.keys(siteEntryTypes).map((type) =>
+        queries: types.map(([type]) =>
             entriesQueryOptions({ type, limit: 5, sort: { updatedAt: 'desc' } })
         ),
         combine: (results) => ({
             data: results
                 .flatMap((result, index) => {
-                    const typeId = Object.keys(siteEntryTypes)[index] ?? '';
-                    const typeLabel = siteEntryTypes[typeId]?.plural ?? typeId;
+                    const [typeId = '', entryType] = types[index] ?? [];
+                    const typeLabel = entryType?.plural ?? typeId;
                     return (result.data?.data ?? []).map(
                         (entry): RecentEntry => ({ ...entry, typeId, typeLabel })
                     );
@@ -93,8 +99,10 @@ function useRecentEntries(): RecentActivityResult {
 
 function DashboardPage(): React.ReactElement {
     const { t } = useTranslation();
-    const typeEntries = Object.entries(siteEntryTypes);
-    const { data: recentEntries, isLoading: recentLoading } = useRecentEntries();
+    const typeEntries = useReadableEntryTypes();
+    const counts = useQuery(entryCountsQueryOptions(typeEntries.map(([type]) => type)));
+    const { data: recentEntries, isLoading: recentLoading } =
+        useRecentEntries(typeEntries);
 
     useAiContext(
         { kind: 'pages', id: 'dashboard', label: t('dashboard.title') },
@@ -120,7 +128,11 @@ function DashboardPage(): React.ReactElement {
                                     params={{ type: key }}
                                     className="am-link-inherit"
                                 >
-                                    <StatCard typeId={key} label={entryType.plural} />
+                                    <StatCard
+                                        label={entryType.plural}
+                                        total={counts.data?.[key] ?? 0}
+                                        isLoading={counts.isLoading}
+                                    />
                                 </Link>
                             ))}
                         </div>

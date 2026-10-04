@@ -30,6 +30,12 @@ afterEach(() => {
     else process.env.DATABASE_URL = originalUrl;
 });
 
+describe('libsql', () => {
+    it('names itself, as every driver does', () => {
+        expect(libsql({ url: ':memory:' }).name).toBe('libsql');
+    });
+});
+
 describe('libsql isRemote', () => {
     it('treats an in-memory database as local', () => {
         expect(libsql({ url: ':memory:' }).isRemote()).toBe(false);

@@ -204,7 +204,7 @@ import { CamelCasePlugin, Kysely } from 'kysely';
 let instance;
 export default {
     db: {
-        type: 'libsql',
+        name: 'libsql',
         isRemote: () => ${options.remote === true},
         getInstance() {
             if (${options.throwOnOpen === true}) throw new Error('opened the database');

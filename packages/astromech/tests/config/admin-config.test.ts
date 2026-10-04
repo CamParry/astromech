@@ -12,7 +12,7 @@ import { buildAdminConfig, toAdminEntryType } from '@/config/admin-config';
 import { resolveConfig } from '@/config/resolve';
 
 const driver: DatabaseDriver = {
-    type: 'test',
+    name: 'test',
     getInstance() {
         throw new Error('not called');
     },

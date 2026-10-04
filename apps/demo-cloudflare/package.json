@@ -10,7 +10,7 @@
         "typecheck": "astro sync && tsc --noEmit",
         "check:config": "tsx astromech.config.ts",
         "db:generate": "tsx --tsconfig ../../packages/astromech/tsconfig.json ../../packages/astromech/src/transport/cli/index.ts db:generate",
-        "db:init": "tsx --tsconfig ../../packages/astromech/tsconfig.json ../../packages/astromech/src/transport/cli/index.ts db:init --allow-remote"
+        "db:init": "tsx --tsconfig ../../packages/astromech/tsconfig.json ../../packages/astromech/src/transport/cli/index.ts db:init"
     },
     "dependencies": {
         "@astrojs/cloudflare": "^14.3.1",

@@ -20,7 +20,7 @@ import { describe, expect, it } from 'vitest';
 import { resolveConfig } from '@/config/resolve';
 
 const dbDriver: DatabaseDriver = {
-    type: 'test',
+    name: 'test',
     getInstance: () => {
         throw new Error('not called');
     },
