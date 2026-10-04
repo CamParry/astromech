@@ -5,6 +5,9 @@
  * "View" link and the menus, redirects and seo plugins.
  */
 
+import type { ResolvedConfig } from '@/types/index';
+import { defaultContentLocale } from '@/utilities/locale';
+
 export type UrlEntry = {
     slug: string | null;
     fields: Record<string, unknown>;
@@ -41,4 +44,19 @@ export function resolveEntryPath(template: string, entry: UrlEntry): string | nu
     } catch {
         return null;
     }
+}
+
+/**
+ * The public path of one locale of an entry: `resolveEntryPath`, prefixed with
+ * `/{locale}` unless the locale is the default content locale, as Astro's i18n
+ * routing builds it with `prefixDefaultLocale: false`. Null as for `resolveEntryPath`.
+ */
+export function resolveEntryLocalePath(
+    template: string,
+    entry: UrlEntry & { locale: string },
+    config: Pick<ResolvedConfig, 'locales' | 'defaultLocale'>
+): string | null {
+    const path = resolveEntryPath(template, entry);
+    if (path === null || entry.locale === defaultContentLocale(config)) return path;
+    return `/${entry.locale}${path}`;
 }

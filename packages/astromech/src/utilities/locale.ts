@@ -4,6 +4,8 @@
  * (`en`), resolving down the display tag's fallback chain.
  */
 
+import type { ResolvedConfig } from '@/types/index';
+
 /** RFC 4647 lookup chain: `'en-GB'` → `['en-GB','en']`. */
 function localeFallbackChain(tag: string): string[] {
     const parts = tag.split('-').filter(Boolean);
@@ -26,4 +28,18 @@ export function resolveContentLocale(
         if (available.includes(candidate)) return candidate;
     }
     return undefined;
+}
+
+/**
+ * The content locale rows are tagged with by default, reached by walking
+ * `defaultLocale` down its RFC 4647 fallback chain.
+ */
+export function defaultContentLocale(
+    config: Pick<ResolvedConfig, 'locales' | 'defaultLocale'>
+): string {
+    // `defaultLocale` is a display tag (e.g. `en-GB`) and the repository matches
+    // locale exactly, so fall back to the first configured locale.
+    const locales = config.locales ?? [];
+    const requested = config.defaultLocale ?? 'en';
+    return resolveContentLocale(requested, locales) ?? locales[0] ?? requested;
 }

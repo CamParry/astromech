@@ -42,7 +42,11 @@ export {
  */
 export { rateLimitKey } from '@/transport/http/client-address';
 export { withDefaults } from '@/utilities/options';
-export { resolveEntryUrl, resolveEntryPath } from '@/entries/entry-url';
+export {
+    resolveEntryUrl,
+    resolveEntryPath,
+    resolveEntryLocalePath,
+} from '@/entries/entry-url';
 export type { UrlEntry } from '@/entries/entry-url';
 export { defaultImageWidths } from '@/media/image-widths';
 export { buildImageAttrs } from '@/media/serving/image/build-image-attrs';

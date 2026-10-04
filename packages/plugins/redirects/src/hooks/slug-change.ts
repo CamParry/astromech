@@ -1,27 +1,36 @@
 /**
- * When an update moves an entry's front-end path (from the entry type's `url`
- * template), record a 301 from the old path, keeping the rules loop-free and
- * one hop deep. The writes are separate calls: a plugin context has no transaction.
+ * When an update moves a live entry's public path, record a 301 from the old
+ * path, keeping the rules loop-free and one hop deep. The writes are separate
+ * calls: a plugin context has no transaction.
  */
 
-import type { Hook } from 'astromech';
-import { defineHook, resolveEntryPath } from 'astromech';
+import type { Entry, Hook, ResolvedEntryType } from 'astromech';
+import { defineHook, resolveEntryLocalePath } from 'astromech';
 import { createRedirectsRepository } from '../repository';
 
 export const slugChangeHook: Hook = defineHook(
     'entry:afterUpdate',
     async (event, ctx) => {
-        const template = ctx.config.entryTypes[event.type]?.url;
-        if (!template) return;
+        const entryType = ctx.config.entryTypes[event.type];
+        const template = entryType?.url;
+        if (!entryType || !template) return;
+        // `event.entry` is the row before the write. A staged change is not
+        // public, and a row that was not live had no public path to leave.
+        if (event.entry.staged || !wasLive(entryType, event.entry)) return;
         // A trashed entry serves no page, and its old path may belong to
         // another entry by now, as when a restore re-slugs it.
         if (event.entry.deletedAt !== null) return;
 
-        const from = resolveEntryPath(template, event.entry);
-        const to = resolveEntryPath(template, {
-            slug: event.data.slug ?? event.entry.slug,
-            fields: { ...event.entry.fields, ...(event.data.fields ?? {}) },
-        });
+        const from = resolveEntryLocalePath(template, event.entry, ctx.config);
+        const to = resolveEntryLocalePath(
+            template,
+            {
+                locale: event.entry.locale,
+                slug: event.data.slug ?? event.entry.slug,
+                fields: { ...event.entry.fields, ...(event.data.fields ?? {}) },
+            },
+            ctx.config
+        );
         if (!from || !to || from === to) return;
 
         const redirects = createRedirectsRepository(ctx.db);
@@ -53,3 +62,13 @@ export const slugChangeHook: Hook = defineHook(
         }
     }
 );
+
+/**
+ * True when the row was publicly visible: every row of a type without statuses,
+ * otherwise a published row whose publish date has passed.
+ */
+function wasLive(entryType: ResolvedEntryType, entry: Entry): boolean {
+    if (!entryType.capabilities.statuses) return true;
+    if (entry.status !== 'published') return false;
+    return entry.publishedAt === null || entry.publishedAt <= new Date();
+}

@@ -1543,6 +1543,52 @@ describe('hooks', () => {
         expect(seen).toEqual([{ status: 'unpublished' }]);
     });
 
+    it('fires afterUpdate when a staged change merges, with the row as it was and the merged values', async () => {
+        const base = makeTestConfig();
+        const post = base.entries['post'];
+        if (!post) throw new Error('test harness missing `post` entry type');
+        const resolved = setupTestConfig({
+            ...base,
+            entries: { ...base.entries, post: { ...post, staging: true } },
+        });
+        const seen: { slug: string | null; data: unknown }[] = [];
+        registerTestPlugins(
+            [
+                {
+                    package: '@test/probe',
+                    hooks: [
+                        defineHook('entry:afterUpdate', (ctx) => {
+                            seen.push({ slug: ctx.entry.slug, data: ctx.data });
+                        }),
+                    ],
+                },
+            ],
+            resolved
+        );
+        const e = await api.create({ type: 'post', data: { title: 'A' } });
+        await api.createStaged({ type: 'post', id: e.id });
+        await api.update({
+            type: 'post',
+            id: e.id,
+            staged: true,
+            data: { title: 'B', slug: 'b', fields: { body: 'staged' } },
+        });
+        seen.length = 0;
+
+        await api.mergeStaged({ type: 'post', id: e.id });
+
+        expect(seen).toEqual([
+            {
+                slug: 'a',
+                data: {
+                    title: 'B',
+                    slug: 'b',
+                    fields: expect.objectContaining({ body: 'staged' }),
+                },
+            },
+        ]);
+    });
+
     it('fires one beforeCreate/afterCreate pair for a duplicate, with the first locale', async () => {
         const src = await api.create({
             type: 'post',

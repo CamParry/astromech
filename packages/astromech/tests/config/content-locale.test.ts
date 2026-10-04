@@ -6,7 +6,7 @@
 import type { ResolvedConfig } from '@/types/index';
 import { resolveTestConfig } from '@tests/harness';
 import { describe, expect, it } from 'vitest';
-import { defaultContentLocale } from '@/config/content-locale';
+import { defaultContentLocale } from '@/utilities/locale';
 
 function config(locales?: string[], defaultLocale?: string): ResolvedConfig {
     const {

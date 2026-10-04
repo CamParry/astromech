@@ -1,12 +1,16 @@
 /**
- * `resolveEntryUrl` and `resolveEntryPath`: an entry type's `url` template
- * filled from an entry, and the null answer for an entry whose template names
- * an empty token.
+ * `resolveEntryUrl`, `resolveEntryPath` and `resolveEntryLocalePath`: an entry
+ * type's `url` template filled from an entry, and the null answer for an entry
+ * whose template names an empty token.
  */
 
 import type { UrlEntry } from '@/entries/entry-url';
 import { describe, expect, it } from 'vitest';
-import { resolveEntryPath, resolveEntryUrl } from '@/entries/entry-url';
+import {
+    resolveEntryLocalePath,
+    resolveEntryPath,
+    resolveEntryUrl,
+} from '@/entries/entry-url';
 
 function entry(slug: string | null, fields: Record<string, unknown> = {}): UrlEntry {
     return { slug, fields };
@@ -74,5 +78,28 @@ describe('resolveEntryPath', () => {
 
     it('answers null when the resolved value is not a URL', () => {
         expect(resolveEntryPath('http://[{slug}', entry('hello'))).toBeNull();
+    });
+});
+
+describe('resolveEntryLocalePath', () => {
+    const config = { locales: ['en', 'de'], defaultLocale: 'en-GB' };
+
+    it.each([
+        ['leaves the default content locale unprefixed', 'en', '/blog/hello'],
+        ['prefixes another locale', 'de', '/de/blog/hello'],
+    ])('%s', (_, locale, expected) => {
+        expect(
+            resolveEntryLocalePath('/blog/{slug}', { ...entry('hello'), locale }, config)
+        ).toBe(expected);
+    });
+
+    it('answers null when the entry has no path', () => {
+        expect(
+            resolveEntryLocalePath(
+                '/blog/{slug}',
+                { ...entry(null), locale: 'de' },
+                config
+            )
+        ).toBeNull();
     });
 });

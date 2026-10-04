@@ -7,6 +7,7 @@ import { assertGuardHolds, writeGuarded } from '@/content/write-guard';
 import { transaction } from '@/database/transaction';
 import { resolveEntryType } from '@/entries/entry-types';
 import { defineServiceMethod } from '@/services/define-service-method';
+import { parseOutput } from '@/services/parse-method-output';
 import { entryAccess } from '../../internal/access';
 import { prepareEntryFields } from '../../internal/prepare-fields';
 import { uniqueSlugIfChanged } from '../../internal/slug';
@@ -20,7 +21,8 @@ import { entrySchema } from '../../schema';
  * when the type keeps versions, overwrites its title and fields, and discards the
  * staged change. A staged slug that differs from the canonical's replaces it, or
  * the next free one if a live entry took it meanwhile. The status stays:
- * publishing is a separate call. An entry in the trash answers 409.
+ * publishing is a separate call. Fires `entry:afterUpdate` with the merged title,
+ * slug and fields as `data`. An entry in the trash answers 409.
  */
 export const mergeStagedEntry = defineServiceMethod({
     summary: 'Merge the staged change into an entry.',
@@ -64,7 +66,7 @@ export const mergeStagedEntry = defineServiceMethod({
             slug: staged.slug,
         });
 
-        return transaction(async () => {
+        const merged = await transaction(async () => {
             if (versioning) {
                 await snapshotVersion('entry', entryRepository, guard, user, {
                     id,
@@ -89,5 +91,14 @@ export const mergeStagedEntry = defineServiceMethod({
             await syncEntryRelationships(config, updated, type);
             return updated;
         });
+
+        await ctx.runHook('entry:afterUpdate', {
+            type,
+            entry: parseOutput(entrySchema, canonical, 'The entry in entry:afterUpdate'),
+            data: { title: staged.title, slug: slug ?? undefined, fields },
+            user,
+        });
+
+        return merged;
     },
 });
