@@ -15,7 +15,10 @@ see.
 
 ## The work
 
-- [ ] A TanStack Router blocker in `useFieldsForm` that asks before leaving a
+- [x] A TanStack Router blocker in `useFieldsForm` that asks before leaving a
       dirty form.
-- [ ] The same for the media detail form.
-- [ ] Tests: leaving a dirty form asks; a clean one does not.
+- [x] The same for the media detail form.
+- [x] Tests: leaving a dirty form asks; a clean one does not.
+- [x] Writes that drop the form ask first: merge, log out (a `/logout`
+      route), adding a locale, duplicating, and closing the upload dialog.
+- [x] An edit typed while a save is in flight keeps the form dirty.

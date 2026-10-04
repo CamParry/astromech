@@ -112,13 +112,16 @@ function EntryEditBody({
     );
 
     const mutations = entryMutations(type, config.single);
+    // The entry is gone, so its unsaved edits are not worth asking about.
     const trashEntry = useAdminMutation(mutations.trash, {
-        onSuccess: () => void navigate({ to: basePath }),
+        onSuccess: () => void navigate({ to: basePath, ignoreBlocker: true }),
     });
+    // Duplicating asks first, so the copy opens without asking again.
     const duplicateEntry = useAdminMutation(mutations.duplicate, {
         onSuccess: (copy) =>
             void navigate({
                 to: entryEditPath(basePath, copy.id, { locale: copy.locale }),
+                ignoreBlocker: true,
             }),
     });
     const issueToken = useAdminMutation(mutations.issuePreviewToken);
@@ -192,6 +195,7 @@ function EntryEditBody({
                                 locales={entry.locales}
                                 allLocales={adminConfig.locales}
                                 defaultLocale={defaultContentLocale()}
+                                confirmDiscard={controller.confirmDiscard}
                                 compact
                             />
                         )}
@@ -237,7 +241,11 @@ function EntryEditBody({
                                         <Menu.Popup className="am-topbar-menu-popup">
                                             <Menu.Item
                                                 className="am-topbar-menu-item"
-                                                onClick={() => duplicateEntry.mutate(id)}
+                                                onClick={() =>
+                                                    controller.confirmDiscard(() =>
+                                                        duplicateEntry.mutate(id)
+                                                    )
+                                                }
                                                 disabled={duplicateEntry.isPending}
                                             >
                                                 <span className="am-topbar-menu-item-icon">

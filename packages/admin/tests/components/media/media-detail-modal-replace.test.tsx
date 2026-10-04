@@ -12,7 +12,7 @@ import { screen, waitFor } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { MediaDetailModal } from '@/admin/components/media/media-detail-modal';
 import { queryKeys } from '@/admin/hooks/use-query-keys';
-import { createTestQueryClient, renderWithProviders } from '../../_support/render-admin';
+import { createTestQueryClient, renderAdmin } from '../../_support/render-admin';
 
 const { media } = vi.hoisted(() => ({
     media: { get: vi.fn(), versions: vi.fn(), replace: vi.fn() },
@@ -95,7 +95,7 @@ async function openModal(permissions?: { canUpload?: boolean }): Promise<UserEve
     media.replace.mockResolvedValue(ITEM);
     const queryClient = createTestQueryClient();
     queryClient.setQueryData(queryKeys.media.usedBy(ITEM.id), usage);
-    const { user } = renderWithProviders(
+    const { user } = renderAdmin(
         <MediaDetailModal
             mediaId={ITEM.id}
             onClose={vi.fn()}

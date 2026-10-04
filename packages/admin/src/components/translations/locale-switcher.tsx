@@ -35,6 +35,11 @@ type LocaleSwitcherProps = {
      * calls this instead of writing the row itself.
      */
     onSelectMissing?: (locale: string) => void;
+    /**
+     * Runs the create-translation write once the editor agrees to drop the
+     * form's unsaved changes, as `useFieldsForm`'s `confirmDiscard` does.
+     */
+    confirmDiscard?: (action: () => void) => void;
     compact?: boolean;
 };
 
@@ -47,6 +52,7 @@ export function LocaleSwitcher({
     basePath,
     type,
     onSelectMissing,
+    confirmDiscard = (action) => action(),
     compact = false,
 }: LocaleSwitcherProps): React.ReactElement {
     const navigate = useNavigate();
@@ -57,10 +63,12 @@ export function LocaleSwitcher({
     const createMutation = useAdminMutation(
         entryMutations(type ?? '').createTranslation,
         {
+            // The editor has already agreed to drop any unsaved changes.
             onSuccess: (entry) => {
                 setIsCreating(false);
                 void navigate({
                     to: entryEditPath(basePath, entry.id, { locale: entry.locale }),
+                    ignoreBlocker: true,
                 });
             },
             onError: () => setIsCreating(false),
@@ -81,8 +89,10 @@ export function LocaleSwitcher({
             onSelectMissing(value);
             return;
         }
-        setIsCreating(true);
-        createMutation.mutate({ id, locale: value });
+        confirmDiscard(() => {
+            setIsCreating(true);
+            createMutation.mutate({ id, locale: value });
+        });
     }
 
     // Sort options: default locale first, others alphabetical; missing locales

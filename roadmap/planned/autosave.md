@@ -7,9 +7,10 @@ expired session loses the work. Raised on 2026-10-03; decided the same day.
 
 ## What exists
 
-- `useFieldsForm` (`packages/admin/src/hooks/use-fields-form.ts`) has a
-  `beforeunload` guard and Cmd+S, and no in-app navigation guard
-  (`roadmap/planned/unsaved-changes-guard.md`).
+- `useFieldsForm` (`packages/admin/src/hooks/use-fields-form.ts`) has Cmd+S
+  and the unsaved-changes guard
+  (`packages/admin/src/hooks/use-unsaved-changes-guard.ts`), which asks before
+  a tab close or an in-app navigation drops a dirty form.
 - A save of an unpublished entry skips `required` (the `partial` validation
   mode) but runs every other rule, so a half-typed email address is refused.
 

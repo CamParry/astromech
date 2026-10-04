@@ -11,7 +11,7 @@ import { act, waitFor } from '@testing-library/react';
 import React from 'react';
 import { describe, expect, it, vi } from 'vitest';
 import { useEntryForm } from '@/admin/hooks/use-entry-form';
-import { renderWithProviders } from '../_support/render-admin';
+import { renderAdmin } from '../_support/render-admin';
 
 type UseEntryFormResult = ReturnType<typeof useEntryForm<Entry>>;
 
@@ -32,10 +32,10 @@ type Mounted = {
  * Mount the hook with a `title` field carrying the same required-validator the
  * entry pages register, plus one required entry field.
  */
-function mountForm(defaults: {
+async function mountForm(defaults: {
     title: string;
     fields: Record<string, unknown>;
-}): Mounted {
+}): Promise<Mounted> {
     const saveFn = vi.fn(async () => entry('saved'));
     const publishFn = vi.fn(async () => entry('published'));
     let latest: UseEntryFormResult | undefined;
@@ -66,7 +66,9 @@ function mountForm(defaults: {
         );
     }
 
-    const { unmount } = renderWithProviders(<Probe />);
+    const { unmount } = renderAdmin(<Probe />);
+    // The router renders its route on a later tick.
+    await waitFor(() => expect(latest).toBeDefined());
 
     return {
         handle: () => {
@@ -94,7 +96,7 @@ async function waitForSubmit(mounted: Mounted): Promise<void> {
 
 describe('handlePublish', () => {
     it('does not fire the publish mutation when the title is empty', async () => {
-        const mounted = mountForm({ title: '', fields: { body: 'written' } });
+        const mounted = await mountForm({ title: '', fields: { body: 'written' } });
 
         act(() => mounted.handle().handlePublish());
         await waitForSubmit(mounted);
@@ -106,7 +108,7 @@ describe('handlePublish', () => {
     });
 
     it('fires the publish mutation when the title and fields are valid', async () => {
-        const mounted = mountForm({ title: 'Ready', fields: { body: 'written' } });
+        const mounted = await mountForm({ title: 'Ready', fields: { body: 'written' } });
 
         act(() => mounted.handle().handlePublish());
         await waitFor(() => expect(mounted.publishFn).toHaveBeenCalledTimes(1));
@@ -121,7 +123,7 @@ describe('handlePublish', () => {
     });
 
     it('still refuses when the title is fine but a required field is empty', async () => {
-        const mounted = mountForm({ title: 'Ready', fields: { body: '' } });
+        const mounted = await mountForm({ title: 'Ready', fields: { body: '' } });
 
         act(() => mounted.handle().handlePublish());
         await waitForSubmit(mounted);
@@ -132,7 +134,7 @@ describe('handlePublish', () => {
     });
 
     it('leaves a following save unpublished (the publish intent is cleared)', async () => {
-        const mounted = mountForm({ title: 'Ready', fields: { body: 'written' } });
+        const mounted = await mountForm({ title: 'Ready', fields: { body: 'written' } });
 
         act(() => mounted.handle().handlePublish());
         await waitForSubmit(mounted);
@@ -151,7 +153,7 @@ describe('handlePublish', () => {
 
 describe('handleSave', () => {
     it('does not fire the save mutation when the title is empty', async () => {
-        const mounted = mountForm({ title: '', fields: { body: 'written' } });
+        const mounted = await mountForm({ title: '', fields: { body: 'written' } });
 
         act(() => mounted.handle().handleSave());
         await waitForSubmit(mounted);
@@ -162,7 +164,7 @@ describe('handleSave', () => {
     });
 
     it('saves an incomplete entry — completeness is publish-only', async () => {
-        const mounted = mountForm({ title: 'Draft', fields: { body: '' } });
+        const mounted = await mountForm({ title: 'Draft', fields: { body: '' } });
 
         act(() => mounted.handle().handleSave());
         await waitFor(() => expect(mounted.saveFn).toHaveBeenCalledTimes(1));

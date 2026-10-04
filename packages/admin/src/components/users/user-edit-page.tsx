@@ -123,8 +123,9 @@ function UserEditBody({
         toastError: false,
     });
 
+    // The user is gone, so their unsaved edits are not worth asking about.
     const deleteMutation = useAdminMutation(userMutations().delete, {
-        onSuccess: () => void navigate({ to: '/users' }),
+        onSuccess: () => void navigate({ to: '/users', ignoreBlocker: true }),
     });
 
     const userForm = useFieldsForm<UserFormExtras, User>({
@@ -148,7 +149,7 @@ function UserEditBody({
             });
         },
     });
-    const { form, mutation, handleSubmit, isDirty } = userForm;
+    const { form, mutation, handleSubmit, isDirty, confirmDiscard } = userForm;
 
     return (
         <EntryNamespaceProvider namespace={namespace}>
@@ -225,9 +226,12 @@ function UserEditBody({
                                                 <div className="am-content-locale">
                                                     <Select
                                                         value={locale}
+                                                        // The switch remounts the form, so it asks first.
                                                         onValueChange={(value) => {
-                                                            if (value !== null)
-                                                                onLocaleChange(value);
+                                                            if (value === null) return;
+                                                            confirmDiscard(() =>
+                                                                onLocaleChange(value)
+                                                            );
                                                         }}
                                                         options={localeOptions(
                                                             user.locales

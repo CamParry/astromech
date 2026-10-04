@@ -17,6 +17,7 @@ export { buildVariantUrl } from '@/media/serving/image/url';
 export { entryPermission } from '@/permissions/entry-permission';
 export { globalPermission } from '@/permissions/global-permission';
 export { formatAiContextMessage } from '@/utilities/ai-context';
+export { deepEqual } from '@/utilities/deep-equal';
 export { resolveContentLocale } from '@/utilities/locale';
 export { hasPermission } from '@/utilities/permission-match';
 export { MEDIA_MIME_TYPE_FILTERS, MEDIA_SORT_FIELDS } from '@/types/query';

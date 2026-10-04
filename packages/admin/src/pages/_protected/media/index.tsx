@@ -123,14 +123,12 @@ function MediaIndexPage(): React.ReactElement {
     }
 
     function closeItem(): void {
-        void navigate({
-            replace: true,
-            search: (prev) => {
-                const out: MediaSearch = { ...prev };
-                delete out.item;
-                return out;
-            },
-        });
+        void navigate({ replace: true, search: withoutItem });
+    }
+
+    /** The item is gone, so its unsaved edits are not worth asking about. */
+    function handleItemDeleted(): void {
+        void navigate({ replace: true, search: withoutItem, ignoreBlocker: true });
     }
 
     // Selection is scoped to the active query: narrowing the list must not leave
@@ -275,7 +273,7 @@ function MediaIndexPage(): React.ReactElement {
             <MediaDetailModal
                 mediaId={item ?? null}
                 onClose={closeItem}
-                onDeleted={closeItem}
+                onDeleted={handleItemDeleted}
                 canDelete={canDeleteMedia()}
                 canUpdate={canUpdateMedia()}
                 canUpload={canUpload}
@@ -317,3 +315,10 @@ export const Route = createFileRoute('/_protected/media/')({
     },
     component: MediaIndexPage,
 });
+
+/** The search without the open detail item. */
+function withoutItem(prev: MediaSearch): MediaSearch {
+    const out: MediaSearch = { ...prev };
+    delete out.item;
+    return out;
+}

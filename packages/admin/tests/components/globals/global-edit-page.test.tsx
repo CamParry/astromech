@@ -4,8 +4,9 @@
  * The global edit page. A global is declared by config and its row is created
  * on demand, so a `null` read is an empty form whose first save is the write
  * that creates it. One `update` carries the fields and the status the publish
- * panel asks for, a locale with no row is opened, not written, and the merge
- * confirm warns when the staged read reports `diverged`.
+ * panel asks for, a locale with no row is opened, not written, the merge
+ * confirm warns when the staged read reports `diverged`, staging over unsaved
+ * edits asks first, and merging over them asks once.
  */
 
 import type { RenderAdminResult } from '../../_support/render-admin';
@@ -370,6 +371,26 @@ describe('the global edit page', () => {
         });
     });
 
+    it('asks once before merging over unsaved edits, saying they will be lost', async () => {
+        const { mergeStaged, page } = await mountStaged();
+
+        await page.user.type(await tagline(), ' edited');
+        await page.user.click(screen.getByRole('button', { name: MERGE }));
+        const dialog = await screen.findByRole('alertdialog', {
+            name: 'Merge staged change?',
+        });
+        expect(dialog.textContent).toContain(MERGE_MESSAGE);
+        expect(dialog.textContent).toContain(
+            'Your changes have not been saved and will be lost.'
+        );
+        await page.user.click(within(dialog).getByRole('button', { name: MERGE }));
+
+        await waitFor(() => {
+            expect(mergeStaged).toHaveBeenCalledWith({ key: KEY, locale: 'en' });
+        });
+        expect(screen.queryByRole('alertdialog')).toBeNull();
+    });
+
     it('discards the staged change from the staged view', async () => {
         const { deleteStaged, page } = await mountStaged();
 
@@ -379,5 +400,39 @@ describe('the global edit page', () => {
         await waitFor(() => {
             expect(deleteStaged).toHaveBeenCalledWith({ key: KEY, locale: 'en' });
         });
+    });
+
+    it('asks before staging over unsaved edits', async () => {
+        const { api, createStaged } = makeApi({ canonical: makeGlobal(), staged: null });
+        const page = mountPage({
+            api,
+            config: config({
+                capabilities: {
+                    statuses: true,
+                    translatable: false,
+                    versioning: false,
+                    staging: true,
+                },
+            }),
+        });
+
+        const field = await tagline();
+        await page.user.type(field, ' edited');
+        await page.user.click(screen.getByRole('button', { name: 'Stage a change' }));
+        await confirmDialog(page, 'Keep editing');
+
+        await waitFor(() => expect(screen.queryByRole('alertdialog')).toBeNull());
+        expect(createStaged).not.toHaveBeenCalled();
+        expect(field.value).toBe('Stored tagline edited');
+
+        // Discarding stages the saved row and opens it without asking again.
+        await page.user.click(screen.getByRole('button', { name: 'Stage a change' }));
+        await confirmDialog(page, 'Discard changes');
+
+        await waitFor(() => {
+            expect(page.location()).toBe(`${BASE_PATH}?locale=en&staged=true`);
+        });
+        expect(createStaged).toHaveBeenCalledWith({ key: KEY, locale: 'en' });
+        expect(screen.queryByRole('alertdialog')).toBeNull();
     });
 });

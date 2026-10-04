@@ -14,6 +14,7 @@
  * of an admin hook left: no rendered output shows a transient partial group.
  */
 
+import type { RenderAdminResult } from '../../_support/render-admin';
 import type * as UseEntryForm from '@/admin/hooks/use-entry-form';
 import type {
     AdminEntryType,
@@ -25,7 +26,7 @@ import type {
 } from '@/types/index';
 import type { QueryClient } from '@tanstack/react-query';
 import { useSearch } from '@tanstack/react-router';
-import { screen, waitFor } from '@testing-library/react';
+import { screen, waitFor, within } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { EntryEditPage } from '@/admin/components/entries/entry-edit-page';
 import { queryKeys } from '@/admin/hooks/use-query-keys';
@@ -223,6 +224,26 @@ function makeClient(): QueryClient {
     return queryClient;
 }
 
+/**
+ * Switch locale through the page's switcher from an edited form: the
+ * unsaved-changes guard asks, and the editor discards the edits.
+ */
+async function switchDiscarding(page: RenderAdminResult, to: 'en' | 'fr'): Promise<void> {
+    const from = to === 'fr' ? 'EN' : 'FR';
+    const trigger = screen
+        .getAllByRole('combobox')
+        .find((element) => element.textContent === from);
+    if (trigger === undefined) throw new Error(`no locale switcher showing ${from}`);
+    await page.user.click(trigger);
+    await page.user.click(await screen.findByRole('option', { name: to.toUpperCase() }));
+    const dialog = await screen.findByRole('alertdialog', {
+        name: 'Discard unsaved changes?',
+    });
+    await page.user.click(
+        within(dialog).getByRole('button', { name: 'Discard changes' })
+    );
+}
+
 /** Every `seo` the form held either carried both sub-keys or was absent. */
 function assertNoPartialGroup(): void {
     let seen = 0;
@@ -248,9 +269,9 @@ describe('the entry edit page across a locale switch', () => {
         await user.clear(title);
         await user.type(title, 'EN edited');
 
-        // Switch locale — what `LocaleSwitcher.handleValueChange` does for a
-        // locale the entry already has: same id, different `locale` param.
-        await page.navigate(`/entries/${TYPE}/${ID}?locale=fr`);
+        // Switch to a locale the entry already has: same id, different
+        // `locale` param.
+        await switchDiscarding(page, 'fr');
         await waitFor(() => {
             expect(control('input[name="seo.title"]').value).toBe('FR title');
         });
@@ -260,7 +281,7 @@ describe('the entry edit page across a locale switch', () => {
         const other = await findControl('input[name="seo.title"]');
         await user.clear(other);
         await user.type(other, 'FR edited');
-        await page.navigate(`/entries/${TYPE}/${ID}?locale=en`);
+        await switchDiscarding(page, 'en');
         await waitFor(() => {
             expect(control('input[name="seo.title"]').value).toBe('EN title');
         });
@@ -325,7 +346,7 @@ describe('the entry edit page across a locale switch', () => {
             expect(control('input[name="seo.title"]').value).toBe('EN edited');
         });
 
-        await page.navigate(`/entries/${TYPE}/${ID}?locale=fr`);
+        await switchDiscarding(page, 'fr');
 
         await waitFor(() => {
             expect(control('input[name="seo.title"]').value).toBe('FR title');

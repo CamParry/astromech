@@ -4,6 +4,7 @@
  * tree read the same cached key. Uses Better Auth endpoints via fetch.
  */
 
+import type { QueryClient } from '@tanstack/react-query';
 import type { Me } from 'astromech';
 import { queryOptions, useQuery, useQueryClient } from '@tanstack/react-query';
 import React, { createContext, useContext } from 'react';
@@ -24,7 +25,6 @@ type AuthContextValue = {
     user: AuthUser | null;
     isLoading: boolean;
     login: (email: string, password: string) => Promise<void>;
-    logout: () => Promise<void>;
 };
 
 /** What `GET /api/me` answers. */
@@ -62,13 +62,25 @@ async function fetchSetupCheck(): Promise<{ needsSetup: boolean }> {
     return (await res.json()) as { needsSetup: boolean };
 }
 
+/**
+ * End the session and clear it from the cache. The `/logout` route calls this,
+ * so leaving a form with unsaved changes asks before the session ends.
+ */
+export async function logout(queryClient: QueryClient): Promise<void> {
+    await fetch(`${__ASTROMECH_BASE_PATH__}/api/auth/sign-out`, {
+        method: 'POST',
+        credentials: 'include',
+    });
+    queryClient.setQueryData(sessionQueryOptions.queryKey, null);
+}
+
 const AuthContext = createContext<AuthContextValue | null>(null);
 
 type AuthProviderProps = {
     children: React.ReactNode;
 };
 
-/** Provides the session user and login/logout actions, backed by `sessionQueryOptions`. */
+/** Provides the session user and the login action, backed by `sessionQueryOptions`. */
 export function AuthProvider({ children }: AuthProviderProps) {
     const queryClient = useQueryClient();
     const { data, isPending } = useQuery(sessionQueryOptions);
@@ -87,24 +99,14 @@ export function AuthProvider({ children }: AuthProviderProps) {
         await queryClient.refetchQueries({ queryKey: sessionQueryOptions.queryKey });
     }
 
-    async function logout(): Promise<void> {
-        await fetch(`${__ASTROMECH_BASE_PATH__}/api/auth/sign-out`, {
-            method: 'POST',
-            credentials: 'include',
-        });
-        queryClient.setQueryData(sessionQueryOptions.queryKey, null);
-    }
-
     return (
-        <AuthContext.Provider
-            value={{ user: data ?? null, isLoading: isPending, login, logout }}
-        >
+        <AuthContext.Provider value={{ user: data ?? null, isLoading: isPending, login }}>
             {children}
         </AuthContext.Provider>
     );
 }
 
-/** Reads the session user and login/logout actions from `AuthProvider`. */
+/** Reads the session user and the login action from `AuthProvider`. */
 export function useAuth(): AuthContextValue {
     const ctx = useContext(AuthContext);
     if (ctx === null) {
