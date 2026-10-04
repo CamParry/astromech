@@ -106,6 +106,8 @@ describe('recordRunAndRelease', () => {
         const next = new Date(NOW.getTime() + 60_000);
         await cronRepository.recordRunAndRelease('job', EXPIRY, {
             lastRun: NOW,
+            lastResult: 'ok',
+            lastError: null,
             nextRun: next,
         });
 
@@ -119,6 +121,8 @@ describe('recordRunAndRelease', () => {
         const stale = new Date(EXPIRY.getTime() - 1000);
         await cronRepository.recordRunAndRelease('job', stale, {
             lastRun: NOW,
+            lastResult: 'ok',
+            lastError: null,
             nextRun: null,
         });
 

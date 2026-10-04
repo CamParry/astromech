@@ -11,6 +11,7 @@ import { createAdminViteConfig } from '@astromech/admin/vite';
 import { buildAdminConfig } from '@/config/admin-config';
 import { loadConfigFile } from '@/config/load';
 import { resolveConfig } from '@/config/resolve';
+import { listAppMigrationNames, resolveMigrationsDir } from '@/database/app-migrations';
 import { runMigrations } from '@/database/migrations';
 import { AstromechError } from '@/errors/astromech-error';
 import { registerRoutes } from '@/integrations/astro/routes';
@@ -66,6 +67,11 @@ export function astromech(options: AstromechIntegrationOptions = {}): AstroInteg
 
                 logger.info('Initializing Astromech CMS');
 
+                const migrationNames = await bundleMigrationNames(
+                    resolveMigrationsDir(resolvedConfig.migrationsDir),
+                    (message) => logger.warn(message)
+                );
+
                 const admin = createAdminViteConfig({
                     iconNames: collectIconNames(buildAdminConfig(config, resolvedConfig)),
                     warn: (message) => logger.warn(message),
@@ -80,6 +86,7 @@ export function astromech(options: AstromechIntegrationOptions = {}): AstroInteg
                         config,
                         resolvedConfig,
                         astroReadsForwardedFor: getAstroReadsForwardedFor,
+                        migrationNames,
                     }),
                 });
 
@@ -164,6 +171,26 @@ export function astromech(options: AstromechIntegrationOptions = {}): AstroInteg
             },
         },
     };
+}
+
+/**
+ * The app's migration names for the build to bundle, or null when the site has
+ * no chain. A chain that fails to load is warned about rather than failing the
+ * build, since `db:init` reports it too.
+ */
+async function bundleMigrationNames(
+    dir: string,
+    warn: (message: string) => void
+): Promise<string[] | null> {
+    try {
+        return await listAppMigrationNames(dir);
+    } catch (error) {
+        warn(
+            `Could not read the migrations in ${dir}, so the build bundles none: ` +
+                (error instanceof Error ? error.message : String(error))
+        );
+        return null;
+    }
 }
 
 /**

@@ -5,9 +5,10 @@
  */
 
 import type { MiddlewareHandler } from 'astro';
-import { rawConfig } from 'virtual:astromech/config';
+import { migrationNames, rawConfig } from 'virtual:astromech/config';
 import { createAstromech } from '@/astromech';
 import { assertAuthSecret } from '@/auth/better-auth';
+import { setBundledMigrationNames } from '@/database/migration-registry';
 import { runInRequestScope } from '@/request-scope/request-scope';
 
 export const onRequest: MiddlewareHandler = async (context, next) => {
@@ -15,6 +16,7 @@ export const onRequest: MiddlewareHandler = async (context, next) => {
     // nothing. A page prerendered at build time signs no session, so the build
     // does not need the secret.
     if (!context.isPrerendered) assertAuthSecret();
+    if (migrationNames !== null) setBundledMigrationNames(migrationNames);
     const app = await createAstromech({ config: rawConfig });
     // The Node deployment has no external cron, so the serving integration is
     // what starts the in-process ticker. A no-op on Workers.

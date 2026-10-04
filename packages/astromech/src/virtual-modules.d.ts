@@ -7,6 +7,8 @@ declare module 'virtual:astromech/config' {
      * `clientAddress` from `x-forwarded-for` rather than the connection.
      */
     export const astroReadsForwardedFor: boolean;
+    /** The app's migration names when the site was built, or null with no chain. */
+    export const migrationNames: readonly string[] | null;
 }
 
 declare const __ASTROMECH_BASE_PATH__: string;

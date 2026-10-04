@@ -51,7 +51,7 @@ a failing test first.
 - [x] Sync cron schedules from config on boot; fix the Cloudflare docs.
 - [x] Constant-time comparison of the cron secret.
 - [x] A result and error on each cron run.
-- [ ] Bundle migration names so Workers can check them.
+- [x] Bundle migration names so Workers can check them.
 - [ ] `validate` reads staged rows apart, globals included.
 - [ ] A remote guard that means something on D1, and docs for reaching
       production D1 from the CLI.

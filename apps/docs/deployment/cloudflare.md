@@ -112,6 +112,11 @@ astromech db:generate
 astromech db:init --allow-remote
 ```
 
+A Worker cannot read your migrations folder, so the build bundles the names of
+its migrations. The first request a Worker serves compares them with the
+database and logs a warning when migrations are pending. A Worker woken only by
+a Cron Trigger skips the check.
+
 ## Running it locally
 
 ```

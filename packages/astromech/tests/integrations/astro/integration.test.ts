@@ -4,12 +4,12 @@
  */
 import type { VirtualModulePlugin } from '@/integrations/astro/virtual-module';
 import type { HookParameters } from 'astro';
-import { mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
+import { mkdir, mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import { findMissingExportTargets } from '@tests/package-exports';
-import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { AstromechError } from '@/errors/astromech-error';
 import { astromech } from '@/integrations/astro/integration';
 
@@ -153,6 +153,36 @@ describe('astromech()', () => {
                 );
             }
         );
+
+        it('serves the names of the migrations in migrationsDir, so a Worker can check them', async () => {
+            await mkdir(join(root, 'migrations'));
+            await writeFile(
+                join(root, 'migrations', 'index.ts'),
+                `export const migrationProvider = {
+                    async getMigrations() {
+                        return { '0000_baseline': {}, '0001_next': {} };
+                    },
+                };\n`
+            );
+            // `migrationsDir` resolves against the working directory.
+            vi.spyOn(process, 'cwd').mockReturnValue(root);
+            const { integration, recorded, done } = await runSetup();
+            await integration.hooks['astro:config:done']?.(done);
+
+            expect(loadConfigModule(recorded)).toContain(
+                'export const migrationNames = ["0000_baseline","0001_next"];'
+            );
+        });
+
+        it('serves null migration names for a site with no migrations folder', async () => {
+            vi.spyOn(process, 'cwd').mockReturnValue(root);
+            const { integration, recorded, done } = await runSetup();
+            await integration.hooks['astro:config:done']?.(done);
+
+            expect(loadConfigModule(recorded)).toContain(
+                'export const migrationNames = null;'
+            );
+        });
 
         it('warns when Astro may read x-forwarded-for and trustProxy is unset', async () => {
             const { integration, recorded, done } = await runSetup(undefined, {
