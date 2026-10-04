@@ -310,3 +310,27 @@ describe('requireAuth covers every mounted domain router', () => {
         expect(body.error.message).toBe(`Route GET ${api}/nope not found`);
     });
 });
+
+describe('Cache-Control on an API response', () => {
+    it.each([
+        ['a public read', 'GET', '/setup/check', 200],
+        ['a Better Auth read', 'GET', '/auth/get-session', 200],
+        ['a refusal without a session', 'GET', '/entries/post', 401],
+        ['a write', 'POST', '/setup', 422],
+    ])('is private, no-store on %s', async (_label, method, path, status) => {
+        const app = await freshApp();
+        const res = await app.request(`${api}${path}`, { method });
+        expect(res.status).toBe(status);
+        expect(res.headers.get('Cache-Control')).toBe('private, no-store');
+    });
+
+    it('is private, no-store on a signed-in read', async () => {
+        const app = await freshApp();
+        const user = await usersService.create({
+            data: { email: 'me@test.dev', name: 'Me' },
+        });
+        const res = await requestAs(app, { user, role: adminRole }, `${api}/me`);
+        expect(res.status).toBe(200);
+        expect(res.headers.get('Cache-Control')).toBe('private, no-store');
+    });
+});

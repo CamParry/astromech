@@ -1,7 +1,7 @@
 /**
- * Registration of the media, admin shell and API routes. Auth and plugin
- * routes are not injected here — they mount inside the Hono app under
- * `${basePath}/api/*`, already served by the catch-all below.
+ * Registration of the media, admin shell and API routes, and which of them
+ * serves a path. Auth and plugin routes are not injected here: they mount inside
+ * the Hono app under `${basePath}/api/*`, already served by the catch-all below.
  */
 
 import type { ResolvedConfig } from '@/types/index';
@@ -43,4 +43,23 @@ export function registerRoutes(
         entrypoint: 'astromech/routes/handler.ts',
         prerender: false,
     });
+}
+
+/**
+ * Which injected route serves `pathname`: `admin` for the shell and the API
+ * under `basePath`, `media` for the media route, or undefined for a site page.
+ */
+export function resolveInjectedRoute(
+    resolvedConfig: Pick<ResolvedConfig, 'basePath' | 'mediaRoute'>,
+    pathname: string
+): 'admin' | 'media' | undefined {
+    const { basePath, mediaRoute } = resolvedConfig;
+    if (isUnder(pathname, mediaRoute)) return 'media';
+    if (isUnder(pathname, basePath)) return 'admin';
+    return undefined;
+}
+
+/** True for `prefix` itself and every path below it. */
+function isUnder(pathname: string, prefix: string): boolean {
+    return pathname === prefix || pathname.startsWith(`${prefix}/`);
 }
