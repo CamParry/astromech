@@ -7,8 +7,6 @@ import type { CronRow } from '@/database/tables';
 import { createRepository } from '@/database/repository/create-repository';
 import { cronTable } from '@/database/tables';
 
-export type CronRepository = ReturnType<typeof createCronRepository>;
-
 function createCronRepository() {
     const repository = createRepository(cronTable);
 
