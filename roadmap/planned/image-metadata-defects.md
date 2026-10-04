@@ -1,7 +1,9 @@
 # Image metadata defects
 
 Found on 2026-10-03 by reading the media code while comparing it with Smush
-(`roadmap/proposed/image-optimisation.md`). Not yet reproduced in a test.
+(`roadmap/planned/image-optimisation.md`). Not yet reproduced in a test. The
+second list was found on 2026-10-04 while planning that file and
+`roadmap/planned/focal-point.md`.
 
 - **Rotated photos store swapped dimensions.** `readImageDimensions`
   (`packages/astromech/src/media/serving/image/dimensions.ts`) reads the JPEG
@@ -18,6 +20,29 @@ Found on 2026-10-03 by reading the media code while comparing it with Smush
 The class: any fact about an image read from its header rather than from the
 decoded image, which is what the variants are made from.
 
+## Variants and placeholders
+
+- **Stale variants on Cloudflare after a replace.** The transform fetches the
+  original's URL with no version (`originUrl` in
+  `packages/astromech/src/media/serving/handler.ts`), and Cloudflare caches
+  transforms under the source URL. A replaced image can keep serving the old
+  picture under a new, immutable URL for a year.
+- **The variant storage key holds only id, version, width and format**
+  (`variantStorageKey` in `packages/astromech/src/media/serving/image/url.ts`).
+  Once quality or a crop can change, an old file would be served under an
+  unchanged URL.
+- **Wrong placeholders.** The blurhash is computed without `.rotate()`
+  (`packages/astromech/src/media/serving/image/drivers/sharp.ts`), so a rotated
+  photo gets a sideways placeholder, and transparent pixels are encoded as
+  their hidden colour.
+- **Animated WebP becomes a still on sharp**, which is not passed
+  `animated: true`; Cloudflare keeps the animation.
+- **HEIC fails on every request on sharp.** `dimensions.ts` marks it
+  resizable, but sharp's prebuilt binaries cannot decode it, so each request
+  fails, logs, and serves the original, which most browsers cannot show.
+- **`size` records the incoming file**, not the stored one, which will differ
+  once uploads are resized (`roadmap/planned/image-optimisation.md`).
+
 ## The work
 
 - [ ] Record dimensions after applying EXIF orientation, from the image driver
@@ -26,5 +51,11 @@ decoded image, which is what the variants are made from.
       can (sharp; the Cloudflare driver cannot rewrite the original, so say so
       in its docs).
 - [ ] Read dimensions for HEIC, AVIF and TIFF.
+- [ ] Add the version to the Cloudflare driver's origin URL.
+- [ ] Every setting that changes a variant's bytes joins its storage key.
+- [ ] Placeholders from the upright image; record whether an image has alpha.
+- [ ] Animated WebP stays animated on sharp.
+- [ ] HEIC: not resizable on sharp unless the build can decode it.
+- [ ] `size` from the stored bytes.
 - [ ] Tests: a rotated JPEG fixture stores upright dimensions; an uploaded
       original with GPS data is served without it.
