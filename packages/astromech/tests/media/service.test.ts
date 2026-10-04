@@ -106,6 +106,23 @@ describe('mediaService.upload', () => {
         });
     });
 
+    it.each([
+        ['a PNG with an alpha channel', 4, true],
+        ['a PNG with none', 3, false],
+    ] as const)('records whether %s has one', async (_, channels, hasAlpha) => {
+        const png = await sharpLib({
+            create: { width: 4, height: 4, channels, background: '#80808000' },
+        })
+            .png()
+            .toBuffer();
+
+        const media = await mediaService.upload({
+            file: new File([new Uint8Array(png)], 'logo.png', { type: 'image/png' }),
+        });
+
+        expect(media.metadata?.hasAlpha).toBe(hasAlpha);
+    });
+
     it('records the dimensions of a GIF, which it does not optimise', async () => {
         const gif = await sharpLib({
             create: { width: 30, height: 10, channels: 3, background: '#808080' },

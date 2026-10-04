@@ -108,6 +108,13 @@ width and height, which are the ones its variants have. Astromech reads them
 from the file's header on upload, with or without an image driver. JPEG, PNG,
 GIF, WebP, AVIF, HEIC and TIFF are read; any other file has `null` for both.
 
+`metadata.hasAlpha` says whether an optimisable image has an alpha channel,
+also read from its header: a PNG with alpha or a transparent colour, a WebP,
+AVIF or HEIC with an alpha plane, or a TIFF with an extra sample. A JPEG never
+has one. It reports the channel, not its pixels, so a PNG saved with alpha
+counts even when every pixel is opaque. The `metadata.blurhash` placeholder is
+made from the upright image, with any transparent pixels shown as white.
+
 **Location data is removed from uploaded originals.** On upload and replace,
 Astromech blanks the GPS data in a JPEG, PNG, WebP, AVIF, HEIC or TIFF file
 before storing it, since the original is public at its media URL. It removes:

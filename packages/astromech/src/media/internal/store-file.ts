@@ -5,6 +5,7 @@ import {
     readImageDimensions,
 } from '../serving/image/dimensions';
 import { detectImageFormat } from '../serving/image/header';
+import { readImageMetadata } from '../serving/image/metadata';
 import { getImageConfig } from '../serving/image/registry';
 import { contentVersion } from '../serving/image/version';
 import { removeGpsMetadata } from './gps';
@@ -52,6 +53,7 @@ export async function storeFile(
         ? {
               blurhash: (await getImageConfig()?.driver.placeholder?.(bytes)) ?? null,
               version: await contentVersion(bytes),
+              ...readImageMetadata(bytes),
           }
         : {};
     await driver.put(key, bytes, { contentType: file.type });

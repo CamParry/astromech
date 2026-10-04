@@ -1,6 +1,6 @@
 /**
- * `readImageDimensions` runs on every uploaded image, so a damaged or hostile
- * file must give null or a size, never a throw. Each case starts from a real
+ * `readImageDimensions` and `readImageMetadata` run on every uploaded image, so
+ * a damaged or hostile file must never make them throw. Each case starts from a real
  * file in one of the formats it parses, with the orientation blocks it reads,
  * then cuts it short and overwrites bytes at random.
  */
@@ -11,6 +11,7 @@ import fc from 'fast-check';
 import sharpLib from 'sharp';
 import { beforeAll, describe, expect, it } from 'vitest';
 import { readImageDimensions } from '@/media/serving/image/dimensions';
+import { readImageMetadata } from '@/media/serving/image/metadata';
 
 const files: Uint8Array[] = [];
 /** Each file's upright size as sharp reads it, an oracle independent of the reader. */
@@ -83,6 +84,32 @@ describe('readImageDimensions over damaged files', () => {
                     upright && { width: upright.height, height: upright.width },
                 ]).toContainEqual(dimensions);
             }),
+            { numRuns: 2000 }
+        );
+    });
+});
+
+describe('readImageMetadata over damaged files', () => {
+    it('returns a boolean or nothing for each key, and never throws', () => {
+        fc.assert(
+            fc.property(
+                fc.nat(),
+                fc.nat(),
+                fc.array(fc.tuple(fc.nat(), fc.integer({ min: 0, max: 255 })), {
+                    maxLength: 8,
+                }),
+                (pick, cut, writes) => {
+                    const file = files[pick % files.length] ?? new Uint8Array();
+                    const bytes = file.slice(0, cut % (file.length + 1));
+                    for (const [at, value] of writes) {
+                        if (bytes.length > 0) bytes[at % bytes.length] = value;
+                    }
+
+                    const { hasAlpha } = readImageMetadata(bytes);
+
+                    expect([undefined, true, false]).toContain(hasAlpha);
+                }
+            ),
             { numRuns: 2000 }
         );
     });

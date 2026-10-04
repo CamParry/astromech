@@ -41,8 +41,10 @@ export function sharp(): ImageDriver {
 
         async placeholder(bytes: Uint8Array): Promise<string | null> {
             try {
+                // BlurHash ignores alpha, so a transparent pixel is hashed as white.
                 const { data, info } = await sharpLib(Buffer.from(bytes))
                     .rotate()
+                    .flatten({ background: '#ffffff' })
                     .raw()
                     .ensureAlpha()
                     .resize(32, 32, { fit: 'inside' })

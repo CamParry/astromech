@@ -120,4 +120,30 @@ describe('sharp driver — placeholder', () => {
             await driver.placeholder?.(new Uint8Array(upright))
         );
     });
+
+    // 32px is hashed as it is; 64px is scaled down first, which blackens hidden colour.
+    it.each([32, 64])(
+        'hashes transparent pixels as white, not as the colour they hide (%ipx)',
+        async (size) => {
+            const square = await sharpLib({
+                create: { width: 8, height: 8, channels: 4, background: '#808080ff' },
+            })
+                .png()
+                .toBuffer();
+            const withBorder = (background: string) =>
+                sharpLib({
+                    create: { width: size, height: size, channels: 4, background },
+                })
+                    .composite([{ input: square, left: size / 4, top: size / 4 }])
+                    .png()
+                    .toBuffer();
+            const transparent = await withBorder('#ff000000');
+            const white = await withBorder('#ffffffff');
+
+            const driver = sharp();
+            expect(await driver.placeholder?.(new Uint8Array(transparent))).toBe(
+                await driver.placeholder?.(new Uint8Array(white))
+            );
+        }
+    );
 });
