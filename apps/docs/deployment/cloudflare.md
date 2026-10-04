@@ -163,8 +163,9 @@ npx wrangler dev -c dist/server/wrangler.json --local --env-file "$PWD/.dev.vars
 the config it runs, which with `-c` is inside the build output, so the file is
 passed with `--env-file` instead.
 
-The build applies migrations through wrangler's `getPlatformProxy()`, which
-writes local state next to your wrangler config. `wrangler dev` keeps its own
+The build applies migrations when it starts, before it prerenders anything,
+through wrangler's `getPlatformProxy()`, which writes local state next to your
+wrangler config. `wrangler dev` keeps its own
 state beside whichever config file it was given, so pointing it at
 `dist/server/wrangler.json` needs `--persist-to` at the directory the build
 used, or the Worker boots against an empty database.

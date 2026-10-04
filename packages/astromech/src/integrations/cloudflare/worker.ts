@@ -19,6 +19,9 @@ export type ScheduledEvent = { scheduledTime: number };
  */
 export type WorkerEnv = Record<string, unknown>;
 
+/** The Worker's `ExecutionContext`, narrowed to the method a tick uses. */
+export type WorkerExecutionContext = { waitUntil(promise: Promise<unknown>): void };
+
 /** The Worker's `export default`. */
 export type WorkerEntry = {
     fetch: (
@@ -26,7 +29,11 @@ export type WorkerEntry = {
         env: WorkerEnv,
         ctx?: unknown
     ) => Response | Promise<Response>;
-    scheduled: (event: ScheduledEvent, env: WorkerEnv, ctx?: unknown) => Promise<void>;
+    scheduled: (
+        event: ScheduledEvent,
+        env: WorkerEnv,
+        ctx?: WorkerExecutionContext
+    ) => Promise<void>;
 };
 
 /**
@@ -51,14 +58,19 @@ export function createWorkerEntry(
             setEnvSource(env);
             return server.fetch(request, env, ctx);
         },
-        scheduled: async (event, env): Promise<void> => {
+        scheduled: async (event, env, ctx): Promise<void> => {
             // A cron trigger fires `scheduled()` and never `fetch()`, so this
             // cannot assume a request has created the application.
             setEnvSource(env);
             const app = await createAstromech({ config: options.config });
             // The trigger is a dumb frequent ticker (`* * * * *`); the real
             // cadence is the runner's due-evaluation.
-            await app.scheduled(new Date(event.scheduledTime));
+            // Called on `ctx`: workerd throws on a detached `waitUntil`.
+            await app.scheduled(new Date(event.scheduledTime), {
+                ...(ctx === undefined
+                    ? {}
+                    : { waitUntil: (promise) => ctx.waitUntil(promise) }),
+            });
         },
     };
 }

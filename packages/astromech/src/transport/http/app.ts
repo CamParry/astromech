@@ -24,6 +24,7 @@ import { resolveNodeEnv } from '@/env';
 import { handleMediaRequest } from '@/media/serving/handler';
 import { getRequestScope, runInRequestScope } from '@/request-scope/request-scope';
 import { parseOutput } from '@/services/parse-method-output';
+import { PRIVATE_NO_STORE } from '@/transport/http/cache-control';
 import { getClientAddress } from '@/transport/http/client-address';
 import { requireAuth } from './middleware/auth';
 import { forbidden, fromZodError, onError, onNotFound } from './middleware/errors';
@@ -101,6 +102,12 @@ export function createHttpApp(config: ResolvedConfig): OpenAPIHono<AppEnv> {
             c.res.headers.set('Permissions-Policy', permissionsPolicy);
         });
     }
+
+    // Set after the handler, over any value of its own.
+    app.use(`${api}/*`, async (c, next) => {
+        await next();
+        c.res.headers.set('Cache-Control', PRIVATE_NO_STORE);
+    });
 
     // CORS: same-origin only by default; opt in additional origins via config.
     const allowed = config.cors?.origins ?? [];

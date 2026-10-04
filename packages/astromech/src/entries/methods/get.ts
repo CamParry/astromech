@@ -14,7 +14,8 @@ import { entryReadKeys, entrySchema } from '../schema';
 /**
  * Filtered to the caller's visibility shape, and null when that hides it or the
  * locale has no row of this type; there is no fallback to another locale. A
- * `previewToken` reads past the publish gate, and `staged` needs one.
+ * `previewToken` reads past the publish gate, and no cache may store the
+ * response to the request it serves; `staged` needs one.
  */
 export const getEntry = defineServiceMethod({
     summary: 'Read an entry.',
@@ -31,7 +32,10 @@ export const getEntry = defineServiceMethod({
         const { config } = ctx;
         const shape: VisibilityShape = full ? 'full' : 'public';
 
-        if (previewToken) return getPreviewEntry(config, params);
+        if (previewToken) {
+            ctx.noStore();
+            return getPreviewEntry(config, params);
+        }
         // Answering the canonical row here would hand back the wrong content.
         if (staged === true) {
             throw ValidationError.fromFieldErrors({}, [

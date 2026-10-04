@@ -25,6 +25,8 @@ export type RequestScope = {
      * Astro page requests and trusted callers.
      */
     clientAddress?: string | undefined;
+    /** Set through `ctx.noStore()`, by a read no cache may store. */
+    noStore?: boolean;
 };
 
 const requestScope = createRegistry<AsyncLocalStorage<RequestScope>>('requestScope', {

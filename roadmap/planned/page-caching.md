@@ -7,14 +7,20 @@ milestone: 1.0
 A site's pages render on every request, and nothing tells a cache that content
 changed. Raised on 2026-10-03 from WPMU DEV Hummingbird; decided 2026-10-04.
 
-Prerequisite: `roadmap/planned/caching-defects.md`. Builds on
+Prerequisite: `roadmap/completed/caching-defects.md`. Builds on
 `roadmap/planned/drafts.md` and `roadmap/planned/schedules.md`.
 
 ## What exists
 
 - The media route sends immutable headers for variants and short-lived ones for
-  originals (`packages/astromech/src/media/serving/handler.ts`). Site pages get
-  no `Cache-Control` and no cache tags.
+  originals and the redirect, `no-store` on a 404, and a
+  `Cache-Tag: astromech:media:<id>` on each item's responses
+  (`packages/astromech/src/media/serving/handler.ts`). Site pages get no
+  `Cache-Control` and no cache tags.
+- The middleware (`packages/astromech/src/integrations/astro/middleware.ts`)
+  calls `cache.set(false)` last on the admin, API and media routes and on a
+  page whose request scope a preview read marked `noStore`, and sends
+  `private, no-store` on all but media. A prerendered page boots nothing.
 - Astro 7's route caching is stable (the repo has 7.3.2): `Astro.cache.set`
   and `routeRules` set a lifetime and tags, `cache.invalidate({ tags })` clears
   them, with `memoryCache()` on Node and `cacheCloudflare()` on Workers.
@@ -83,9 +89,10 @@ Prerequisite: `roadmap/planned/caching-defects.md`. Builds on
   process or use a short `maxAge`. Purging a CDN in front of a Node site is a
   plugin after 1.0.
 - **Static builds are not supported for content pages in 1.0.** `getAstromech()`
-  throws in `getStaticPaths`, which runs before the middleware boots the app;
-  migrations run after prerendering; and on Cloudflare prerendering would need
-  remote D1. The docs cover `prerender = true` for pages that read no content.
+  throws in a prerendered page and its `getStaticPaths`, since the middleware
+  boots no application for one, and on Cloudflare prerendering would need
+  remote D1. `apps/docs/deployment/caching.md` covers `prerender = true` for
+  pages that read no content.
   Deploy hooks that rebuild a static site are `roadmap/proposed/webhooks.md`.
 - **Headers are left to Astro's providers.** Astromech sends only
   `private, no-store`, and never a browser `max-age` on HTML, which a clear

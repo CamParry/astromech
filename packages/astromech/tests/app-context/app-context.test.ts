@@ -49,6 +49,7 @@ const APP_CONTEXT_KEYS = [
     'logger',
     'media',
     'methods',
+    'noStore',
     'notifications',
     'notify',
     'role',

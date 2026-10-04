@@ -11,7 +11,7 @@ export * from '@/types/index';
  * carries a `virtual:` import and this barrel still loads in plain Node.
  */
 export { createAstromech, getAstromech } from '@/astromech';
-export type { Astromech } from '@/astromech';
+export type { Astromech, ScheduledOptions } from '@/astromech';
 /**
  * Model access, so a plugin can reach a configured model without taking its
  * own SDK dependency. Absent unless the site configures `ai` — hence `undefined`.
