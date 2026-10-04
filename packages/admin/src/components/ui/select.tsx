@@ -15,6 +15,11 @@ export type SelectProps = {
     options: SelectOption[];
     placeholder?: string;
     disabled?: boolean;
+    /**
+     * Shows the value without letting it change. Unlike `disabled`, the trigger
+     * stays in the tab order, so its label and description are still announced.
+     */
+    readOnly?: boolean;
     required?: boolean;
     name?: string;
     id?: string | undefined;
@@ -29,6 +34,7 @@ export function Select({
     options,
     placeholder = 'Select...',
     disabled,
+    readOnly,
     required,
     name,
     id,
@@ -42,6 +48,7 @@ export function Select({
             value={value}
             onValueChange={onValueChange}
             disabled={disabled}
+            readOnly={readOnly}
             required={required}
             name={name}
             items={options}

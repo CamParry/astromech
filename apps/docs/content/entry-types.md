@@ -65,8 +65,8 @@ publish or schedule it in the same call, name `status` (and `publishedAt`) in
 `data`, which needs the type's `publish` permission.
 
 `Astromech.entries.duplicate()` copies an entry into a new one, `unpublished`
-unless `overrides` names a `status`. A `scheduled` status, on any write, needs a
-`publishedAt`: without one the write is refused with a 422 naming it.
+unless `overrides` names a `status`. A write that leaves an entry scheduled with
+no date is refused with a 422 naming `publishedAt`.
 
 ## Trash and restore
 

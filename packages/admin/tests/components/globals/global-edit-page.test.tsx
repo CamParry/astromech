@@ -4,10 +4,10 @@
  * The global edit page. A global is declared by config and its row is created
  * on demand, so a `null` read is an empty form whose first save is the write
  * that creates it. One `update` carries the fields, and the status only when
- * the publish panel changed it, which needs publish. A locale with no row is
- * opened, not written, the merge confirm warns when the staged read reports
- * `diverged`, staging over unsaved edits asks first, and merging over them
- * asks once.
+ * the publish panel changed it, which needs publish; a schedule needs a date.
+ * A locale with no row is opened, not written, the merge confirm warns when the
+ * staged read reports `diverged`, staging over unsaved edits asks first, and
+ * merging over them asks once.
  */
 
 import type { RenderAdminResult } from '../../_support/render-admin';
@@ -244,7 +244,7 @@ describe('the global edit page', () => {
         const field = await tagline();
         const select = screen.getByRole('combobox', { name: 'Status' });
         expect(select.textContent).toContain('Published');
-        expect(select.hasAttribute('data-disabled')).toBe(true);
+        expect(select.getAttribute('aria-readonly')).toBe('true');
         const hint = screen.getByText(
             'Only users who can publish can change the status.'
         );
@@ -283,6 +283,21 @@ describe('the global edit page', () => {
             data: { status: 'published' },
         });
         expect(publish).not.toHaveBeenCalled();
+    });
+
+    it('refuses a schedule with no publish date before sending it', async () => {
+        const { api, update } = makeApi({ canonical: makeGlobal() });
+        const page = mountPage({ api, config: config() });
+
+        await tagline();
+        await pickOption(page, 0, 'Scheduled');
+        expect(screen.getByLabelText<HTMLInputElement>('Publish date').value).toBe('');
+        await page.user.click(screen.getByRole('button', { name: 'Update' }));
+
+        expect(
+            await screen.findByText('Publish date is required when scheduled')
+        ).not.toBeNull();
+        expect(update).not.toHaveBeenCalled();
     });
 
     it('shows no locale switcher on a global that is not translatable', async () => {

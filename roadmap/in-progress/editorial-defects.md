@@ -34,6 +34,11 @@ Found on 2026-10-03 while planning `roadmap/planned/drafts.md`.
   `packages/astromech/src/plugins/runtime/plugin-runtime.ts`), so a plugin
   method or route acting for a user without `publish` could write a status. No
   plugin does today.
+- **Scheduling a published row keeps its past date.** An update naming
+  `status: 'scheduled'` and no `publishedAt` on a published row keeps the row's
+  date (`packages/astromech/src/content/published-at.ts`), so the row becomes
+  scheduled for a time already passed and the next `scheduled-publish` run
+  republishes it.
 - **`maxVersions` is never applied**, and **a staged write takes a version that
   is deleted when the staged change is merged or discarded**. Both are fixed by
   `roadmap/planned/history.md`; listed here so they are not fixed twice.

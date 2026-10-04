@@ -22,8 +22,13 @@ export type PublishPanelProps = {
     entryPublishedAt?: Date | string | null | undefined;
     onStatusChange: (status: EntryStatus) => void;
     onPublishedAtChange: (value: string) => void;
+    /** The publish date's error, such as a schedule with no date. */
+    publishedAtError?: string | undefined;
+    /** The whole form is read-only, which its own banner says. */
+    disabled?: boolean;
+    /** The status and date show their values but cannot change; `hint` says why. */
     readOnly?: boolean;
-    /** A note under the status select, such as why it cannot be changed. */
+    /** A note under the status select that also describes the date, such as why neither can change. */
     hint?: string | undefined;
 };
 
@@ -33,6 +38,8 @@ export function PublishPanel({
     entryPublishedAt,
     onStatusChange,
     onPublishedAtChange,
+    publishedAtError,
+    disabled = false,
     readOnly = false,
     hint,
 }: PublishPanelProps): React.ReactElement {
@@ -69,7 +76,8 @@ export function PublishPanel({
                                 if (isEntryStatus(v)) onStatusChange(v);
                             }}
                             options={statusOptions}
-                            disabled={readOnly}
+                            disabled={disabled}
+                            readOnly={readOnly}
                         />
                     </FieldControlProvider>
                     {hint !== undefined && (
@@ -80,18 +88,17 @@ export function PublishPanel({
                 </div>
 
                 {status === 'scheduled' && (
-                    <div className="am-field">
-                        <label className="am-field-label" htmlFor="entry-published-at">
-                            {t('entries.publishedAtField')}
-                        </label>
-                        <Input
-                            id="entry-published-at"
-                            type="datetime-local"
-                            value={publishedAt}
-                            onChange={(e) => onPublishedAtChange(e.target.value)}
-                            disabled={readOnly}
-                        />
-                    </div>
+                    <Input
+                        id="entry-published-at"
+                        label={t('entries.publishedAtField')}
+                        error={publishedAtError}
+                        type="datetime-local"
+                        value={publishedAt}
+                        onChange={(e) => onPublishedAtChange(e.target.value)}
+                        disabled={disabled}
+                        readOnly={readOnly}
+                        aria-describedby={hint !== undefined ? hintId : undefined}
+                    />
                 )}
 
                 {status === 'published' && formattedPublishedAt != null && (

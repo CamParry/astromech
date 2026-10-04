@@ -105,7 +105,7 @@ describe('EntryNewPage', () => {
         expect(screen.queryByRole('button', { name: 'Save as Unpublished' })).toBeNull();
         const select = screen.getByRole('combobox', { name: 'Status' });
         expect(select.textContent).toContain('Unpublished');
-        expect(select.hasAttribute('data-disabled')).toBe(true);
+        expect(select.getAttribute('aria-readonly')).toBe('true');
         expect(
             screen.getByText('Only users who can publish can change the status.')
         ).not.toBeNull();

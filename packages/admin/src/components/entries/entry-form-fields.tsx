@@ -89,7 +89,8 @@ export function SlugField({
 
 /**
  * The status select and publish date, bound to the form's `status` and
- * `publishedAt`. Without `canPublish` they are read-only, with a note saying why.
+ * `publishedAt`. Without `canPublish` they are read-only, with a note saying
+ * why. A save that leaves the status scheduled needs a date, as the server does.
  */
 export function StatusField({
     form,
@@ -110,7 +111,16 @@ export function StatusField({
     return (
         <form.Field name="status">
             {(statusField) => (
-                <form.Field name="publishedAt">
+                <form.Field
+                    name="publishedAt"
+                    validators={{
+                        onSubmit: ({ value, fieldApi }) =>
+                            fieldApi.form.getFieldValue('status') === 'scheduled' &&
+                            value === ''
+                                ? t('entries.publishedAtRequired')
+                                : undefined,
+                    }}
+                >
                     {(publishedAtField) => (
                         <PublishPanel
                             status={statusField.state.value}
@@ -120,7 +130,9 @@ export function StatusField({
                             onPublishedAtChange={(value) =>
                                 publishedAtField.handleChange(value)
                             }
-                            readOnly={disabled || !canPublish}
+                            publishedAtError={publishedAtField.state.meta.errors[0]}
+                            disabled={disabled}
+                            readOnly={!canPublish}
                             hint={hint}
                         />
                     )}
