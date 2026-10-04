@@ -1,5 +1,5 @@
 ---
-milestone: later
+milestone: 1.0
 ---
 
 # CI review
