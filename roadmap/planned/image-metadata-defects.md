@@ -49,20 +49,20 @@ decoded image, which is what the variants are made from.
 
 ## The work
 
-- [ ] Record dimensions after applying EXIF orientation, from the image driver
+- [x] Record dimensions after applying EXIF orientation, from the image driver
       where one is configured, and drop the unused `orientation` key or set it.
-- [ ] Remove the GPS data from the stored original on upload and replace,
+- [x] Remove the GPS data from the stored original on upload and replace,
       blanking it in place in the EXIF and XMP with no re-encode, so the pixels
       and size are unchanged and it needs no image driver. Other metadata
       (camera, date, copyright) is kept.
-- [ ] Read dimensions for HEIC, AVIF and TIFF.
+- [x] Read dimensions for HEIC, AVIF and TIFF.
 - [ ] Add the version to the Cloudflare driver's origin URL.
 - [ ] Every setting that changes a variant's bytes joins its storage key.
 - [ ] Placeholders from the upright image; record whether an image has alpha.
 - [ ] Animated WebP stays animated on sharp.
 - [ ] HEIC: not resizable on sharp unless the build can decode it.
 - [ ] `size` from the stored bytes.
-- [ ] Tests: a rotated JPEG fixture stores upright dimensions; an uploaded
+- [x] Tests: a rotated JPEG fixture stores upright dimensions; an uploaded
       original with GPS data is served without it.
 
 ## Left open
