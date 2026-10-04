@@ -8,6 +8,7 @@ import type { RedirectsOptions } from './types';
 import type { PluginDB, ServiceInterface } from 'astromech';
 import { definePlugin, withDefaults } from 'astromech';
 import { migrationProvider } from '../migrations/index';
+import { version } from '../package.json';
 import { slugChangeHook } from './hooks/slug-change';
 import { redirectsPermissions } from './permissions/redirects';
 import { redirectsResource } from './resources/redirects';
@@ -41,7 +42,7 @@ export const redirects = definePlugin((options?: RedirectsOptions) => {
 
     return {
         package: REDIRECTS_PACKAGE,
-        version: '0.1.0',
+        version,
         label: 'Redirects',
         icon: 'Signpost',
         tables,

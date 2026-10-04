@@ -8,6 +8,7 @@ import type { FormsOptions } from './types';
 import type { PluginDB, ServiceInterface } from 'astromech';
 import { definePlugin, withDefaults } from 'astromech';
 import { migrationProvider } from '../migrations/index';
+import { version } from '../package.json';
 import { formEntryType } from './entries/form';
 import { formsPermissions } from './permissions/forms';
 import { submissionsResource } from './resources/submissions';
@@ -59,7 +60,7 @@ export const forms = definePlugin((options?: FormsOptions) => {
 
     return {
         package: FORMS_PACKAGE,
-        version: '0.1.0',
+        version,
         label: 'Forms',
         icon: 'ClipboardList',
         tables,

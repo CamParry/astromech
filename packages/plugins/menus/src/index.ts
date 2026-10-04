@@ -7,6 +7,7 @@
 import type { MenusOptions } from './types';
 import type { ServiceInterface } from 'astromech';
 import { definePlugin } from 'astromech';
+import { version } from '../package.json';
 import { buildMenuGlobals } from './globals/menus';
 import { createMenusService } from './service/menus';
 
@@ -26,7 +27,7 @@ export const menus = definePlugin((options?: MenusOptions) => {
 
     return {
         package: '@astromech/menus',
-        version: '0.1.0',
+        version,
         label: 'Menus',
         icon: 'Menu',
         globals: buildMenuGlobals(menuConfigs),

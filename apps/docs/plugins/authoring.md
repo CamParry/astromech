@@ -18,10 +18,11 @@ way the result is a factory, so a site always calls it:
 
 ```ts
 import { definePlugin } from 'astromech';
+import { version } from '../package.json';
 
 export const myPlugin = definePlugin({
     package: 'my-plugin', // canonical name — survives renames
-    version: '1.0.0',
+    version, // read from package.json, so a release cannot leave it behind
     label: 'My Plugin', // admin sidebar group + page-title prefix
     icon: 'Puzzle', // Lucide icon name
     // ...surfaces...
@@ -33,6 +34,11 @@ export default myPlugin;
 `package` is a key like any other, so a plugin never has to hand its own
 identity to itself — nothing inside the package needs to import an identity
 module to build a namespaced string.
+
+`version` is what another plugin's `dependsOn` range is checked against. The
+JSON import needs `resolveJsonModule` in the plugin's `tsconfig.json`; a bundler
+such as tsup inlines the value, so the published build never reads
+`package.json` at runtime.
 
 Register it in your config (plugins load in array order):
 
@@ -1483,6 +1489,7 @@ options, pass `definePlugin` a factory instead of a plain object:
 import type { RedirectsOptions } from './types.js';
 import { definePlugin, withDefaults } from 'astromech';
 import { migrationProvider } from '../migrations/index.js';
+import { version } from '../package.json';
 import { slugChangeHook } from './hooks/slug-change.js';
 import { redirectsPermissions } from './permissions/redirects.js';
 import { redirectsResource } from './resources/redirects.js';
@@ -1499,7 +1506,7 @@ export const redirects = definePlugin((options?: RedirectsOptions) => {
 
     return {
         package: REDIRECTS_PACKAGE,
-        version: '0.1.0',
+        version,
         label: 'Redirects',
         icon: 'Signpost',
         tables: [redirectsTable],

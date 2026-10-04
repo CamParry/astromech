@@ -109,9 +109,15 @@ item 8 proposed, would protect libsql only.
       sending unchanged fields, answers 500 (`it.fails` in
       `packages/astromech/tests/users/last-admin.test.ts`).
 - [ ] **OpenAPI coverage** as decided above.
-- [ ] **Plugin versions.** Each `packages/plugins/*/src/index.ts` reads its
-      version from its `package.json` with a JSON import, and a test checks the
-      two agree.
+- [x] **Plugin versions.** Each `packages/plugins/*/src/index.ts` reads its
+      version from its `package.json` with a JSON import, which tsup inlines,
+      and the plugin contract
+      (`packages/astromech/tests/_support/plugin-contract.ts`) checks the
+      declared package and version against `package.json`.
+- [ ] **Core's API version.** The OpenAPI document's `info.version`
+      (`transport/http/routes/openapi-document.ts`) is a hard-coded `1.0.0`
+      while `astromech` is `0.1.0`. Decide whether it tracks the package
+      version, as the plugins now do, or names the API's own version.
 - [x] **CLI statuses.** Build the list from `statusSchema.options` in
       `transport/cli/commands/entries-create.ts`, `entries-update.ts` and
       `entries-list.ts` (`statusArgs` in `transport/cli/common-args.ts`), drop
