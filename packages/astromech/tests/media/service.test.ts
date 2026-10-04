@@ -106,6 +106,23 @@ describe('mediaService.upload', () => {
         });
     });
 
+    it.each([
+        ['a PNG with an alpha channel', 4, true],
+        ['a PNG with none', 3, false],
+    ] as const)('records whether %s has one', async (_, channels, hasAlpha) => {
+        const png = await sharpLib({
+            create: { width: 4, height: 4, channels, background: '#80808000' },
+        })
+            .png()
+            .toBuffer();
+
+        const media = await mediaService.upload({
+            file: new File([new Uint8Array(png)], 'logo.png', { type: 'image/png' }),
+        });
+
+        expect(media.metadata?.hasAlpha).toBe(hasAlpha);
+    });
+
     it('records the dimensions of a GIF, which it does not optimise', async () => {
         const gif = await sharpLib({
             create: { width: 30, height: 10, channels: 3, background: '#808080' },
@@ -122,6 +139,28 @@ describe('mediaService.upload', () => {
             height: 10,
         });
     });
+
+    it.each([
+        [
+            'an image',
+            () =>
+                new File([jpegBytes() as BlobPart], 'photo.jpg', { type: 'image/jpeg' }),
+        ],
+        ['a streamed file', () => textFile('notes.txt', 'hello world')],
+    ])(
+        'records the size of the bytes stored for %s, on upload and replace',
+        async (_, makeFile) => {
+            const uploaded = await mediaService.upload({ file: makeFile() });
+            const key = `${uploaded.id}.${uploaded.filename.split('.').pop() ?? ''}`;
+            expect(uploaded.size).toBe((await storage.stat(key))?.size);
+
+            const replaced = await mediaService.replace({
+                id: uploaded.id,
+                file: makeFile(),
+            });
+            expect(replaced.size).toBe((await storage.stat(key))?.size);
+        }
+    );
 
     it('mints a ULID id, not a UUID', async () => {
         const media = await mediaService.upload({

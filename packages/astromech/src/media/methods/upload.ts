@@ -46,7 +46,7 @@ export const uploadMedia = defineServiceMethod({
         // Minted here, not by the column default: the file is stored under it first.
         const id = ulid();
         const key = originalKey(id, file.name);
-        const { width, height, metadata } = await storeFile(driver, key, file);
+        const { size, width, height, metadata } = await storeFile(driver, key, file);
 
         try {
             return await transaction(async () => {
@@ -55,7 +55,7 @@ export const uploadMedia = defineServiceMethod({
                         id,
                         filename: file.name,
                         mimeType: file.type,
-                        size: file.size,
+                        size,
                         width,
                         height,
                         metadata,

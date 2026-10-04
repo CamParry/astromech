@@ -1,11 +1,14 @@
 import type { ImageFormat } from '@/media/serving/image/url';
 import type { ImageDriver, ImageSource, StorageDriver } from '@/types/index';
+import { readFile } from 'node:fs/promises';
+import { join } from 'node:path';
 import {
     createTestDb,
     createTestStorage,
     makeTestConfig,
     setupTestConfig,
 } from '@tests/harness';
+import sharpLib from 'sharp';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { currentServices } from '@/app-context/services';
 import { handleMediaRequest } from '@/media/serving/handler';
@@ -57,15 +60,17 @@ const VARIANT_BYTES = new TextEncoder().encode('VARIANT');
 
 function makeFakeImageDriver() {
     const calls: { width: number; format: ImageFormat }[] = [];
+    const originUrls: string[] = [];
     const driver: ImageDriver = {
         name: 'fake',
         cachesVariants: false,
-        async transform(_src: ImageSource, opts: { width: number; format: ImageFormat }) {
+        async transform(src: ImageSource, opts: { width: number; format: ImageFormat }) {
             calls.push({ width: opts.width, format: opts.format });
+            originUrls.push(src.originUrl);
             return { body: VARIANT_BYTES, contentType: `image/${opts.format}` };
         },
     };
-    return { driver, calls };
+    return { driver, calls, originUrls };
 }
 
 let storage: StorageDriver;
@@ -183,8 +188,36 @@ describe('handleMediaRequest', () => {
         expect(fakeDriver.calls[0]).toEqual({ width: 320, format: 'webp' });
 
         // Variant was written back to storage
-        const vKey = `variants/${media.id}/${version}/320.webp`;
+        const vKey = `variants/${media.id}/${version}/fake/320.webp`;
         expect(await storage.stat(vKey)).not.toBeNull();
+    });
+
+    it('hands the driver an origin URL that carries the version and serves the original', async () => {
+        const jpegBytes = makeJpegBytes();
+        const media = await mediaService.upload({
+            file: new File([jpegBytes as BlobPart], 'photo.jpg', { type: 'image/jpeg' }),
+        });
+        const version = media.metadata?.version ?? '';
+
+        await handleMediaRequest({
+            id: media.id,
+            ext: 'jpg',
+            search: new URLSearchParams({ w: '320', f: 'webp', v: version }),
+            origin: 'http://x',
+        });
+
+        expect(fakeDriver.originUrls).toEqual([
+            `http://x/_media/${media.id}.jpg?v=${version}`,
+        ]);
+        const origin = new URL(fakeDriver.originUrls[0] ?? '');
+        const res = await handleMediaRequest({
+            id: media.id,
+            ext: 'jpg',
+            search: origin.searchParams,
+            origin: 'http://x',
+        });
+        expect(res.status).toBe(200);
+        expect(await readBody(res)).toEqual(jpegBytes);
     });
 
     it('6. valid variant cache hit → 200, transform NOT called again', async () => {
@@ -218,6 +251,108 @@ describe('handleMediaRequest', () => {
         expect(body).toEqual(VARIANT_BYTES);
         // No new transform calls
         expect(fakeDriver.calls.length).toBe(callsBefore);
+    });
+
+    it('makes a new variant, under a new ETag, when the driver’s cache key changes', async () => {
+        const media = await mediaService.upload({
+            file: new File([makeJpegBytes() as BlobPart], 'photo.jpg', {
+                type: 'image/jpeg',
+            }),
+        });
+        const version = media.metadata?.version ?? '';
+        const search = new URLSearchParams({ w: '320', f: 'webp', v: version });
+        const request = { id: media.id, ext: 'jpg', search, origin: 'http://x' };
+        const first = await handleMediaRequest(request);
+        await readBody(first);
+
+        const requality = makeFakeImageDriver();
+        setupTestConfig({
+            ...makeTestConfig(),
+            storage,
+            media: {
+                image: {
+                    driver: { ...requality.driver, cacheKey: 'fake-q90' },
+                    widths: [320, 640],
+                    avif: true,
+                },
+            },
+        });
+        const second = await handleMediaRequest(request);
+
+        expect(requality.calls).toEqual([{ width: 320, format: 'webp' }]);
+        expect(first.headers.get('ETag')).toBe(`"${version}-320-webp-fake"`);
+        expect(second.headers.get('ETag')).toBe(`"${version}-320-webp-fake-q90"`);
+        expect(
+            await storage.stat(`variants/${media.id}/${version}/fake-q90/320.webp`)
+        ).not.toBeNull();
+    });
+
+    it('redirects an AVIF request for an animated WebP to its WebP variant', async () => {
+        // Three 8×8 frames: black, grey, white.
+        const pixels = Buffer.concat(
+            [0, 0x80, 0xff].map((v) => Buffer.alloc(8 * 8 * 4, v))
+        );
+        const webp = await sharpLib(pixels, {
+            raw: { width: 8, height: 24, channels: 4, pageHeight: 8 },
+        })
+            .webp({ loop: 0, delay: [100, 100, 100] })
+            .toBuffer();
+        const media = await mediaService.upload({
+            file: new File([new Uint8Array(webp)], 'spinner.webp', {
+                type: 'image/webp',
+            }),
+        });
+        const version = media.metadata?.version ?? '';
+
+        const res = await handleMediaRequest({
+            id: media.id,
+            ext: 'webp',
+            search: new URLSearchParams({ w: '320', f: 'avif', v: version }),
+            origin: 'http://x',
+        });
+
+        expect(res.status).toBe(302);
+        expect(res.headers.get('Location')).toBe(
+            `/_media/${media.id}.webp?w=320&f=webp&v=${version}`
+        );
+        expect(fakeDriver.calls).toEqual([]);
+    });
+
+    it('serves the original, without transforming, a type the driver cannot decode', async () => {
+        const undecodable = makeFakeImageDriver();
+        setupTestConfig({
+            ...makeTestConfig(),
+            storage,
+            media: {
+                image: {
+                    driver: {
+                        ...undecodable.driver,
+                        canTransform: async (type) => type !== 'image/heic',
+                    },
+                    widths: [320, 640],
+                    avif: true,
+                },
+            },
+        });
+        const heic = await readFile(
+            join(import.meta.dirname, 'image', 'fixtures', 'grid-1200x800.heic')
+        );
+        const media = await mediaService.upload({
+            file: new File([new Uint8Array(heic)], 'photo.heic', { type: 'image/heic' }),
+        });
+        const version = media.metadata?.version ?? '';
+
+        const res = await handleMediaRequest({
+            id: media.id,
+            ext: 'heic',
+            search: new URLSearchParams({ w: '320', f: 'webp', v: version }),
+            origin: 'http://x',
+        });
+
+        expect(res.status).toBe(200);
+        expect(res.headers.get('Content-Type')).toBe('image/heic');
+        expect(await readBody(res)).toEqual(new Uint8Array(heic));
+        expect(undecodable.calls).toEqual([]);
     });
 
     it('7. non-optimisable type → serves original, transform not called', async () => {

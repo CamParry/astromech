@@ -79,7 +79,11 @@ function thumbSources(item: Media, width: number): { type: string; srcset: strin
     );
     if (ladder.length === 0) return [];
 
-    const formats = adminConfig.imageAvif ? ['avif', 'webp'] : ['webp'];
+    // AVIF variants hold no animation, so an animated image's are all WebP.
+    const formats =
+        adminConfig.imageAvif && item.metadata?.animated !== true
+            ? ['avif', 'webp']
+            : ['webp'];
     return formats.map((format) => ({
         type: `image/${format}`,
         srcset: ladder

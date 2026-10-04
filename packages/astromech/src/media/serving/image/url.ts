@@ -6,9 +6,18 @@ export type ParsedImageParams = {
     version: string | null;
 };
 
-/** Canonical original URL. */
-export function buildMediaUrl(mediaRoute: string, id: string, ext: string): string {
-    return `${mediaRoute}/${id}.${ext}`;
+/**
+ * Canonical original URL. A `version` adds `?v=`, which the media route ignores
+ * on an original, so a cache keyed on the URL tells one file from the next.
+ */
+export function buildMediaUrl(
+    mediaRoute: string,
+    id: string,
+    ext: string,
+    version?: string
+): string {
+    const base = `${mediaRoute}/${id}.${ext}`;
+    return version === undefined ? base : `${base}?v=${version}`;
 }
 
 /** Canonical versioned variant URL. */
@@ -53,14 +62,16 @@ export function isAllowedWidth(width: number, widths: readonly number[]): boolea
     return widths.includes(width);
 }
 
-/** Storage key for a cached transformed variant. */
+/**
+ * Storage key for a cached transformed variant. The driver's cache key joins
+ * it, as one path segment, so a change to the driver's settings makes new files.
+ */
 export function variantStorageKey(
     id: string,
-    version: string,
-    width: number,
-    format: ImageFormat
+    opts: { version: string; cacheKey: string; width: number; format: ImageFormat }
 ): string {
-    return `variants/${id}/${version}/${width}.${format}`;
+    const settings = encodeURIComponent(opts.cacheKey);
+    return `variants/${id}/${opts.version}/${settings}/${opts.width}.${opts.format}`;
 }
 
 /** The variants/<id>/ prefix used to purge all variants of a media item. */

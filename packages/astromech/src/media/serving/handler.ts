@@ -5,8 +5,8 @@ import { getConfig } from '@/config/registry';
 import { getStorageDriver } from '@/storage/registry';
 import { toBytes } from '@/utilities/bytes';
 import { extOf, originalKey } from '../internal/keys';
-import { isOptimisableImage } from './image/dimensions';
 import { getImageConfig } from './image/registry';
+import { canTransformImage } from './image/transformable';
 import {
     buildMediaUrl,
     buildVariantUrl,
@@ -76,8 +76,8 @@ async function serveMedia(info: MediaRequestInfo): Promise<Response> {
 
     const imageConfig = getImageConfig();
 
-    // No image driver or non-optimisable type — serve original, ignore params
-    if (!imageConfig || !isOptimisableImage(media.mimeType)) {
+    // No image driver, or a type it cannot transform — serve original, ignore params
+    if (!imageConfig || !(await canTransformImage(media.mimeType))) {
         return serveOriginal({
             key,
             mimeType: media.mimeType,
@@ -107,10 +107,18 @@ async function serveMedia(info: MediaRequestInfo): Promise<Response> {
         });
     }
 
-    const wantFormat: ImageFormat = params.format ?? (imageConfig.avif ? 'avif' : 'webp');
+    // AVIF variants hold no animation, so an animated image's are all WebP.
+    const wantFormat: ImageFormat =
+        media.metadata?.animated === true
+            ? 'webp'
+            : (params.format ?? (imageConfig.avif ? 'avif' : 'webp'));
 
-    // Missing format, missing version param, or stale version — redirect to canonical
-    if (params.format == null || params.version == null || params.version !== version) {
+    // Missing or unwanted format, missing version param, or stale version — redirect to canonical
+    if (
+        params.format !== wantFormat ||
+        params.version == null ||
+        params.version !== version
+    ) {
         const location = buildVariantUrl(getConfig().mediaRoute, id, ext, {
             width: params.width,
             format: wantFormat,
@@ -124,9 +132,15 @@ async function serveMedia(info: MediaRequestInfo): Promise<Response> {
     // and are served whole, and one may not exist yet (a cache miss transforms it
     // on the spot), so there is nothing stable to range over. Ranges are an
     // originals-only concern — see `serveOriginal`.
-    const format = params.format;
-    const vKey = variantStorageKey(id, version, params.width, format);
-    const etag = `"${version}-${params.width}-${format}"`;
+    const format = wantFormat;
+    const cacheKey = imageConfig.driver.cacheKey ?? imageConfig.driver.name;
+    const vKey = variantStorageKey(id, {
+        version,
+        cacheKey,
+        width: params.width,
+        format,
+    });
+    const etag = `"${version}-${params.width}-${format}-${encodeURIComponent(cacheKey)}"`;
     const variantCacheControl = 'public, max-age=31536000, immutable';
 
     if (ifNoneMatch === etag) {
@@ -158,7 +172,8 @@ async function serveMedia(info: MediaRequestInfo): Promise<Response> {
             if (!o) throw new Error('original missing');
             return toBytes(o.body);
         },
-        originUrl: `${origin}${buildMediaUrl(getConfig().mediaRoute, id, ext)}`,
+        // A transform cached under its source URL must not outlive a replace.
+        originUrl: `${origin}${buildMediaUrl(getConfig().mediaRoute, id, ext, version)}`,
     };
 
     let variant: { bytes: Uint8Array; contentType: string };

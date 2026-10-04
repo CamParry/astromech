@@ -112,6 +112,33 @@ describe('buildImageAttrs — avif:false', () => {
     });
 });
 
+describe('buildImageAttrs — a type the image driver cannot transform', () => {
+    it('returns a bare img with no sources', () => {
+        const heic: ImageAttrsInput = {
+            ...jpegInput,
+            filename: 'photo.heic',
+            mimeType: 'image/heic',
+            transformable: false,
+        };
+        const result = buildImageAttrs(heic, {}, ctx);
+        expect(result.sources).toEqual([]);
+        expect(result.img.src).toBe('/_media/img-abc.heic');
+    });
+});
+
+describe('buildImageAttrs — animated', () => {
+    it('produces only the webp source, since AVIF variants hold no animation', () => {
+        const animated: ImageAttrsInput = {
+            ...jpegInput,
+            filename: 'spinner.webp',
+            mimeType: 'image/webp',
+            animated: true,
+        };
+        const result = buildImageAttrs(animated, {}, ctx);
+        expect(result.sources.map((source) => source.type)).toEqual(['image/webp']);
+    });
+});
+
 describe('buildImageAttrs — non-optimisable types', () => {
     const cases: [string, string, string][] = [
         ['image/svg+xml', 'icon.svg', 'SVG'],

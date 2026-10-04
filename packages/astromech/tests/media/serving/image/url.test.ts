@@ -18,6 +18,12 @@ describe('buildMediaUrl', () => {
     it('works with a custom route', () => {
         expect(buildMediaUrl('/uploads', 'xyz', 'png')).toBe('/uploads/xyz.png');
     });
+
+    it('adds a version as `v`', () => {
+        expect(buildMediaUrl('/_media', 'abc123', 'jpg', '9f2c')).toBe(
+            '/_media/abc123.jpg?v=9f2c'
+        );
+    });
 });
 
 describe('buildVariantUrl', () => {
@@ -143,15 +149,36 @@ describe('isAllowedWidth', () => {
 
 describe('variantStorageKey', () => {
     it('produces the correct storage key', () => {
-        expect(variantStorageKey('abc123', 'v1', 640, 'webp')).toBe(
-            'variants/abc123/v1/640.webp'
-        );
+        expect(
+            variantStorageKey('abc123', {
+                version: 'v1',
+                cacheKey: 'sharp-avif50-webp78',
+                width: 640,
+                format: 'webp',
+            })
+        ).toBe('variants/abc123/v1/sharp-avif50-webp78/640.webp');
     });
 
     it('works for avif', () => {
-        expect(variantStorageKey('img-id', 'hash9', 1280, 'avif')).toBe(
-            'variants/img-id/hash9/1280.avif'
-        );
+        expect(
+            variantStorageKey('img-id', {
+                version: 'hash9',
+                cacheKey: 'sharp',
+                width: 1280,
+                format: 'avif',
+            })
+        ).toBe('variants/img-id/hash9/sharp/1280.avif');
+    });
+
+    it('keeps a cache key with a slash inside one path segment', () => {
+        expect(
+            variantStorageKey('img-id', {
+                version: 'hash9',
+                cacheKey: '../q=90',
+                width: 1280,
+                format: 'avif',
+            })
+        ).toBe('variants/img-id/hash9/..%2Fq%3D90/1280.avif');
     });
 });
 

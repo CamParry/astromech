@@ -139,10 +139,20 @@ export type ImageSource = {
 
 export type ImageDriver = {
     name: string;
+    /**
+     * Names every setting that shapes the driver's output, such as its encoder
+     * and quality. It joins each variant's storage key and ETag; defaults to `name`.
+     */
+    cacheKey?: string;
     transform(
         src: ImageSource,
         opts: { width: number; format: ImageFormat }
     ): Promise<{ body: ReadableStream | Uint8Array; contentType: string }>;
+    /**
+     * Whether the driver can make variants of a file of this content type. A
+     * type it cannot is served as the original with no srcset; absent, it can.
+     */
+    canTransform?(contentType: string): Promise<boolean>;
     placeholder?(bytes: Uint8Array): Promise<string | null>;
     cachesVariants?: boolean;
 };

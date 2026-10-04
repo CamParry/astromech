@@ -108,6 +108,25 @@ width and height, which are the ones its variants have. Astromech reads them
 from the file's header on upload, with or without an image driver. JPEG, PNG,
 GIF, WebP, AVIF, HEIC and TIFF are read; any other file has `null` for both.
 
+`metadata.hasAlpha` says whether an optimisable image has an alpha channel,
+also read from its header: a PNG with alpha or a transparent colour, a WebP,
+AVIF or HEIC with an alpha plane, or a TIFF with an extra sample. A JPEG never
+has one. It reports the channel, not its pixels, so a PNG saved with alpha
+counts even when every pixel is opaque. The `metadata.blurhash` placeholder is
+made from the upright image, with any transparent pixels shown as white.
+
+**HEIC gets variants only where the image driver can decode it.** The
+`sharp()` driver checks once, on first use, whether its libvips build decodes
+HEVC. The prebuilt `sharp` package does not, so there a HEIC image is served as
+the original with no srcset, which most browsers other than Safari cannot show;
+a libvips built with libde265 makes variants as usual. The `cloudflare-images`
+driver transforms HEIC.
+
+`metadata.animated` says whether a WebP is animated. An animated WebP keeps its
+animation in its variants, which are all WebP: AVIF variants hold no animation,
+so `<Image>` lists no AVIF source for it and the media route redirects an AVIF
+request to the WebP variant.
+
 **Location data is removed from uploaded originals.** On upload and replace,
 Astromech blanks the GPS data in a JPEG, PNG, WebP, AVIF, HEIC or TIFF file
 before storing it, since the original is public at its media URL. It removes:

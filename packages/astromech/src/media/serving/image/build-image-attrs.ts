@@ -19,6 +19,13 @@ export type ImageAttrsInput = {
     version?: string | null;
     blurhash?: string | null;
     /**
+     * Whether the image driver can make variants of this file (`canTransformImage`,
+     * server-side). False gives a bare `<img>`; absent, an optimisable type can.
+     */
+    transformable?: boolean;
+    /** Whether the image is animated (`metadata.animated`), which leaves out the AVIF source. */
+    animated?: boolean | null;
+    /**
      * Already-resolved original URL (from `Media.url`), honouring media access
      * mode. Falls back to the media route when absent.
      */
@@ -75,7 +82,10 @@ export function buildImageAttrs(
     const version = input.version;
 
     const optimisable =
-        isOptimisableImage(input.mimeType) && version != null && ctx.widths.length > 0;
+        isOptimisableImage(input.mimeType) &&
+        input.transformable !== false &&
+        version != null &&
+        ctx.widths.length > 0;
 
     if (!optimisable || version == null) {
         return bareImg;
@@ -90,7 +100,8 @@ export function buildImageAttrs(
         return bareImg;
     }
 
-    const formats: ImageFormat[] = ctx.avif ? ['avif', 'webp'] : ['webp'];
+    const formats: ImageFormat[] =
+        ctx.avif && input.animated !== true ? ['avif', 'webp'] : ['webp'];
 
     // Variant URLs ALWAYS stay on the media route, whatever the access mode: a
     // variant is generated on demand by `handleMediaRequest` on a cache miss, so

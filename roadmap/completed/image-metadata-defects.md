@@ -1,7 +1,3 @@
----
-milestone: 1.0
----
-
 # Image metadata defects
 
 Found on 2026-10-03 by reading the media code while comparing it with Smush
@@ -56,19 +52,35 @@ decoded image, which is what the variants are made from.
       and size are unchanged and it needs no image driver. Other metadata
       (camera, date, copyright) is kept.
 - [x] Read dimensions for HEIC, AVIF and TIFF.
-- [ ] Add the version to the Cloudflare driver's origin URL.
-- [ ] Every setting that changes a variant's bytes joins its storage key.
-- [ ] Placeholders from the upright image; record whether an image has alpha.
-- [ ] Animated WebP stays animated on sharp.
-- [ ] HEIC: not resizable on sharp unless the build can decode it.
-- [ ] `size` from the stored bytes.
+- [x] Add the version to the Cloudflare driver's origin URL.
+- [x] Every setting that changes a variant's bytes joins its storage key.
+- [x] Placeholders from the upright image; record whether an image has alpha.
+- [x] Animated WebP stays animated on sharp.
+- [x] HEIC: not resizable on sharp unless the build can decode it.
+- [x] `size` from the stored bytes.
 - [x] Tests: a rotated JPEG fixture stores upright dimensions; an uploaded
       original with GPS data is served without it.
 
 ## Left open
 
+- **An animated WebP uploaded before this work has no `animated` key**, so it
+  still gets an AVIF source, a still of its first frame, until its file is
+  replaced. An animated GIF is not optimised at all, and an APNG's variants
+  are stills, since sharp reads one frame of it.
+- **A driver setting is not in the variant URL.** The driver's `cacheKey`
+  joins the variant's storage key and ETag, but not its URL, which is served
+  `immutable` for a year. A browser or CDN that cached a variant keeps it
+  after a quality change until the image's version changes. When
+  `media.image.quality` lands (`roadmap/planned/image-optimisation.md`, which
+  expects a new URL), the URL needs the setting too, as a focal point's `fp`.
 - **HEIC variants fall back to the original.** The prebuilt sharp cannot decode
-  HEVC, so a HEIC upload records its dimensions but gets no resized variants.
+  HEVC, so a HEIC upload records its dimensions but gets no resized variants
+  and no placeholder, and most browsers cannot show the original. Converting
+  HEIC to JPEG at upload would fix it, but needs a decoder sharp lacks.
+- **The admin's thumbnails do not ask the driver.** `MediaThumb` builds a
+  variant srcset for every image with a version, so a HEIC thumbnail on sharp
+  requests a variant and gets the original back, without an error. The admin
+  config carries no per-type answer from `canTransform`.
 - **Rows uploaded before this work keep swapped dimensions** until their file
   is replaced: nothing rereads the stored originals.
 - **Core sets no upload size limit.** An image is buffered whole to read its
