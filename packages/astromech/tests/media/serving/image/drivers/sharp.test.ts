@@ -90,6 +90,66 @@ describe('sharp driver — withoutEnlargement', () => {
     });
 });
 
+/** An 8×8 WebP of three frames: red, green, blue. */
+async function animatedWebp(): Promise<Uint8Array> {
+    const frame = (r: number, g: number, b: number) =>
+        Array.from({ length: 64 }, () => [r, g, b, 255]).flat();
+    const pixels = Buffer.from([
+        ...frame(255, 0, 0),
+        ...frame(0, 255, 0),
+        ...frame(0, 0, 255),
+    ]);
+    const bytes = await sharpLib(pixels, {
+        raw: { width: 8, height: 24, channels: 4, pageHeight: 8 },
+    })
+        .webp({ loop: 0, delay: [100, 100, 100] })
+        .toBuffer();
+    return new Uint8Array(bytes);
+}
+
+describe('sharp driver — animated source', () => {
+    it('keeps every frame of an animated WebP in a WebP variant', async () => {
+        const bytes = await animatedWebp();
+        const animated: ImageSource = {
+            contentType: 'image/webp',
+            originUrl: '',
+            getBytes: () => Promise.resolve(bytes),
+        };
+
+        const result = await sharp().transform(animated, { width: 4, format: 'webp' });
+
+        const meta = await sharpLib(Buffer.from(result.body as Uint8Array), {
+            animated: true,
+        }).metadata();
+        expect({
+            pages: meta.pages,
+            width: meta.width,
+            pageHeight: meta.pageHeight,
+        }).toEqual({
+            pages: 3,
+            width: 4,
+            pageHeight: 4,
+        });
+    });
+
+    it('makes an AVIF variant of the first frame, not a strip of every frame', async () => {
+        const bytes = await animatedWebp();
+        const animated: ImageSource = {
+            contentType: 'image/webp',
+            originUrl: '',
+            getBytes: () => Promise.resolve(bytes),
+        };
+
+        const result = await sharp().transform(animated, { width: 4, format: 'avif' });
+
+        const meta = await sharpLib(Buffer.from(result.body as Uint8Array)).metadata();
+        expect({ width: meta.width, height: meta.height }).toEqual({
+            width: 4,
+            height: 4,
+        });
+    });
+});
+
 describe('sharp driver — placeholder', () => {
     it('returns a non-empty blurhash string', async () => {
         const driver = sharp();

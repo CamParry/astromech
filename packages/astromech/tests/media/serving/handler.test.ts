@@ -6,6 +6,7 @@ import {
     makeTestConfig,
     setupTestConfig,
 } from '@tests/harness';
+import sharpLib from 'sharp';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { currentServices } from '@/app-context/services';
 import { handleMediaRequest } from '@/media/serving/handler';
@@ -282,6 +283,37 @@ describe('handleMediaRequest', () => {
         expect(
             await storage.stat(`variants/${media.id}/${version}/fake-q90/320.webp`)
         ).not.toBeNull();
+    });
+
+    it('redirects an AVIF request for an animated WebP to its WebP variant', async () => {
+        // Three 8×8 frames: black, grey, white.
+        const pixels = Buffer.concat(
+            [0, 0x80, 0xff].map((v) => Buffer.alloc(8 * 8 * 4, v))
+        );
+        const webp = await sharpLib(pixels, {
+            raw: { width: 8, height: 24, channels: 4, pageHeight: 8 },
+        })
+            .webp({ loop: 0, delay: [100, 100, 100] })
+            .toBuffer();
+        const media = await mediaService.upload({
+            file: new File([new Uint8Array(webp)], 'spinner.webp', {
+                type: 'image/webp',
+            }),
+        });
+        const version = media.metadata?.version ?? '';
+
+        const res = await handleMediaRequest({
+            id: media.id,
+            ext: 'webp',
+            search: new URLSearchParams({ w: '320', f: 'avif', v: version }),
+            origin: 'http://x',
+        });
+
+        expect(res.status).toBe(302);
+        expect(res.headers.get('Location')).toBe(
+            `/_media/${media.id}.webp?w=320&f=webp&v=${version}`
+        );
+        expect(fakeDriver.calls).toEqual([]);
     });
 
     it('7. non-optimisable type → serves original, transform not called', async () => {

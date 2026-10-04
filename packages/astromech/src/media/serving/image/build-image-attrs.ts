@@ -18,6 +18,8 @@ export type ImageAttrsInput = {
     height?: number | null;
     version?: string | null;
     blurhash?: string | null;
+    /** Whether the image is animated (`metadata.animated`), which leaves out the AVIF source. */
+    animated?: boolean | null;
     /**
      * Already-resolved original URL (from `Media.url`), honouring media access
      * mode. Falls back to the media route when absent.
@@ -90,7 +92,8 @@ export function buildImageAttrs(
         return bareImg;
     }
 
-    const formats: ImageFormat[] = ctx.avif ? ['avif', 'webp'] : ['webp'];
+    const formats: ImageFormat[] =
+        ctx.avif && input.animated !== true ? ['avif', 'webp'] : ['webp'];
 
     // Variant URLs ALWAYS stay on the media route, whatever the access mode: a
     // variant is generated on demand by `handleMediaRequest` on a cache miss, so

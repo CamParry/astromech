@@ -107,10 +107,18 @@ async function serveMedia(info: MediaRequestInfo): Promise<Response> {
         });
     }
 
-    const wantFormat: ImageFormat = params.format ?? (imageConfig.avif ? 'avif' : 'webp');
+    // AVIF variants hold no animation, so an animated image's are all WebP.
+    const wantFormat: ImageFormat =
+        media.metadata?.animated === true
+            ? 'webp'
+            : (params.format ?? (imageConfig.avif ? 'avif' : 'webp'));
 
-    // Missing format, missing version param, or stale version — redirect to canonical
-    if (params.format == null || params.version == null || params.version !== version) {
+    // Missing or unwanted format, missing version param, or stale version — redirect to canonical
+    if (
+        params.format !== wantFormat ||
+        params.version == null ||
+        params.version !== version
+    ) {
         const location = buildVariantUrl(getConfig().mediaRoute, id, ext, {
             width: params.width,
             format: wantFormat,
@@ -124,7 +132,7 @@ async function serveMedia(info: MediaRequestInfo): Promise<Response> {
     // and are served whole, and one may not exist yet (a cache miss transforms it
     // on the spot), so there is nothing stable to range over. Ranges are an
     // originals-only concern — see `serveOriginal`.
-    const format = params.format;
+    const format = wantFormat;
     const cacheKey = imageConfig.driver.cacheKey ?? imageConfig.driver.name;
     const vKey = variantStorageKey(id, {
         version,

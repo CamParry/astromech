@@ -105,9 +105,10 @@ describe('readImageMetadata over damaged files', () => {
                         if (bytes.length > 0) bytes[at % bytes.length] = value;
                     }
 
-                    const { hasAlpha } = readImageMetadata(bytes);
+                    const { hasAlpha, animated } = readImageMetadata(bytes);
 
                     expect([undefined, true, false]).toContain(hasAlpha);
+                    expect([undefined, true, false]).toContain(animated);
                 }
             ),
             { numRuns: 2000 }

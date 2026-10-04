@@ -115,6 +115,11 @@ has one. It reports the channel, not its pixels, so a PNG saved with alpha
 counts even when every pixel is opaque. The `metadata.blurhash` placeholder is
 made from the upright image, with any transparent pixels shown as white.
 
+`metadata.animated` says whether a WebP is animated. An animated WebP keeps its
+animation in its variants, which are all WebP: AVIF variants hold no animation,
+so `<Image>` lists no AVIF source for it and the media route redirects an AVIF
+request to the WebP variant.
+
 **Location data is removed from uploaded originals.** On upload and replace,
 Astromech blanks the GPS data in a JPEG, PNG, WebP, AVIF, HEIC or TIFF file
 before storing it, since the original is public at its media URL. It removes:

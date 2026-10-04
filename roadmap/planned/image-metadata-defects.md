@@ -59,7 +59,7 @@ decoded image, which is what the variants are made from.
 - [x] Add the version to the Cloudflare driver's origin URL.
 - [x] Every setting that changes a variant's bytes joins its storage key.
 - [x] Placeholders from the upright image; record whether an image has alpha.
-- [ ] Animated WebP stays animated on sharp.
+- [x] Animated WebP stays animated on sharp.
 - [ ] HEIC: not resizable on sharp unless the build can decode it.
 - [x] `size` from the stored bytes.
 - [x] Tests: a rotated JPEG fixture stores upright dimensions; an uploaded
@@ -67,6 +67,10 @@ decoded image, which is what the variants are made from.
 
 ## Left open
 
+- **An animated WebP uploaded before this work has no `animated` key**, so it
+  still gets an AVIF source, a still of its first frame, until its file is
+  replaced. An animated GIF is not optimised at all, and an APNG's variants
+  are stills, since sharp reads one frame of it.
 - **A driver setting is not in the variant URL.** The driver's `cacheKey`
   joins the variant's storage key and ETag, but not its URL, which is served
   `immutable` for a year. A browser or CDN that cached a variant keeps it

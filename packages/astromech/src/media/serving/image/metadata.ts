@@ -3,6 +3,7 @@
  * media row's metadata records it. DataView only, so it runs on Workers.
  */
 
+import type { ImageFormat } from './header';
 import {
     boxType,
     detectImageFormat,
@@ -16,7 +17,7 @@ import {
 } from './header';
 
 /** The keys `readImageMetadata` reads; each is absent when the header does not say. */
-export type ImageMetadata = { hasAlpha?: boolean };
+export type ImageMetadata = { hasAlpha?: boolean; animated?: boolean };
 
 /** TIFF's ExtraSamples tag, present when a pixel has a sample beyond its colour, such as alpha. */
 const TAG_EXTRA_SAMPLES = 0x0152;
@@ -34,22 +35,33 @@ const ALPHA_AUX_TYPES = new Set([
 ]);
 
 /**
- * Whether a PNG, JPEG, WebP, TIFF or HEIF image has an alpha channel, read from
- * its header. Empty for any other or malformed file.
+ * Whether a PNG, JPEG, WebP, TIFF or HEIF image has an alpha channel, and
+ * whether a WebP is animated, read from its header. Empty for a malformed file.
  */
 export function readImageMetadata(bytes: Uint8Array): ImageMetadata {
     const view = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength);
-    // The bytes are an untrusted upload: a read the checks below miss gives nothing, not a throw.
+    const format = detectImageFormat(bytes);
+    const hasAlpha = attempt(() => readHasAlpha(format, view));
+    const animated = attempt(() =>
+        format === 'webp' ? readWebpAnimated(view) : undefined
+    );
+    return {
+        ...(hasAlpha === undefined ? {} : { hasAlpha }),
+        ...(animated === undefined ? {} : { animated }),
+    };
+}
+
+/** The bytes are an untrusted upload: a read the checks miss gives nothing, not a throw. */
+function attempt(read: () => boolean | undefined): boolean | undefined {
     try {
-        const hasAlpha = readHasAlpha(bytes, view);
-        return hasAlpha === undefined ? {} : { hasAlpha };
+        return read();
     } catch {
-        return {};
+        return undefined;
     }
 }
 
-function readHasAlpha(bytes: Uint8Array, view: DataView): boolean | undefined {
-    switch (detectImageFormat(bytes)) {
+function readHasAlpha(format: ImageFormat | null, view: DataView): boolean | undefined {
+    switch (format) {
         case 'png':
             return readPngHasAlpha(view);
         case 'jpeg':
@@ -64,6 +76,16 @@ function readHasAlpha(bytes: Uint8Array, view: DataView): boolean | undefined {
         case null:
             return undefined;
     }
+}
+
+/** Only an extended WebP can be animated, and its flags say whether it is. */
+function readWebpAnimated(view: DataView): boolean | undefined {
+    if (view.byteLength < 16) return undefined;
+    const chunk = fourCC(view, 12);
+    if (chunk === 'VP8 ' || chunk === 'VP8L') return false;
+    if (chunk === 'VP8X' && view.byteLength >= 21)
+        return (view.getUint8(20) & 0x02) !== 0;
+    return undefined;
 }
 
 /** Grey or truecolour with alpha (colour types 4 and 6), or a `tRNS` chunk before the image data. */

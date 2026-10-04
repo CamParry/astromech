@@ -38,7 +38,7 @@ describe('readImageMetadata — hasAlpha', () => {
         ['a TIFF', 'tiff', false, { compression: 'lzw' }],
     ] as const)('reads %s', async (_, format, alpha, options) => {
         const bytes = await encode(format, { alpha, options });
-        expect(readImageMetadata(bytes)).toEqual({ hasAlpha: alpha });
+        expect(readImageMetadata(bytes).hasAlpha).toBe(alpha);
     });
 
     it('reads a JPEG as opaque', async () => {
@@ -62,5 +62,35 @@ describe('readImageMetadata — hasAlpha', () => {
             .toBuffer();
         expect(readImageMetadata(new Uint8Array(gif))).toEqual({});
         expect(readImageMetadata(new TextEncoder().encode('not an image'))).toEqual({});
+    });
+});
+
+describe('readImageMetadata — animated', () => {
+    it('reads an animated WebP as animated', async () => {
+        // Three 8×8 frames: black, grey, white.
+        const pixels = Buffer.concat(
+            [0, 0x80, 0xff].map((v) => Buffer.alloc(8 * 8 * 4, v))
+        );
+        const bytes = await sharpLib(pixels, {
+            raw: { width: 8, height: 24, channels: 4, pageHeight: 8 },
+        })
+            .webp({ loop: 0, delay: [100, 100, 100] })
+            .toBuffer();
+
+        expect(readImageMetadata(new Uint8Array(bytes)).animated).toBe(true);
+    });
+
+    it.each([
+        ['a lossy WebP', { alpha: false }],
+        ['a lossless WebP', { alpha: false, options: { lossless: true } }],
+        ['an extended WebP', { alpha: true }],
+    ])('reads %s as still', async (_, opts) => {
+        expect(readImageMetadata(await encode('webp', opts)).animated).toBe(false);
+    });
+
+    it('says nothing about animation in another format', async () => {
+        expect(readImageMetadata(await encode('png', { alpha: true }))).toEqual({
+            hasAlpha: true,
+        });
     });
 });

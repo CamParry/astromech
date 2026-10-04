@@ -112,6 +112,19 @@ describe('buildImageAttrs — avif:false', () => {
     });
 });
 
+describe('buildImageAttrs — animated', () => {
+    it('produces only the webp source, since AVIF variants hold no animation', () => {
+        const animated: ImageAttrsInput = {
+            ...jpegInput,
+            filename: 'spinner.webp',
+            mimeType: 'image/webp',
+            animated: true,
+        };
+        const result = buildImageAttrs(animated, {}, ctx);
+        expect(result.sources.map((source) => source.type)).toEqual(['image/webp']);
+    });
+});
+
 describe('buildImageAttrs — non-optimisable types', () => {
     const cases: [string, string, string][] = [
         ['image/svg+xml', 'icon.svg', 'SVG'],

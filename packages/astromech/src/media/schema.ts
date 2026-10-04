@@ -19,6 +19,8 @@ export const mediaMetadataSchema = z.object({
     version: withFallback(z.string().optional(), undefined),
     /** Whether an optimisable image has an alpha channel, read from its header. */
     hasAlpha: withFallback(z.boolean().optional(), undefined),
+    /** Whether a WebP is animated, read from its header. */
+    animated: withFallback(z.boolean().optional(), undefined),
     duration: withFallback(z.number().optional(), undefined),
     pageCount: withFallback(z.number().optional(), undefined),
 });
