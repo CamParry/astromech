@@ -15,6 +15,10 @@ type PlatformProxy = {
 
 type WranglerModule = {
     getPlatformProxy(): Promise<PlatformProxy>;
+    unstable_readConfig(
+        args: Record<string, never>,
+        options: { hideWarnings: boolean }
+    ): { d1_databases: { binding: string; remote?: boolean }[] };
 };
 
 /**
@@ -64,6 +68,25 @@ function pick<T>(env: Record<string, unknown>, name: string): T {
 }
 
 /**
+ * Whether the named D1 binding reaches a database on Cloudflare rather than
+ * wrangler's local emulation, as `resolveBinding` would open it outside a
+ * Worker: only a binding the wrangler config marks `remote: true` does. Inside
+ * a Worker, or when the wrangler config cannot be read, the answer is true.
+ */
+export async function isRemoteD1Binding(name: string): Promise<boolean> {
+    if (resolveEnvSource() !== undefined || isWorkersRuntime()) return true;
+    try {
+        const wrangler = await importWrangler();
+        // The same config discovery `getPlatformProxy()` runs, CLOUDFLARE_ENV included.
+        const config = wrangler.unstable_readConfig({}, { hideWarnings: true });
+        const database = config.d1_databases.find((entry) => entry.binding === name);
+        return database === undefined || database.remote === true;
+    } catch {
+        return true;
+    }
+}
+
+/**
  * Release the wrangler platform proxy. A Node process that resolved a binding
  * will not exit until this runs.
  */
@@ -96,10 +119,15 @@ function startWrangler(): Promise<Record<string, unknown>> {
 }
 
 async function openWrangler(): Promise<PlatformProxy> {
-    let wrangler: WranglerModule;
+    const proxy = await (await importWrangler()).getPlatformProxy();
+    openProxy.set(proxy);
+    return proxy;
+}
+
+async function importWrangler(): Promise<WranglerModule> {
     try {
         const spec = 'wrangler';
-        wrangler = (await import(/* @vite-ignore */ spec)) as WranglerModule;
+        return (await import(/* @vite-ignore */ spec)) as WranglerModule;
     } catch (err) {
         const message = err instanceof Error ? err.message : String(err);
         throw new AstromechError(
@@ -109,8 +137,4 @@ async function openWrangler(): Promise<PlatformProxy> {
             { cause: err }
         );
     }
-
-    const proxy = await wrangler.getPlatformProxy();
-    openProxy.set(proxy);
-    return proxy;
 }

@@ -42,16 +42,16 @@ afterEach(() => {
 });
 
 describe('assertLocalDatabase', () => {
-    it('refuses a remote driver, naming the type and --allow-remote', () => {
+    it('refuses a remote driver, naming the type and --allow-remote', async () => {
         const exit = catchExit();
         const error = vi.spyOn(console, 'error').mockImplementation(() => undefined);
 
-        expect(() =>
+        await expect(
             assertLocalDatabase(
                 configWith({ type: 'libsql', isRemote: () => true }),
                 false
             )
-        ).toThrow('exit:1');
+        ).rejects.toThrow('exit:1');
 
         expect(exit).toHaveBeenCalledWith(1);
         const message = String(error.mock.calls[0]?.[0]);
@@ -59,31 +59,44 @@ describe('assertLocalDatabase', () => {
         expect(message).toContain('--allow-remote');
     });
 
-    it('proceeds against a remote driver when --allow-remote was passed', () => {
+    it('refuses a driver that answers remote asynchronously, as D1 does', async () => {
+        const exit = catchExit();
+        vi.spyOn(console, 'error').mockImplementation(() => undefined);
+
+        await expect(
+            assertLocalDatabase(
+                configWith({ type: 'd1', isRemote: () => Promise.resolve(true) }),
+                false
+            )
+        ).rejects.toThrow('exit:1');
+        expect(exit).toHaveBeenCalledWith(1);
+    });
+
+    it('proceeds against a remote driver when --allow-remote was passed', async () => {
         const exit = catchExit();
 
-        expect(() =>
+        await expect(
             assertLocalDatabase(configWith({ type: 'd1', isRemote: () => true }), true)
-        ).not.toThrow();
+        ).resolves.toBeUndefined();
         expect(exit).not.toHaveBeenCalled();
     });
 
-    it('proceeds against a local driver', () => {
+    it('proceeds against a local driver', async () => {
         const exit = catchExit();
 
-        expect(() =>
+        await expect(
             assertLocalDatabase(
                 configWith({ type: 'libsql', isRemote: () => false }),
                 false
             )
-        ).not.toThrow();
+        ).resolves.toBeUndefined();
         expect(exit).not.toHaveBeenCalled();
     });
 
-    it('proceeds against a driver that reports nothing', () => {
+    it('proceeds against a driver that reports nothing', async () => {
         const exit = catchExit();
 
-        expect(() => assertLocalDatabase(configWith({}), false)).not.toThrow();
+        await expect(assertLocalDatabase(configWith({}), false)).resolves.toBeUndefined();
         expect(exit).not.toHaveBeenCalled();
     });
 });

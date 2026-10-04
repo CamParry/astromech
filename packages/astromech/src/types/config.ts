@@ -42,7 +42,7 @@ export type DatabaseDriver = {
      * own. Optional and feature-detected: a driver that cannot tell omits it and
      * the CLI treats the database as local.
      */
-    isRemote?(): boolean;
+    isRemote?(): boolean | Promise<boolean>;
     /** Produce a consistent full-DB snapshot. Optional — absent on drivers that can't dump in-process (e.g. D1). */
     dump?(): Promise<DbDump>;
     /** Restore a full-DB snapshot from raw SQLite bytes, migrated to this schema first. Optional. */

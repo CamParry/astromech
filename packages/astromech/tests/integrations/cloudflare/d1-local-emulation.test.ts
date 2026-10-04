@@ -18,13 +18,25 @@ import type { D1DatabaseLike } from '@/database/drivers/d1-dialect';
 import type { Db } from '@/database/types';
 import type { Kysely } from 'kysely';
 import type { MigrationProvider } from 'kysely/migration';
+import { mkdtempSync, rmSync, writeFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
 import { migrateToLatest } from '@astromech/schema-engine';
 import { makeTestConfig, setupTestConfig } from '@tests/harness';
 import { sql } from 'kysely';
-import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
+import {
+    afterAll,
+    afterEach,
+    beforeAll,
+    beforeEach,
+    describe,
+    expect,
+    it,
+    vi,
+} from 'vitest';
 import { d1 } from '@/database/drivers/d1';
 import { assertForeignKeysEnforced } from '@/database/migrations';
-import { clearEnvSource } from '@/env';
+import { clearEnvSource, setEnvSource } from '@/env';
 import {
     disposeBindings,
     resetBindings,
@@ -270,5 +282,65 @@ describe('d1() against local emulation', () => {
             .where('id', '=', 'x')
             .executeTakeFirst();
         expect(row?.label).toBe('applied');
+    });
+});
+
+// The CLI opens a binding through wrangler's `getPlatformProxy()`, which reaches
+// the database on Cloudflare only for a binding the wrangler config marks
+// `remote: true`; every other binding is local emulation.
+describe('d1 isRemote', () => {
+    let siteDir: string;
+
+    beforeAll(() => {
+        siteDir = mkdtempSync(join(tmpdir(), 'astromech-d1-remote-'));
+        writeFileSync(
+            join(siteDir, 'wrangler.jsonc'),
+            JSON.stringify({
+                name: 'remote-test',
+                compatibility_date: '2026-02-14',
+                d1_databases: [
+                    { binding: 'LOCAL', database_name: 'local', database_id: 'local-id' },
+                    {
+                        binding: 'PRODUCTION',
+                        database_name: 'production',
+                        database_id: 'production-id',
+                        remote: true,
+                    },
+                ],
+            })
+        );
+    });
+
+    afterAll(() => {
+        rmSync(siteDir, { recursive: true, force: true });
+    });
+
+    afterEach(() => {
+        clearEnvSource();
+    });
+
+    it.each([
+        ['reports a binding wrangler emulates locally as local', 'LOCAL', false],
+        [
+            'reports a binding the wrangler config marks remote as remote',
+            'PRODUCTION',
+            true,
+        ],
+        [
+            'reports a binding the wrangler config does not declare as remote',
+            'MISSING',
+            true,
+        ],
+    ])('%s', async (_label, binding, remote) => {
+        vi.spyOn(process, 'cwd').mockReturnValue(siteDir);
+
+        expect(await d1({ binding }).isRemote()).toBe(remote);
+    });
+
+    it('reports a binding from a registered Worker environment as remote', async () => {
+        vi.spyOn(process, 'cwd').mockReturnValue(siteDir);
+        setEnvSource({});
+
+        expect(await d1({ binding: 'LOCAL' }).isRemote()).toBe(true);
     });
 });

@@ -82,7 +82,7 @@ export async function runMcpServer(
     );
     console.error(
         `[astromech mcp] database: ${db?.type ?? 'unknown'} ` +
-            `(${db?.isRemote?.() === true ? 'remote' : 'local'})`
+            `(${(await db?.isRemote?.()) === true ? 'remote' : 'local'})`
     );
 
     // Skipped and excluded stay distinct: a skip is a method that could not be

@@ -18,7 +18,6 @@ pnpm run preview              # wrangler dev over the built Worker
 - `src/worker.ts`: `createWorkerEntry(astro, { config })` exports `fetch` and `scheduled` and registers the Worker's `env`. `main` in `wrangler.jsonc` points at it.
 - `wrangler.jsonc`: the D1 and R2 bindings the config names, and a `* * * * *` trigger. Each job's own `schedule`, synced into `_astromech_cron` every tick, decides whether a tick runs it.
 - `astromech.config.ts` names no `scheduler`: `createWorkerEntry` supplies `cloudflareCron()`.
-- `db:init` passes `--allow-remote`, because the D1 driver reports itself remote even against local emulation.
 
 ## The gate
 

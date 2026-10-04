@@ -53,7 +53,7 @@ a failing test first.
 - [x] A result and error on each cron run.
 - [x] Bundle migration names so Workers can check them.
 - [x] `validate` reads staged rows apart, globals included.
-- [ ] A remote guard that means something on D1, and docs for reaching
+- [x] A remote guard that means something on D1, and docs for reaching
       production D1 from the CLI.
 - [ ] The dashboard checks read permission and makes one request.
 - [ ] `name` on the database driver.
