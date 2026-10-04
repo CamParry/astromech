@@ -38,11 +38,11 @@ export const replaceMedia = defineServiceMethod({
         const copyKey = key === oldKey ? await copyOriginal(driver, id, key) : null;
 
         try {
-            const { width, height, metadata } = await storeFile(driver, key, file);
+            const { size, width, height, metadata } = await storeFile(driver, key, file);
             await mediaRepository.updateFile(id, {
                 filename: file.name,
                 mimeType: file.type,
-                size: file.size,
+                size,
                 width,
                 height,
                 metadata,

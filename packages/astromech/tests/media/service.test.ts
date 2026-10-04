@@ -123,6 +123,28 @@ describe('mediaService.upload', () => {
         });
     });
 
+    it.each([
+        [
+            'an image',
+            () =>
+                new File([jpegBytes() as BlobPart], 'photo.jpg', { type: 'image/jpeg' }),
+        ],
+        ['a streamed file', () => textFile('notes.txt', 'hello world')],
+    ])(
+        'records the size of the bytes stored for %s, on upload and replace',
+        async (_, makeFile) => {
+            const uploaded = await mediaService.upload({ file: makeFile() });
+            const key = `${uploaded.id}.${uploaded.filename.split('.').pop() ?? ''}`;
+            expect(uploaded.size).toBe((await storage.stat(key))?.size);
+
+            const replaced = await mediaService.replace({
+                id: uploaded.id,
+                file: makeFile(),
+            });
+            expect(replaced.size).toBe((await storage.stat(key))?.size);
+        }
+    );
+
     it('mints a ULID id, not a UUID', async () => {
         const media = await mediaService.upload({
             file: new File([jpegBytes() as BlobPart], 'photo.jpg', {

@@ -61,7 +61,7 @@ decoded image, which is what the variants are made from.
 - [ ] Placeholders from the upright image; record whether an image has alpha.
 - [ ] Animated WebP stays animated on sharp.
 - [ ] HEIC: not resizable on sharp unless the build can decode it.
-- [ ] `size` from the stored bytes.
+- [x] `size` from the stored bytes.
 - [x] Tests: a rotated JPEG fixture stores upright dimensions; an uploaded
       original with GPS data is served without it.
 
