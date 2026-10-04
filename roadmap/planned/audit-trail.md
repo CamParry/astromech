@@ -1,3 +1,7 @@
+---
+milestone: 1.0
+---
+
 # Audit trail
 
 A record of which service method ran, with which arguments, for which user, with

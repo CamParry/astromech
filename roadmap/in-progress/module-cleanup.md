@@ -1,3 +1,7 @@
+---
+milestone: 1.0
+---
+
 # Module clean-up
 
 From a read-only review of every package (2026-09-27). Paths are under

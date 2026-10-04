@@ -1,3 +1,7 @@
+---
+milestone: 1.0
+---
+
 # D1 migrations run as one batch
 
 On D1, a migration that rebuilds a table other rows point at fails at its

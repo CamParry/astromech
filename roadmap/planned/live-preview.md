@@ -1,9 +1,13 @@
+---
+milestone: 1.0
+---
+
 # Side-by-side live preview
 
 Preview opens saved content in a new tab
 (`packages/astromech/src/entries/methods/preview/issue-token.ts`). There is no
 preview beside the form that follows the editor's unsaved changes. Raised on
-2026-10-03; decided the same day. **Target: 1.0.**
+2026-10-03; decided the same day.
 
 ## Prior art
 

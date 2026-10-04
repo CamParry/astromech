@@ -1,3 +1,7 @@
+---
+milestone: 1.0
+---
+
 # Image metadata defects
 
 Found on 2026-10-03 by reading the media code while comparing it with Smush

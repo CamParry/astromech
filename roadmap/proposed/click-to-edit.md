@@ -1,9 +1,13 @@
+---
+milestone: later
+---
+
 # Click to edit on the site
 
 Click a piece of content on the site and land on that field in the admin.
 Builds on `roadmap/planned/live-preview.md` and
 `roadmap/planned/admin-bar.md`, which already link a page to its entry. Raised
-on 2026-10-03. **Target: after 1.0.**
+on 2026-10-03.
 
 ## Prior art
 

@@ -299,6 +299,7 @@ Plugins are the exception. A plugin reaches the database only through `ctx.db`, 
 **Drift is reported, not enforced.** `pnpm run report:drift` finds a second copy of a helper, a cast or a query key, and review decides whether to share it, schedule it or keep it. Rejected: lint bans on code shapes and a count that may only fall (they force awkward structure, as dependency-cruiser did), and periodic clean-up passes, after which the drift returns.
 
 **`check:install` follows the installation guide on packed tarballs.** Workspace links hide packaging and generator defects, and the script reads its commands from `apps/docs/installation.md`, so the guide cannot drift from what is tested. Rejected: a fixture site, which drifts from the guide, and a stage in `verify`, which would stop the gate running offline.
+**A roadmap file's milestone is a field; its status is the directory.** Each live file's frontmatter holds `milestone: 1.0` or `milestone: later`. Scope changes often (a feature moved from 1.0 to later within one week), and a directory per milestone would make each change a `git mv` that breaks links, or nest status under milestone. GitHub milestones, Kubernetes KEPs (`latest-milestone` in `kep.yaml`) and Python PEPs (`Python-Version`) keep it as a field. A generated index in `roadmap/README.md` shows progress, and `check:docs` fails when it is stale. Rejected: milestone directories under `roadmap/` (`v1/`, `future/`), and inline "**Target: 1.0.**" text, which 24 of 44 planned files lacked.
 
 ## Reserved words
 

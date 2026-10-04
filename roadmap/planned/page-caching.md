@@ -1,8 +1,11 @@
+---
+milestone: 1.0
+---
+
 # Page caching and invalidation
 
 A site's pages render on every request, and nothing tells a cache that content
 changed. Raised on 2026-10-03 from WPMU DEV Hummingbird; decided 2026-10-04.
-**Target: 1.0.**
 
 Prerequisite: `roadmap/planned/caching-defects.md`. Builds on
 `roadmap/planned/drafts.md` and `roadmap/planned/schedules.md`.

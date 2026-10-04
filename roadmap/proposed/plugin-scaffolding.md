@@ -1,3 +1,7 @@
+---
+milestone: later
+---
+
 # `astromech plugin:init` scaffolding
 
 There is `plugin:generate` and `plugin:purge`, but nothing to start a plugin

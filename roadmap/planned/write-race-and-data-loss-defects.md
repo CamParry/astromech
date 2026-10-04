@@ -1,3 +1,7 @@
+---
+milestone: 1.0
+---
+
 # Write-race and data-loss defects
 
 > **Follows `roadmap/planned/drafts.md`** (decided 2026-10-03): staged changes become drafts in their own table, so revise the staging parts of this file before building it.

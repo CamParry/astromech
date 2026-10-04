@@ -47,6 +47,8 @@ Nothing in it is binding. It is evidence, so a settled question is not re-argued
 
 One file per feature. **Status is the directory** (`proposed/` → `planned/` → `in-progress/` → `completed/`; `proposed/` needs planning, `planned/` is ready to build) and never a field, a heading, or an emoji inside the file. Change status with `git mv`.
 
+**The milestone is a field.** Every file outside `completed/` starts with frontmatter holding `milestone: 1.0` or `milestone: later`; changing scope edits that line and moves nothing. After adding, moving or retagging a file, run `pnpm run roadmap` to rewrite the progress index in `roadmap/README.md`. `check:docs` fails when a live file has no milestone or the index is stale.
+
 `backlog.md` holds unscheduled work that belongs to no single feature: one line each, with a link if there is detail. It is not a bug tracker and not an essay. A known defect in shipped code belongs in the roadmap file for the feature it breaks, where the person picking that feature back up will see it.
 
 Prune it. A ticked item in `backlog.md` is finished work sitting in a list of unfinished work — delete it, or move the reasoning to the feature's roadmap file.

@@ -1,9 +1,13 @@
+---
+milestone: 1.0
+---
+
 # Drafts
 
 Replace staged changes with drafts: every edit to a published entry or global
 goes into one draft per locale, and the live content changes only when the
 draft is published. Decided 2026-10-03 (`DECISIONS.md`, "Published content
-changes through a draft"). **Target: 1.0.**
+changes through a draft").
 
 Together with `roadmap/planned/history.md` and `roadmap/planned/schedules.md`,
 this is the editorial model; `roadmap/planned/autosave.md` and

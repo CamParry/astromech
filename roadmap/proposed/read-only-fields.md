@@ -1,3 +1,7 @@
+---
+milestone: 1.0
+---
+
 # Read-only fields
 
 A field whose value is stored and shown but cannot be edited in the admin: an

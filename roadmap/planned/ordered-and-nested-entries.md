@@ -1,10 +1,13 @@
+---
+milestone: 1.0
+---
+
 # Ordered and nested entries
 
 Entries have no parent and no position, so a site cannot build `/about/team`
 or order its pages by hand. The `tree` field
 (`packages/admin/src/components/fields/tree-field.tsx`) nests values inside one
 entry, as `@astromech/menus` uses it. Raised on 2026-10-03; decided 2026-10-04.
-**Target: 1.0.**
 
 Builds on `roadmap/planned/drafts.md` and `roadmap/planned/locale-trash.md`.
 

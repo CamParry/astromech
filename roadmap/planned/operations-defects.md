@@ -1,3 +1,7 @@
+---
+milestone: 1.0
+---
+
 # Operations defects
 
 Found on 2026-10-04 while planning `roadmap/planned/site-health.md`,

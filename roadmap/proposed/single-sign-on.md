@@ -1,7 +1,11 @@
+---
+milestone: later
+---
+
 # Single sign-on
 
 Sign in with Google, GitHub, Microsoft or a company identity provider. Raised
-on 2026-10-03. **Target: after 1.0.**
+on 2026-10-03.
 
 ## Prior art
 

@@ -1,3 +1,7 @@
+---
+milestone: 1.0
+---
+
 # D1 content writes as one batch
 
 On D1, `transaction()` runs its function with no transaction (`DECISIONS.md`,

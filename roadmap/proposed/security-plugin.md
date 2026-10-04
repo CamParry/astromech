@@ -1,9 +1,13 @@
+---
+milestone: later
+---
+
 # `@astromech/security`
 
 Policies a site opts into on top of core's security mechanisms
 (`roadmap/planned/core-security.md`). The line between them is
 `DECISIONS.md`, "Security in core is defaults and shared mechanisms". Raised on 2026-10-03 from WPMU DEV Defender, Wordfence and Solid
-Security. **Target: after 1.0.**
+Security.
 
 ## Candidates
 

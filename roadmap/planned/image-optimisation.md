@@ -1,6 +1,10 @@
+---
+milestone: 1.0
+---
+
 # Image optimisation
 
-Raised on 2026-10-03 from WPMU DEV Smush; decided 2026-10-04. **Target: 1.0.**
+Raised on 2026-10-03 from WPMU DEV Smush; decided 2026-10-04.
 
 Prerequisite: `roadmap/planned/image-metadata-defects.md`. Cropping around a
 focal point is `roadmap/planned/focal-point.md`.

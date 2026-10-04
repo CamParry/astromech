@@ -1,3 +1,7 @@
+---
+milestone: 1.0
+---
+
 # Account security defects
 
 Found on 2026-10-03 while planning `roadmap/planned/core-security.md`.

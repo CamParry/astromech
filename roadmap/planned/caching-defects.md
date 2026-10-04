@@ -1,3 +1,7 @@
+---
+milestone: 1.0
+---
+
 # Caching defects
 
 Found on 2026-10-04 while planning `roadmap/planned/page-caching.md`, which
