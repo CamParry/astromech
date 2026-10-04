@@ -133,6 +133,27 @@ describe('the Astro middleware', () => {
             'page'
         );
     });
+
+    it('boots no application and starts no scheduler for a prerendered page', async () => {
+        setEnvSource({ NODE_ENV: 'production', BETTER_AUTH_SECRET: SECRET });
+        const start = vi.fn();
+        site.config = { ...makeBootConfig(), scheduler: { name: 'spy', start } };
+
+        expect(await bodyOf(onRequest(context({ isPrerendered: true }), page))).toBe(
+            'page'
+        );
+        expect(start).not.toHaveBeenCalled();
+        expect(() => getAstromech()).toThrow(/no instance of Astromech exists/);
+    });
+
+    it('starts the scheduler for a page rendered on demand', async () => {
+        setEnvSource({ NODE_ENV: 'production', BETTER_AUTH_SECRET: SECRET });
+        const start = vi.fn();
+        site.config = { ...makeBootConfig(), scheduler: { name: 'spy', start } };
+
+        expect(await bodyOf(onRequest(context(), page))).toBe('page');
+        expect(start).toHaveBeenCalledOnce();
+    });
 });
 
 describe('caching on Astromech routes', () => {

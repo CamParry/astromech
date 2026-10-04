@@ -1,7 +1,7 @@
 /**
- * Creates the application and establishes the request scope. Creation happens
- * per request rather than at module scope because Workers forbid I/O outside a
- * request context.
+ * Creates the application and establishes the request scope for every page
+ * rendered on demand. Creation happens per request rather than at module scope
+ * because Workers forbid I/O outside a request context.
  */
 
 import type { MiddlewareHandler } from 'astro';
@@ -13,10 +13,12 @@ import { runInRequestScope } from '@/request-scope/request-scope';
 import { PRIVATE_NO_STORE } from '@/transport/http/cache-control';
 
 export const onRequest: MiddlewareHandler = async (context, next) => {
+    // A page prerendered at build time gets no application, so a build neither
+    // needs the secret nor runs scheduled jobs against the site's database.
+    if (context.isPrerendered) return next();
     // Before the application is created, so a site missing its secret serves
-    // nothing. A page prerendered at build time signs no session, so the build
-    // does not need the secret.
-    if (!context.isPrerendered) assertAuthSecret();
+    // nothing.
+    assertAuthSecret();
     const app = await createAstromech({ config: rawConfig });
     // The Node deployment has no external cron, so the serving integration is
     // what starts the in-process ticker. A no-op on Workers.

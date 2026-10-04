@@ -38,7 +38,7 @@ The class: a response or a job that assumed no cache and no build step.
 
 - [x] `set(false)` and `private, no-store` on Astromech's own routes.
 - [x] Media: `Cache-Control` on the 302 and the 404; the cache tag on variants.
-- [ ] No scheduler and no app boot for a prerendered page.
+- [x] No scheduler and no app boot for a prerendered page.
 - [ ] Migrations before prerendering, or a documented build order.
 - [ ] Pass `ctx` through `scheduled()`.
 - [ ] A test that a preview-token response is never stored.

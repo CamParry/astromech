@@ -46,3 +46,11 @@ the tag copied into it. Astromech purges nothing itself.
 The middleware calls `cache.set(false)` on the media route as on the admin, so
 Astro's route cache never holds a file and a `routeRules` lifetime never
 replaces the ones above.
+
+## Prerendered pages
+
+A page with `export const prerender = true` is rendered once, at build time,
+and Astromech creates no application for it: the build needs no
+`BETTER_AUTH_SECRET` and runs no scheduled jobs. So `getAstromech()` throws in
+a prerendered page and in its `getStaticPaths`. Prerender only pages that read
+no content, and render the rest on demand.
