@@ -24,6 +24,8 @@ export type ValidationFinding = {
     type: string | null;
     id: string;
     locale: string | null;
+    /** Whether the row is a staged change rather than the live row. */
+    staged: boolean;
     /** Null for a form-level message from a resource validator. */
     fieldPath: string | null;
     message: string;
@@ -44,6 +46,7 @@ type StoredRow = {
     target: string | undefined;
     id: string;
     locale: string;
+    staged: boolean;
     fields: JsonObject;
     status: EntryStatus | undefined;
     record: unknown;
@@ -71,13 +74,13 @@ export async function validateStoredContent(
 }
 
 /**
- * Every live entry row: one per locale of every entry. Trashed entries are
- * skipped — an entry in the trash is on its way out and no write is pending
- * against it. Drafts are reported at the stage their own status implies, so an
- * incomplete draft is not a failure.
+ * Every content row of every entry not in the trash: one per locale, and one
+ * per staged change. Trashed entries are skipped, since no write is pending
+ * against them. Drafts are reported at the stage their own status implies, so
+ * an incomplete draft is not a failure.
  *
  * A content row is reported under its entry's id, which is the id every other
- * surface addresses it by; `locale` is what tells two findings apart.
+ * surface addresses it by; `locale` and `staged` tell two findings apart.
  */
 async function checkEntries(
     ctx: AppContext,
@@ -100,6 +103,7 @@ async function checkEntries(
             target: entry.type,
             id: entry.id,
             locale: row.locale,
+            staged: row.stagedFor != null,
             status: row.status,
             fields: (row.fields ?? {}) as JsonObject,
             record: row,
@@ -128,6 +132,7 @@ async function checkContentRows(
                 target: undefined,
                 id: row.id,
                 locale,
+                staged: false,
                 status: undefined,
                 fields: row.fields,
                 record: row,
@@ -137,24 +142,28 @@ async function checkContentRows(
 }
 
 /**
- * Every saved locale of every declared global, host and plugin alike. A locale
- * that has never been saved reads back null and is skipped: there is no stored
- * row to report on.
+ * Every saved locale of every declared global, host and plugin alike, and the
+ * staged change of each where the global stages. A locale that has never been
+ * saved reads back null and is skipped: there is no stored row to report on.
  */
 async function checkGlobals(ctx: AppContext, report: ValidationReport): Promise<void> {
     for (const [key, global] of Object.entries(ctx.config.globals)) {
+        const stages = global.capabilities.staging ? [false, true] : [false];
         for (const locale of locales(ctx, global.capabilities.translatable)) {
-            const row = await ctx.globals.get({ key, locale, full: true });
-            if (row === null) continue;
-            await checkRow(ctx, report, {
-                kind: 'global',
-                target: key,
-                id: key,
-                locale,
-                status: row.status,
-                fields: row.fields,
-                record: row,
-            });
+            for (const staged of stages) {
+                const row = await ctx.globals.get({ key, locale, full: true, staged });
+                if (row === null) continue;
+                await checkRow(ctx, report, {
+                    kind: 'global',
+                    target: key,
+                    id: key,
+                    locale,
+                    staged,
+                    status: row.status,
+                    fields: row.fields,
+                    record: row,
+                });
+            }
         }
     }
 }
@@ -192,6 +201,7 @@ async function checkRow(
         type: row.kind === 'entry' ? (row.target ?? null) : null,
         id: row.id,
         locale: row.locale,
+        staged: row.staged,
     };
     collect(report, subject, processed);
 }
