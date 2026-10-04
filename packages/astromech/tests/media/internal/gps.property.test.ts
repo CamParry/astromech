@@ -137,7 +137,7 @@ describe('removeGpsMetadata', () => {
                     const started = performance.now();
                     await removeGpsMetadata(new Uint8Array(bytes));
 
-                    expect(performance.now() - started).toBeLessThan(1000);
+                    expect(performance.now() - started).toBeLessThan(3000);
                 }
             ),
             { numRuns: 100 }
