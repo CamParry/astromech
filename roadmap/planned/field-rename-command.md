@@ -1,7 +1,11 @@
+---
+milestone: 1.0
+---
+
 # Renaming a field's stored values
 
 Renaming a field in the config leaves its stored values under the old name, and
-nothing moves them. Raised on 2026-10-03; decided 2026-10-04. **Target: 1.0.**
+nothing moves them. Raised on 2026-10-03; decided 2026-10-04.
 
 ## What exists
 

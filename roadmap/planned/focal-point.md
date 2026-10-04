@@ -1,7 +1,11 @@
+---
+milestone: 1.0
+---
+
 # Focal point
 
 Every crop is centred, so a resized portrait can cut off a face. Raised on
-2026-10-03; decided 2026-10-04. **Target: 1.0.**
+2026-10-03; decided 2026-10-04.
 
 Builds on `roadmap/planned/image-optimisation.md` and the variant fixes in
 `roadmap/planned/image-metadata-defects.md`.

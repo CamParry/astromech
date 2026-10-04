@@ -1,8 +1,12 @@
+---
+milestone: 1.0
+---
+
 # API keys
 
 Only a session cookie identifies a caller, so a build script, a CI job or a site
 on another host has no way in, and `astromech/fetch` sends cookies only. Raised
-on 2026-10-03; decided the same day. **Target: 1.0.**
+on 2026-10-03; decided the same day.
 
 ## What exists
 

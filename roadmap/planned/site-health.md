@@ -1,9 +1,13 @@
+---
+milestone: 1.0
+---
+
 # Site health
 
 Nothing tells an admin when the site is misconfigured. A broken scheduler never
 publishes scheduled entries and nobody is told, which is WordPress's well-known
 "missed schedule" failure. Raised on 2026-10-03 as a status screen; decided
-2026-10-04. **Target: 1.0.**
+2026-10-04.
 
 Prerequisite: `roadmap/planned/operations-defects.md` (cron results, the
 migrations list on Workers). Notifications use

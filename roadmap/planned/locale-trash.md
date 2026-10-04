@@ -1,8 +1,12 @@
+---
+milestone: 1.0
+---
+
 # Trashing one locale
 
 An entry's translation cannot be removed: trashing or deleting an entry takes
 every locale (`DECISIONS.md`, "Trash is resource-level"). Raised on 2026-10-03;
-decided the same day. **Target: 1.0.**
+decided the same day.
 
 Builds on `roadmap/planned/drafts.md`, `roadmap/planned/history.md`,
 `roadmap/planned/schedules.md` and the relationship locale column in

@@ -1,7 +1,11 @@
+---
+milestone: 1.0
+---
+
 # Conditional fields
 
 A field cannot be shown or hidden by another field's value. Raised on
-2026-10-03; decided the same day. **Target: 1.0.**
+2026-10-03; decided the same day.
 
 ## What exists
 

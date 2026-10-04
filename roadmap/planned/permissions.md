@@ -1,3 +1,7 @@
+---
+milestone: 1.0
+---
+
 # Permissions
 
 Permissions are spread across modules and named several ways. The entry and

@@ -1,3 +1,7 @@
+---
+milestone: 1.0
+---
+
 # Schema engine defects found by the property tests
 
 Found by the property tests added in stage 5 of

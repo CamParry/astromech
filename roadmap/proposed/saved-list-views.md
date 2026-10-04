@@ -1,8 +1,12 @@
+---
+milestone: later
+---
+
 # Saved list views
 
 An entry list's filters, sort and columns
 (`packages/admin/src/components/entries/entries-list-toolbar.tsx`) reset when
-the editor leaves. Raised on 2026-10-03. **Target: after 1.0.**
+the editor leaves. Raised on 2026-10-03.
 
 ## Prior art
 

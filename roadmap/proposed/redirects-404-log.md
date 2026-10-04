@@ -1,8 +1,12 @@
+---
+milestone: later
+---
+
 # A 404 log in `@astromech/redirects`
 
 `@astromech/redirects` (`packages/plugins/redirects/src`) adds a redirect when a
 slug changes, but nothing records the URLs visitors miss. Raised on
-2026-10-03. **Target: after 1.0.**
+2026-10-03.
 
 ## Prior art
 

@@ -1,9 +1,12 @@
+---
+milestone: 1.0
+---
+
 # Sidebar groups for entry types and globals
 
 Plugins group their admin pages in the sidebar
 (`packages/admin/src/components/layout/sidebar.tsx`), but a site's entry types
 and globals cannot be grouped. Raised on 2026-10-03; decided 2026-10-04.
-**Target: 1.0.**
 
 ## Prior art
 

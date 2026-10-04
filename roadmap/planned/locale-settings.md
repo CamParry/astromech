@@ -1,3 +1,7 @@
+---
+milestone: 1.0
+---
+
 # Locale settings
 
 `config.defaultLocale` does two jobs today. The admin reads it as its UI

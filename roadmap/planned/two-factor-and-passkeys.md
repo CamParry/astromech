@@ -1,8 +1,11 @@
+---
+milestone: 1.0
+---
+
 # Two-factor sign-in, passkeys and confirming your password
 
 Sign-in is an email and a password only, and nothing asks for the password
 again before a sensitive action. Raised on 2026-10-03; decided the same day.
-**Target: 1.0.**
 
 ## What exists
 

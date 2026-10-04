@@ -1,3 +1,7 @@
+---
+milestone: 1.0
+---
+
 # Admin widgets and edit-screen layout
 
 The dashboard is fixed, and the edit screens hold only fields. Plugins add whole
@@ -5,7 +9,7 @@ pages (the SEO overview is one) and fill the toolbar, right drawer and global
 overlay slots (`packages/admin/src/components/plugins/plugin-slot.tsx`), but
 cannot add a panel to the dashboard or beside an entry. Raised on 2026-10-03 as
 dashboard widgets; decided 2026-10-04 as widgets anywhere in the admin, with the
-edit-screen layout around them. **Target: 1.0.**
+edit-screen layout around them.
 
 Prerequisite: `roadmap/planned/admin-ui-defects.md` (the `Button` type).
 

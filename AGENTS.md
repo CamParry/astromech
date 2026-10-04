@@ -9,7 +9,7 @@ Nested `AGENTS.md` files cover `packages/astromech`, `packages/admin`, `packages
 `packages/*` is published to npm; `apps/*` is never published. `apps/demo` is the app to run and browser-verify against. `ARCHITECTURE.md` ("Repository layout") lists every package.
 
 - `ARCHITECTURE.md`: where code lives and what it may import. `TERMINOLOGY.md`: what a term means. `DECISIONS.md`: why a choice beat the alternatives.
-- `roadmap/`: one file per feature, status by directory (`proposed/` needs planning, `planned/` is ready to build, then `in-progress/`, `completed/`).
+- `roadmap/`: one file per feature, status by directory (`proposed/` needs planning, `planned/` is ready to build, then `in-progress/`, `completed/`) and a `milestone` field (`1.0` or `later`).
 - `specs/`: in-flight designs, deleted once the work ships.
 
 ## Commands and the gate
@@ -41,7 +41,7 @@ Each script's header has the detail.
 - **Run the boot checks by hand.** Neither is in the pre-commit hook, and they are the only checks that see a defect in the serving process. Run `check:boot` after touching boot, the config path or the injected middleware, and `check:boot:cloudflare` after touching bindings, the environment or the Worker entry.
 - **A core table change needs a migration.** `packages/astromech/tests/database/drift.test.ts` diffs `apps/demo/migrations/snapshot.json` against `CORE_TABLES`. When it fails, run `pnpm run db:generate` and commit the result. It does not cover plugin tables.
 - **Use pnpm**, never `npm install`: a flat tree hides undeclared dependencies. Every package declares what it imports.
-- Other commands: `format`, `db:generate`, `db:init`.
+- Other commands: `format`, `db:generate`, `db:init`, `roadmap`.
 
 ## Workflow
 

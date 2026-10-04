@@ -1,9 +1,13 @@
+---
+milestone: later
+---
+
 # Creating a related entry from the picker
 
 The relationship picker
 (`packages/admin/src/components/fields/relationship-field.tsx`) chooses
 existing entries only, so an editor leaves the form to create a missing one.
-Raised on 2026-10-03. **Target: after 1.0.**
+Raised on 2026-10-03.
 
 ## Prior art
 

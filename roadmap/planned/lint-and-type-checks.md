@@ -1,3 +1,7 @@
+---
+milestone: later
+---
+
 # Lint and type checks
 
 From a comparison with Matt Pocock's course-video-manager

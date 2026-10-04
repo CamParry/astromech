@@ -1,7 +1,11 @@
+---
+milestone: 1.0
+---
+
 # Media folders
 
 The media library has search and filters but no folders. Raised on
-2026-10-03; decided 2026-10-04. **Target: 1.0.**
+2026-10-03; decided 2026-10-04.
 
 ## What exists
 

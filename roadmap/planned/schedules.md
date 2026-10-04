@@ -1,9 +1,12 @@
+---
+milestone: 1.0
+---
+
 # Schedules
 
-Publishing and unpublishing at a set time, as records of their own rather than
-a status. Decided 2026-10-03. **Target: 1.0.** Builds on
-`roadmap/planned/drafts.md`; absorbs the former scheduled-unpublishing
-proposal.
+Publishing and unpublishing at a set time, as records of their own rather than a
+status. Decided 2026-10-03. Builds on `roadmap/planned/drafts.md`; absorbs the
+former scheduled-unpublishing proposal.
 
 ## What exists
 

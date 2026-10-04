@@ -1,3 +1,7 @@
+---
+milestone: 1.0
+---
+
 # Editor locking
 
 Two editors who open the same entry and both save: the second save silently

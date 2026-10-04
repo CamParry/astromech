@@ -1,10 +1,14 @@
+---
+milestone: 1.0
+---
+
 # Suspending a user
 
 A user's access cannot be cut without deleting them. A role with no
 permissions does not do it: the user still signs in, can change their own email
 through `PUT /api/users/:id`, and can use Better Auth's account endpoints. Raised
 on 2026-10-03, reversing the suspension part of `DECISIONS.md`, "Users are
-deleted or suspended, not archived". **Target: 1.0.**
+deleted or suspended, not archived".
 
 ## Prior art
 

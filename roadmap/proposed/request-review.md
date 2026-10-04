@@ -1,10 +1,14 @@
+---
+milestone: later
+---
+
 # Requesting a review
 
 `publish` is already a separate permission
 (`packages/astromech/src/permissions/entry-permission.ts`), so a role can write
 drafts without publishing them. What is missing is a way to say a draft is
-ready. Raised on 2026-10-03; shaped 2026-10-04. **Target: after 1.0**, as a
-first-party plugin: not every site needs it.
+ready. Raised on 2026-10-03; shaped 2026-10-04. Meant as a first-party
+plugin: not every site needs it.
 
 ## Prior art
 

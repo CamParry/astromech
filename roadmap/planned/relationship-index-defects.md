@@ -1,3 +1,7 @@
+---
+milestone: 1.0
+---
+
 # Relationship index defects
 
 Found on 2026-10-03 while planning `roadmap/planned/drafts.md`.

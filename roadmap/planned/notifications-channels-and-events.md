@@ -1,3 +1,7 @@
+---
+milestone: 1.0
+---
+
 # Notification channels and events
 
 The notification system shipped (`completed/notifications-system.md`):

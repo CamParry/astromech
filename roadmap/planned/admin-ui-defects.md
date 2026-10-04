@@ -1,3 +1,7 @@
+---
+milestone: 1.0
+---
+
 # Admin UI defects
 
 Found on 2026-10-04 while planning `roadmap/planned/sidebar-groups.md` and

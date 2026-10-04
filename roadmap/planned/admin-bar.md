@@ -1,3 +1,7 @@
+---
+milestone: 1.0
+---
+
 # Admin bar
 
 A small floating bar on the site's own pages for a signed-in user: open the

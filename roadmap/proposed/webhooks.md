@@ -1,8 +1,12 @@
+---
+milestone: later
+---
+
 # Webhooks
 
 Call an outside URL when content changes: a deploy hook that rebuilds a static
-site, a search index, or another service. Raised on 2026-10-03. **Target:
-after 1.0**, as a first-party plugin once `roadmap/planned/hooks.md` lands.
+site, a search index, or another service. Raised on 2026-10-03. Meant as a
+first-party plugin once `roadmap/planned/hooks.md` lands.
 
 ## Prior art
 
