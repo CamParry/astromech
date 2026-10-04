@@ -36,7 +36,7 @@ function publishedEntry(fields: JsonObject): Entry {
 }
 
 function opts(shape: 'public' | 'full', fields: Field[]): VisibilityOptions {
-    return { shape, fields, audience: audience() };
+    return { shape, fields, statuses: true, audience: audience() };
 }
 
 const richtextFields: Field[] = [{ name: 'body', type: 'richtext' }];

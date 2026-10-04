@@ -2,6 +2,7 @@
  * Site helpers: locale resolution, path localisation, UI strings.
  */
 
+import { defaultContentLocale } from 'astromech/shared';
 // The site's own config, not the application's: `localizedPath` and `t` are
 // called from templates and have to answer synchronously, and `getAstromech()`
 // is a promise. The locale list is authored here, so this is the source.
@@ -19,18 +20,11 @@ export function locales(): readonly Locale[] {
 }
 
 /**
- * `defaultLocale` is a display tag (`en-GB`) and need not be a content locale.
- * Routing matches locales exactly, so fall back to the first configured one.
+ * The locale served unprefixed: core's default content locale, so the site's
+ * routes and core's entry paths agree on it.
  */
 export function defaultLocale(): Locale {
-    if (cachedDefaultLocale !== undefined) return cachedDefaultLocale;
-    const all = locales();
-    const configured = config.defaultLocale;
-    cachedDefaultLocale =
-        configured !== undefined && all.includes(configured)
-            ? configured
-            : (all[0] ?? 'en');
-    return cachedDefaultLocale;
+    return (cachedDefaultLocale ??= defaultContentLocale(config));
 }
 
 /**

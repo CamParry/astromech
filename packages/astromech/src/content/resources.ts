@@ -120,3 +120,15 @@ export function isTranslatable(
 ): boolean {
     return RESOURCE_CONFIG[resource].translatable(config, target);
 }
+
+/**
+ * Whether `resource` has statuses; `target` names the entry type or global. An
+ * entry type no longer configured counts as having them, the default.
+ */
+export function hasStatuses(
+    resource: ResourceType,
+    config: ResolvedConfig,
+    target?: string
+): boolean {
+    return RESOURCE_CONFIG[resource].hasStatuses(config, target);
+}

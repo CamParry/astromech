@@ -6,8 +6,11 @@
 
 import type { UseFieldsFormResult } from './use-fields-form';
 import type { Entry, EntryStatus, Field, JsonObject } from 'astromech';
+import { useStore } from '@tanstack/react-form';
 // The function the server uses, so the browser picks the same stage it will.
 import { entryValidationMode } from 'astromech/shared';
+import { useEffect, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { useFieldsForm } from './use-fields-form';
 
 /** The entry's own keys, held beside the declared fields' `fields`. */
@@ -59,7 +62,7 @@ type UseEntryFormOptions<TSaved> = {
     hasStatuses?: boolean;
     /** Initial form values; defaults to empty and unpublished. */
     defaultValues?: Partial<EntryFormValues>;
-    /** The "save" write (save as unpublished, or update); resolves to the saved record. */
+    /** The "save" write, with the status the form holds; resolves to the saved record. */
     saveFn: (payload: EntryPayload) => Promise<TSaved>;
     /** The "publish" write, handed the payload with its status forced to `published`. */
     publishFn: (payload: EntryPayload) => Promise<TSaved>;
@@ -81,6 +84,10 @@ export function useEntryForm<TSaved = Entry>({
     onSuccess,
     readOnly = false,
 }: UseEntryFormOptions<TSaved>) {
+    const { t } = useTranslation();
+    /** The publish date's error from the last submit, cleared by a status or date change. */
+    const [publishedAtError, setPublishedAtError] = useState<string | undefined>();
+
     /**
      * The write's payload. An update sends `status` and `publishedAt` only when
      * the editor changed them or pressed Publish, since either needs the publish
@@ -88,8 +95,7 @@ export function useEntryForm<TSaved = Entry>({
      */
     function buildPayload(values: EntryFormValues, publish: boolean): EntryPayload {
         const status = statusAfter(values, publish);
-        const sendsStatus =
-            hasStatuses && (publish || operation === 'create' || changed('status'));
+        const sendsStatus = sendsStatusFor(publish);
         const payload: EntryPayload = {
             title: values.title,
             fields: values.fields as JsonObject,
@@ -110,6 +116,24 @@ export function useEntryForm<TSaved = Entry>({
         return payload;
     }
 
+    /** Whether a submit's payload names `status`. */
+    function sendsStatusFor(publish: boolean): boolean {
+        return hasStatuses && (publish || operation === 'create' || changed('status'));
+    }
+
+    /**
+     * Whether the server would refuse the submit for a schedule with no date:
+     * it sends `scheduled` with no date, or clears a scheduled row's date.
+     */
+    function schedulesWithoutDate(values: EntryFormValues, publish: boolean): boolean {
+        return (
+            hasStatuses &&
+            statusAfter(values, publish) === 'scheduled' &&
+            values.publishedAt === '' &&
+            (sendsStatusFor(publish) || changed('publishedAt'))
+        );
+    }
+
     /** Whether the editor changed this key since the form last loaded or saved. */
     function changed(name: 'status' | 'publishedAt'): boolean {
         return fieldsForm.form.getFieldMeta(name)?.isDirty === true;
@@ -127,6 +151,11 @@ export function useEntryForm<TSaved = Entry>({
             publishedAt: defaultValues?.publishedAt ?? '',
             fields: defaultValues?.fields ?? {},
         },
+        beforeSubmit: (values, meta) => {
+            const refused = schedulesWithoutDate(values, meta?.publish === true);
+            setPublishedAtError(refused ? t('entries.publishedAtRequired') : undefined);
+            return !refused;
+        },
         // An update that sends no status is validated against the row's own,
         // which is the form's, so the browser and the server pick one stage.
         validationMode: (values, meta) =>
@@ -141,8 +170,16 @@ export function useEntryForm<TSaved = Entry>({
         ...(onSuccess !== undefined ? { onSuccess } : {}),
     });
 
+    const status = useStore(fieldsForm.form.store, (state) => state.values.status);
+    const publishedAt = useStore(
+        fieldsForm.form.store,
+        (state) => state.values.publishedAt
+    );
+    useEffect(() => setPublishedAtError(undefined), [status, publishedAt]);
+
     return {
         ...fieldsForm,
+        publishedAtError,
         handleSave: (): void => fieldsForm.handleSubmit({ publish: false }),
         handlePublish: (): void => fieldsForm.handleSubmit({ publish: true }),
     };

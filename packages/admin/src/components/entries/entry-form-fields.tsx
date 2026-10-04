@@ -90,17 +90,20 @@ export function SlugField({
 /**
  * The status select and publish date, bound to the form's `status` and
  * `publishedAt`. Without `canPublish` they are read-only, with a note saying
- * why. A save that leaves the status scheduled needs a date, as the server does.
+ * why. `useEntryForm` decides when a schedule needs a date.
  */
 export function StatusField({
     form,
     savedPublishedAt,
+    publishedAtError,
     disabled = false,
     canPublish,
 }: {
     form: EntryForm;
     /** The saved row's publish date, shown once it is live. */
     savedPublishedAt?: Date | string | null | undefined;
+    /** The publish date's error from the last submit (`useEntryForm`'s `publishedAtError`). */
+    publishedAtError: string | undefined;
     disabled?: boolean;
     /** Whether the user holds the publish permission, which a status change needs. */
     canPublish: boolean;
@@ -111,16 +114,7 @@ export function StatusField({
     return (
         <form.Field name="status">
             {(statusField) => (
-                <form.Field
-                    name="publishedAt"
-                    validators={{
-                        onSubmit: ({ value, fieldApi }) =>
-                            fieldApi.form.getFieldValue('status') === 'scheduled' &&
-                            value === ''
-                                ? t('entries.publishedAtRequired')
-                                : undefined,
-                    }}
-                >
+                <form.Field name="publishedAt">
                     {(publishedAtField) => (
                         <PublishPanel
                             status={statusField.state.value}
@@ -130,7 +124,7 @@ export function StatusField({
                             onPublishedAtChange={(value) =>
                                 publishedAtField.handleChange(value)
                             }
-                            publishedAtError={publishedAtField.state.meta.errors[0]}
+                            publishedAtError={publishedAtError}
                             disabled={disabled}
                             readOnly={!canPublish}
                             hint={hint}

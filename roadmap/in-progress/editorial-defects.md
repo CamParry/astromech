@@ -38,7 +38,24 @@ Found on 2026-10-03 while planning `roadmap/planned/drafts.md`.
   `status: 'scheduled'` and no `publishedAt` on a published row keeps the row's
   date (`packages/astromech/src/content/published-at.ts`), so the row becomes
   scheduled for a time already passed and the next `scheduled-publish` run
-  republishes it.
+  republishes it. The admin does the same through the form: picking Scheduled
+  on a published row shows the row's past date pre-filled (`toFormValues` in
+  `packages/admin/src/hooks/use-edit-controller.ts`), and `buildPayload`
+  (`packages/admin/src/hooks/use-entry-form.ts`) sends it with the status.
+- **Locale paths assume Astro's default routing.** `resolveEntryLocalePath`
+  and `resolveEntryLocaleUrl` (`packages/astromech/src/entries/entry-url.ts`)
+  leave the default content locale unprefixed and put every other locale
+  under `/{locale}` (`DECISIONS.md`, "A locale's public path"). They give the
+  wrong path when Astro's `i18n.defaultLocale` differs from Astromech's default
+  content locale, with `prefixDefaultLocale: true`, with `routing: 'manual'`,
+  and with `domains`.
+- **Two consumers still build locale URLs without the prefix.** The menus
+  plugin resolves an entry link with `resolveEntryUrl`
+  (`packages/plugins/menus/src/service/menus.ts`), and the seo plugin's
+  sitemap lists each entry with `resolveEntryPath`
+  (`packages/plugins/seo/src/service/seo.ts`). The demo's sitemap
+  (`apps/demo/src/pages/sitemap.xml.ts`) then adds a prefixed copy of every
+  URL for every locale, including locales the entry has no row in.
 - **`maxVersions` is never applied**, and **a staged write takes a version that
   is deleted when the staged change is merged or discarded**. Both are fixed by
   `roadmap/planned/history.md`; listed here so they are not fixed twice.

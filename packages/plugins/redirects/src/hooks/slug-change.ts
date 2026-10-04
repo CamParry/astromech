@@ -4,8 +4,8 @@
  * calls: a plugin context has no transaction.
  */
 
-import type { Entry, Hook, ResolvedEntryType } from 'astromech';
-import { defineHook, resolveEntryLocalePath } from 'astromech';
+import type { Hook } from 'astromech';
+import { defineHook, isPubliclyVisible, resolveEntryLocalePath } from 'astromech';
 import { createRedirectsRepository } from '../repository';
 
 export const slugChangeHook: Hook = defineHook(
@@ -15,11 +15,10 @@ export const slugChangeHook: Hook = defineHook(
         const template = entryType?.url;
         if (!entryType || !template) return;
         // `event.entry` is the row before the write. A staged change is not
-        // public, and a row that was not live had no public path to leave.
-        if (event.entry.staged || !wasLive(entryType, event.entry)) return;
-        // A trashed entry serves no page, and its old path may belong to
-        // another entry by now, as when a restore re-slugs it.
-        if (event.entry.deletedAt !== null) return;
+        // public, and a row that was not live (unpublished, scheduled or
+        // trashed) had no public path to leave.
+        const statuses = entryType.capabilities.statuses;
+        if (event.entry.staged || !isPubliclyVisible(event.entry, { statuses })) return;
 
         const from = resolveEntryLocalePath(template, event.entry, ctx.config);
         const to = resolveEntryLocalePath(
@@ -62,13 +61,3 @@ export const slugChangeHook: Hook = defineHook(
         }
     }
 );
-
-/**
- * True when the row was publicly visible: every row of a type without statuses,
- * otherwise a published row whose publish date has passed.
- */
-function wasLive(entryType: ResolvedEntryType, entry: Entry): boolean {
-    if (!entryType.capabilities.statuses) return true;
-    if (entry.status !== 'published') return false;
-    return entry.publishedAt === null || entry.publishedAt <= new Date();
-}

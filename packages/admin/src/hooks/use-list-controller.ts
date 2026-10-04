@@ -8,10 +8,10 @@ import type { ListSort } from '../components/ui/use-list-state';
 import type { UseAdminEntryTypeResult } from './use-admin-entry-type';
 import type { Entry, EntryStatus } from 'astromech';
 import { useSearch } from '@tanstack/react-router';
-import { isEntryStatus } from 'astromech/shared';
+import { defaultContentLocale, isEntryStatus } from 'astromech/shared';
 import React from 'react';
+import adminConfig from 'virtual:astromech/admin-config';
 import { useListState } from '../components/ui/use-list-state';
-import { defaultContentLocale } from '../utilities/content-locale';
 import { validateEntriesListSearch } from '../utilities/entry-admin-path';
 import { useEntriesQuery } from './entries';
 
@@ -32,7 +32,7 @@ export function useListController(
     const hasI18n = config.capabilities.translatable;
 
     const status = isStatusFilter(search.status) ? search.status : 'all';
-    const locale = search.locale ?? defaultContentLocale();
+    const locale = search.locale ?? defaultContentLocale(adminConfig);
     const isTrash = status === 'trashed';
     const { q, sort, page } = list;
 
@@ -66,7 +66,10 @@ export function useListController(
             list.setFilters({ status: value && value !== 'all' ? value : undefined }),
         setLocale: (value: string | null) =>
             list.setFilters({
-                locale: value && value !== defaultContentLocale() ? value : undefined,
+                locale:
+                    value && value !== defaultContentLocale(adminConfig)
+                        ? value
+                        : undefined,
             }),
         setSort: list.setSort,
         setPage: list.setPage,

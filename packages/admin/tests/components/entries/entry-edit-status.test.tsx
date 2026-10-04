@@ -312,4 +312,53 @@ describe('the entry edit page status', () => {
         expect(date.getAttribute('aria-describedby')?.split(' ')).toContain(error.id);
         expect(update).not.toHaveBeenCalled();
     });
+
+    it('refuses clearing the date of a scheduled entry', async () => {
+        const { page, update } = await mountPage(PUBLISHER, {
+            status: 'scheduled',
+            publishedAt: new Date('2027-01-01T09:00:00Z'),
+        });
+
+        await page.user.clear(screen.getByLabelText('Publish date'));
+        await page.user.click(screen.getByRole('button', { name: 'Update' }));
+
+        expect(await screen.findByText(DATE_REQUIRED)).not.toBeNull();
+        expect(update).not.toHaveBeenCalled();
+    });
+
+    it('saves the content of a scheduled entry with no date for a user without publish', async () => {
+        const { page, update, title } = await mountPage(EDITOR, {
+            status: 'scheduled',
+            publishedAt: null,
+        });
+
+        await page.user.type(title, ' edited');
+        await page.user.click(screen.getByRole('button', { name: 'Update' }));
+
+        await waitFor(() => expect(update).toHaveBeenCalledTimes(1));
+        expect(update.mock.calls[0]?.[0].data).toEqual({
+            title: 'Live post edited',
+            fields: {},
+        });
+        expect(screen.queryByText(DATE_REQUIRED)).toBeNull();
+    });
+
+    it('clears the publish date error when the status changes', async () => {
+        const { page } = await mountPage(PUBLISHER, {
+            status: 'unpublished',
+            publishedAt: null,
+        });
+        await page.user.click(statusSelect());
+        await page.user.click(await screen.findByRole('option', { name: 'Scheduled' }));
+        await page.user.click(screen.getByRole('button', { name: 'Update' }));
+        expect(await screen.findByText(DATE_REQUIRED)).not.toBeNull();
+
+        await page.user.click(statusSelect());
+        await page.user.click(await screen.findByRole('option', { name: 'Unpublished' }));
+        await page.user.click(statusSelect());
+        await page.user.click(await screen.findByRole('option', { name: 'Scheduled' }));
+
+        expect(screen.getByLabelText<HTMLInputElement>('Publish date').value).toBe('');
+        expect(screen.queryByText(DATE_REQUIRED)).toBeNull();
+    });
 });

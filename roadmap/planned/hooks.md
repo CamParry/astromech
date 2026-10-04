@@ -93,10 +93,13 @@ as forms does.
       ones (the redirects plugin skips a staged write by `entry.staged` until
       then); add `restoreVersion`, `restore`, `emptyTrash`, update hooks for
       each further locale of `duplicate`, and `entry:beforeUpdate` for
-      `mergeStaged`, which fires only `entry:afterUpdate`. The redirects plugin
-      builds the new path from the requested `data.slug`, not the stored one
-      `uniqueSlug` may have changed, because `entry:afterUpdate` gets the row as
-      it was before the write.
+      `mergeStaged`, which fires only `entry:afterUpdate`. After an `update`,
+      the redirects plugin builds the new path from the requested `data.slug`,
+      not the stored one `uniqueSlug` may have changed, because
+      `entry:afterUpdate` gets the row as it was before the write; the staged
+      merge passes the slug it made unique
+      (`packages/astromech/src/entries/methods/staging/merge.ts`), so a merge
+      gets it right.
 - [ ] **Globals.** The same payload, the staged events, `mergeStaged` and
       `restoreVersion`.
 - [ ] **Scheduler.** Publish through the update path (the item in

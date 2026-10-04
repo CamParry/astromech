@@ -48,6 +48,14 @@ export type UseFieldsFormOptions<TExtras extends object, TSaved, TMeta> = {
     ) => Promise<TSaved>;
     /** Called with the saved record once the form has been reset to its values. */
     onSuccess?: (saved: TSaved) => void;
+    /**
+     * Runs on each submit before the field pipeline, with the submit's `meta`;
+     * false stops the submit, and the caller shows why.
+     */
+    beforeSubmit?: (
+        values: FieldsFormValues<TExtras>,
+        meta: TMeta | undefined
+    ) => boolean;
     /** The stage a submit validates at, `'complete'` unless this says otherwise. */
     validationMode?: (
         values: FieldsFormValues<TExtras>,
@@ -96,6 +104,7 @@ export function useFieldsForm<
     defaultValues,
     onSubmit,
     onSuccess,
+    beforeSubmit,
     validationMode,
     readOnly = false,
     namespace = labelNamespace(undefined),
@@ -132,6 +141,7 @@ export function useFieldsForm<
         // Types the `meta` a caller hands `handleSubmit`.
         onSubmitMeta: undefined as TMeta | undefined,
         onSubmit: async ({ value, meta }) => {
+            if (beforeSubmit !== undefined && !beforeSubmit(value, meta)) return;
             const errors = await validation.validateAll(
                 validationMode?.(value, meta) ?? 'complete'
             );

@@ -90,6 +90,12 @@
     &::placeholder {
         color: var(--am-input-placeholder-color);
     }
+
+    /* The attribute, not `:read-only`, which also matches a `<select>`. */
+    &[readonly] {
+        background-color: var(--am-color-bg-muted);
+        border-color: var(--am-color-border);
+    }
 }
 
 .am-input-error {

@@ -122,6 +122,7 @@ describe('a plugin container field type', () => {
         const visible = applyVisibility(record, {
             shape: 'public',
             fields: [cardsField],
+            statuses: true,
             audience: { now: new Date() },
         });
 

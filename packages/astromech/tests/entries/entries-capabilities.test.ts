@@ -106,6 +106,23 @@ describe('statuses capability', () => {
         const entry = Array.isArray(result) ? result[0] : result;
         expect(entry?.status).toBe('published');
     });
+
+    it('a public read returns an entry of a statuses-off type, whose rows are always live', async () => {
+        const id = await createEntry('nostatuses');
+
+        const got = await entriesService.get({ type: 'nostatuses', id });
+        const listed = await entriesService.query({ type: 'nostatuses' });
+
+        expect(got?.id).toBe(id);
+        expect(listed.data.map((entry) => entry.id)).toEqual([id]);
+    });
+
+    it('a public read hides a trashed entry of a statuses-off type', async () => {
+        const id = await createEntry('nostatuses');
+        await entriesService.trash({ type: 'nostatuses', id });
+
+        expect(await entriesService.get({ type: 'nostatuses', id })).toBeNull();
+    });
 });
 
 describe('trash capability', () => {

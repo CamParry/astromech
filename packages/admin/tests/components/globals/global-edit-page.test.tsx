@@ -300,6 +300,30 @@ describe('the global edit page', () => {
         expect(update).not.toHaveBeenCalled();
     });
 
+    it('saves the fields of a scheduled global with no date for a user without publish', async () => {
+        const { api, update } = makeApi({
+            canonical: makeGlobal({ status: 'scheduled', publishedAt: null }),
+        });
+        const page = mountPage({
+            api,
+            config: config(),
+            permissions: [`global:${KEY}:read`, `global:${KEY}:update`],
+        });
+
+        const input = await tagline();
+        await page.user.clear(input);
+        await page.user.type(input, 'A new tagline');
+        await page.user.click(screen.getByRole('button', { name: 'Update' }));
+
+        await waitFor(() => {
+            expect(update).toHaveBeenCalledTimes(1);
+        });
+        expect(update.mock.calls[0]?.[0].data).toEqual({
+            fields: { tagline: 'A new tagline' },
+        });
+        expect(screen.queryByText('Publish date is required when scheduled')).toBeNull();
+    });
+
     it('shows no locale switcher on a global that is not translatable', async () => {
         const { api } = makeApi({ canonical: makeGlobal() });
         mountPage({ api, config: config() });

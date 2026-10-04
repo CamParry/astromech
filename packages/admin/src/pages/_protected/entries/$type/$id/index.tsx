@@ -4,10 +4,11 @@
  */
 
 import { createFileRoute, redirect } from '@tanstack/react-router';
+import { defaultContentLocale } from 'astromech/shared';
 import React from 'react';
+import adminConfig from 'virtual:astromech/admin-config';
 import { EntryEditPage } from '../../../../../components/entries/entry-edit-page';
 import { entryQueryOptions } from '../../../../../hooks/entries';
-import { defaultContentLocale } from '../../../../../utilities/content-locale';
 import {
     pluginEntryRouteParams,
     validateEntryEditSearch,
@@ -39,7 +40,7 @@ export const Route = createFileRoute('/_protected/entries/$type/$id/')({
             entryQueryOptions(
                 params.type,
                 params.id,
-                deps.locale ?? defaultContentLocale()
+                deps.locale ?? defaultContentLocale(adminConfig)
             )
         ),
     component: EntryEditRoutePage,

@@ -114,7 +114,6 @@
         "emptySearch": "Try adjusting your search.",
         "emptyTrash": "The trash is empty.",
         "emptyCreate": "Create your first {{name}} to get started.",
-        "saveAsUnpublished": "Save as Unpublished",
         "titleField": "Title",
         "titleRequired": "Title is required",
         "fixFields": "Please fix {{fields}}.",

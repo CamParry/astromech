@@ -201,6 +201,10 @@
     min-width: 0;
 }
 
+.am-stack-gap-4 {
+    gap: calc(var(--am-space) * 4);
+}
+
 .am-stack-gap-5 {
     gap: calc(var(--am-space) * 5);
 }

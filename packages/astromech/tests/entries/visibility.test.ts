@@ -36,12 +36,12 @@ function publishedEntry(overrides: Partial<Entry> = {}): Entry {
     };
 }
 
-function publicOpts(fields: Field[] = []): VisibilityOptions {
-    return { shape: 'public', fields, audience: audience() };
+function publicOpts(fields: Field[] = [], statuses = true): VisibilityOptions {
+    return { shape: 'public', fields, statuses, audience: audience() };
 }
 
 function fullOpts(fields: Field[] = []): VisibilityOptions {
-    return { shape: 'full', fields, audience: audience() };
+    return { shape: 'full', fields, statuses: true, audience: audience() };
 }
 
 // (a) Private field stripped in public, present in full
@@ -332,6 +332,16 @@ describe('row filter (audience)', () => {
     it('passes trashed entries in full shape', () => {
         const entry = publishedEntry({ deletedAt: new Date() });
         expect(applyVisibility(entry, fullOpts())).not.toBeNull();
+    });
+
+    it('returns a row of a statuses-off type whatever its status column holds', () => {
+        const entry = publishedEntry({ status: 'unpublished', publishedAt: null });
+        expect(applyVisibility(entry, publicOpts([], false))).not.toBeNull();
+    });
+
+    it('returns null for a trashed row of a statuses-off type', () => {
+        const entry = publishedEntry({ status: 'unpublished', deletedAt: NOW });
+        expect(applyVisibility(entry, publicOpts([], false))).toBeNull();
     });
 });
 

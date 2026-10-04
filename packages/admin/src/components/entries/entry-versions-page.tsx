@@ -7,8 +7,10 @@
 
 import type { UseAdminEntryTypeResult } from '../../hooks/use-admin-entry-type';
 import { useNavigate } from '@tanstack/react-router';
+import { defaultContentLocale } from 'astromech/shared';
 import React from 'react';
 import { useTranslation } from 'react-i18next';
+import adminConfig from 'virtual:astromech/admin-config';
 import {
     entryMutations,
     entryVersionQueryOptions,
@@ -17,7 +19,6 @@ import {
 } from '../../hooks/entries';
 import { useAdminEntryType } from '../../hooks/use-admin-entry-type';
 import { useAdminMutation } from '../../hooks/use-admin-mutation';
-import { defaultContentLocale } from '../../utilities/content-locale';
 import { entryEditPath, entryTypeBasePath } from '../../utilities/entry-admin-path';
 import { NotFoundPage } from '../layout/not-found-page';
 import { VersionHistory } from '../versions/version-history';
@@ -48,7 +49,7 @@ function EntryVersionsBody({
     locale: string | undefined;
 }): React.ReactElement {
     const { type, config, basePath } = entryType;
-    const locale = localeProp ?? defaultContentLocale();
+    const locale = localeProp ?? defaultContentLocale(adminConfig);
     const editPath = entryEditPath(basePath, id, { locale });
     const { t } = useTranslation();
     const navigate = useNavigate();

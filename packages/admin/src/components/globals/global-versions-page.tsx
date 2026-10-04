@@ -7,8 +7,10 @@
 
 import type { UseAdminGlobalResult } from '../../hooks/use-admin-global';
 import { useNavigate } from '@tanstack/react-router';
+import { defaultContentLocale } from 'astromech/shared';
 import React from 'react';
 import { useTranslation } from 'react-i18next';
+import adminConfig from 'virtual:astromech/admin-config';
 import {
     globalMutations,
     globalVersionQueryOptions,
@@ -17,7 +19,6 @@ import {
 import { useAdminGlobal } from '../../hooks/use-admin-global';
 import { useAdminMutation } from '../../hooks/use-admin-mutation';
 import { resolveLabel } from '../../i18n/labels';
-import { defaultContentLocale } from '../../utilities/content-locale';
 import { globalBasePath, globalEditPath } from '../../utilities/global-admin-path';
 import { NotFoundPage } from '../layout/not-found-page';
 import { VersionHistory } from '../versions/version-history';
@@ -44,7 +45,7 @@ function GlobalVersionsBody({
     locale: string | undefined;
 }): React.ReactElement {
     const { key, config, basePath, namespace } = global;
-    const locale = localeProp ?? defaultContentLocale();
+    const locale = localeProp ?? defaultContentLocale(adminConfig);
     const editPath = globalEditPath(basePath, { locale });
     const { t } = useTranslation();
     const navigate = useNavigate();

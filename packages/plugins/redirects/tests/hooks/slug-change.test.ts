@@ -386,6 +386,45 @@ describe('slug-change hook and what was live', () => {
 
         expect(await rules()).toEqual([['/blog/a', '/blog/b']]);
     });
+
+    it('records nothing when a staged slug change is merged into an unpublished entry', async () => {
+        const post = await app.entries.create({ type: 'post', data: { title: 'A' } });
+        await app.entries.createStaged({ type: 'post', id: post.id });
+        await app.entries.update({
+            type: 'post',
+            id: post.id,
+            staged: true,
+            data: { slug: 'b' },
+        });
+
+        const merged = await app.entries.mergeStaged({ type: 'post', id: post.id });
+
+        expect(merged.slug).toBe('b');
+        expect(await rules()).toEqual([]);
+    });
+
+    it('records a redirect to the merged slug when the merge made it unique', async () => {
+        const post = await app.entries.create({
+            type: 'post',
+            data: { title: 'A', status: 'published' },
+        });
+        await app.entries.createStaged({ type: 'post', id: post.id });
+        await app.entries.update({
+            type: 'post',
+            id: post.id,
+            staged: true,
+            data: { slug: 'b' },
+        });
+        await app.entries.create({
+            type: 'post',
+            data: { title: 'B', status: 'published' },
+        });
+
+        const merged = await app.entries.mergeStaged({ type: 'post', id: post.id });
+
+        expect(merged.slug).toBe('b-2');
+        expect(await rules()).toEqual([['/blog/a', '/blog/b-2']]);
+    });
 });
 
 describe('slug-change hook in a locale other than the default', () => {

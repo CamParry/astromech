@@ -3,6 +3,7 @@ import type { VisibilityShape } from '@/content/visibility';
 import type { Field, QueryResult, ReferencesFilter, ResolvedConfig } from '@/types/index';
 import { z } from '@hono/zod-openapi';
 import { listKeys, queryPage, queryResultSchema } from '@/content/list';
+import { hasStatuses } from '@/content/resources';
 import { applyVisibility } from '@/content/visibility';
 import { resolveEntryType } from '@/entries/entry-types';
 import { flattenEntryFields } from '@/fields/flatten';
@@ -69,6 +70,7 @@ export const queryEntries = defineServiceMethod({
                 applyVisibility(entry, {
                     shape,
                     fields: fieldsOf(entry.type),
+                    statuses: hasStatuses('entry', config, entry.type),
                     audience: { now },
                 }) ?? []
         );

@@ -48,6 +48,8 @@ export {
     resolveEntryLocalePath,
 } from '@/entries/entry-url';
 export type { UrlEntry } from '@/entries/entry-url';
+/** Whether a public read returns a row, so a plugin acts only on what is live. */
+export { isPubliclyVisible } from '@/content/visibility';
 export { defaultImageWidths } from '@/media/image-widths';
 export { buildImageAttrs } from '@/media/serving/image/build-image-attrs';
 export type {

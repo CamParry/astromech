@@ -7,7 +7,7 @@ import type { UseAdminEntryTypeResult } from '../../hooks/use-admin-entry-type';
 import type { Entry } from 'astromech';
 import { Menu } from '@base-ui/react/menu';
 import { useNavigate } from '@tanstack/react-router';
-import { resolveEntryUrl } from 'astromech/shared';
+import { defaultContentLocale, resolveEntryLocaleUrl } from 'astromech/shared';
 import { Copy, ExternalLink, Eye, MoreHorizontal, Trash2 } from 'lucide-react';
 import React from 'react';
 import { useTranslation } from 'react-i18next';
@@ -20,7 +20,6 @@ import { useAdminMutation } from '../../hooks/use-admin-mutation';
 import { entryEditResource, useEditController } from '../../hooks/use-edit-controller';
 import { EntryNamespaceProvider } from '../../i18n/entry-namespace';
 import { resolveForm } from '../../rendering/resolve';
-import { defaultContentLocale } from '../../utilities/content-locale';
 import { formatDatetime } from '../../utilities/dates';
 import { entryEditPath, entryTypeBasePath } from '../../utilities/entry-admin-path';
 import { FieldColumn, FieldsForm } from '../forms/fields-form';
@@ -66,7 +65,7 @@ export function EntryEditPage({
     staged = false,
 }: EntryEditPageProps): React.ReactElement {
     const entryType = useAdminEntryType(type);
-    const resolvedLocale = locale ?? defaultContentLocale();
+    const resolvedLocale = locale ?? defaultContentLocale(adminConfig);
     if (entryType === null) return <NotFoundPage path={entryTypeBasePath(type)} />;
     return (
         <EntryEditBody
@@ -128,7 +127,9 @@ function EntryEditBody({
     const revokeToken = useAdminMutation(mutations.revokePreviewToken);
 
     const previewUrl =
-        config.url !== null && entry !== null ? resolveEntryUrl(config.url, entry) : null;
+        config.url !== null && entry !== null
+            ? resolveEntryLocaleUrl(config.url, entry, adminConfig)
+            : null;
     // One surface control: a published entry links to its live page; anything
     // else opens a tokenised preview of the last saved state.
     const showViewLive =
@@ -194,7 +195,7 @@ function EntryEditBody({
                                 basePath={basePath}
                                 locales={entry.locales}
                                 allLocales={adminConfig.locales}
-                                defaultLocale={defaultContentLocale()}
+                                defaultLocale={defaultContentLocale(adminConfig)}
                                 confirmDiscard={controller.confirmDiscard}
                                 compact
                             />
@@ -309,6 +310,7 @@ function EntryEditBody({
                                 {hasStatuses && !isStaged && (
                                     <StatusField
                                         form={form}
+                                        publishedAtError={controller.publishedAtError}
                                         savedPublishedAt={entry?.publishedAt}
                                         disabled={isReadOnly}
                                         canPublish={controller.canPublish}

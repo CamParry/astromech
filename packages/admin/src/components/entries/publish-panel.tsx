@@ -10,6 +10,7 @@ import { useTranslation } from 'react-i18next';
 import { formatDatetime } from '../../utilities/dates';
 import { FieldControlProvider } from '../fields/field-control-context';
 import { Input } from '../ui/input';
+import { Stack } from '../ui/page';
 import { Panel } from '../ui/panel';
 import { Select } from '../ui/select';
 import { ENTRY_STATUS_LABEL_KEYS } from '../ui/status-badge';
@@ -57,7 +58,7 @@ export function PublishPanel({
 
     return (
         <Panel title={t('entries.statusPanel')}>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+            <Stack gap={4}>
                 <div className="am-field">
                     <label className="am-field-label" htmlFor={statusId}>
                         {t('entries.statusField')}
@@ -109,7 +110,7 @@ export function PublishPanel({
                         <p className="am-text-sm am-text-muted">{formattedPublishedAt}</p>
                     </div>
                 )}
-            </div>
+            </Stack>
         </Panel>
     );
 }

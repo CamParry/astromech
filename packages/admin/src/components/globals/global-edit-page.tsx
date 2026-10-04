@@ -6,6 +6,7 @@
 
 import type { UseAdminGlobalResult } from '../../hooks/use-admin-global';
 import { useNavigate } from '@tanstack/react-router';
+import { defaultContentLocale } from 'astromech/shared';
 import React from 'react';
 import { useTranslation } from 'react-i18next';
 import adminConfig from 'virtual:astromech/admin-config';
@@ -14,7 +15,6 @@ import { useAdminGlobal } from '../../hooks/use-admin-global';
 import { globalEditResource, useEditController } from '../../hooks/use-edit-controller';
 import { EntryNamespaceProvider } from '../../i18n/entry-namespace';
 import { resolveLabel } from '../../i18n/labels';
-import { defaultContentLocale } from '../../utilities/content-locale';
 import { globalBasePath, globalEditPath } from '../../utilities/global-admin-path';
 import { StatusField } from '../entries/entry-form-fields';
 import { EditActions, EditBanners, VersionsLink } from '../entries/staging-controls';
@@ -52,7 +52,7 @@ export function GlobalEditPage({
     staged = false,
 }: GlobalEditPageProps): React.ReactElement {
     const global = useAdminGlobal(globalKey);
-    const resolvedLocale = locale ?? defaultContentLocale();
+    const resolvedLocale = locale ?? defaultContentLocale(adminConfig);
     if (global === null) return <NotFoundPage path={globalBasePath(globalKey)} />;
     return (
         <GlobalEditBody
@@ -114,7 +114,7 @@ function GlobalEditBody({
                                 basePath={basePath}
                                 locales={record?.locales ?? [locale]}
                                 allLocales={adminConfig.locales}
-                                defaultLocale={defaultContentLocale()}
+                                defaultLocale={defaultContentLocale(adminConfig)}
                                 // A locale with no row renders an empty form,
                                 // and its first save writes the row, so the
                                 // switch is a navigation, not a mutation.
@@ -142,6 +142,7 @@ function GlobalEditBody({
                                 {capabilities.statuses && !isStaged && (
                                     <StatusField
                                         form={form}
+                                        publishedAtError={controller.publishedAtError}
                                         savedPublishedAt={record?.publishedAt}
                                         disabled={isReadOnly}
                                         canPublish={controller.canPublish}
