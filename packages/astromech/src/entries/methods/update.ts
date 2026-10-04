@@ -14,7 +14,8 @@ import { entrySchema, updateEntryPayloadSchema } from '../schema';
 export const updateEntries = defineServiceMethod({
     summary:
         'Update an entry. Fields merge: omitted fields keep their current ' +
-        'value, and arrays are replaced whole.',
+        'value, and arrays are replaced whole. Naming `status` or ' +
+        '`publishedAt` also needs the publish permission.',
     input: oneOrMany(
         z.strictObject({
             type: z.string(),

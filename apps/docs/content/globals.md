@@ -206,6 +206,10 @@ await app.globals.update({
 });
 ```
 
+An `update` that names `status` or `publishedAt` needs `global:<key>:publish`
+as well as `global:<key>:update`, whatever the value, as `publish`, `unpublish`
+and `schedule` do. A role without `publish` saves by leaving both out.
+
 Each locale publishes independently. Publishing and scheduling check the stored
 fields as a publish, since a scheduled global goes live unattended: a `required`
 field left empty refuses the call with a 422 naming it. A staged write takes no
@@ -264,7 +268,8 @@ staged edit does not move the global's until the merge.
 Each global derives its own permissions from its key:
 
 - `global:<key>:read`, `global:<key>:update`, `global:<key>:publish` for a host
-  global.
+  global. `publish` covers the status methods and any `update` that names
+  `status` or `publishedAt`.
 - `plugin:<namespace>:global:<key>:<action>` for a plugin's.
 
 Grant them with `globalPermissions`:
