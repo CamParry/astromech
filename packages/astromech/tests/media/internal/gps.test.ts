@@ -421,6 +421,40 @@ describe('removeGpsMetadata', () => {
         expect(bytes).toEqual(original);
     });
 
+    it('removes the GPS IFD from a HEIF EXIF item inside an earlier item whose TIFF header is broken', async () => {
+        const item = concat(u32(6), latin1('Exif\0\0'), exifTiff(false));
+        // A 0 offset to the TIFF header, then 8 bytes that are not one.
+        const payload = concat(u32(0), latin1('notatiff'), item);
+        const bytes = heifWithItems('Exif', payload, [
+            { offset: 0, length: payload.length },
+            { offset: 12, length: item.length },
+        ]);
+        expect(holdsLatitude(bytes)).toBe(true);
+
+        await removeGpsMetadata(bytes);
+
+        expect(holdsLatitude(bytes)).toBe(false);
+    });
+
+    it.each([
+        ['0, to the end of the file', 0],
+        ['past the end of the file', 0xffff_ff00],
+    ])(
+        'removes the GPS IFD from two HEIF EXIF items when the first one’s length is %s',
+        async (_, length) => {
+            const item = concat(u32(6), latin1('Exif\0\0'), exifTiff(false));
+            const bytes = heifWithItems('Exif', concat(item, item), [
+                { offset: 0, length },
+                { offset: item.length, length: item.length },
+            ]);
+            expect(holdsLatitude(bytes)).toBe(true);
+
+            await removeGpsMetadata(bytes);
+
+            expect(holdsLatitude(bytes)).toBe(false);
+        }
+    );
+
     it('finishes quickly on an iloc box of 65535 items of 65535 empty extents, leaving the file unchanged', async () => {
         // Offset, length, base offset and index sizes are all 0, so no extent takes any bytes.
         const item = new Uint8Array([0, 2, 0, 0, 0xff, 0xff]);
@@ -503,33 +537,40 @@ describe('removeGpsMetadata', () => {
         expect(tags).not.toContain(TAG_GPS_IFD);
     }, 30_000);
 
-    it('finishes quickly on 3000 HEIF EXIF items whose IFD0s overlap, two bytes apart', async () => {
-        // Each item is its own TIFF header, pointing into one run of 0xff bytes,
-        // which reads as an IFD0 of 65535 entries wherever it starts.
-        const count = 3000;
-        const headers = new Uint8Array(count * 12);
-        const view = new DataView(headers.buffer);
-        for (let i = 0; i < count; i++) {
-            const at = i * 12;
-            // A 0 offset to the TIFF header, then the header, its IFD0 2 * i bytes into the run.
-            headers.set(latin1('MM\0*'), at + 4);
-            view.setUint32(at + 8, headers.length + 2 * i - (at + 4));
-        }
-        const run = new Uint8Array(65535 * 12 + 2 * count + 16).fill(0xff);
-        const payload = concat(headers, run);
-        const extents = Array.from({ length: count }, (_, i) => ({
-            offset: i * 12,
-            length: payload.length - i * 12,
-        }));
-        const bytes = heifWithItems('Exif', payload, extents);
-        const original = bytes.slice();
+    it.each([
+        ['to the end of the run', false],
+        ['0, to the end of the file', true],
+    ])(
+        'finishes quickly on 10000 HEIF EXIF items whose IFD0s overlap, two bytes apart, each of length %s',
+        async (_, toEndOfFile) => {
+            // Each item is its own TIFF header, pointing into one run of 0xff bytes,
+            // which reads as an IFD0 of 65535 entries wherever it starts.
+            const count = 10_000;
+            const headers = new Uint8Array(count * 12);
+            const view = new DataView(headers.buffer);
+            for (let i = 0; i < count; i++) {
+                const at = i * 12;
+                // A 0 offset to the TIFF header, then the header, its IFD0 2 * i bytes into the run.
+                headers.set(latin1('MM\0*'), at + 4);
+                view.setUint32(at + 8, headers.length + 2 * i - (at + 4));
+            }
+            const run = new Uint8Array(65535 * 12 + 2 * count + 16).fill(0xff);
+            const payload = concat(headers, run);
+            const extents = Array.from({ length: count }, (_, i) => ({
+                offset: i * 12,
+                length: toEndOfFile ? 0 : payload.length - i * 12,
+            }));
+            const bytes = heifWithItems('Exif', payload, extents);
+            const original = bytes.slice();
 
-        const started = performance.now();
-        await removeGpsMetadata(bytes);
+            const started = performance.now();
+            await removeGpsMetadata(bytes);
 
-        expect(performance.now() - started).toBeLessThan(3000);
-        expect(bytes).toEqual(original);
-    }, 30_000);
+            expect(performance.now() - started).toBeLessThan(3000);
+            expect(bytes).toEqual(original);
+        },
+        60_000
+    );
 
     it('blanks the values of ImageMagick’s exif:GPS text chunks and keeps the others', async () => {
         const bytes = withPngChunks(await plainPng(), [

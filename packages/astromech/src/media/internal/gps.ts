@@ -81,6 +81,9 @@ const CRC_TABLE = buildCrcTable();
 /** Where a run of bytes starts and ends. */
 type Range = { start: number; end: number };
 
+/** Where a HEIF item's bytes lie; `toEnd` when its length is 0 or runs past its data, so it ends where its data does. */
+type ItemLocation = Range & { toEnd: boolean };
+
 /** How many more bytes the compressed text in one file may inflate to. */
 type Budget = { left: number };
 
@@ -382,10 +385,10 @@ function removeFromHeif(view: DataView, bytes: Uint8Array): void {
     if (items.size === 0) return;
     const idat = findBox(view, meta.start + 4, meta.end, IDAT);
     const xmp: Range[] = [];
-    const exif: Range[] = [];
-    for (const [id, range] of readItemLocations(view, iloc, idat, items)) {
-        if (range.start < 0 || range.end > bytes.length) continue;
-        (items.get(id) === 'xmp' ? xmp : exif).push(range);
+    const exif: ItemLocation[] = [];
+    for (const [id, location] of readItemLocations(view, iloc, idat, items)) {
+        if (location.start >= location.end) continue;
+        (items.get(id) === 'xmp' ? xmp : exif).push(location);
     }
 
     // Many items may share bytes, so each byte of XMP is read once.
@@ -395,13 +398,33 @@ function removeFromHeif(view: DataView, bytes: Uint8Array): void {
 
     // An Exif item is read only inside its own bytes, so skipping each one that
     // overlaps an item already read reads each byte about once.
+    endAtNextStart(exif);
     exif.sort((a, b) => a.start - b.start || b.end - a.end);
     let readTo = 0;
     for (const { start, end } of exif) {
         if (start < readTo || start + 4 > end) continue;
-        readTo = end;
         // An Exif item opens with the offset from after itself to the TIFF header.
-        removeFromExif(view, bytes, start + 4 + view.getUint32(start), end);
+        const tiff = readExifTiff(view, start + 4 + view.getUint32(start), end);
+        if (!tiff) continue;
+        readTo = end;
+        removeGpsIfd(view, bytes, tiff);
+    }
+}
+
+/**
+ * Cut short at the next item's start each of `items` that runs to the end of
+ * its data, so it neither hides the items after it nor is read again by each of them.
+ */
+function endAtNextStart(items: ItemLocation[]): void {
+    items.sort((a, b) => a.start - b.start);
+    let nextStart = Infinity;
+    let laterStart = Infinity;
+    for (const item of [...items].reverse()) {
+        if (item.start < laterStart) {
+            nextStart = laterStart;
+            laterStart = item.start;
+        }
+        if (item.toEnd) item.end = Math.min(item.end, nextStart);
     }
 }
 
@@ -453,15 +476,16 @@ function isPlainXmpItem(bytes: Uint8Array, start: number, end: number): boolean 
 /**
  * Where each of `items` is stored, from the `iloc` box: a file offset, or an
  * offset into the `idat` box. An item in more than one extent, or in another
- * file, is left out.
+ * file, is left out. An extent whose length is 0 or runs past its data ends
+ * where its data does.
  */
 function readItemLocations(
     view: DataView,
     iloc: Box,
     idat: Box | undefined,
     items: Map<number, unknown>
-): Map<number, Range> {
-    const locations = new Map<number, Range>();
+): Map<number, ItemLocation> {
+    const locations = new Map<number, ItemLocation>();
     const version = iloc.start < iloc.end ? view.getUint8(iloc.start) : 0;
     if (iloc.start + 8 > iloc.end || version > 2) return locations;
     const offsetSize = view.getUint8(iloc.start + 4) >> 4;
@@ -495,16 +519,11 @@ function readItemLocations(
         if (!items.has(id) || extentCount !== 1 || dataReferenceIndex !== 0) continue;
         const offset = readSizedNumber(view, extent + indexSize, offsetSize);
         const length = readSizedNumber(view, extent + indexSize + offsetSize, lengthSize);
-        if (method === 0) {
-            const start = baseOffset + offset;
-            locations.set(id, {
-                start,
-                end: length === 0 ? view.byteLength : start + length,
-            });
-        } else if (method === 1 && idat) {
-            const start = idat.start + baseOffset + offset;
-            locations.set(id, { start, end: length === 0 ? idat.end : start + length });
-        }
+        const data = method === 0 ? { start: 0, end: view.byteLength } : idat;
+        if (method > 1 || !data) continue;
+        const start = data.start + baseOffset + offset;
+        const toEnd = length === 0 || start + length > data.end;
+        locations.set(id, { start, end: toEnd ? data.end : start + length, toEnd });
     }
     return locations;
 }
@@ -526,12 +545,13 @@ function removeFromExif(
     start: number,
     end: number
 ): boolean {
-    const tiff = readTiffHeader(
-        view,
-        isExifIdentifier(view, start) ? start + 6 : start,
-        end
-    );
+    const tiff = readExifTiff(view, start, end);
     return tiff ? removeGpsIfd(view, bytes, tiff) : false;
+}
+
+/** The TIFF header of the EXIF block between `start` and `end`, which may open with `Exif\0\0`. */
+function readExifTiff(view: DataView, start: number, end: number): Tiff | null {
+    return readTiffHeader(view, isExifIdentifier(view, start) ? start + 6 : start, end);
 }
 
 /** Zero every GPS IFD in a TIFF structure and remove IFD0's pointers to them. */

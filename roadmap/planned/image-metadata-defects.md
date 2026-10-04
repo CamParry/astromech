@@ -76,10 +76,12 @@ decoded image, which is what the variants are made from.
   host's request limit.
 - **Some GPS data is out of reach of in-place removal.** A HEIF `Exif` item
   stored in several extents or by construction method 2 (an item reference) is
-  left alone, as is a HEIF `Exif` item whose bytes overlap an `Exif` item
-  earlier in the file, a GPS pointer in a TIFF page IFD after the first, XMP in
-  a GIF, an XMP property split across two extended-XMP segments in a JPEG, and
-  a location in a camera maker's MakerNotes.
+  left alone, as is a HEIF `Exif` item that starts inside the declared bytes
+  of an earlier `Exif` item with a valid TIFF header (an earlier item of
+  length 0, or one running past its data, ends where the next one starts), a
+  GPS pointer in a TIFF page IFD after the first, XMP in a GIF, an XMP property
+  split across two extended-XMP segments in a JPEG, and a location in a camera
+  maker's MakerNotes.
 - **A camera raw declared as another type is buffered whole.** A TIFF-based
   raw (DNG, CR2, NEF, ARW) uploaded with a non-image content type is read
   into memory for GPS removal, on top of the copy `formData()` already holds,
