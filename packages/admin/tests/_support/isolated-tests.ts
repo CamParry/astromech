@@ -44,6 +44,7 @@ export const isolatedTests = [
     'tests/components/layout/topbar.test.tsx',
     'tests/components/ui/command-palette.test.tsx',
     'tests/forgot-password-form.test.tsx',
+    'tests/login-access-denied.test.tsx',
     'tests/login-setup-redirect.test.ts',
     'tests/logout-route.test.ts',
     'tests/query-client.test.tsx',

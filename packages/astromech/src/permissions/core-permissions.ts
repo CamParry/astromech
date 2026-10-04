@@ -30,7 +30,7 @@ export const CORE_PERMISSIONS = defineAbsolutePermissions({
     'users:create': { label: 'Create users' },
     'users:update': {
         label: 'Update users',
-        description: "Edit a user's profile, role and password.",
+        description: "Edit a user's profile, email and role.",
     },
     'users:delete': { label: 'Delete users' },
     'entry:read:full': {

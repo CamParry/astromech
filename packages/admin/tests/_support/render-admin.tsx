@@ -6,6 +6,7 @@
 
 import type { AuthUser } from '@/admin/context/auth';
 import type { PluginUiIdentity } from '@/admin/context/plugin';
+import type { RouterContext } from '@/admin/router';
 import type { RouteComponent } from '@tanstack/react-router';
 import type { RenderHookResult, RenderResult } from '@testing-library/react';
 import type { UserEvent } from '@testing-library/user-event';
@@ -13,7 +14,7 @@ import type { ReactElement, ReactNode } from 'react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import {
     createMemoryHistory,
-    createRootRoute,
+    createRootRouteWithContext,
     createRoute,
     createRouter,
     Outlet,
@@ -49,12 +50,15 @@ export type RenderAdminOptions = {
 
 /**
  * One route of a test's own route tree, for UI that reads route params or a
- * validated search. Its component reads them with `useParams({ strict: false })`.
+ * validated search, or a page behind an app route's guard. Its component reads
+ * params with `useParams({ strict: false })`.
  */
 export type TestRoute = {
     path: string;
     component: RouteComponent;
     validateSearch?: (search: Record<string, unknown>) => Record<string, unknown>;
+    /** A guard, given the router context the app's router has. */
+    beforeLoad?: (arg: { context: RouterContext }) => Promise<void>;
 };
 
 /** What `renderAdmin` returns. */
@@ -95,7 +99,7 @@ export function renderAdmin(
     options: RenderAdminOptions = {}
 ): RenderAdminResult {
     const queryClient = seededClient(options);
-    const rootRoute = createRootRoute({
+    const rootRoute = createRootRouteWithContext<RouterContext>()({
         component: () => (
             <AppProviders>
                 <Outlet />
@@ -107,6 +111,7 @@ export function renderAdmin(
     ).map((route) => createRoute({ getParentRoute: () => rootRoute, ...route }));
     const router = createRouter({
         routeTree: rootRoute.addChildren(routes),
+        context: { queryClient },
         history: createMemoryHistory({ initialEntries: [options.url ?? '/'] }),
     });
 
