@@ -50,7 +50,7 @@ a failing test first.
 - [x] Public reads drop undeclared keys.
 - [x] Sync cron schedules from config on boot; fix the Cloudflare docs.
 - [x] Constant-time comparison of the cron secret.
-- [ ] A result and error on each cron run.
+- [x] A result and error on each cron run.
 - [ ] Bundle migration names so Workers can check them.
 - [ ] `validate` reads staged rows apart, globals included.
 - [ ] A remote guard that means something on D1, and docs for reaching

@@ -13,7 +13,9 @@ converges on the same contract, a frequent poke into core's due-evaluation,
 which fires only the jobs whose schedule is due. Each tick first writes every
 registered job's schedule to the database, keeping when it last ran, so a
 changed schedule takes effect on the first tick after the deploy. A job you
-remove keeps its row and is skipped.
+remove keeps its row and is skipped. After each run the row records when the
+job ran, `last_result` (`ok`, or `error` when the job threw) and `last_error`,
+the thrown error's message, which a later successful run clears.
 
 That is why trigger cadence and job cadence are independent: ticking every
 minute does not run every job every minute, it gives due-evaluation a

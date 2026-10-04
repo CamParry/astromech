@@ -133,7 +133,7 @@ The admin runs in the browser and reaches core through three entries only: `astr
 
 ## Scheduler
 
-A job's schedule comes from config: each tick syncs it into the `_astromech_cron` table, which also holds each job's run state. A `SchedulerDriver` only triggers a tick; `cron/runner.ts` decides which jobs are due and runs each in its own try/catch, with the system `AppContext`. The table is also the lock against concurrent ticks.
+A job's schedule comes from config: each tick syncs it into the `_astromech_cron` table, which also holds each job's run state. A `SchedulerDriver` only triggers a tick; `cron/runner.ts` decides which jobs are due and runs each in its own try/catch, with the system `AppContext`, recording on the job's row when it ran, its result (`ok` or `error`) and the error message. The table is also the lock against concurrent ticks.
 
 ## Public entry points
 

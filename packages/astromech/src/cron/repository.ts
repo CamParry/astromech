@@ -60,7 +60,7 @@ function createCronRepository() {
     async function recordRunAndRelease(
         name: string,
         token: Date,
-        run: { lastRun: Date; nextRun: Date | null }
+        run: Pick<CronRow, 'lastRun' | 'lastResult' | 'lastError' | 'nextRun'>
     ): Promise<void> {
         await repository.updateMany({ name, lock: token }, { ...run, lock: null });
     }

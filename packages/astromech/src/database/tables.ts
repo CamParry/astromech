@@ -123,6 +123,9 @@ export const relationshipsTable = defineTable(
 export type RelationshipRow = TableSelect<typeof relationshipsTable>;
 export type NewRelationshipRow = TableInsert<typeof relationshipsTable>;
 
+/** How a cron run ended: `ok`, or `error` when its handler threw. */
+export const CRON_RESULTS = ['ok', 'error'] as const;
+
 /**
  * Scheduler state: each job's schedule, synced from config every tick, its run
  * state and the multi-instance lock. `lock` is a claim-EXPIRY timestamp; a
@@ -133,6 +136,10 @@ export const cronTable = defineTable('_astromech_cron', ({ col }) => ({
     schedule: col.text({ notNull: true }),
     enabled: col.boolean({ notNull: true, default: true }),
     lastRun: col.timestamp(),
+    /** How the last run ended; null until a job first runs. */
+    lastResult: col.enum(CRON_RESULTS),
+    /** The last run's error message, null when it succeeded. */
+    lastError: col.text(),
     nextRun: col.timestamp(),
     lock: col.timestamp(),
 }));

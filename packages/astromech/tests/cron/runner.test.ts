@@ -256,6 +256,28 @@ describe('a failing job', () => {
         expect(await cronRow('test-job')).toMatchObject({
             lock: null,
             nextRun: MINUTE_ON,
+            lastRun: NOW,
+            lastResult: 'error',
+            lastError: 'boom',
+        });
+    });
+
+    it('clears the error once a later run succeeds', async () => {
+        countedJob('test-job');
+        await runDue(SEED, systemAppContext());
+        await setCronRow('test-job', {
+            nextRun: MINUTE_AGO,
+            lock: null,
+            lastResult: 'error',
+            lastError: 'boom',
+        });
+
+        await onTick(NOW, systemAppContext());
+
+        expect(await cronRow('test-job')).toMatchObject({
+            lastRun: NOW,
+            lastResult: 'ok',
+            lastError: null,
         });
     });
 });
