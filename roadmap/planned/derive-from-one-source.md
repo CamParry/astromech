@@ -17,7 +17,7 @@ Each item removes a hand-kept copy that can drift from the thing it copies.
 ## Decided (2026-10-02)
 
 - **Planned as written.** Methods declaring their errors lands after the caller
-  errors in `planned/write-race-and-data-loss-defects.md`, since it builds on
+  errors in `in-progress/write-race-and-data-loss-defects.md`, since it builds on
   those `ApiError` classes.
 
 ## The work
