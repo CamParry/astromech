@@ -6,6 +6,7 @@
 
 import type { Auth, BetterAuthOptions } from 'better-auth';
 import { APIError, betterAuth } from 'better-auth';
+import { createAuthMiddleware } from 'better-auth/api';
 import { SIGN_UP_CLOSED } from '@/auth/setup';
 import { getConfig } from '@/config/registry';
 import { getDatabaseDriverOrThrow } from '@/database/driver-registry';
@@ -111,6 +112,14 @@ function buildAuth(): Auth<BetterAuthOptions> {
             fields: { lastRequest: 'last_request' },
             customRules: RATE_LIMIT_RULES,
         },
+        hooks: {
+            // A password change signs out every other session whatever the
+            // client asks, so a stolen session does not outlive the change.
+            before: createAuthMiddleware(async (ctx) => {
+                if (ctx.path !== '/change-password') return;
+                return { context: { body: { ...ctx.body, revokeOtherSessions: true } } };
+            }),
+        },
         databaseHooks: {
             user: {
                 create: {
@@ -177,6 +186,7 @@ function buildAuth(): Auth<BetterAuthOptions> {
         },
         emailAndPassword: {
             enabled: true,
+            revokeSessionsOnPasswordReset: true,
             sendResetPassword: async ({
                 user,
                 url,
@@ -192,8 +202,16 @@ function buildAuth(): Auth<BetterAuthOptions> {
                     await import('@/email/components/password-reset');
                 const { getEmailOverride } = await import('@/email/email-overrides');
                 const driver = getEmailDriver();
+                // The link signs in as the user, so it reaches the log only in
+                // development, where the log is the developer's own terminal.
                 if (!driver) {
-                    log.info(`Password reset URL for ${user.email}: ${url}`);
+                    if (resolveNodeEnv() === 'development') {
+                        log.info(`Password reset URL for ${user.email}: ${url}`);
+                    } else {
+                        log.warn(
+                            `No email driver is configured, so the password reset email to ${user.email} was not sent. Set \`email\` in astromech.config.ts.`
+                        );
+                    }
                     return;
                 }
                 const subject = 'Reset your password';

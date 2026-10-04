@@ -1,7 +1,7 @@
 /**
- * The plugin's two hook events and their payloads. `forms:beforeSubmit` gates —
- * a subscriber that throws aborts the submission with nothing persisted.
- * `forms:afterSubmit` runs post-commit and is swallow-and-logged by core.
+ * The plugin's two hook events and their payloads. A `forms:beforeSubmit`
+ * subscriber that throws refuses the submission with nothing stored; one on
+ * `forms:afterSubmit` runs once the row is stored, and its throw fails the call.
  */
 
 import type { SubmissionMeta } from '../types';
@@ -15,7 +15,16 @@ export type FormsBeforeSubmitPayload = {
     data: Record<string, unknown>;
     /** Spam-provider token supplied by the client, if any. */
     token?: string;
+    /**
+     * The connecting address the HTTP transport trusts (`ctx.clientAddress`).
+     * Absent for an in-process caller or where no trusted source exists.
+     */
+    clientAddress?: string;
+    /** Caller-supplied metadata: stored, never trusted. */
     meta?: SubmissionMeta;
 };
 
-export type FormsAfterSubmitPayload = FormsBeforeSubmitPayload & { submissionId: string };
+/** The stored submission's payload: the `forms:beforeSubmit` one without `clientAddress`. */
+export type FormsAfterSubmitPayload = Omit<FormsBeforeSubmitPayload, 'clientAddress'> & {
+    submissionId: string;
+};

@@ -6,17 +6,19 @@
  *   is NOT the "never mock the DB" rule.
  * - `spamHook` — the `forms:beforeSubmit` subscriber that turns a bad verdict
  *   into a throw (the gate), tested against a hand-written `SpamProvider` stub.
- *
- * These are plain unit tests with no plugin registration or DB, so they
- * import the source files directly rather than through the package's public
- * entry.
+ * - the address sent as `remoteip`, through a registered plugin over HTTP.
  */
 
 import type { FormsBeforeSubmitPayload } from '../src/hooks/events';
+import type { FormsOptions } from '../src/index';
 import type { SpamProvider } from '../src/spam/types';
+import type { PluginTestApp } from '@tests/plugin-app';
 import type { PluginContext } from 'astromech';
+import { makeTestConfig } from '@tests/harness';
+import { createPluginTestApp } from '@tests/plugin-app';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { BEFORE_SUBMIT } from '../src/hooks/events';
+import { forms } from '../src/index';
 import { spamHook } from '../src/spam/hook';
 import { recaptcha } from '../src/spam/providers/recaptcha';
 import { turnstile } from '../src/spam/providers/turnstile';
@@ -265,13 +267,88 @@ describe('spamHook', () => {
         expect(verify).not.toHaveBeenCalled();
     });
 
-    it('passes the token and ip through to verify', async () => {
+    it('passes the token and the trusted address through to verify', async () => {
         const verify = vi.fn().mockResolvedValue({ ok: true });
         const hook = spamHook(stubProvider(verify));
         const handler = hook.handler as SpamHandler;
 
-        await handler(payloadWith({ meta: { ip: '1.2.3.4' } }), ctx);
+        await handler(
+            payloadWith({ clientAddress: '1.2.3.4', meta: { ip: '203.0.113.66' } }),
+            ctx
+        );
 
-        expect(verify).toHaveBeenCalledWith('a-token', { ip: '1.2.3.4' });
+        expect(verify).toHaveBeenCalledWith('a-token', { clientAddress: '1.2.3.4' });
+    });
+});
+
+describe('the address sent to the spam provider', () => {
+    const VERIFY_URL = 'https://challenges.cloudflare.com/turnstile/v0/siteverify';
+
+    let app: PluginTestApp<'forms'>;
+
+    /** The `remoteip` of each siteverify request, `null` where none was sent. */
+    let sentAddresses: (string | null)[];
+
+    async function setup(security: { trustProxy: boolean }): Promise<void> {
+        const options: FormsOptions = {
+            spam: turnstile({ siteKey: 'site-key', secretKey: 'super-secret' }),
+            rateLimit: false,
+        };
+        app = await createPluginTestApp('forms', {
+            ...makeTestConfig(),
+            security,
+            plugins: [forms(options)],
+        });
+        await app.entries.create({
+            type: 'forms/form',
+            data: {
+                title: 'Contact',
+                slug: 'contact',
+                status: 'published',
+                fields: {
+                    enabled: true,
+                    fields: [{ _type: 'text', _id: 'b1', name: 'name', label: 'Name' }],
+                },
+            },
+        });
+        sentAddresses = [];
+        vi.stubGlobal('fetch', async (url: string, init: RequestInit) => {
+            expect(url).toBe(VERIFY_URL);
+            const body = new URLSearchParams(String(init.body));
+            sentAddresses.push(body.get('remoteip'));
+            return jsonResponse({ success: true });
+        });
+    }
+
+    /** Submit with a spoofed `meta.ip` and `forwardedFor` as `x-forwarded-for`. */
+    async function submit(forwardedFor: string): Promise<unknown> {
+        const response = await app.request('POST', '/plugins/forms/submit', {
+            body: {
+                slug: 'contact',
+                data: { name: 'Ada' },
+                token: 'a-token',
+                meta: { ip: '203.0.113.66' },
+            },
+            headers: { 'x-forwarded-for': forwardedFor },
+        });
+        return response.json();
+    }
+
+    it('sends the address the proxy vouches for, never the caller’s own', async () => {
+        await setup({ trustProxy: true });
+
+        const result = await submit('198.51.100.1, 192.0.2.10');
+
+        expect(result).toEqual({ ok: true, id: expect.any(String) });
+        expect(sentAddresses).toEqual(['192.0.2.10']);
+    });
+
+    it('sends no address when the transport has no trusted one', async () => {
+        await setup({ trustProxy: false });
+
+        const result = await submit('198.51.100.1');
+
+        expect(result).toEqual({ ok: true, id: expect.any(String) });
+        expect(sentAddresses).toEqual([null]);
     });
 });

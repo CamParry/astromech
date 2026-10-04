@@ -6,7 +6,7 @@ Defender; decided the same day. **Target: 1.0.**
 
 Prerequisites: `roadmap/completed/auth-rate-limit-defects.md` (one trusted client
 address and database-backed limits) and
-`roadmap/planned/account-security-defects.md`. Suspension, two-factor sign-in
+`roadmap/completed/account-security-defects.md`. Suspension, two-factor sign-in
 and API keys are `roadmap/planned/user-suspension.md`,
 `roadmap/planned/two-factor-and-passkeys.md` and `roadmap/planned/api-keys.md`.
 Opt-in policies are `roadmap/proposed/security-plugin.md`. The line between them

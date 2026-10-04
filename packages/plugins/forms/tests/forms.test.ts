@@ -355,6 +355,38 @@ describe('forms.submit — the beforeSubmit gate', () => {
     });
 });
 
+describe('forms.submit — the afterSubmit payload', () => {
+    it('leaves out the client address the beforeSubmit payload carries', async () => {
+        const before: unknown[] = [];
+        const after: unknown[] = [];
+        const probe: PluginDefinition = {
+            package: '@astromech/probe',
+            hooks: [
+                defineHook('forms:beforeSubmit', (payload) => void before.push(payload)),
+                defineHook('forms:afterSubmit', (payload) => void after.push(payload)),
+            ],
+        };
+        sent = [];
+        app = await createPluginTestApp('forms', {
+            ...configWithForms(),
+            security: { trustProxy: true },
+            plugins: [forms(), probe],
+        });
+        await createContactForm();
+
+        const response = await app.request('POST', '/plugins/forms/submit', {
+            body: { slug: 'contact', data: { name: 'Ada', email: 'ada@example.com' } },
+            headers: { 'x-forwarded-for': '203.0.113.7' },
+        });
+
+        expect(((await response.json()) as { ok: boolean }).ok).toBe(true);
+        expect(before[0]).toMatchObject({ clientAddress: '203.0.113.7' });
+        expect(after).toHaveLength(1);
+        expect(after[0]).toMatchObject({ submissionId: expect.any(String) });
+        expect(after[0]).not.toHaveProperty('clientAddress');
+    });
+});
+
 describe('forms.submit — emails', () => {
     const NOTIFYING = {
         notifications: [

@@ -183,12 +183,32 @@ Users have four permissions:
 
 `get` and `update` have a self-access rule beside the permission: a caller
 reading or updating their own user row passes without `users:read` or
-`users:update`. The version methods have no such rule and always need the
-permission, even for the caller's own row.
+`users:update`. The rule covers `name` and `fields` only. A change to the
+caller's own `role` or `email` still needs `users:update`, and without it
+`PUT /api/users/:id` answers 403 `FORBIDDEN`: a stolen session could otherwise
+change the email and then reset the password. The version methods have no such
+rule and always need the permission, even for the caller's own row.
+
+The rule belongs to the REST route. The same method called through the RPC
+route, MCP or a plugin's scoped handle always needs `users:update`. Better
+Auth's own `/api/auth/change-email` route is turned off, and its
+`/api/auth/update-user` refuses an email.
 
 `create` takes an optional `password` of at least eight characters, and with
 one writes the credential account the user signs in with; without one the user
-sets a password through the reset link.
+sets a password through the reset link. Outside development a site with no
+`email` driver has no way to deliver that link, so give a password on create.
+
+The reset link goes out through the config's `email` driver. With no driver,
+Astromech logs the link instead when `NODE_ENV` is `development`. Anywhere
+else it logs only that the email was not sent, because the link lets anyone who
+opens it set the user's password, and anyone who can read the logs could use it.
+
+A new password signs out the sessions the old one opened. A reset through the
+link revokes every session the user had. A change through Better Auth's
+`/api/auth/change-password` revokes every session but the caller's, whether or
+not the request sets `revokeOtherSessions`, and its response carries the
+caller's new session cookie.
 
 `update` and `delete` refuse to take the `admin` role from the only user
 holding it, whether the call comes from the admin, the CLI, MCP or a plugin.

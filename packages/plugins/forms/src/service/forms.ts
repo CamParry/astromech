@@ -161,6 +161,7 @@ export function createFormsService(
                     },
                     data: values,
                     ...(token !== undefined ? { token } : {}),
+                    ...(clientAddress !== undefined ? { clientAddress } : {}),
                     ...(meta !== undefined ? { meta } : {}),
                 };
 
@@ -187,8 +188,10 @@ export function createFormsService(
                     submittedAt: new Date(),
                 });
 
+                // The address gates the spam check only; it goes no further.
+                const { clientAddress: _clientAddress, ...submitted } = payload;
                 const after: FormsAfterSubmitPayload = {
-                    ...payload,
+                    ...submitted,
                     submissionId: submission.id,
                 };
                 // Not caught: a throwing subscriber fails the call, though the

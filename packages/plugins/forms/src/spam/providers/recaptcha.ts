@@ -30,7 +30,7 @@ export function recaptcha(options: RecaptchaOptions): SpamProvider {
                 VERIFY_URL,
                 options.secretKey,
                 token,
-                context.ip
+                context.clientAddress
             );
             if (!result.ok) return result;
 

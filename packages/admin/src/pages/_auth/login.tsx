@@ -10,8 +10,12 @@ import { Button } from '../../components/ui/button';
 import { Input } from '../../components/ui/input';
 import { setupCheckQueryOptions, useAuth } from '../../context/auth';
 
+/** Why the visitor was sent to the login page, when the protected guard says. */
+type LoginSearch = { error?: 'access_denied' };
+
 function LoginPage() {
     const { login } = useAuth();
+    const search = Route.useSearch();
     const navigate = useNavigate();
     const { t } = useTranslation();
 
@@ -56,7 +60,13 @@ function LoginPage() {
                         required
                     />
                 </div>
-                {error !== null && <p className="am-auth-error">{error}</p>}
+                {error !== null ? (
+                    <p className="am-auth-error">{error}</p>
+                ) : (
+                    search.error === 'access_denied' && (
+                        <p className="am-auth-error">{t('auth.accessDenied')}</p>
+                    )
+                )}
                 <div className="am-auth-actions">
                     <Button
                         type="submit"
@@ -76,6 +86,8 @@ function LoginPage() {
 }
 
 export const Route = createFileRoute('/_auth/login')({
+    validateSearch: (search: Record<string, unknown>): LoginSearch =>
+        search['error'] === 'access_denied' ? { error: 'access_denied' } : {},
     // An install with no users sends the visitor to first-run setup. A check that
     // fails leaves the login form in place rather than blocking sign-in.
     beforeLoad: async ({ context }) => {

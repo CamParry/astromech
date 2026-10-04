@@ -42,8 +42,10 @@ server also reads these:
 database options.
 
 Leave `NODE_ENV` unset or set it to `production`. Under `development` or `test`,
-Astromech serves without `BETTER_AUTH_SECRET`, and under `development` its API
-error responses include the exception message.
+Astromech serves without `BETTER_AUTH_SECRET`. Under `development` its API error
+responses include the exception message, and with no `email` driver it logs
+password reset links
+([../content/users.md](../content/users.md#permissions)).
 
 ## Apply migrations before you start the server
 
