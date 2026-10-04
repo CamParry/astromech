@@ -62,14 +62,16 @@ export function isAllowedWidth(width: number, widths: readonly number[]): boolea
     return widths.includes(width);
 }
 
-/** Storage key for a cached transformed variant. */
+/**
+ * Storage key for a cached transformed variant. The driver's cache key joins
+ * it, as one path segment, so a change to the driver's settings makes new files.
+ */
 export function variantStorageKey(
     id: string,
-    version: string,
-    width: number,
-    format: ImageFormat
+    opts: { version: string; cacheKey: string; width: number; format: ImageFormat }
 ): string {
-    return `variants/${id}/${version}/${width}.${format}`;
+    const settings = encodeURIComponent(opts.cacheKey);
+    return `variants/${id}/${opts.version}/${settings}/${opts.width}.${opts.format}`;
 }
 
 /** The variants/<id>/ prefix used to purge all variants of a media item. */

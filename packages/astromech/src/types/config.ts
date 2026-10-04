@@ -139,6 +139,11 @@ export type ImageSource = {
 
 export type ImageDriver = {
     name: string;
+    /**
+     * Names every setting that shapes the driver's output, such as its encoder
+     * and quality. It joins each variant's storage key and ETag; defaults to `name`.
+     */
+    cacheKey?: string;
     transform(
         src: ImageSource,
         opts: { width: number; format: ImageFormat }

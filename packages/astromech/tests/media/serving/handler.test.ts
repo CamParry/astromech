@@ -185,7 +185,7 @@ describe('handleMediaRequest', () => {
         expect(fakeDriver.calls[0]).toEqual({ width: 320, format: 'webp' });
 
         // Variant was written back to storage
-        const vKey = `variants/${media.id}/${version}/320.webp`;
+        const vKey = `variants/${media.id}/${version}/fake/320.webp`;
         expect(await storage.stat(vKey)).not.toBeNull();
     });
 
@@ -248,6 +248,40 @@ describe('handleMediaRequest', () => {
         expect(body).toEqual(VARIANT_BYTES);
         // No new transform calls
         expect(fakeDriver.calls.length).toBe(callsBefore);
+    });
+
+    it('makes a new variant, under a new ETag, when the driver’s cache key changes', async () => {
+        const media = await mediaService.upload({
+            file: new File([makeJpegBytes() as BlobPart], 'photo.jpg', {
+                type: 'image/jpeg',
+            }),
+        });
+        const version = media.metadata?.version ?? '';
+        const search = new URLSearchParams({ w: '320', f: 'webp', v: version });
+        const request = { id: media.id, ext: 'jpg', search, origin: 'http://x' };
+        const first = await handleMediaRequest(request);
+        await readBody(first);
+
+        const requality = makeFakeImageDriver();
+        setupTestConfig({
+            ...makeTestConfig(),
+            storage,
+            media: {
+                image: {
+                    driver: { ...requality.driver, cacheKey: 'fake-q90' },
+                    widths: [320, 640],
+                    avif: true,
+                },
+            },
+        });
+        const second = await handleMediaRequest(request);
+
+        expect(requality.calls).toEqual([{ width: 320, format: 'webp' }]);
+        expect(first.headers.get('ETag')).toBe(`"${version}-320-webp-fake"`);
+        expect(second.headers.get('ETag')).toBe(`"${version}-320-webp-fake-q90"`);
+        expect(
+            await storage.stat(`variants/${media.id}/${version}/fake-q90/320.webp`)
+        ).not.toBeNull();
     });
 
     it('7. non-optimisable type → serves original, transform not called', async () => {

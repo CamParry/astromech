@@ -8,9 +8,13 @@ import type { ImageDriver, ImageSource } from '@/types/index';
 import { encode } from 'blurhash';
 import sharpLib from 'sharp';
 
+/** The quality each output format is encoded at. */
+const QUALITY = { avif: 50, webp: 78 } as const;
+
 export function sharp(): ImageDriver {
     return {
         name: 'sharp',
+        cacheKey: `sharp-avif${QUALITY.avif}-webp${QUALITY.webp}`,
 
         async transform(
             src: ImageSource,
@@ -24,8 +28,8 @@ export function sharp(): ImageDriver {
 
             const encoded =
                 opts.format === 'avif'
-                    ? pipeline.avif({ quality: 50 })
-                    : pipeline.webp({ quality: 78 });
+                    ? pipeline.avif({ quality: QUALITY.avif })
+                    : pipeline.webp({ quality: QUALITY.webp });
 
             const out = await encoded.toBuffer();
 

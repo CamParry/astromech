@@ -73,6 +73,12 @@ describe('sharp driver — transform avif', () => {
     });
 });
 
+describe('sharp driver — cache key', () => {
+    it('names the encoder and the quality of each format', () => {
+        expect(sharp().cacheKey).toBe('sharp-avif50-webp78');
+    });
+});
+
 // withoutEnlargement — never upscale
 
 describe('sharp driver — withoutEnlargement', () => {

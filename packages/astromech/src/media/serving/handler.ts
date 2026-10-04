@@ -125,8 +125,14 @@ async function serveMedia(info: MediaRequestInfo): Promise<Response> {
     // on the spot), so there is nothing stable to range over. Ranges are an
     // originals-only concern — see `serveOriginal`.
     const format = params.format;
-    const vKey = variantStorageKey(id, version, params.width, format);
-    const etag = `"${version}-${params.width}-${format}"`;
+    const cacheKey = imageConfig.driver.cacheKey ?? imageConfig.driver.name;
+    const vKey = variantStorageKey(id, {
+        version,
+        cacheKey,
+        width: params.width,
+        format,
+    });
+    const etag = `"${version}-${params.width}-${format}-${encodeURIComponent(cacheKey)}"`;
     const variantCacheControl = 'public, max-age=31536000, immutable';
 
     if (ifNoneMatch === etag) {

@@ -57,7 +57,7 @@ decoded image, which is what the variants are made from.
       (camera, date, copyright) is kept.
 - [x] Read dimensions for HEIC, AVIF and TIFF.
 - [x] Add the version to the Cloudflare driver's origin URL.
-- [ ] Every setting that changes a variant's bytes joins its storage key.
+- [x] Every setting that changes a variant's bytes joins its storage key.
 - [ ] Placeholders from the upright image; record whether an image has alpha.
 - [ ] Animated WebP stays animated on sharp.
 - [ ] HEIC: not resizable on sharp unless the build can decode it.
@@ -67,6 +67,12 @@ decoded image, which is what the variants are made from.
 
 ## Left open
 
+- **A driver setting is not in the variant URL.** The driver's `cacheKey`
+  joins the variant's storage key and ETag, but not its URL, which is served
+  `immutable` for a year. A browser or CDN that cached a variant keeps it
+  after a quality change until the image's version changes. When
+  `media.image.quality` lands (`roadmap/planned/image-optimisation.md`, which
+  expects a new URL), the URL needs the setting too, as a focal point's `fp`.
 - **HEIC variants fall back to the original.** The prebuilt sharp cannot decode
   HEVC, so a HEIC upload records its dimensions but gets no resized variants.
 - **Rows uploaded before this work keep swapped dimensions** until their file
