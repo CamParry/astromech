@@ -12,6 +12,7 @@ import type {
     MediaService,
     NotificationsService,
     PluginServiceNamespace,
+    SecurityService,
     UsersService,
 } from '@/types/index';
 import { typedServices } from '@/services/typed-services';
@@ -354,6 +355,8 @@ const notificationsService = restService<NotificationsService>(
     }
 );
 
+const securityService = restService<SecurityService>('security', callRoute, {});
+
 /**
  * Plugins API — HTTP shims to /api/plugins/{name}/{method} (RPC: POST JSON).
  * Synthesised lazily by a Proxy: no name list, no codegen. An unknown
@@ -400,6 +403,7 @@ export const astromechUntypedClient = {
     media: mediaService,
     users: usersService,
     notifications: notificationsService,
+    security: securityService,
     plugins: pluginsApi,
     /** Point the client at an API base other than the default. */
     configure({ baseUrl }: { baseUrl: string }): void {

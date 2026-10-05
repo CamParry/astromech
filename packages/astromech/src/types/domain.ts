@@ -13,6 +13,7 @@ import type {
     mediaVersionSchema,
 } from '@/media/schema';
 import type { notificationSchema } from '@/notifications/schema';
+import type { allowedAddressSchema, blockedAddressSchema } from '@/security/schema';
 import type { userSchema, userVersionSchema } from '@/users/schema';
 import type { z } from 'zod';
 
@@ -123,6 +124,7 @@ export type Permission =
     | 'users:create'
     | 'users:update'
     | 'users:delete'
+    | 'security:manage'
     | 'admin:access'
     | `plugin:${string}`
     | '*'
@@ -143,6 +145,12 @@ export type Me = z.output<typeof meSchema>;
 
 /** One notification in a user's inbox. */
 export type Notification = z.output<typeof notificationSchema>;
+
+/** A client address or range the API and admin refuse requests from. */
+export type BlockedAddress = z.output<typeof blockedAddressSchema>;
+
+/** A client address or range no block applies to. */
+export type AllowedAddress = z.output<typeof allowedAddressSchema>;
 
 export type NotifyTarget = { user: string } | { role: string } | { all: true };
 

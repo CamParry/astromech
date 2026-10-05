@@ -14,6 +14,7 @@ import type {
     PluginMethods,
     ResolvedConfig,
     Role,
+    SecurityService,
     User,
     UsersService,
 } from '@/types/index';
@@ -83,6 +84,9 @@ export function createAppContext(input: AppContextInput): AppContext {
         },
         get notifications(): NotificationsService {
             return createServices(context).notifications;
+        },
+        get security(): SecurityService {
+            return createServices(context).security;
         },
         email: { send: sendEmail },
         notify,

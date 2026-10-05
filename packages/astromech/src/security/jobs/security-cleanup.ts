@@ -1,9 +1,10 @@
 /**
  * Built-in CRON job: forget sign-in failures nobody has added to for a day and
- * whose lock, if any, has ended, so the table stays bounded.
+ * whose lock, if any, has ended, and blocks that have expired.
  */
 
 import type { CronJob } from '@/cron/registry';
+import { blockedAddressRepository } from '@/security/repository/blocked-addresses';
 import { signInFailureRepository } from '@/security/repository/sign-in-failures';
 
 /** How long a counter sits idle before the cleanup job deletes it. */
@@ -15,6 +16,7 @@ export const securityCleanupJob: CronJob = {
     async handler() {
         const now = Date.now();
         await signInFailureRepository.deleteStale(now - IDLE_MS, now);
+        await blockedAddressRepository.deleteExpired(new Date(now));
     },
 };
 

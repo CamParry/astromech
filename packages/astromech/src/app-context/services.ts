@@ -13,6 +13,7 @@ import { notificationsDefinition } from '@/notifications/service';
 import { permissionsFor } from '@/permissions/permissions-for';
 import { pluginNamespace, pluginServicesFor } from '@/plugins/runtime/plugin-services';
 import { scopeMethods, scopePlugins } from '@/policies/scoped-services';
+import { securityDefinition } from '@/security/service';
 import { usersDefinition } from '@/users/service';
 
 /** How the handle `createServices` builds treats each method's `access`. */
@@ -35,6 +36,7 @@ const DEFINITIONS = {
     media: mediaDefinition,
     users: usersDefinition,
     notifications: notificationsDefinition,
+    security: securityDefinition,
 } satisfies Record<ContentKey, { catalogue: object }>;
 
 const TRUSTED = new WeakMap<AppContext, Services>();
@@ -66,6 +68,7 @@ function bindServices(ctx: AppContext): Services {
         media: mediaDefinition.bind(ctx),
         users: usersDefinition.bind(ctx),
         notifications: notificationsDefinition.bind(ctx),
+        security: securityDefinition.bind(ctx),
         plugins: pluginServicesFor(ctx),
     };
 }
@@ -98,6 +101,12 @@ function scopeServices(ctx: AppContext): Services {
             caller,
             'notifications'
         ),
+        security: scopeMethods(
+            trusted.security,
+            securityDefinition.catalogue,
+            caller,
+            'security'
+        ),
         plugins: scopePlugins(trusted.plugins, caller.permissions),
     };
 }
@@ -113,6 +122,7 @@ export const currentServices: Services = {
     media: forwardToCurrent('media'),
     users: forwardToCurrent('users'),
     notifications: forwardToCurrent('notifications'),
+    security: forwardToCurrent('security'),
     plugins: pluginNamespace(
         (resolved, _method, name) => async (input) =>
             createServices(await currentAppContext()).plugins[resolved.serviceKey]?.[

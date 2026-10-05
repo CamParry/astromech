@@ -33,6 +33,11 @@ export const CORE_PERMISSIONS = defineAbsolutePermissions({
         description: "Edit a user's profile, email and role.",
     },
     'users:delete': { label: 'Delete users' },
+    // After CASL's `manage`, which stands for every action on a subject.
+    'security:manage': {
+        label: 'Manage security',
+        description: 'View and change the blocked and allowed addresses.',
+    },
     'entry:read:full': {
         label: 'Read full entry shape',
         description:

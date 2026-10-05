@@ -23,6 +23,7 @@ import { createGlobalsRouter } from '@/transport/http/routes/globals';
 import { HTTP_ROUTES } from '@/transport/http/routes/http-routes';
 import { mediaRouter } from '@/transport/http/routes/media';
 import { notificationsRouter } from '@/transport/http/routes/notifications';
+import { securityRouter } from '@/transport/http/routes/security';
 import { usersRouter } from '@/transport/http/routes/users';
 
 type Schema = OpenApiSchema;
@@ -64,7 +65,7 @@ function queryParameters(operation: Operation | undefined): string[] {
         .map((parameter) => parameter.name);
 }
 
-/** The document the five domain routers compose to. */
+/** The document the domain routers compose to. */
 function document(): Document {
     const app = new OpenAPIHono<{ Variables: AuthVariables }>();
     app.route('/entries', createEntriesRouter());
@@ -72,6 +73,7 @@ function document(): Document {
     app.route('/users', usersRouter);
     app.route('/media', mediaRouter);
     app.route('/notifications', notificationsRouter);
+    app.route('/security', securityRouter);
     return app.getOpenAPI31Document({
         openapi: '3.1.0',
         info: { title: 'Astromech CMS API', version: '1.0.0' },

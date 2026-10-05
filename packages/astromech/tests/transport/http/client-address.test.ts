@@ -10,7 +10,7 @@ import { resetRuntime, resolveTestConfig } from '@tests/harness';
 import { Hono } from 'hono';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { setConfig } from '@/config/registry';
-import { getClientAddress, rateLimitKey } from '@/transport/http/client-address';
+import { getClientAddress } from '@/transport/http/client-address';
 
 const PROXY_WARNING = 'set `security.trustProxy`';
 
@@ -220,23 +220,5 @@ describe('getClientAddress', () => {
         await addressFor({ 'x-forwarded-for': 'garbage' });
 
         expect(error).toHaveBeenCalledTimes(1);
-    });
-});
-
-describe('rateLimitKey', () => {
-    it.each([
-        ['203.0.113.4', '203.0.113.4'],
-        ['::ffff:203.0.113.4', '203.0.113.4'],
-        ['::FFFF:cb00:7104', '203.0.113.4'],
-        ['0:0:0:0:0:ffff:203.0.113.4', '203.0.113.4'],
-        ['2001:db8:1:2::1', '2001:db8:1:2::/64'],
-        ['2001:0DB8:0001:0002:ffff:ffff:ffff:ffff', '2001:db8:1:2::/64'],
-        ['2001:db8::1', '2001:db8:0:0::/64'],
-        ['fe80::1%eth0', 'fe80:0:0:0::/64'],
-        ['::1', '0:0:0:0::/64'],
-        ['::', '0:0:0:0::/64'],
-        ['not an address', 'not an address'],
-    ])('keys %s as %s', (address, key) => {
-        expect(rateLimitKey(address)).toBe(key);
     });
 });

@@ -10,6 +10,8 @@ import type { KyselyOf } from '@/database/define-table';
 // dependency graph (see the `database-no-upward-except-aggregate` rule).
 import type {
     accountsTable,
+    allowedAddressesTable,
+    blockedAddressesTable,
     cronTable,
     entriesTable,
     entryContentTable,
@@ -75,6 +77,8 @@ export interface DB extends AstromechPluginTables {
     notifications: KyselyOf<typeof notificationsTable>;
     relationships: KyselyOf<typeof relationshipsTable>;
     signInFailures: KyselyOf<typeof signInFailuresTable>;
+    blockedAddresses: KyselyOf<typeof blockedAddressesTable>;
+    allowedAddresses: KyselyOf<typeof allowedAddressesTable>;
     // Leading-underscore table name has no camelCase humps, so CamelCasePlugin
     // leaves it intact; keep the key identical to the SQL table name.
     _astromech_cron: KyselyOf<typeof cronTable>;

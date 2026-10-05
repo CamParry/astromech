@@ -81,7 +81,7 @@ is `DECISIONS.md`, "Security in core is defaults and shared mechanisms".
 
 - [x] The per-account lock: counters, escalation, clearing, and a before-hook
       on Better Auth's sign-in that refuses a locked account.
-- [ ] The block list and allow list tables, with `pnpm run db:generate` and the
+- [x] The block list and allow list tables, with `pnpm run db:generate` and the
       Cloudflare baseline hand-applied; the middleware and its cache; automatic
       blocks.
 - [ ] The captcha service: config, providers moved from `@astromech/forms`,

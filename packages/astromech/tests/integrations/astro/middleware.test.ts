@@ -29,6 +29,7 @@ vi.mock('virtual:astromech/config', () => ({
     get migrationNames() {
         return site.migrationNames;
     },
+    astroReadsForwardedFor: false,
 }));
 
 const SECRET = 'middleware-test-0123456789abcdef0123';
@@ -83,7 +84,12 @@ function routeCache(enabled = true): RouteCache {
 
 /** The slice of Astro's context the middleware reads. */
 function context(
-    options: { path?: string; isPrerendered?: boolean; cache?: RouteCache } = {}
+    options: {
+        path?: string;
+        isPrerendered?: boolean;
+        cache?: RouteCache;
+        clientAddress?: string;
+    } = {}
 ): APIContext {
     const url = new URL(options.path ?? '/', 'http://localhost');
     return {
@@ -91,6 +97,7 @@ function context(
         url,
         isPrerendered: options.isPrerendered ?? false,
         cache: options.cache ?? routeCache(),
+        clientAddress: options.clientAddress,
     } as unknown as APIContext;
 }
 
@@ -319,5 +326,50 @@ describe('caching on a page that read with a preview token', () => {
 
         expect(cache.disabled).toBe(false);
         expect(response.headers.get('Cache-Control')).toBeNull();
+    });
+});
+
+describe('the block list on pages', () => {
+    const BLOCKED = '203.0.113.7';
+
+    beforeEach(async () => {
+        setEnvSource({ NODE_ENV: 'production', BETTER_AUTH_SECRET: SECRET });
+        // Boots the application, so the services can write the block.
+        await responseOf(
+            onRequest(context({ path: '/cms', clientAddress: BLOCKED }), page)
+        );
+        await currentServices.security.block({ data: { address: BLOCKED } });
+    });
+
+    it('refuses an admin page from a blocked address', async () => {
+        const next = vi.fn(page);
+
+        const response = await responseOf(
+            onRequest(context({ path: '/cms/entries', clientAddress: BLOCKED }), next)
+        );
+
+        expect(response.status).toBe(403);
+        expect(await response.text()).toBe('Forbidden');
+        expect(response.headers.get('Cache-Control')).toBe('private, no-store');
+        expect(next).not.toHaveBeenCalled();
+    });
+
+    it('serves an admin page to another address', async () => {
+        const response = await responseOf(
+            onRequest(
+                context({ path: '/cms/entries', clientAddress: '203.0.113.8' }),
+                page
+            )
+        );
+
+        expect(response.status).toBe(200);
+    });
+
+    it('leaves a site page from a blocked address alone', async () => {
+        const response = await responseOf(
+            onRequest(context({ path: '/blog', clientAddress: BLOCKED }), page)
+        );
+
+        expect(response.status).toBe(200);
     });
 });

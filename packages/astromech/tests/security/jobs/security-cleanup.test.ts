@@ -2,8 +2,9 @@
 
 import type { DB } from '@/database/types';
 import type { Kysely } from 'kysely';
-import { contextAs, createTestDb } from '@tests/harness';
+import { contextAs, createTestDb, makeTestConfig, setupTestConfig } from '@tests/harness';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { currentServices } from '@/app-context/services';
 import { securityCleanupJob } from '@/security/jobs/security-cleanup';
 import { recordSignInFailure } from '@/security/sign-in-failures';
 
@@ -57,5 +58,21 @@ describe('security-cleanup', () => {
         expect(
             await db.selectFrom('signInFailures').select('key').execute()
         ).toHaveLength(1);
+    });
+
+    it('deletes expired blocks and keeps the ones still in force', async () => {
+        setupTestConfig(makeTestConfig());
+        await currentServices.security.block({
+            data: { address: '10.0.0.1', expiresAt: new Date(Date.now() + HOUR) },
+        });
+        await currentServices.security.block({
+            data: { address: '10.0.0.2', expiresAt: new Date(Date.now() + 3 * HOUR) },
+        });
+        vi.setSystemTime(Date.now() + 2 * HOUR);
+
+        await securityCleanupJob.handler(contextAs(null));
+
+        const rows = await db.selectFrom('blockedAddresses').select('address').execute();
+        expect(rows).toEqual([{ address: '10.0.0.2' }]);
     });
 });

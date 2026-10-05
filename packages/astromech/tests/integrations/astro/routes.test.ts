@@ -9,7 +9,7 @@ import { makeTestConfig } from '@tests/harness';
 import { findMissingExportTargets } from '@tests/package-exports';
 import { describe, expect, it } from 'vitest';
 import { resolveConfig } from '@/config/resolve';
-import { registerRoutes } from '@/integrations/astro/routes';
+import { isAdminPage, registerRoutes } from '@/integrations/astro/routes';
 
 type InjectedRoute = { pattern: string; entrypoint: string; prerender: boolean };
 
@@ -63,4 +63,21 @@ describe('registerRoutes()', () => {
             expect(findMissingExportTargets(entrypoint)).toEqual([]);
         }
     );
+});
+
+describe('isAdminPage()', () => {
+    const config = { basePath: '/cms', mediaRoute: '/_media' };
+
+    it.each([
+        ['/cms', true],
+        ['/cms/entries/post', true],
+        ['/cms/api', false],
+        ['/cms/api/entries/post', false],
+        ['/cms/apiary', true],
+        ['/_media/abc.jpg', false],
+        ['/cmsx', false],
+        ['/blog', false],
+    ])('answers %s: %s', (pathname, expected) => {
+        expect(isAdminPage(config, pathname)).toBe(expected);
+    });
 });

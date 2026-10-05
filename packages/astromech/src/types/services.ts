@@ -10,6 +10,8 @@
  */
 
 import type {
+    AllowedAddress,
+    BlockedAddress,
     Entry,
     EntryVersion,
     Global,
@@ -455,6 +457,27 @@ export type NotificationsService = {
     dismissAll(): Promise<void>;
 };
 
+/** The block list and allow list. */
+export type SecurityService = {
+    /** The blocks in force, newest first. */
+    listBlocked(): Promise<BlockedAddress[]>;
+    /** Block an address or CIDR range, replacing any block on the same one. */
+    block(params: {
+        data: {
+            address: string;
+            reason?: string | null | undefined;
+            expiresAt?: Date | string | null | undefined;
+        };
+    }): Promise<BlockedAddress>;
+    unblock(params: { id: string }): Promise<void>;
+    listAllowed(): Promise<AllowedAddress[]>;
+    /** Allow an address or CIDR range, which overrides every block that covers it. */
+    allow(params: {
+        data: { address: string; reason?: string | null | undefined };
+    }): Promise<AllowedAddress>;
+    removeAllowed(params: { id: string }): Promise<void>;
+};
+
 /** Every content service and the plugin namespace: the handle `createServices` builds. */
 export type Services = {
     /** Entry reads and writes, for any entry type. */
@@ -467,6 +490,8 @@ export type Services = {
     users: UsersService;
     /** Notifications for the acting user. */
     notifications: NotificationsService;
+    /** The block list and allow list. */
+    security: SecurityService;
     /** The services each installed plugin exposes, namespaced by plugin. */
     plugins: PluginServiceNamespace;
 };

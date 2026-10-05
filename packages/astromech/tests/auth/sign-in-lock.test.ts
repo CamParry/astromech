@@ -148,7 +148,11 @@ describe('the account lock', { timeout: 60_000 }, () => {
     it('stores a hash of the email, not the email', async () => {
         await failSignIns(EMAIL, 1);
 
-        const rows = await db.selectFrom('signInFailures').select('key').execute();
+        const rows = await db
+            .selectFrom('signInFailures')
+            .select('key')
+            .where('key', 'like', 'account:%')
+            .execute();
 
         expect(rows).toHaveLength(1);
         expect(rows[0]?.key).toMatch(/^account:[0-9a-f]{64}$/);

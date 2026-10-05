@@ -478,16 +478,43 @@ export const NOTIFICATIONS_ROUTE_SPECS = [
     { verb: 'get', path: '/count', id: 'notifications.count', handler: 'bespoke' },
 ] as const satisfies readonly HttpRouteSpec[];
 
+export const SECURITY_ROUTE_SPECS = [
+    { verb: 'get', path: '/blocked', id: 'security.listBlocked' },
+    {
+        verb: 'post',
+        path: '/blocked',
+        id: 'security.block',
+        status: 201,
+        bodyKey: 'data',
+    },
+    { verb: 'delete', path: '/blocked/:id', id: 'security.unblock', envelope: 'empty' },
+    { verb: 'get', path: '/allowed', id: 'security.listAllowed' },
+    {
+        verb: 'post',
+        path: '/allowed',
+        id: 'security.allow',
+        status: 201,
+        bodyKey: 'data',
+    },
+    {
+        verb: 'delete',
+        path: '/allowed/:id',
+        id: 'security.removeAllowed',
+        envelope: 'empty',
+    },
+] as const satisfies readonly HttpRouteSpec[];
+
 /** `specs`, each carrying the mount path of the router that serves it. */
 function mountedAt(base: string, specs: readonly HttpRouteSpec[]): MountedRoute[] {
     return specs.map((spec) => ({ ...spec, base }));
 }
 
-/** Every REST route the fetch client can reach, across all five domains. */
+/** Every REST route the fetch client can reach, across every domain. */
 export const HTTP_ROUTES: readonly MountedRoute[] = [
     ...mountedAt('/entries', ENTRIES_ROUTE_SPECS),
     ...mountedAt('/globals', GLOBALS_ROUTE_SPECS),
     ...mountedAt('/users', USERS_ROUTE_SPECS),
     ...mountedAt('/media', MEDIA_ROUTE_SPECS),
     ...mountedAt('/notifications', NOTIFICATIONS_ROUTE_SPECS),
+    ...mountedAt('/security', SECURITY_ROUTE_SPECS),
 ];

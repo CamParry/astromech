@@ -27,6 +27,7 @@ import { parseOutput } from '@/services/parse-method-output';
 import { PRIVATE_NO_STORE } from '@/transport/http/cache-control';
 import { getClientAddress } from '@/transport/http/client-address';
 import { requireAuth } from './middleware/auth';
+import { refuseBlockedAddresses } from './middleware/block-list';
 import { forbidden, fromZodError, onError, onNotFound } from './middleware/errors';
 import { cronRouter } from './routes/cron';
 import { entriesRouter } from './routes/entries';
@@ -38,6 +39,7 @@ import { notificationsRouter } from './routes/notifications';
 import { openApiDocument } from './routes/openapi-document';
 import { createPluginsRouter } from './routes/plugins';
 import { rpcRouter } from './routes/rpc';
+import { securityRouter } from './routes/security';
 import { usersRouter } from './routes/users';
 
 type AppEnv = { Bindings: ServerBindings; Variables: AuthVariables };
@@ -124,6 +126,9 @@ export function createHttpApp(config: ResolvedConfig): OpenAPIHono<AppEnv> {
             credentials: true,
         })
     );
+
+    // Every API route, public or not, from a blocked address. Media is not covered.
+    app.use(`${api}/*`, refuseBlockedAddresses);
 
     // Public routes — no auth required.
 
@@ -227,6 +232,7 @@ export function createHttpApp(config: ResolvedConfig): OpenAPIHono<AppEnv> {
     app.route(`${api}/media`, mediaRouter);
     app.route(`${api}/entry-types`, entryTypesRouter);
     app.route(`${api}/notifications`, notificationsRouter);
+    app.route(`${api}/security`, securityRouter);
 
     // Not `app.doc`: the document adds the plugin methods, and `app.doc` answers
     // a failure as `{}` with no log where this one reaches `onError`.

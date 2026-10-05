@@ -26,74 +26,35 @@ export type ServerBindings = { remoteAddress?: string | undefined };
 export function getClientAddress<E extends { Bindings: ServerBindings }>(
     c: Context<E>
 ): string | undefined {
+    // `app.request` in a test passes no bindings at all.
+    const bindings: ServerBindings | undefined = c.env;
+    return resolveClientAddress(c.req.raw, bindings?.remoteAddress);
+}
+
+/** The connecting address of `request`, given the peer address the server saw. */
+export function resolveClientAddress(
+    request: Request,
+    remoteAddress: string | undefined
+): string | undefined {
     // Trustworthy only on the runtime Cloudflare serves. A Node deployment
     // behind Cloudflare takes the `trustProxy` route below instead.
     const workerd = getRuntimeKey() === 'workerd';
     if (workerd) {
-        const connectingIp = c.req.header('cf-connecting-ip');
-        if (connectingIp !== undefined && connectingIp !== '') return connectingIp;
+        const connectingIp = request.headers.get('cf-connecting-ip');
+        if (connectingIp !== null && connectingIp !== '') return connectingIp;
     }
 
     const trustProxy: TrustProxy = getConfig().security?.trustProxy ?? false;
     if (trustProxy === false) {
-        // `app.request` in a test passes no bindings at all.
-        const bindings: ServerBindings | undefined = c.env;
-        const remoteAddress = bindings?.remoteAddress;
         if (workerd || remoteAddress === undefined) return undefined;
-        warnOnForwardedHeader(c.req.raw.headers);
+        warnOnForwardedHeader(request.headers);
         return parseAddress(remoteAddress);
     }
 
     return forwardedAddress(
-        c.req.header('x-forwarded-for'),
+        request.headers.get('x-forwarded-for') ?? undefined,
         trustProxy === true ? 1 : trustProxy
     );
-}
-
-/**
- * The key a per-client rate limit counts `address` under, grouped as Better
- * Auth groups sign-in attempts: an IPv6 address by its /64 network
- * (`2001:db8:1:2::/64`), since one client is often given a whole /64, and an
- * IPv4-mapped IPv6 address (`::ffff:1.2.3.4`) as its IPv4 address. A value that
- * is not an IP address is returned unchanged.
- */
-export function rateLimitKey(address: string): string {
-    if (isIP(address) !== 6) return address;
-
-    const groups = ipv6Groups(address);
-    const mapped =
-        groups.slice(0, 5).every((group) => group === 0) && groups[5] === 0xffff;
-    if (mapped) {
-        const [high = 0, low = 0] = groups.slice(6);
-        return [high >> 8, high & 0xff, low >> 8, low & 0xff].join('.');
-    }
-    return `${groups
-        .slice(0, 4)
-        .map((group) => group.toString(16))
-        .join(':')}::/64`;
-}
-
-/** The eight 16-bit groups of an IPv6 address that `isIP` accepts. */
-function ipv6Groups(address: string): number[] {
-    const [withoutZone = ''] = address.split('%');
-    // A trailing dotted IPv4 part (`::ffff:1.2.3.4`) fills the last two groups.
-    const dotted = /(\d+)\.(\d+)\.(\d+)\.(\d+)$/.exec(withoutZone);
-    const hex = dotted
-        ? withoutZone.slice(0, dotted.index) +
-          [0, 2]
-              .map((at) =>
-                  (Number(dotted[at + 1]) * 256 + Number(dotted[at + 2])).toString(16)
-              )
-              .join(':')
-        : withoutZone;
-
-    const [head = '', tail] = hex.split('::');
-    const parse = (part: string): number[] =>
-        part === '' ? [] : part.split(':').map((group) => Number.parseInt(group, 16));
-    const left = parse(head);
-    const right = tail === undefined ? [] : parse(tail);
-    const zeros = new Array<number>(8 - left.length - right.length).fill(0);
-    return [...left, ...zeros, ...right];
 }
 
 /**

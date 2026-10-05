@@ -10,9 +10,12 @@ import { migrationNames, rawConfig } from 'virtual:astromech/config';
 import { createAstromech } from '@/astromech';
 import { assertAuthSecret } from '@/auth/better-auth';
 import { setBundledMigrationNames } from '@/database/migration-registry';
-import { resolveInjectedRoute } from '@/integrations/astro/routes';
+import { readRemoteAddress } from '@/integrations/astro/remote-address';
+import { isAdminPage, resolveInjectedRoute } from '@/integrations/astro/routes';
 import { runInRequestScope } from '@/request-scope/request-scope';
+import { isAddressBlocked } from '@/security/address-lists';
 import { PRIVATE_NO_STORE } from '@/transport/http/cache-control';
+import { resolveClientAddress } from '@/transport/http/client-address';
 
 export const onRequest: MiddlewareHandler = async (context, next) => {
     // A page prerendered at build time gets no application, so a build neither
@@ -26,6 +29,14 @@ export const onRequest: MiddlewareHandler = async (context, next) => {
     // The Node deployment has no external cron, so the serving integration is
     // what starts the in-process ticker. A no-op on Workers.
     await app.startScheduler();
+
+    // The API refuses a blocked address itself, in the Hono app.
+    if (isAdminPage(app.config, context.url.pathname)) {
+        const address = resolveClientAddress(context.request, readRemoteAddress(context));
+        if (address !== undefined && (await isAddressBlocked(address))) {
+            return blockedPage();
+        }
+    }
 
     const scope: RequestScope = { request: context.request };
     const response = await runInRequestScope(scope, () => next());
@@ -52,4 +63,15 @@ function withCacheControl(response: Response, value: string): Response {
         copy.headers.set('Cache-Control', value);
         return copy;
     }
+}
+
+/** The 403 an admin page answers a blocked address with. */
+function blockedPage(): Response {
+    return new Response('Forbidden', {
+        status: 403,
+        headers: {
+            'Cache-Control': PRIVATE_NO_STORE,
+            'Content-Type': 'text/plain; charset=utf-8',
+        },
+    });
 }

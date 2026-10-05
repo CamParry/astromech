@@ -279,10 +279,14 @@ describe('which methods it holds', () => {
         }
     });
 
-    it('holds the media and notifications core methods', () => {
+    it('holds the media, notifications and security core methods', () => {
         const names = manifest.methods.map((m) => m.name);
         expect(names).toEqual(
-            expect.arrayContaining(['media.upload', 'notifications.list'])
+            expect.arrayContaining([
+                'media.upload',
+                'notifications.list',
+                'security.listBlocked',
+            ])
         );
     });
 

@@ -59,6 +59,20 @@ export function resolveInjectedRoute(
     return undefined;
 }
 
+/**
+ * Whether `pathname` is an admin page: under `basePath` but not under
+ * `${basePath}/api`, which the Hono app guards itself.
+ */
+export function isAdminPage(
+    resolvedConfig: Pick<ResolvedConfig, 'basePath' | 'mediaRoute'>,
+    pathname: string
+): boolean {
+    return (
+        resolveInjectedRoute(resolvedConfig, pathname) === 'admin' &&
+        !isUnder(pathname, `${resolvedConfig.basePath}/api`)
+    );
+}
+
 /** True for `prefix` itself and every path below it. */
 function isUnder(pathname: string, prefix: string): boolean {
     return pathname === prefix || pathname.startsWith(`${prefix}/`);

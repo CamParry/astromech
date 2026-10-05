@@ -15,7 +15,11 @@ import { globalContentTable, globalsTable, globalVersionsTable } from '@/globals
 import { mediaContentTable, mediaTable, mediaVersionsTable } from '@/media/tables';
 import { notificationsTable } from '@/notifications/tables';
 import { rolesTable } from '@/permissions/tables';
-import { signInFailuresTable } from '@/security/tables';
+import {
+    allowedAddressesTable,
+    blockedAddressesTable,
+    signInFailuresTable,
+} from '@/security/tables';
 import { RESOURCE_TYPES, TARGET_KINDS } from '@/types/domain';
 import { userContentTable, usersTable, userVersionsTable } from '@/users/tables';
 
@@ -34,7 +38,12 @@ export {
     rateLimitsTable,
 } from '@/auth/tables';
 
-export { signInFailuresTable, type SignInFailureRow } from '@/security/tables';
+export {
+    allowedAddressesTable,
+    blockedAddressesTable,
+    signInFailuresTable,
+    type SignInFailureRow,
+} from '@/security/tables';
 
 export {
     usersTable,
@@ -178,6 +187,8 @@ export const CORE_TABLES: Table[] = [
     verificationsTable,
     rateLimitsTable,
     signInFailuresTable,
+    blockedAddressesTable,
+    allowedAddressesTable,
     userContentTable,
     userVersionsTable,
     entriesTable,

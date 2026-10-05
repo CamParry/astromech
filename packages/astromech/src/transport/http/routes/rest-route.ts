@@ -403,6 +403,7 @@ const ROW_NOUNS: Record<string, string> = {
     users: 'user',
     media: 'media item',
     notifications: 'notification',
+    security: 'address',
 };
 
 /**

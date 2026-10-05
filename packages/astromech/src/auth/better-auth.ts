@@ -18,6 +18,7 @@ import { createRegistry } from '@/registry';
 import {
     clearSignInFailures,
     findAccountLock,
+    recordAddressFailure,
     recordSignInFailure,
 } from '@/security/sign-in-failures';
 import { log } from '@/utilities/log';
@@ -130,6 +131,10 @@ function buildAuth(): Auth<BetterAuthOptions> {
                     if (typeof email !== 'string') return;
                     const lockedUntil = await findAccountLock(email);
                     if (lockedUntil === null) return;
+                    // The refusal throws before the after hook, so a spray at
+                    // locked accounts is counted against its address here.
+                    const address = ctx.headers?.get(CLIENT_ADDRESS_HEADER);
+                    if (address) await recordAddressFailure(address);
                     const seconds = Math.ceil(
                         (lockedUntil.getTime() - Date.now()) / 1000
                     );

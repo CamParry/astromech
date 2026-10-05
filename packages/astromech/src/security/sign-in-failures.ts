@@ -3,8 +3,11 @@
  * which emails have one. A lock doubles with each repeat, up to an hour.
  */
 
+import { clearAddressListCache, isAddressAllowed } from '@/security/address-lists';
+import { blockedAddressRepository } from '@/security/repository/blocked-addresses';
 import { signInFailureRepository } from '@/security/repository/sign-in-failures';
 import { sha256Hex } from '@/utilities/hash';
+import { rateLimitKey } from '@/utilities/ip-address';
 
 /** How many refusals lock an account, in what window, and for how long. */
 export const ACCOUNT_LOCK = {
@@ -14,6 +17,13 @@ export const ACCOUNT_LOCK = {
     maxLockMs: 60 * 60_000,
 } as const;
 
+/** How many refusals from one address block it, in what window, and for how long. */
+export const ADDRESS_BLOCK = {
+    failures: 20,
+    windowMs: 15 * 60_000,
+    blockMs: 60 * 60_000,
+} as const;
+
 /** When the account `email` is locked until, or null. Unknown emails lock too. */
 export async function findAccountLock(email: string): Promise<Date | null> {
     const row = await signInFailureRepository.findByKey(await accountKey(email));
@@ -21,12 +31,45 @@ export async function findAccountLock(email: string): Promise<Date | null> {
     return new Date(row.lockedUntil);
 }
 
-/** Count one refused sign-in against `email`, and lock it when over the limit. */
+/**
+ * Count one refused sign-in against `email`, and lock it when over the limit,
+ * and against `address`, which is blocked when it fails across many accounts.
+ */
 export async function recordSignInFailure(input: {
     email: string;
     address: string | undefined;
 }): Promise<void> {
-    const key = await accountKey(input.email);
+    await recordAccountFailure(input.email);
+    if (input.address !== undefined) await recordAddressFailure(input.address);
+}
+
+/**
+ * Count one refused sign-in against `address`, and block it for an hour once it
+ * has failed 20 times in 15 minutes. An allowed address is never blocked.
+ */
+export async function recordAddressFailure(address: string): Promise<void> {
+    const key = `address:${rateLimitKey(address)}`;
+    const now = Date.now();
+    const failure = await signInFailureRepository.recordFailure(
+        key,
+        now,
+        ADDRESS_BLOCK.windowMs
+    );
+    if (failure.count < ADDRESS_BLOCK.failures) return;
+    if (await isAddressAllowed(address)) return;
+    await blockedAddressRepository.upsert({
+        address: rateLimitKey(address),
+        source: 'automatic',
+        reason: 'Repeated failed sign-ins',
+        expiresAt: new Date(now + ADDRESS_BLOCK.blockMs),
+        createdBy: null,
+    });
+    await signInFailureRepository.deleteByKey(key);
+    clearAddressListCache();
+}
+
+async function recordAccountFailure(email: string): Promise<void> {
+    const key = await accountKey(email);
     const now = Date.now();
     const failure = await signInFailureRepository.recordFailure(
         key,
