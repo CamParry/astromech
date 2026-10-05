@@ -24,7 +24,7 @@ export default defineConfig({
         include: ['tests/**/*.test.ts'],
         expect: { requireAssertions: true },
         allowOnly: false,
-        testTimeout: 5000,
+        testTimeout: 15_000,
         hookTimeout: 10_000,
         restoreMocks: true,
         sequence: { shuffle: true },

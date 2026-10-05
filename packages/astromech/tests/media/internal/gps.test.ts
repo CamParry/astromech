@@ -289,6 +289,12 @@ describe('GPS removal on upload', () => {
     });
 });
 
+// The time limit on each crafted-file call below. The defects these inputs
+// guard took 8 to 87 s and the fixed code takes under 0.5 s, so 3 s fails on
+// each defect with room for a loaded runner. The test's own timeout only has
+// to cover building the input and checking the result.
+const TIME_LIMIT_MS = 3000;
+
 describe('removeGpsMetadata', () => {
     it.each([false, true])(
         'removes a GPS IFD whose pointer has tags after it, keeping those tags and the thumbnail (little-endian: %s)',
@@ -357,7 +363,7 @@ describe('removeGpsMetadata', () => {
         const started = performance.now();
         await removeGpsMetadata(bytes);
 
-        expect(performance.now() - started).toBeLessThan(3000);
+        expect(performance.now() - started).toBeLessThan(TIME_LIMIT_MS);
         expect(holdsLatitude(bytes)).toBe(false);
         expect(ifd0Tags(bytes)).toEqual([]);
     });
@@ -394,7 +400,7 @@ describe('removeGpsMetadata', () => {
         const started = performance.now();
         await removeGpsMetadata(bytes);
 
-        expect(performance.now() - started).toBeLessThan(3000);
+        expect(performance.now() - started).toBeLessThan(TIME_LIMIT_MS);
         expect(bytes.subarray(size - valueSize).some((byte) => byte !== 0)).toBe(false);
         expect(ifd0Tags(bytes)).toEqual([]);
     });
@@ -478,8 +484,9 @@ describe('removeGpsMetadata', () => {
         const started = performance.now();
         await removeGpsMetadata(bytes);
 
-        expect(performance.now() - started).toBeLessThan(3000);
-        expect(bytes).toEqual(original);
+        expect(performance.now() - started).toBeLessThan(TIME_LIMIT_MS);
+        // toEqual walks a typed array element by element: 1 to 3 s on these bytes.
+        expect(Buffer.from(bytes).equals(original)).toBe(true);
     });
 
     it('blanks the GPS values in an XMP packet that 1000 HEIF items share, quickly', async () => {
@@ -490,12 +497,12 @@ describe('removeGpsMetadata', () => {
         const started = performance.now();
         await removeGpsMetadata(bytes);
 
-        expect(performance.now() - started).toBeLessThan(3000);
+        expect(performance.now() - started).toBeLessThan(TIME_LIMIT_MS);
         const text = Buffer.from(bytes).toString('latin1');
         expect(text).not.toContain('51,30.2N');
         expect(text).not.toContain('0,7.0W');
         expect(text).toContain('<dc:rights>Example Rights</dc:rights>');
-    }, 30_000);
+    });
 
     it('removes the GPS IFD from an EXIF block that 10000 HEIF items share, quickly', async () => {
         // IFD0 holds the GPS pointer and 65534 other entries, read again by each item.
@@ -530,12 +537,12 @@ describe('removeGpsMetadata', () => {
         const started = performance.now();
         await removeGpsMetadata(bytes);
 
-        expect(performance.now() - started).toBeLessThan(3000);
+        expect(performance.now() - started).toBeLessThan(TIME_LIMIT_MS);
         expect(holdsLatitude(bytes)).toBe(false);
         const tags = ifd0Tags(bytes.subarray(bytes.length - payload.length + 4));
         expect(tags).toHaveLength(count - 1);
         expect(tags).not.toContain(TAG_GPS_IFD);
-    }, 30_000);
+    });
 
     it.each([
         ['to the end of the run', false],
@@ -566,10 +573,10 @@ describe('removeGpsMetadata', () => {
             const started = performance.now();
             await removeGpsMetadata(bytes);
 
-            expect(performance.now() - started).toBeLessThan(3000);
-            expect(bytes).toEqual(original);
-        },
-        60_000
+            expect(performance.now() - started).toBeLessThan(TIME_LIMIT_MS);
+            // toEqual walks a typed array element by element: 1 to 3 s on these bytes.
+            expect(Buffer.from(bytes).equals(original)).toBe(true);
+        }
     );
 
     it('blanks the values of ImageMagick’s exif:GPS text chunks and keeps the others', async () => {
@@ -688,7 +695,7 @@ describe('removeGpsMetadata', () => {
         const started = performance.now();
         await removeGpsMetadata(bytes);
 
-        expect(performance.now() - started).toBeLessThan(3000);
+        expect(performance.now() - started).toBeLessThan(TIME_LIMIT_MS);
         expect(Buffer.from(bytes).includes('51,30.2N')).toBe(false);
         expect(Buffer.from(bytes).includes('p3999:GPSLatitude="        "')).toBe(true);
     });
@@ -709,7 +716,7 @@ describe('removeGpsMetadata', () => {
             const started = performance.now();
             await removeGpsMetadata(bytes);
 
-            expect(performance.now() - started).toBeLessThan(3000);
+            expect(performance.now() - started).toBeLessThan(TIME_LIMIT_MS);
             expect(
                 Buffer.from(bytes).includes(
                     '<exif:GPSLatitude>        </exif:GPSLatitude>'
@@ -869,7 +876,6 @@ describe('removeGpsMetadata', () => {
         expect(hasValidCrcs(bytes)).toBe(true);
     });
 
-    // Builds and inflates three 2 MB texts: slow under coverage on a loaded runner.
     it('leaves alone the compressed text chunks past the first 2 MB a PNG inflates to', async () => {
         // Each chunk inflates to nearly 2 MB from about 2 KB.
         const text = Buffer.alloc(2 * 1024 * 1024 - 1024, 0x20);
@@ -887,7 +893,7 @@ describe('removeGpsMetadata', () => {
         const started = performance.now();
         await removeGpsMetadata(bytes);
 
-        expect(performance.now() - started).toBeLessThan(5000);
+        expect(performance.now() - started).toBeLessThan(TIME_LIMIT_MS);
         const chunks = readPngChunks(bytes).filter(({ type }) => type === 'zTXt');
         const [first, second, last] = [chunks[0], chunks[1], chunks.at(-1)].map((chunk) =>
             inflateSync(Buffer.from(chunk?.data ?? '', 'latin1').subarray(19))
@@ -895,7 +901,7 @@ describe('removeGpsMetadata', () => {
         expect(first?.includes('51,30.2N')).toBe(false);
         expect(second?.includes('51,30.2N')).toBe(true);
         expect(last?.includes('51,30.2N')).toBe(true);
-    }, 30_000);
+    });
 });
 
 /** The 16-byte stand-in for an EXIF thumbnail. */
