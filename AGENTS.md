@@ -36,6 +36,7 @@ While working, run the test file you touched (`pnpm -F <package> exec vitest run
 | `pnpm run check:install`         | installs packed tarballs into a scratch site per `apps/docs/installation.md`, plus `@astromech/backups`                                                |
 | `pnpm run check:hooks`           | the Claude Code Bash hook in `.claude/hooks/`, through its `node:test` suite                                                                           |
 | `pnpm run report:drift`          | not a check: lists drift patterns, copies and test weakening a branch adds; always exits 0                                                             |
+| `pnpm run land`                  | not a check: lands the current worktree's branch on main (see "Branches and worktrees")                                                                |
 
 Each script's header has the detail.
 
@@ -60,15 +61,16 @@ Each script's header has the detail.
 ## Branches and worktrees
 
 - **Anything beyond a trivial edit gets its own branch, in its own worktree.** Only `main` is worked on in the main checkout.
-- **Create the worktree by hand from a verified base**, and run a non-isolated agent scoped to it. The Agent tool's `isolation: worktree` forks from an unpredictable base.
-- **Worktrees live at `../Astromech-worktrees/<branch>`**, and the directory name matches the branch. A worktree nested inside the repo silently resolves main's `node_modules` and `dist`.
-- **A new worktree needs `pnpm install`, a copy of the demo app's `.env` (gitignored) and `pnpm run build`** before it can verify itself. `check:boot` is safe to run in several worktrees at once; a second `pnpm run dev` needs `-- --port <n>`.
-- **Commit or stash the main working tree before starting worktree work.** A worktree forks from the last commit, and copying its output back overwrites uncommitted changes.
+- **Create a worktree with `git fetch -q origin && wt switch --create <branch> --base origin/main --no-cd --yes`** from the main checkout, then run a non-isolated agent scoped to it. The Agent tool's `isolation: worktree` forks from an unpredictable base. The pre-start steps in `.config/wt.toml` copy the `.env` files, install, build, seed the demo database and install Chromium, so run it in the background, one at a time, never beside a gate. If a step fails, fix the cause and rerun them with `wt -C <path> hook pre-start --yes`. `wt list` shows every worktree's state.
+- **Worktrees live at `../Astromech-worktrees/<branch>`**, and the directory name matches the branch, so a branch name has no prefix or `/`. A worktree nested inside the repo silently resolves main's `node_modules` and `dist`. The path is in the Worktrunk user config, `~/.config/worktrunk/config.toml`: under `[projects."github.com/CamParry/astromech"]`, `worktree-path = "{{ repo_path }}/../{{ repo }}-worktrees/{{ branch | sanitize }}"` and `remove.delete-branch = false`.
+- **`check:boot` is safe to run in several worktrees at once.** A second dev server needs `-- --port <n>`; in a worktree, use the port `wt list` shows (`wt -C <path> step eval '{{ branch | hash_port }}'`).
+- **Commit the main working tree before starting worktree work.** A new worktree forks from `origin/main`, so a commit not yet pushed is missing from it, and copying its output back overwrites uncommitted changes.
 - **At most two active branches.** A multi-workstream feature gets one branch with a commit per workstream.
 - **Land on main early.** Nothing is deployed, so merge partial work behind an unticked `roadmap/` checkbox rather than keep a long-lived branch.
 - **Keep `roadmap/` status on main.** A branch's roadmap file lives on main and moves directories as the branch progresses.
 - **At the end of a session**, commit loose work as `wip(scope): …` with a body saying what is unfinished, push every surviving branch, and remove merged or parked worktrees.
-- **Delete a branch only after `git merge-base --is-ancestor <branch> <keeper>` confirms** its commits are contained elsewhere.
+- **Land with `pnpm run land`** from inside the worktree, once the gate has passed on its HEAD. It merges with `--no-ff` onto the fetched `origin/main`, pushes, removes the worktree and branch, fast-forwards the main checkout and waits for CI; `--message-file <path>` adds the merge body. Its header has the steps. Never `wt merge`: the Bash hook refuses it.
+- **Remove an abandoned worktree with `wt remove <branch> --yes`.** It keeps the branch. Delete a branch only after `git merge-base --is-ancestor <branch> <keeper>` confirms its commits are contained elsewhere.
 
 ## Naming
 

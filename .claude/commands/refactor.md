@@ -27,8 +27,8 @@ Per `AGENTS.md`, clarify before acting; for structural decisions, discuss the di
 
 ## 4. Set up git
 
-- **Commit or stash all in-progress changes in the main tree first** — worktrees fork from the last commit and silently overwrite uncommitted work.
-- Branch (`refactor/<kebab-name>`). For a worktree, **don't trust `isolation: "worktree"`** (forks from an unpredictable base here) — create it from a verified base at `../Astromech-worktrees/<branch>`, beside the repo rather than inside it, and run a non-isolated agent scoped to that absolute path, briefed from `.claude/_agents/coder.md`.
+- **Commit all in-progress changes in the main tree first.** A new worktree forks from `origin/main`, so an unpushed commit is missing from it, and copying its output back silently overwrites uncommitted work.
+- Create the branch and its worktree with `git fetch -q origin && wt switch --create <kebab-name> --base origin/main --no-cd --yes`, in the background (`AGENTS.md`, "Branches and worktrees"). The branch has no prefix, because the worktree's directory name must match it. **Don't use `isolation: "worktree"`** (forks from an unpredictable base here): run a non-isolated agent scoped to the worktree's absolute path, briefed from `.claude/_agents/coder.md`.
 
 ## 5. Execute in small, reversible steps
 
@@ -47,4 +47,4 @@ Per `AGENTS.md`, clarify before acting; for structural decisions, discuss the di
 - **Architecture/docs:** update `ARCHITECTURE.md` if the structure or layer boundaries shifted; refresh the docs and type definitions as needed.
 - **Roadmap:** update or tick the relevant `roadmap/` file; add `backlog.md` follow-ups.
 - **Reflect:** capture any non-obvious lesson as a memory file or skill update.
-- Commit with conventional-commit messages (`refactor:`). **Confirm with me before committing or pushing to `main`.** Check that sub-agents didn't commit with `--no-verify`.
+- Commit with conventional-commit messages (`refactor:`). **Confirm with me before committing or pushing to `main`.** Land the branch with `pnpm run land` from its worktree. Check that sub-agents didn't commit with `--no-verify`.
