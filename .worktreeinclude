@@ -1,0 +1,4 @@
+# Gitignored files `wt step copy-ignored` copies from the main checkout into a new worktree
+# (.config/wt.toml). A file must be gitignored and listed here. https://worktrunk.dev/step/
+apps/demo/.env
+apps/demo-cloudflare/.env

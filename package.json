@@ -24,6 +24,7 @@
         "check:install": "node scripts/check-install.mjs",
         "check:hooks": "node --test \".claude/hooks/*.test.mjs\"",
         "report:drift": "node scripts/report-drift.mjs",
+        "land": "node scripts/land.mjs",
         "prior-art": "node scripts/prior-art.mjs",
         "roadmap": "node scripts/roadmap-index.mjs",
         "format": "prettier --write .",

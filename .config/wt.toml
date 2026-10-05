@@ -1,0 +1,34 @@
+# Worktrunk project config: https://worktrunk.dev/config/
+#
+# `wt switch --create <branch>` runs the pre-start steps below in the new worktree, one after the
+# other, and stops at the first that fails. Rerun them with `wt -C <path> hook pre-start --yes`.
+# Hooks: https://worktrunk.dev/hook/. The worktree path is in the user config
+# (AGENTS.md, "Branches and worktrees"); landing is `pnpm run land`, never `wt merge`.
+
+[[pre-start]]
+# The env files `.worktreeinclude` lists, from the main checkout. Nothing else is copied.
+env = "wt step copy-ignored --require-include"
+
+[[pre-start]]
+install = "pnpm install --frozen-lockfile"
+
+[[pre-start]]
+# The demo loads the integration from `dist/` (apps/demo/AGENTS.md).
+build = "pnpm run build"
+
+[[pre-start]]
+# The demo database: the migrations, then the demo seed, which adds admin@astromech.dev and
+# clears the sign-in rate limits.
+db-init = "pnpm run db:init"
+
+[[pre-start]]
+db-seed = "pnpm run db:seed:demo"
+
+[[pre-start]]
+# The browser `check:boot` drives. Downloads only when this playwright version's build is missing.
+chromium = "pnpm exec playwright install chromium"
+
+[list]
+# The worktree's demo admin, on a port derived from the branch (10000-19999). Print the port with
+# `wt -C <path> step eval '{{ branch | hash_port }}'`.
+url = "http://localhost:{{ branch | hash_port }}/admin"
