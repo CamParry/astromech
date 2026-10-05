@@ -109,5 +109,12 @@ export function buildAdminConfig(
             ])
         ),
         pages: resolvedConfig.adminPages,
+        captcha:
+            resolvedConfig.security?.captcha === undefined
+                ? null
+                : {
+                      provider: resolvedConfig.security.captcha.provider,
+                      siteKey: resolvedConfig.security.captcha.siteKey,
+                  },
     };
 }

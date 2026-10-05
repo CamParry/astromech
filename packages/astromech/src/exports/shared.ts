@@ -26,3 +26,7 @@ export { defaultContentLocale, resolveContentLocale } from '@/utilities/locale';
 export { hasPermission } from '@/utilities/permission-match';
 export { MEDIA_MIME_TYPE_FILTERS, MEDIA_SORT_FIELDS } from '@/types/query';
 export { ENTRY_STATUSES, isEntryStatus } from '@/types/domain';
+export { renderCaptcha } from '@/security/captcha/client';
+export type { CaptchaHandle } from '@/security/captcha/client';
+export { CAPTCHA_ACTIONS, CAPTCHA_HEADER } from '@/security/captcha/types';
+export type { CaptchaProviderName, CaptchaWidget } from '@/security/captcha/types';

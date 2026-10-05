@@ -17,6 +17,8 @@ export const isolatedTests = [
     'tests/plugins/runtime/plugin-runtime.test.ts',
     'tests/policies/call-method.test.ts',
     'tests/registry.test.ts',
+    'tests/security/captcha/providers.test.ts',
+    'tests/security/captcha/sign-in.test.ts',
     'tests/request-scope/request-scope.test.ts',
     'tests/auth/secret.test.ts',
     'tests/storage/drivers/s3.test.ts',

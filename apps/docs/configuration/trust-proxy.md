@@ -55,6 +55,14 @@ your deployment knows whether a proxy sits in front of it, so that is what
   `NODE_ENV` is set to.
 - **The session record.** Each session stores the address it signed in from, in
   `sessions.ip_address`.
+- **The account lock.** A refused sign-in counts against the email, and each
+  address's refusals count toward an automatic block of that address, as
+  described in [security.md](security.md#what-is-on-by-default). Without a
+  trusted address no address is ever blocked.
+- **The block list and allow list**, which match each request's address:
+  [security.md](security.md#blocked-and-allowed-addresses).
+- **The captcha check**, which sends the provider the address as `remoteip`:
+  [security.md](security.md#captcha).
 - **The forms plugin's submission limit**, described in
   [../plugins/forms.md](../plugins/forms.md).
 

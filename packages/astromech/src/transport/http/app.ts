@@ -23,12 +23,14 @@ import {
 import { resolveNodeEnv } from '@/env';
 import { handleMediaRequest } from '@/media/serving/handler';
 import { getRequestScope, runInRequestScope } from '@/request-scope/request-scope';
+import { CAPTCHA_ACTIONS } from '@/security/captcha/types';
 import { parseOutput } from '@/services/parse-method-output';
 import { PRIVATE_NO_STORE } from '@/transport/http/cache-control';
 import { getClientAddress } from '@/transport/http/client-address';
 import { strictTransportSecurity } from '@/transport/http/strict-transport-security';
 import { requireAuth } from './middleware/auth';
 import { refuseBlockedAddresses } from './middleware/block-list';
+import { requireCaptcha } from './middleware/captcha';
 import { forbidden, fromZodError, onError, onNotFound } from './middleware/errors';
 import { cronRouter } from './routes/cron';
 import { entriesRouter } from './routes/entries';
@@ -125,7 +127,7 @@ export function createHttpApp(config: ResolvedConfig): OpenAPIHono<AppEnv> {
                 return allowed.includes(origin) ? origin : null;
             },
             allowMethods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
-            allowHeaders: ['Content-Type', 'Authorization'],
+            allowHeaders: ['Content-Type', 'Authorization', 'X-Captcha-Response'],
             credentials: true,
         })
     );
@@ -179,6 +181,16 @@ export function createHttpApp(config: ResolvedConfig): OpenAPIHono<AppEnv> {
         }
         return c.json({ success: true });
     });
+
+    // The captcha check runs before Better Auth sees the request; `next()` falls
+    // through to the catch-all below.
+    if (config.security?.captcha !== undefined) {
+        app.post(`${api}/auth/sign-in/email`, requireCaptcha(CAPTCHA_ACTIONS.signIn));
+        app.post(
+            `${api}/auth/request-password-reset`,
+            requireCaptcha(CAPTCHA_ACTIONS.passwordReset)
+        );
+    }
 
     // A catch-all because Better Auth owns its route surface, so core does not
     // list its routes. Built per request: at construction it would open a

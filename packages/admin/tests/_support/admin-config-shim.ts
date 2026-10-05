@@ -15,6 +15,7 @@ const config = {
     defaultLocale: 'en',
     locales: ['en'],
     media: { translatable: false, fields: [] },
+    captcha: null,
     entryTypes: {
         post: { single: 'Post', plural: 'Posts' },
         'forms/form': { plugin: 'forms', single: 'Form', plural: 'Forms' },

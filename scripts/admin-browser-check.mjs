@@ -1,6 +1,7 @@
 /**
  * The admin flow `check:boot` and `check:install` run in headless chromium,
- * from the first `/cms` load through first-run setup to a post's edit page.
+ * from the first `/cms` load through first-run setup to a post's edit page and
+ * the Security screen.
  */
 import { URL } from 'node:url';
 import { REQUEST_TIMEOUT_MS, step } from './check-helpers.mjs';
@@ -238,6 +239,33 @@ export async function expectAdminWorks(
     console.log(
         '  ok  the edit page renders the new post with its title in the title input'
     );
+
+    step('opening the Security screen');
+    // A documentation range (RFC 5737), so the block covers nobody, least of
+    // all this browser. It is written through the service with the session
+    // first-run setup created, then read back through the screen's list query.
+    const blocked = '203.0.113.0/24';
+    const blockUrl = `${admin}/api/security/blocked`;
+    const block = await page.request.post(blockUrl, {
+        data: { address: blocked, reason: 'check:boot' },
+        timeout: REQUEST_TIMEOUT_MS,
+    });
+    if (block.status() !== 201) {
+        throw new Error(
+            `POST ${blockUrl} returned ${block.status()}, expected 201: ${await block.text()}`
+        );
+    }
+    console.log(`  ok  201 POST ${blockUrl} (the admin may block an address)`);
+    const securityLink = page
+        .getByRole('navigation', { name: 'System' })
+        .getByRole('link', { name: 'Security', exact: true });
+    await waitFor(securityLink, 'the Security link in the sidebar');
+    await securityLink.click();
+    await waitFor(
+        page.getByText(blocked, { exact: true }),
+        'the new block in the Security screen'
+    );
+    console.log('  ok  the Security screen lists the block from its list query');
 
     if (pluginPage) {
         step('opening a plugin admin page');

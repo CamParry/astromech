@@ -23,6 +23,7 @@ export function usePermissions() {
         canCreateUsers: () => hasPermission(permissions, 'users:create'),
         canUpdateUsers: () => hasPermission(permissions, 'users:update'),
         canDeleteUsers: () => hasPermission(permissions, 'users:delete'),
+        canManageSecurity: () => hasPermission(permissions, 'security:manage'),
         hasAdminAccess: () => hasPermission(permissions, 'admin:access'),
         isAdmin: () => permissions.includes('*'),
     };

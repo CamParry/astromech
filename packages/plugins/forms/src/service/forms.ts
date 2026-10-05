@@ -6,12 +6,13 @@ import type { FormsAfterSubmitPayload, FormsBeforeSubmitPayload } from '../hooks
 import type { SpamProvider } from '../spam/types';
 import type { FormsOptions, SubmissionMeta } from '../types';
 import type { DataField } from 'astromech';
-import { defineServiceMethod, rateLimitKey, z } from 'astromech';
+import { CAPTCHA_ACTIONS, defineServiceMethod, rateLimitKey, z } from 'astromech';
 import { safeParseFields } from 'astromech/fields';
 import { compileFormFields } from '../fields/compile';
 import { AFTER_SUBMIT, BEFORE_SUBMIT } from '../hooks/events';
 import { sendNotifications } from '../notifications/dispatch';
 import { createSubmissionsRepository } from '../repository';
+import { captchaSpamProvider } from '../spam/captcha';
 import { entryFields, loadForm, usesSpam } from '../utilities/form-entry';
 import { buildSummary } from '../utilities/summary';
 import { consumeRateLimit } from './rate-limit';
@@ -39,10 +40,12 @@ const publicFormSchema = z.object({
             .openapi({ type: 'object', additionalProperties: true })
     ),
     /**
-     * Present only when the site configured a provider and the form uses it.
-     * Never carries the secret key.
+     * Present only when the site configured a captcha or a `spam` provider and
+     * the form uses it. Never carries the secret key.
      */
-    spam: z.object({ provider: z.string(), siteKey: z.string() }).optional(),
+    spam: z
+        .object({ provider: z.string(), siteKey: z.string(), action: z.string() })
+        .optional(),
 });
 
 export type PublicForm = z.output<typeof publicFormSchema>;
@@ -94,6 +97,8 @@ export function createFormsService(
                 const stored = entryFields(form);
                 const fields = compileFormFields(stored['fields']);
 
+                const provider = spam ?? captchaSpamProvider();
+
                 // Allow-list, never a spread: the `full` read holds the
                 // notification copy and recipients, and this is the one method
                 // an anonymous caller reaches. Site key only.
@@ -102,8 +107,14 @@ export function createFormsService(
                     slug: form.slug ?? '',
                     title: form.title,
                     fields,
-                    ...(spam !== undefined && usesSpam(form)
-                        ? { spam: { provider: spam.name, siteKey: spam.siteKey } }
+                    ...(provider !== undefined && usesSpam(form)
+                        ? {
+                              spam: {
+                                  provider: provider.name,
+                                  siteKey: provider.siteKey,
+                                  action: CAPTCHA_ACTIONS.formSubmit,
+                              },
+                          }
                         : {}),
                 };
             },

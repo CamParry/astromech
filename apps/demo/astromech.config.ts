@@ -162,10 +162,10 @@ export default defineConfig({
             ],
         }),
         rating(),
-        // No `spam` provider configured — the demo has no Turnstile/reCAPTCHA
-        // keys, and a configured provider would fail every seeded submission's
-        // gate. A real site would pass something like:
-        // forms({ spam: turnstile({ siteKey: '…', secretKey: import.meta.env.TURNSTILE_SECRET }) })
+        // No `security.captcha` configured — the demo has no Turnstile/reCAPTCHA
+        // keys, and a configured captcha would fail every seeded submission's
+        // gate. A real site would set something like:
+        // security: { captcha: { provider: 'turnstile', siteKey: '…' } }
         forms(),
     ],
     roles: {

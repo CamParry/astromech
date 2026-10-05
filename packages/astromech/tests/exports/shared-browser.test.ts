@@ -30,6 +30,7 @@ const allowlist = [
     /^src\/transport\/http\/routes\/(http-routes|query-string)\.ts$/,
     /^src\/transport\/http\/client\.ts$/,
     /^src\/services\/typed-services\.ts$/,
+    /^src\/security\/captcha\/(client|types)\.ts$/,
 ];
 
 const builtinNames = builtinModules.filter(

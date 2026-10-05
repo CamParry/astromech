@@ -13,7 +13,7 @@ export const FORMS_PACKAGE = '@astromech/forms';
 export const FORM_TYPE = 'form';
 
 export type FormsOptions = {
-    /** A spam provider such as `turnstile(...)`, or your own. */
+    /** Another spam service. Without it, forms use the site's `security.captcha`. */
     spam?: SpamProvider;
     /** Store ip / userAgent / referer on each submission. Default true. */
     storeMeta?: boolean;

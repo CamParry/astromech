@@ -16,6 +16,7 @@ export type ApiErrorCode =
     | 'METHOD_NOT_ALLOWED'
     | 'SIGN_UP_CLOSED'
     | 'ADDRESS_BLOCKED'
+    | 'CAPTCHA_FAILED'
     | 'capability_not_supported'
     | 'staged_change_exists';
 

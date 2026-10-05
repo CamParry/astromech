@@ -1,12 +1,9 @@
 /**
- * Unit tests for the forms plugin's spam gate:
- * - `turnstile`/`recaptcha` — the built-in `SpamProvider` factories, both
- *   built on the shared `siteverify` POST client. `fetch` is stubbed at the
- *   boundary; this is a network client, so stubbing HTTP here is correct and
- *   is NOT the "never mock the DB" rule.
+ * The forms plugin's spam gate:
  * - `spamHook` — the `forms:beforeSubmit` subscriber that turns a bad verdict
- *   into a throw (the gate), tested against a hand-written `SpamProvider` stub.
- * - the address sent as `remoteip`, through a registered plugin over HTTP.
+ *   into a throw, tested against a hand-written `SpamProvider` stub.
+ * - core's captcha as the default provider, through a registered plugin over
+ *   HTTP. `fetch` is stubbed because siteverify leaves the process.
  */
 
 import type { FormsBeforeSubmitPayload } from '../src/hooks/events';
@@ -17,11 +14,10 @@ import type { PluginContext } from 'astromech';
 import { makeTestConfig } from '@tests/harness';
 import { createPluginTestApp } from '@tests/plugin-app';
 import { afterEach, describe, expect, it, vi } from 'vitest';
+import { clearEnvSource, setEnvSource } from '@/env';
 import { BEFORE_SUBMIT } from '../src/hooks/events';
 import { forms } from '../src/index';
 import { spamHook } from '../src/spam/hook';
-import { recaptcha } from '../src/spam/providers/recaptcha';
-import { turnstile } from '../src/spam/providers/turnstile';
 
 function jsonResponse(body: unknown, status = 200): Response {
     return new Response(JSON.stringify(body), {
@@ -32,169 +28,7 @@ function jsonResponse(body: unknown, status = 200): Response {
 
 afterEach(() => {
     vi.unstubAllGlobals();
-});
-
-describe('turnstile', () => {
-    const provider = turnstile({ siteKey: 'site-key', secretKey: 'super-secret' });
-
-    it('short-circuits on a missing token without calling fetch', async () => {
-        const fetchMock = vi.fn();
-        vi.stubGlobal('fetch', fetchMock);
-
-        const verdict = await provider.verify(undefined, {});
-
-        expect(verdict).toEqual({ ok: false, reason: 'Missing verification token' });
-        expect(fetchMock).not.toHaveBeenCalled();
-    });
-
-    it('short-circuits on a blank token without calling fetch', async () => {
-        const fetchMock = vi.fn();
-        vi.stubGlobal('fetch', fetchMock);
-
-        const verdict = await provider.verify('   ', {});
-
-        expect(verdict.ok).toBe(false);
-        expect(fetchMock).not.toHaveBeenCalled();
-    });
-
-    it('accepts a successful verification', async () => {
-        const fetchMock = vi.fn().mockResolvedValue(jsonResponse({ success: true }));
-        vi.stubGlobal('fetch', fetchMock);
-
-        const verdict = await provider.verify('a-token', {});
-
-        expect(verdict).toEqual({ ok: true });
-        expect(fetchMock).toHaveBeenCalledWith(
-            'https://challenges.cloudflare.com/turnstile/v0/siteverify',
-            expect.objectContaining({ method: 'POST' })
-        );
-    });
-
-    it('surfaces error-codes on failure', async () => {
-        const fetchMock = vi.fn().mockResolvedValue(
-            jsonResponse({
-                success: false,
-                'error-codes': ['invalid-input-response'],
-            })
-        );
-        vi.stubGlobal('fetch', fetchMock);
-
-        const verdict = await provider.verify('a-token', {});
-
-        expect(verdict.ok).toBe(false);
-        expect(verdict.ok === false && verdict.reason).toContain(
-            'invalid-input-response'
-        );
-    });
-
-    it('fails closed on a non-200 response', async () => {
-        const fetchMock = vi.fn().mockResolvedValue(jsonResponse({ success: true }, 500));
-        vi.stubGlobal('fetch', fetchMock);
-
-        const verdict = await provider.verify('a-token', {});
-
-        expect(verdict.ok).toBe(false);
-    });
-
-    it('fails closed on a malformed JSON body', async () => {
-        const fetchMock = vi.fn().mockResolvedValue(
-            new Response('not json', {
-                status: 200,
-                headers: { 'Content-Type': 'application/json' },
-            })
-        );
-        vi.stubGlobal('fetch', fetchMock);
-
-        const verdict = await provider.verify('a-token', {});
-
-        expect(verdict.ok).toBe(false);
-    });
-
-    it('fails closed when fetch itself throws', async () => {
-        const fetchMock = vi.fn().mockRejectedValue(new Error('network down'));
-        vi.stubGlobal('fetch', fetchMock);
-
-        const verdict = await provider.verify('a-token', {});
-
-        expect(verdict.ok).toBe(false);
-    });
-
-    it('never includes secretKey in a returned reason', async () => {
-        const fetchMock = vi
-            .fn()
-            .mockResolvedValue(
-                jsonResponse({ success: false, 'error-codes': ['bad-secret'] })
-            );
-        vi.stubGlobal('fetch', fetchMock);
-
-        const verdict = await provider.verify('a-token', {});
-
-        expect(verdict.ok).toBe(false);
-        expect(verdict.ok === false && verdict.reason).not.toContain('super-secret');
-    });
-});
-
-describe('recaptcha', () => {
-    it('rejects a v3 score below minScore', async () => {
-        const fetchMock = vi
-            .fn()
-            .mockResolvedValue(jsonResponse({ success: true, score: 0.2 }));
-        vi.stubGlobal('fetch', fetchMock);
-        const provider = recaptcha({
-            siteKey: 'site-key',
-            secretKey: 'super-secret',
-            minScore: 0.5,
-        });
-
-        const verdict = await provider.verify('a-token', {});
-
-        expect(verdict.ok).toBe(false);
-        expect(verdict.ok === false && verdict.reason).toContain('below minimum');
-    });
-
-    it('accepts a v3 score at or above minScore', async () => {
-        const fetchMock = vi
-            .fn()
-            .mockResolvedValue(jsonResponse({ success: true, score: 0.9 }));
-        vi.stubGlobal('fetch', fetchMock);
-        const provider = recaptcha({ siteKey: 'site-key', secretKey: 'super-secret' });
-
-        const verdict = await provider.verify('a-token', {});
-
-        expect(verdict).toEqual({ ok: true });
-    });
-
-    it('accepts a v2 response with no score, on success alone', async () => {
-        const fetchMock = vi.fn().mockResolvedValue(jsonResponse({ success: true }));
-        vi.stubGlobal('fetch', fetchMock);
-        const provider = recaptcha({ siteKey: 'site-key', secretKey: 'super-secret' });
-
-        const verdict = await provider.verify('a-token', {});
-
-        expect(verdict).toEqual({ ok: true });
-    });
-
-    it('defaults minScore to 0.5 when not given', async () => {
-        const fetchMock = vi
-            .fn()
-            .mockResolvedValue(jsonResponse({ success: true, score: 0.4 }));
-        vi.stubGlobal('fetch', fetchMock);
-        const provider = recaptcha({ siteKey: 'site-key', secretKey: 'super-secret' });
-
-        const verdict = await provider.verify('a-token', {});
-
-        expect(verdict.ok).toBe(false);
-    });
-
-    it('fails closed on a non-200 response', async () => {
-        const fetchMock = vi.fn().mockResolvedValue(jsonResponse({ success: true }, 500));
-        vi.stubGlobal('fetch', fetchMock);
-        const provider = recaptcha({ siteKey: 'site-key', secretKey: 'super-secret' });
-
-        const verdict = await provider.verify('a-token', {});
-
-        expect(verdict.ok).toBe(false);
-    });
+    clearEnvSource();
 });
 
 // `Hook.handler` is typed as a union of every core handler signature
@@ -281,23 +115,25 @@ describe('spamHook', () => {
     });
 });
 
-describe('the address sent to the spam provider', () => {
+describe("core's captcha as the spam provider", () => {
     const VERIFY_URL = 'https://challenges.cloudflare.com/turnstile/v0/siteverify';
 
     let app: PluginTestApp<'forms'>;
 
-    /** The `remoteip` of each siteverify request, `null` where none was sent. */
-    let sentAddresses: (string | null)[];
+    /** The form body of each siteverify request. */
+    let sent: URLSearchParams[];
 
-    async function setup(security: { trustProxy: boolean }): Promise<void> {
-        const options: FormsOptions = {
-            spam: turnstile({ siteKey: 'site-key', secretKey: 'super-secret' }),
-            rateLimit: false,
-        };
+    async function setup(
+        options: FormsOptions,
+        security: {
+            trustProxy: boolean;
+            captcha?: { provider: 'turnstile'; siteKey: string };
+        }
+    ): Promise<void> {
         app = await createPluginTestApp('forms', {
             ...makeTestConfig(),
             security,
-            plugins: [forms(options)],
+            plugins: [forms({ rateLimit: false, ...options })],
         });
         await app.entries.create({
             type: 'forms/form',
@@ -311,17 +147,23 @@ describe('the address sent to the spam provider', () => {
                 },
             },
         });
-        sentAddresses = [];
-        vi.stubGlobal('fetch', async (url: string, init: RequestInit) => {
+        setEnvSource({ ASTROMECH_CAPTCHA_SECRET: 'captcha-secret' });
+        sent = [];
+        vi.stubGlobal('fetch', (url: string, init: RequestInit) => {
             expect(url).toBe(VERIFY_URL);
-            const body = new URLSearchParams(String(init.body));
-            sentAddresses.push(body.get('remoteip'));
-            return jsonResponse({ success: true });
+            sent.push(new URLSearchParams(String(init.body)));
+            return Promise.resolve(
+                jsonResponse({
+                    success: true,
+                    action: 'form_submit',
+                    hostname: 'localhost',
+                })
+            );
         });
     }
 
     /** Submit with a spoofed `meta.ip` and `forwardedFor` as `x-forwarded-for`. */
-    async function submit(forwardedFor: string): Promise<unknown> {
+    async function submit(forwardedFor = '192.0.2.10'): Promise<unknown> {
         const response = await app.request('POST', '/plugins/forms/submit', {
             body: {
                 slug: 'contact',
@@ -334,21 +176,83 @@ describe('the address sent to the spam provider', () => {
         return response.json();
     }
 
+    const CAPTCHA = { provider: 'turnstile', siteKey: 'site-key' } as const;
+
+    it("uses core's captcha when the site configures one and passes no spam option", async () => {
+        await setup({}, { trustProxy: false, captcha: CAPTCHA });
+
+        const result = await submit();
+        const form = await app.service.get({ slug: 'contact' });
+
+        expect(result).toEqual({ ok: true, id: expect.any(String) });
+        expect(sent.map((body) => body.get('secret'))).toEqual(['captcha-secret']);
+        expect(form?.spam).toEqual({
+            provider: 'turnstile',
+            siteKey: 'site-key',
+            action: 'form_submit',
+        });
+    });
+
+    it("refuses a submission whose token core's captcha refuses", async () => {
+        await setup({}, { trustProxy: false, captcha: CAPTCHA });
+        vi.stubGlobal('fetch', () =>
+            Promise.resolve(
+                jsonResponse({ success: true, action: 'sign_in', hostname: 'localhost' })
+            )
+        );
+
+        const result = await submit();
+
+        expect(result).toEqual({
+            ok: false,
+            errors: {
+                _form: ['Spam check failed: Token was issued for another action'],
+            },
+        });
+    });
+
+    it("a spam option overrides core's captcha", async () => {
+        const verify = vi.fn().mockResolvedValue({ ok: true });
+        await setup(
+            { spam: { name: 'own', siteKey: 'own-key', verify } },
+            { trustProxy: false, captcha: CAPTCHA }
+        );
+
+        const result = await submit();
+        const form = await app.service.get({ slug: 'contact' });
+
+        expect(result).toEqual({ ok: true, id: expect.any(String) });
+        expect(verify).toHaveBeenCalledOnce();
+        expect(sent).toEqual([]);
+        expect(form?.spam?.provider).toBe('own');
+    });
+
+    it('checks nothing when the site sets neither', async () => {
+        await setup({}, { trustProxy: false });
+
+        const result = await submit();
+        const form = await app.service.get({ slug: 'contact' });
+
+        expect(result).toEqual({ ok: true, id: expect.any(String) });
+        expect(sent).toEqual([]);
+        expect(form?.spam).toBeUndefined();
+    });
+
     it('sends the address the proxy vouches for, never the caller’s own', async () => {
-        await setup({ trustProxy: true });
+        await setup({}, { trustProxy: true, captcha: CAPTCHA });
 
         const result = await submit('198.51.100.1, 192.0.2.10');
 
         expect(result).toEqual({ ok: true, id: expect.any(String) });
-        expect(sentAddresses).toEqual(['192.0.2.10']);
+        expect(sent.map((body) => body.get('remoteip'))).toEqual(['192.0.2.10']);
     });
 
     it('sends no address when the transport has no trusted one', async () => {
-        await setup({ trustProxy: false });
+        await setup({}, { trustProxy: false, captcha: CAPTCHA });
 
         const result = await submit('198.51.100.1');
 
         expect(result).toEqual({ ok: true, id: expect.any(String) });
-        expect(sentAddresses).toEqual([null]);
+        expect(sent.map((body) => body.get('remoteip'))).toEqual([null]);
     });
 });

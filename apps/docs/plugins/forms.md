@@ -5,12 +5,11 @@ submissions are kept. Writing a plugin of your own is
 [authoring.md](authoring.md).
 
 ```ts
-import { forms, turnstile } from '@astromech/forms';
+import { forms } from '@astromech/forms';
 
 export default defineConfig({
     plugins: [
         forms({
-            spam: turnstile({ siteKey: '…', secretKey: '…' }),
             storeMeta: true,
             rateLimit: { limit: 20, windowMs: 60_000 },
         }),
@@ -20,7 +19,7 @@ export default defineConfig({
 
 | Option      | Default                          | What it does                                                                          |
 | ----------- | -------------------------------- | ------------------------------------------------------------------------------------- |
-| `spam`      | none                             | A spam provider such as `turnstile(...)`, or your own.                                |
+| `spam`      | the site's captcha               | Another spam service, as a `SpamProvider` object.                                     |
 | `storeMeta` | `true`                           | Store the `ip` / `userAgent` / `referer` a caller sends alongside each submission.    |
 | `rateLimit` | `{ limit: 20, windowMs: 60000 }` | Submissions allowed per connecting address and form per window. `false` turns it off. |
 
@@ -68,17 +67,26 @@ failure, so it renders where your other errors do:
 
 ## Spam protection
 
-With `spam` set, every form whose **Spam protection** toggle is on checks the
-token the caller sends with `submit`, after the fields pass validation. The
-check runs as a `forms:beforeSubmit` subscriber, and a failed check refuses the
-submission with nothing stored.
+Every form whose **Spam protection** toggle is on checks the token the caller
+sends with `submit`, after the fields pass validation. The check is the site's
+captcha, set once for sign-in and forms with `security.captcha`
+([../configuration/security.md](../configuration/security.md#captcha)). With no
+captcha configured and no `spam` option, nothing is checked. The check runs as a
+`forms:beforeSubmit` subscriber, and a failed check refuses the submission with
+nothing stored.
 
-`turnstile()` and `recaptcha()` send the provider the connecting address (the
-one the rate limit counts) as `remoteip`. With no connecting address, they leave
-`remoteip` out, which both providers accept. They never send the `ip` a caller
-puts in `meta`. Your own provider's `verify(token, { clientAddress })` receives
-the same address, and the `forms:beforeSubmit` payload carries it as
-`clientAddress`.
+`get` returns `spam: { provider, siteKey, action }` for a protected form. Render
+the widget with `renderCaptcha` from `astromech/shared`, ask it for
+`action` (always `form_submit`), and send the token as `submit`'s `token`.
+
+The check sends the provider the connecting address (the one the rate limit
+counts) as `remoteip`. With no connecting address, it leaves `remoteip` out,
+which every provider accepts. It never sends the `ip` a caller puts in `meta`.
+
+`spam` replaces the captcha with a provider of your own, an object with a
+`name`, a `siteKey` and a `verify(token, { clientAddress })` that returns
+`{ ok: true }` or `{ ok: false, reason }`. It receives the same address, and the
+`forms:beforeSubmit` payload carries it as `clientAddress`.
 
 ## Submissions
 

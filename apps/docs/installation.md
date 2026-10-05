@@ -110,10 +110,11 @@ served through Astromech's media route. Add `uploads/` to your `.gitignore`.
 
 Development needs no environment variables. Before you deploy, set these:
 
-| Variable             | Required | What it is                                                                      |
-| -------------------- | -------- | ------------------------------------------------------------------------------- |
-| `BETTER_AUTH_SECRET` | yes      | The key that signs sessions. Use at least 32 random characters.                 |
-| `BETTER_AUTH_URL`    | no       | The site's public origin, such as `https://example.com`. Set it behind a proxy. |
+| Variable                   | Required                | What it is                                                                                             |
+| -------------------------- | ----------------------- | ------------------------------------------------------------------------------------------------------ |
+| `BETTER_AUTH_SECRET`       | yes                     | The key that signs sessions. Use at least 32 random characters.                                        |
+| `BETTER_AUTH_URL`          | no                      | The site's public origin, such as `https://example.com`. Set it behind a proxy.                        |
+| `ASTROMECH_CAPTCHA_SECRET` | with `security.captcha` | The captcha provider's secret key; see [configuration/security.md](configuration/security.md#captcha). |
 
 Without `BETTER_AUTH_SECRET`, a built site refuses every request with a 500 and
 logs `Astromech requires missing env var: BETTER_AUTH_SECRET`. Generate one with

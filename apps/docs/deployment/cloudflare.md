@@ -100,6 +100,11 @@ Until it is set, Astromech refuses every request, because Better Auth would
 otherwise sign sessions with a built-in secret that anyone can read. Running it
 locally, below, covers `wrangler dev`.
 
+With `security.captcha` set, store its secret the same way, with
+`npx wrangler secret put ASTROMECH_CAPTCHA_SECRET`; without it Astromech refuses
+every request in production
+([../configuration/security.md](../configuration/security.md#captcha)).
+
 ## Migrations
 
 Migrations are applied by command, never on boot. `db:generate` never opens

@@ -21,24 +21,14 @@ export default defineConfig({
 });
 ```
 
-With spam protection:
-
-```ts
-import { forms, turnstile } from '@astromech/forms';
-
-forms({
-    spam: turnstile({
-        siteKey: 'your-site-key',
-        secretKey: import.meta.env.TURNSTILE_SECRET,
-    }),
-});
-```
+Spam protection is the site's `security.captcha` setting; see
+[Spam protection](#spam-protection).
 
 ### Options
 
 | option      | type                           | default                          | meaning                                                                          |
 | ----------- | ------------------------------ | -------------------------------- | -------------------------------------------------------------------------------- |
-| `spam`      | `SpamProvider`                 | none                             | Enables spam protection. See below.                                              |
+| `spam`      | `SpamProvider`                 | the site's captcha               | Replaces the captcha check. See below.                                           |
 | `storeMeta` | `boolean`                      | `true`                           | Store `ip` / `userAgent` / `referer` on each row.                                |
 | `rateLimit` | `{ limit, windowMs } \| false` | `{ limit: 20, windowMs: 60000 }` | Submissions per connecting address and form per window, counted in the database. |
 
@@ -62,7 +52,7 @@ forms/
   src/service/rate-limit.ts          the submission rate limit, counted per address and form
   src/hooks/events.ts                forms:beforeSubmit / forms:afterSubmit payloads
   src/notifications/                 one provider per notification kind (see below)
-  src/spam/                          one provider per spam service (see below)
+  src/spam/                          the spam gate: core's captcha, or a `spam` provider (see below)
   src/utilities/                     shared reads over a form entry, value display, summaries
 ```
 
@@ -83,7 +73,8 @@ entry — no second validation implementation.
 **Notifications** — see below.
 
 **Spam** — a single **Spam protection** toggle. It only does anything when the
-site configured a provider; a form can opt out of one that is configured.
+site configured a captcha or a `spam` provider; a form can opt out of one that is
+configured.
 
 ## Notifications
 
@@ -144,8 +135,14 @@ is logged rather than returned to the visitor.
 
 ## Spam protection
 
-A spam provider is an ordinary value, so `turnstile` and `recaptcha` are two
-instances of one contract rather than a closed set:
+Forms check the token a visitor sends with the site's captcha
+(`security.captcha`, which also protects sign-in), and check nothing when the
+site sets none. The check is core's `verifyCaptcha` with the fixed action
+`form_submit`, and it fails closed: a missing token, a bad status, an
+unparseable body and a network throw all reject the submission.
+
+`forms({ spam })` replaces it with a provider of your own, an ordinary value
+rather than a closed set:
 
 ```ts
 export type SpamProvider = {
@@ -160,20 +157,11 @@ export type SpamProvider = {
 };
 ```
 
-Pass your own object to `forms({ spam })` to use a different service. Both
-built-ins fail closed: a missing token, a bad status, an unparseable body and a
-network throw all reject the submission.
-
-```ts
-turnstile({ siteKey, secretKey });
-recaptcha({ siteKey, secretKey, minScore: 0.5 }); // minScore is v3 only
-```
-
 [Spam protection](../../../apps/docs/plugins/forms.md#spam-protection) says
-which address `clientAddress` carries. The secret key never leaves the server —
-only `name` and `siteKey` are published to the browser. The check runs as an
-ordinary `forms:beforeSubmit` subscriber, through the same extension point a
-third party would use.
+which address `clientAddress` carries. The secret never leaves the server: only
+`provider`, `siteKey` and `action` are published to the browser. The check runs
+as an ordinary `forms:beforeSubmit` subscriber, through the same extension point
+a third party would use.
 
 ## Service methods
 
@@ -187,14 +175,15 @@ const form = await Astromech.plugins.forms.get({ slug: 'contact' });
 Returns `null` unless the form is published and accepting submissions.
 Otherwise `{ id, slug, title, fields, spam? }` — an explicit allow-list, so
 notification settings and the spam secret can never ride along. `fields` is
-exactly what `submit` will validate against; `spam` is `{ provider, siteKey }`
-and appears only when the site configured a provider and the form uses it.
+exactly what `submit` will validate against; `spam` is
+`{ provider, siteKey, action }` and appears only when the site configured a
+captcha or a `spam` provider and the form uses it.
 
 ```ts
 const result = await Astromech.plugins.forms.submit({
     slug: 'contact',
     data: { name: 'Ada', email: 'ada@example.com' },
-    token: turnstileToken, // when spam protection is on
+    token: captchaToken, // when spam protection is on
     meta: { ip, userAgent, referer },
 });
 ```
