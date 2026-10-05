@@ -4,9 +4,13 @@
 # other, and stops at the first that fails. Rerun them with `wt -C <path> hook pre-start --yes`.
 # Hooks: https://worktrunk.dev/hook/. The worktree path is in the user config
 # (AGENTS.md, "Branches and worktrees"); landing is `pnpm run land`, never `wt merge`.
+#
+# `wt switch` reads this file from the checkout it runs in, and `.worktreeinclude` from the main
+# checkout, so run it from the main checkout: a change to either applies once main has it.
 
 [[pre-start]]
-# The env files `.worktreeinclude` lists, from the main checkout. Nothing else is copied.
+# The env files `.worktreeinclude` lists, from the main checkout. With `--require-include`, a
+# missing `.worktreeinclude` copies nothing rather than every gitignored file.
 env = "wt step copy-ignored --require-include"
 
 [[pre-start]]
