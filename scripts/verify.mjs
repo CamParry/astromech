@@ -46,10 +46,11 @@
  * Each check's whole output goes to a log file in the worktree's git
  * directory, `verify/<check>.log`, and a `FAIL` line names its path. To see
  * more of a failure, search that log; don't rerun the check. A passing run
- * writes `verify/stamp.json` there, recording the mode, HEAD and the
- * uncommitted changes, and a failed run removes it. `pnpm run verify:status`
- * reads it, so a run already made on the same tree need not be repeated. A run
- * whose tree changes while it runs writes no stamp. `scripts/verify-stamp.mjs`
+ * writes `verify/stamp.json` there, recording the mode and the git tree id of
+ * the working tree, and a failed run removes it. `pnpm run verify:status`
+ * reads it, so a run already made on the same content need not be repeated,
+ * before or after that content is committed. A run whose tree changes while it
+ * runs writes no stamp. `scripts/verify-stamp.mjs`
  * has the detail.
  */
 
@@ -369,10 +370,7 @@ if (interrupted) {
 } else {
     console.log(passed[mode]);
     const endingTree = treeState(repoRoot);
-    if (
-        endingTree.head === startingTree.head &&
-        endingTree.changes === startingTree.changes
-    ) {
+    if (endingTree.tree === startingTree.tree) {
         writeStamp(verifyDirectory, mode, startingTree);
         console.log(
             `Recorded in ${stampPath(verifyDirectory)} (pnpm run verify:status).`

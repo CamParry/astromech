@@ -1,8 +1,8 @@
 /**
  * Says whether the gate's last passing run in this worktree still holds:
- * whether the stamp `scripts/verify.mjs` wrote matches the current HEAD and
- * uncommitted changes. Exits 0 when it matches and 1 otherwise. It runs no
- * check, so it costs a moment rather than a gate.
+ * whether the stamp `scripts/verify.mjs` wrote matches the working tree's
+ * current content, committed or not. Exits 0 when it matches and 1 otherwise.
+ * It runs no check, so it costs a moment rather than a gate.
  *
  * With no flag, a passing run of any mode matches, and the line printed names
  * the mode. `--fast`, `--runtime` or `--full` asks for a run that covers that

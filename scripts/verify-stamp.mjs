@@ -8,8 +8,14 @@
  *
  * - `<check>.log` holds a check's whole output from the latest run, stdout and
  *   stderr as the check printed them. Each run removes the previous run's logs.
- * - `stamp.json` is written when a run passes: the mode, HEAD, a hash of the
- *   uncommitted changes, the time and the result. A failed run removes it.
+ * - `stamp.json` is written when a run passes: the mode, the git tree id of
+ *   the working tree, HEAD, the time and the result. A failed run removes it.
+ *
+ * The tree id is the one a commit of the working tree would point at: tracked
+ * files as they are on disk, plus untracked files git does not ignore. So the
+ * stamp still matches after the verified changes are committed, and stops
+ * matching when any file changes, including a reformat by the pre-commit hook.
+ * HEAD is kept only to name the commit in messages.
  *
  * The stamp is what a lead reads instead of rerunning a gate a sub-agent ran:
  * the script writes it, so it does not rest on the agent's report.
@@ -18,17 +24,19 @@
  * check they run; neither of those covers another mode.
  */
 import { execFileSync } from 'node:child_process';
-import { createHash } from 'node:crypto';
 import {
-    lstatSync,
+    copyFileSync,
+    existsSync,
     mkdirSync,
+    mkdtempSync,
     readdirSync,
     readFileSync,
-    readlinkSync,
     rmSync,
     writeFileSync,
 } from 'node:fs';
-import { join } from 'node:path';
+import { tmpdir } from 'node:os';
+import { join, resolve } from 'node:path';
+import process from 'node:process';
 
 /** The modes each mode's passing run covers. */
 const COVERED_MODES = {
@@ -66,44 +74,36 @@ export function stampPath(directory) {
 }
 
 /**
- * HEAD, and a hash of everything the working tree adds to it: the tracked
- * changes, staged or not (`git diff HEAD`), and each untracked file that git
- * does not ignore, by path and content. Two calls on an unchanged tree return
- * the same hash, whatever the files' timestamps.
+ * HEAD, and the git tree id of the working tree. The tree is written through a
+ * copy of the index (`git add -A` then `git write-tree`), so the real index is
+ * never touched; the copy is removed afterwards. Two calls on an unchanged tree
+ * return the same id, whatever the files' timestamps.
  */
 export function treeState(repoRoot) {
     const head = git(repoRoot, 'rev-parse', 'HEAD').toString().trim();
-    const hash = createHash('sha256');
-    hash.update(
-        git(
-            repoRoot,
-            'diff',
-            'HEAD',
-            '--binary',
-            '--no-color',
-            '--no-ext-diff',
-            '--no-textconv',
-            '--no-renames'
-        )
+    const index = resolve(
+        repoRoot,
+        git(repoRoot, 'rev-parse', '--git-path', 'index').toString().trim()
     );
-    const untracked = git(repoRoot, 'ls-files', '--others', '--exclude-standard', '-z')
-        .toString()
-        .split('\0')
-        .filter((path) => path !== '')
-        .sort();
-    for (const path of untracked) {
-        hash.update(`\0${path}\0`);
-        hash.update(untrackedContent(join(repoRoot, path)));
+    const scratch = mkdtempSync(join(tmpdir(), 'astromech-verify-'));
+    try {
+        const copy = join(scratch, 'index');
+        if (existsSync(index)) copyFileSync(index, copy);
+        const env = { ...process.env, GIT_INDEX_FILE: copy };
+        gitWith(repoRoot, env, 'add', '-A');
+        const tree = gitWith(repoRoot, env, 'write-tree').toString().trim();
+        return { head, tree };
+    } finally {
+        rmSync(scratch, { recursive: true, force: true });
     }
-    return { head, changes: hash.digest('hex') };
 }
 
 /** Records a passing run of `mode` over `state`. */
 export function writeStamp(directory, mode, state) {
     const stamp = {
         mode,
+        tree: state.tree,
         head: state.head,
-        changes: state.changes,
         finishedAt: new Date().toISOString(),
         result: 'passed',
     };
@@ -130,30 +130,29 @@ export function stampStatus(repoRoot, mode) {
                 'no passing run recorded (none has run here, or the last run failed)',
         };
     }
-    const ran = `a ${stamp.mode} run passed at ${stamp.finishedAt} on ${stamp.head.slice(0, 8)}`;
+    const ran = `a ${stamp.mode} run passed at ${stamp.finishedAt} on ${short(stamp.head)}`;
     if (mode !== undefined && !COVERED_MODES[stamp.mode]?.includes(mode)) {
         return { matches: false, message: `${ran}, which does not cover ${mode}` };
     }
     const state = treeState(repoRoot);
-    if (stamp.head !== state.head) {
+    if (stamp.tree !== state.tree) {
         return {
             matches: false,
-            message: `${ran}, but HEAD is ${state.head.slice(0, 8)}`,
+            message: `${ran}, but the working tree's content differs (tree ${short(state.tree)}, was ${short(stamp.tree)})`,
         };
     }
-    if (stamp.changes !== state.changes) {
-        return {
-            matches: false,
-            message: `${ran}, but the uncommitted changes differ from that run's`,
-        };
-    }
-    return { matches: true, message: `${ran}, with the same uncommitted changes` };
+    const moved =
+        stamp.head === state.head ? '' : `; HEAD has moved to ${short(state.head)}`;
+    return {
+        matches: true,
+        message: `${ran}, on the same content (tree ${short(state.tree)})${moved}`,
+    };
 }
 
 function readStamp(directory) {
     try {
         const stamp = JSON.parse(readFileSync(stampPath(directory), 'utf8'));
-        return typeof stamp?.head === 'string' && typeof stamp?.mode === 'string'
+        return typeof stamp?.tree === 'string' && typeof stamp?.mode === 'string'
             ? stamp
             : undefined;
     } catch {
@@ -161,21 +160,19 @@ function readStamp(directory) {
     }
 }
 
-/**
- * A file's content; a symlink's target, without following it; nothing for a
- * directory, which git lists for a nested repository.
- */
-function untrackedContent(path) {
-    const stats = lstatSync(path);
-    if (stats.isSymbolicLink()) return readlinkSync(path);
-    if (stats.isDirectory()) return '';
-    return readFileSync(path);
+function short(id) {
+    return String(id).slice(0, 8);
 }
 
 /** A git command's stdout, as a buffer of any size. */
 function git(repoRoot, ...args) {
+    return gitWith(repoRoot, process.env, ...args);
+}
+
+function gitWith(repoRoot, env, ...args) {
     return execFileSync('git', args, {
         cwd: repoRoot,
+        env,
         maxBuffer: Number.POSITIVE_INFINITY,
         stdio: ['ignore', 'pipe', 'ignore'],
     });

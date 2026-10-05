@@ -50,7 +50,7 @@ Each script's header has the detail.
 - **Clarify before acting.** If a task is ambiguous, or the approach depends on an unclear requirement, ask.
 - **Delegate implementation to a sub-agent.** The main thread plans, decides and reviews. Edit directly only for a trivial one-liner or to correct a sub-agent.
 - **Give the sub-agent the whole plan**: file paths, exact changes and expected outcomes, so it does not re-research the codebase.
-- **Verify what comes back.** Run `pnpm run verify:status --fast` in the worktree (`--full` for the full gate). It exits 0 only when that gate passed on the worktree's current HEAD and uncommitted changes; otherwise re-run the gate yourself. A sub-agent's report of a clean run is not evidence. The stamp is, because the gate script writes it, not the agent.
+- **Verify what comes back.** Run `pnpm run verify:status --fast` in the worktree (`--full` for the full gate). It exits 0 only when that gate passed on the worktree's current content, committed since or not; otherwise re-run the gate yourself. A sub-agent's report of a clean run is not evidence. The stamp is, because the gate script writes it, not the agent.
 - **Study a pattern before changing it.** Find where it already repeats. Change every copy, record the rest in a `roadmap/` file, or say why this one differs. A defect fix asks where else the same defect can occur.
 - **Run `pnpm run report:drift` before a branch merges**, and give each item a decision in the merge summary: share it now, add it to a `roadmap/` file, or leave it with a reason.
 - **Don't commit while sub-agents are writing in the same worktree.** The pre-commit hook stashes repo-wide and can clobber their edits.
