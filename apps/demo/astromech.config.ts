@@ -183,6 +183,21 @@ export default defineConfig({
                 ...assistant.permissions('use'),
             ],
         },
+        // The built-in editor without `publish`: its `entry:*` grant is
+        // replaced by every action but `publish` on each entry type. The seed
+        // signs one in as `contributor@astromech.dev`.
+        contributor: {
+            name: 'Contributor',
+            permissions: [
+                ...permissionsForBuiltInRole('editor').filter(
+                    (grant) => grant !== 'entry:*'
+                ),
+                'entry:read:full',
+                ...['page', 'post', 'author', 'caseStudy', 'category', 'tag'].flatMap(
+                    (type) => entryPermissions(type, 'read', 'create', 'update', 'delete')
+                ),
+            ],
+        },
     },
 
     globals: [

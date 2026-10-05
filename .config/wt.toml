@@ -14,6 +14,13 @@
 env = "wt step copy-ignored --require-include"
 
 [[pre-start]]
+# The demo's auth URL on this worktree's port. The copied `.env` names the main checkout's port,
+# and Better Auth refuses a sign-in whose `Origin` is not that URL (403 `INVALID_ORIGIN`).
+auth-url = '''
+node -e "const fs = require('fs'); const file = 'apps/demo/.env'; const line = 'BETTER_AUTH_URL=http://localhost:{{ branch | hash_port }}'; const text = fs.existsSync(file) ? fs.readFileSync(file, 'utf8') : ''; const pattern = /^BETTER_AUTH_URL=.*/m; fs.writeFileSync(file, pattern.test(text) ? text.replace(pattern, line) : text + (text === '' || text.endsWith('\n') ? '' : '\n') + line + '\n')"
+'''
+
+[[pre-start]]
 install = "pnpm install --frozen-lockfile"
 
 [[pre-start]]
@@ -21,8 +28,8 @@ install = "pnpm install --frozen-lockfile"
 build = "pnpm run build"
 
 [[pre-start]]
-# The demo database: the migrations, then the demo seed, which adds admin@astromech.dev and
-# clears the sign-in rate limits.
+# The demo database: the migrations, then the demo seed, which adds the users `apps/demo/AGENTS.md`
+# names and clears the sign-in rate limits.
 db-init = "pnpm run db:init"
 
 [[pre-start]]

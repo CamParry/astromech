@@ -1,7 +1,7 @@
 /**
- * Demo marketing-site seed. Clears all content entries plus relationships,
- * globals, redirects and settings on every run; preserves auth rows and creates
- * admin@astromech.dev / password if missing. Run with `tsx demo/seed.ts`.
+ * Demo marketing-site seed. Clears content and sign-in rate limits on every
+ * run, keeps users, and creates the admin and contributor in `apps/demo/AGENTS.md`
+ * if missing. Run with `pnpm run db:seed:demo`.
  */
 
 import type { Field, JsonObject } from 'astromech';
@@ -64,8 +64,24 @@ const db = dbDriver.getInstance();
 const now = new Date();
 const PUBLISHED_AT = now;
 
-async function upsertAdmin(): Promise<string> {
-    const email = 'admin@astromech.dev';
+/** A user the seed signs in as, all with the password `password`. */
+type SeedUser = { email: string; name: string; role: string };
+
+/** The admin, who owns the seeded content. */
+const ADMIN: SeedUser = {
+    email: 'admin@astromech.dev',
+    name: 'Alex Admin',
+    role: 'admin',
+};
+
+/** A user whose role cannot publish, for checking what such a user sees. */
+const CONTRIBUTOR: SeedUser = {
+    email: 'contributor@astromech.dev',
+    name: 'Casey Contributor',
+    role: 'contributor',
+};
+
+async function upsertUser({ email, name, role }: SeedUser): Promise<string> {
     const existing = await db
         .selectFrom('users')
         .select('id')
@@ -73,7 +89,7 @@ async function upsertAdmin(): Promise<string> {
         .executeTakeFirst();
 
     if (existing !== undefined) {
-        console.log(`  Admin user exists: ${email}`);
+        console.log(`  User exists: ${email}`);
         return existing.id;
     }
 
@@ -87,9 +103,9 @@ async function upsertAdmin(): Promise<string> {
             schema.encodeWith(schema.usersTable, {
                 id: userId,
                 email,
-                name: 'Alex Admin',
+                name,
                 emailVerified: true,
-                role: 'admin',
+                role,
                 createdAt: now,
                 updatedAt: now,
             })
@@ -126,7 +142,7 @@ async function upsertAdmin(): Promise<string> {
         )
         .execute();
 
-    console.log(`  Created admin user: ${email}`);
+    console.log(`  Created user: ${email} (${role})`);
     return userId;
 }
 
@@ -282,7 +298,12 @@ async function seed(): Promise<void> {
         '  Cleared content entries, relationships, globals, settings, redirects, form submissions, media\n'
     );
 
-    const adminId = await upsertAdmin();
+    // Sign-in counts live in the database, so a restart does not clear them.
+    await db.deleteFrom('rateLimits').execute();
+    console.log('  Cleared sign-in rate limits');
+
+    const adminId = await upsertUser(ADMIN);
+    await upsertUser(CONTRIBUTOR);
     console.log();
 
     // Media: deterministic placeholder photos from picsum.photos, falling
@@ -2018,7 +2039,8 @@ async function seed(): Promise<void> {
     console.log('  Redirects      3');
     console.log('  Forms          1  (contact) + 2 submissions');
     console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
-    console.log('  Admin login: admin@astromech.dev / password');
+    console.log(`  Admin login: ${ADMIN.email} / password`);
+    console.log(`  Contributor login (cannot publish): ${CONTRIBUTOR.email} / password`);
     console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n');
 }
 
