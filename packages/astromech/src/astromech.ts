@@ -31,6 +31,7 @@ import { bootPlugins, registerPlugins } from '@/plugins/runtime/plugin-runtime';
 import { registerDrivers } from '@/register-drivers';
 import { createRegistry } from '@/registry';
 import { getCurrentRole, getCurrentUser } from '@/request-scope/request-scope';
+import { securityJobs } from '@/security/jobs/security-cleanup';
 import { typedServices } from '@/services/typed-services';
 import { createHttpApp } from '@/transport/http/app';
 
@@ -116,7 +117,8 @@ export function getAstromech(): Promise<Astromech> {
 
 /** Register the built-in cron jobs each domain ships. New domains add their jobs here. */
 function registerBuiltInJobs(): void {
-    for (const job of [scheduledPublishJob, ...entryJobs]) registerCronJob(job);
+    for (const job of [scheduledPublishJob, ...entryJobs, ...securityJobs])
+        registerCronJob(job);
 }
 
 /** Boot a runtime: fill the registries, verify, register, boot the plugins, assemble the app. */

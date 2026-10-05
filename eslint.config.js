@@ -78,6 +78,7 @@ const contentModules = [
     'media',
     'users',
     'notifications',
+    'security',
     'content',
 ];
 

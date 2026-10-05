@@ -54,6 +54,7 @@ const APP_CONTEXT_KEYS = [
     'notify',
     'role',
     'runHook',
+    'security',
     'user',
     'users',
 ];
@@ -120,6 +121,7 @@ describe('createServices', () => {
         expect(ctx.media).toBe(services.media);
         expect(ctx.users).toBe(services.users);
         expect(ctx.notifications).toBe(services.notifications);
+        expect(ctx.security).toBe(services.security);
     });
 
     it('refuses on the scoped handle what the role lacks, and not on the trusted one', async () => {

@@ -64,7 +64,7 @@ action?: { label, href } }`, the message a translation key. `run` returns
   "cron job failed" notification goes through the same row, so a job failing
   every minute notifies once.
 - **Where:** `/health` in the sidebar's System section, with a badge counting
-  critical checks. The Security screen (`roadmap/planned/core-security.md`)
+  critical checks. The Security screen (`roadmap/in-progress/core-security.md`)
   stays separate; security checks here link to it.
 
 ## The work

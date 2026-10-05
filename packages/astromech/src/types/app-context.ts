@@ -13,6 +13,7 @@ import type {
     GlobalsService,
     MediaService,
     NotificationsService,
+    SecurityService,
     UsersService,
 } from './services';
 import type { DB } from '@/database/types';
@@ -53,6 +54,7 @@ export type AppContext = {
     users: UsersService;
     /** Session-scoped: acts for `user`. */
     notifications: NotificationsService;
+    security: SecurityService;
     /** Email port — the element is rendered here, and an unconfigured driver throws. */
     email: PluginEmail;
     notify: (input: NotifyInput) => Promise<void>;

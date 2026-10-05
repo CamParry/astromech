@@ -338,6 +338,47 @@ export async function up(db: Kysely<unknown>): Promise<void> {
         db
     );
     await sql`
+        CREATE TABLE \`sign_in_failures\` (
+            \`id\` text PRIMARY KEY NOT NULL,
+            \`key\` text NOT NULL,
+            \`count\` integer NOT NULL,
+            \`window_start\` integer NOT NULL,
+            \`lock_count\` integer DEFAULT 0 NOT NULL,
+            \`locked_until\` integer
+        )
+    `.execute(db);
+    await sql`CREATE UNIQUE INDEX \`sign_in_failures_key_unique\` ON \`sign_in_failures\` (\`key\`)`.execute(
+        db
+    );
+    await sql`
+        CREATE TABLE \`allowed_addresses\` (
+            \`id\` text PRIMARY KEY NOT NULL,
+            \`address\` text NOT NULL,
+            \`reason\` text,
+            \`created_at\` text NOT NULL,
+            \`created_by\` text,
+            CONSTRAINT \`allowed_addresses_created_by_fkey\` FOREIGN KEY (\`created_by\`) REFERENCES \`users\`(\`id\`) ON UPDATE no action ON DELETE set null
+        )
+    `.execute(db);
+    await sql`CREATE UNIQUE INDEX \`allowed_addresses_address_unique\` ON \`allowed_addresses\` (\`address\`)`.execute(
+        db
+    );
+    await sql`
+        CREATE TABLE \`blocked_addresses\` (
+            \`id\` text PRIMARY KEY NOT NULL,
+            \`address\` text NOT NULL,
+            \`reason\` text,
+            \`source\` text NOT NULL CHECK (\`source\` IN ('automatic', 'manual')),
+            \`expires_at\` text,
+            \`created_at\` text NOT NULL,
+            \`created_by\` text,
+            CONSTRAINT \`blocked_addresses_created_by_fkey\` FOREIGN KEY (\`created_by\`) REFERENCES \`users\`(\`id\`) ON UPDATE no action ON DELETE set null
+        )
+    `.execute(db);
+    await sql`CREATE UNIQUE INDEX \`blocked_addresses_address_unique\` ON \`blocked_addresses\` (\`address\`)`.execute(
+        db
+    );
+    await sql`
         CREATE TABLE \`user_content\` (
             \`id\` text PRIMARY KEY NOT NULL,
             \`user_id\` text NOT NULL,

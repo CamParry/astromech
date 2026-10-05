@@ -6,15 +6,21 @@
 
 import type { Auth, BetterAuthOptions } from 'better-auth';
 import { APIError, betterAuth } from 'better-auth';
-import { createAuthMiddleware } from 'better-auth/api';
+import { createAuthMiddleware, isAPIError } from 'better-auth/api';
 import { openAPI } from 'better-auth/plugins';
-import { SIGN_UP_CLOSED } from '@/auth/setup';
+import { ACCOUNT_LOCKED, SIGN_UP_CLOSED } from '@/auth/setup';
 import { getConfig } from '@/config/registry';
 import { getDatabaseDriverOrThrow } from '@/database/driver-registry';
 import { resolveEnv, resolveNodeEnv } from '@/env';
 import { AstromechError } from '@/errors/astromech-error';
 import { DEFAULT_ROLE_SLUG } from '@/permissions/roles';
 import { createRegistry } from '@/registry';
+import {
+    clearSignInFailures,
+    findAccountLock,
+    recordAddressFailure,
+    recordSignInFailure,
+} from '@/security/sign-in-failures';
 import { log } from '@/utilities/log';
 
 const authRegistry = createRegistry<Auth<BetterAuthOptions>>('auth', {
@@ -119,11 +125,48 @@ function buildAuth(): Auth<BetterAuthOptions> {
             customRules: RATE_LIMIT_RULES,
         },
         hooks: {
-            // A password change signs out every other session whatever the
-            // client asks, so a stolen session does not outlive the change.
             before: createAuthMiddleware(async (ctx) => {
+                if (ctx.path === '/sign-in/email') {
+                    const email: unknown = ctx.body?.email;
+                    if (typeof email !== 'string') return;
+                    const lockedUntil = await findAccountLock(email);
+                    if (lockedUntil === null) return;
+                    // The refusal throws before the after hook, so a spray at
+                    // locked accounts is counted against its address here.
+                    const address = ctx.headers?.get(CLIENT_ADDRESS_HEADER);
+                    if (address) await recordAddressFailure(address);
+                    const seconds = Math.ceil(
+                        (lockedUntil.getTime() - Date.now()) / 1000
+                    );
+                    throw new APIError('TOO_MANY_REQUESTS', ACCOUNT_LOCKED, {
+                        'Retry-After': String(seconds),
+                    });
+                }
+                // A password change signs out every other session whatever the
+                // client asks, so a stolen session does not outlive the change.
                 if (ctx.path !== '/change-password') return;
                 return { context: { body: { ...ctx.body, revokeOtherSessions: true } } };
+            }),
+            // Runs after a refused sign-in too: Better Auth leaves the error in
+            // `returned`. Only a wrong password or unknown email counts.
+            after: createAuthMiddleware(async (ctx) => {
+                if (ctx.path !== '/sign-in/email') return;
+                const email: unknown = ctx.body?.email;
+                if (typeof email !== 'string') return;
+                if (ctx.context.newSession) {
+                    await clearSignInFailures(email);
+                    return;
+                }
+                const returned = ctx.context.returned;
+                if (
+                    isAPIError(returned) &&
+                    returned.body?.code === 'INVALID_EMAIL_OR_PASSWORD'
+                ) {
+                    await recordSignInFailure({
+                        email,
+                        address: ctx.headers?.get(CLIENT_ADDRESS_HEADER) ?? undefined,
+                    });
+                }
             }),
         },
         databaseHooks: {
@@ -193,6 +236,9 @@ function buildAuth(): Auth<BetterAuthOptions> {
         emailAndPassword: {
             enabled: true,
             revokeSessionsOnPasswordReset: true,
+            onPasswordReset: async ({ user }) => {
+                await clearSignInFailures(user.email);
+            },
             sendResetPassword: async ({
                 user,
                 url,

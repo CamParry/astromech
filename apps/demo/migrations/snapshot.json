@@ -243,6 +243,150 @@
       ],
       "indexes": []
     },
+    "allowed_addresses": {
+      "name": "allowed_addresses",
+      "columns": [
+        {
+          "key": "id",
+          "name": "id",
+          "kind": "id",
+          "type": "text",
+          "notNull": true,
+          "primaryKey": true
+        },
+        {
+          "key": "address",
+          "name": "address",
+          "kind": "text",
+          "type": "text",
+          "notNull": true,
+          "primaryKey": false
+        },
+        {
+          "key": "reason",
+          "name": "reason",
+          "kind": "text",
+          "type": "text",
+          "notNull": false,
+          "primaryKey": false
+        },
+        {
+          "key": "createdAt",
+          "name": "created_at",
+          "kind": "timestamp",
+          "type": "text",
+          "notNull": true,
+          "primaryKey": false
+        },
+        {
+          "key": "createdBy",
+          "name": "created_by",
+          "kind": "reference",
+          "type": "text",
+          "notNull": false,
+          "primaryKey": false
+        }
+      ],
+      "fks": [
+        {
+          "column": "created_by",
+          "targetTable": "users",
+          "targetColumn": "id",
+          "onDelete": "set null"
+        }
+      ],
+      "indexes": [
+        {
+          "name": "allowed_addresses_address_unique",
+          "columns": [
+            "address"
+          ],
+          "unique": true
+        }
+      ]
+    },
+    "blocked_addresses": {
+      "name": "blocked_addresses",
+      "columns": [
+        {
+          "key": "id",
+          "name": "id",
+          "kind": "id",
+          "type": "text",
+          "notNull": true,
+          "primaryKey": true
+        },
+        {
+          "key": "address",
+          "name": "address",
+          "kind": "text",
+          "type": "text",
+          "notNull": true,
+          "primaryKey": false
+        },
+        {
+          "key": "reason",
+          "name": "reason",
+          "kind": "text",
+          "type": "text",
+          "notNull": false,
+          "primaryKey": false
+        },
+        {
+          "key": "source",
+          "name": "source",
+          "kind": "enum",
+          "type": "text",
+          "notNull": true,
+          "primaryKey": false,
+          "enumValues": [
+            "automatic",
+            "manual"
+          ]
+        },
+        {
+          "key": "expiresAt",
+          "name": "expires_at",
+          "kind": "timestamp",
+          "type": "text",
+          "notNull": false,
+          "primaryKey": false
+        },
+        {
+          "key": "createdAt",
+          "name": "created_at",
+          "kind": "timestamp",
+          "type": "text",
+          "notNull": true,
+          "primaryKey": false
+        },
+        {
+          "key": "createdBy",
+          "name": "created_by",
+          "kind": "reference",
+          "type": "text",
+          "notNull": false,
+          "primaryKey": false
+        }
+      ],
+      "fks": [
+        {
+          "column": "created_by",
+          "targetTable": "users",
+          "targetColumn": "id",
+          "onDelete": "set null"
+        }
+      ],
+      "indexes": [
+        {
+          "name": "blocked_addresses_address_unique",
+          "columns": [
+            "address"
+          ],
+          "unique": true
+        }
+      ]
+    },
     "entries": {
       "name": "entries",
       "columns": [
@@ -1680,6 +1824,70 @@
           "name": "sessions_token_unique",
           "columns": [
             "token"
+          ],
+          "unique": true
+        }
+      ]
+    },
+    "sign_in_failures": {
+      "name": "sign_in_failures",
+      "columns": [
+        {
+          "key": "id",
+          "name": "id",
+          "kind": "id",
+          "type": "text",
+          "notNull": true,
+          "primaryKey": true
+        },
+        {
+          "key": "key",
+          "name": "key",
+          "kind": "text",
+          "type": "text",
+          "notNull": true,
+          "primaryKey": false
+        },
+        {
+          "key": "count",
+          "name": "count",
+          "kind": "integer",
+          "type": "integer",
+          "notNull": true,
+          "primaryKey": false
+        },
+        {
+          "key": "windowStart",
+          "name": "window_start",
+          "kind": "integer",
+          "type": "integer",
+          "notNull": true,
+          "primaryKey": false
+        },
+        {
+          "key": "lockCount",
+          "name": "lock_count",
+          "kind": "integer",
+          "type": "integer",
+          "notNull": true,
+          "primaryKey": false,
+          "default": 0
+        },
+        {
+          "key": "lockedUntil",
+          "name": "locked_until",
+          "kind": "integer",
+          "type": "integer",
+          "notNull": false,
+          "primaryKey": false
+        }
+      ],
+      "fks": [],
+      "indexes": [
+        {
+          "name": "sign_in_failures_key_unique",
+          "columns": [
+            "key"
           ],
           "unique": true
         }

@@ -79,16 +79,18 @@ is `DECISIONS.md`, "Security in core is defaults and shared mechanisms".
 
 ## The work
 
-- [ ] The per-account lock: counters, escalation, clearing, and a before-hook
+- [x] The per-account lock: counters, escalation, clearing, and a before-hook
       on Better Auth's sign-in that refuses a locked account.
-- [ ] The block list and allow list tables, with `pnpm run db:generate` and the
+- [x] The block list and allow list tables, with `pnpm run db:generate` and the
       Cloudflare baseline hand-applied; the middleware and its cache; automatic
       blocks.
 - [ ] The captcha service: config, providers moved from `@astromech/forms`,
       hCaptcha, the server check, the middleware on Better Auth's routes, a
       client renderer, and the admin sign-in and reset forms sending the token.
-- [ ] Opt-in HSTS, and `frame-ancestors 'self'` on the admin page.
-- [ ] Security events written to the audit trail.
+- [x] Opt-in HSTS, and `frame-ancestors 'self'` on the admin page.
+- [ ] Security events written to the audit trail. Waits for the table in
+      `roadmap/planned/audit-trail.md`, which lists each event's call site; the
+      Security screen shows no events until then.
 - [ ] The Security screen and its permission.
 - [ ] Docs: the defaults, the settings, and the CSP sources a captcha needs.
 

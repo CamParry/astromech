@@ -300,6 +300,7 @@ describe('requireAuth covers every mounted domain router', () => {
         ['/media'],
         ['/entry-types'],
         ['/notifications'],
+        ['/security/blocked'],
     ])('401s %s without a session', async (path) => {
         const app = await freshApp();
         const res = await app.request(`${api}${path}`);

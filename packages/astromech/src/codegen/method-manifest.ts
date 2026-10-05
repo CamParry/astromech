@@ -26,6 +26,7 @@ import {
     resolvePluginIdentity,
     resolvePluginPermission,
 } from '@/plugins/runtime/plugin-identity';
+import { securityDefinition } from '@/security/service';
 import { toJsonSchema } from '@/services/json-schema';
 import { usersDefinition } from '@/users/service';
 
@@ -72,6 +73,7 @@ function buildCoreMethods(): CoreManifestMethod[] {
         ['media', mediaDefinition.catalogue],
         ['globals', globalsDefinition.catalogue],
         ['notifications', notificationsDefinition.catalogue],
+        ['security', securityDefinition.catalogue],
     ];
     const methods: CoreManifestMethod[] = [];
 

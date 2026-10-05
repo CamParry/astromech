@@ -10,9 +10,13 @@ import { migrationNames, rawConfig } from 'virtual:astromech/config';
 import { createAstromech } from '@/astromech';
 import { assertAuthSecret } from '@/auth/better-auth';
 import { setBundledMigrationNames } from '@/database/migration-registry';
-import { resolveInjectedRoute } from '@/integrations/astro/routes';
+import { readRemoteAddress } from '@/integrations/astro/remote-address';
+import { isAdminPage, resolveInjectedRoute } from '@/integrations/astro/routes';
 import { runInRequestScope } from '@/request-scope/request-scope';
+import { isAddressBlocked } from '@/security/address-lists';
 import { PRIVATE_NO_STORE } from '@/transport/http/cache-control';
+import { resolveClientAddress } from '@/transport/http/client-address';
+import { strictTransportSecurity } from '@/transport/http/strict-transport-security';
 
 export const onRequest: MiddlewareHandler = async (context, next) => {
     // A page prerendered at build time gets no application, so a build neither
@@ -27,6 +31,15 @@ export const onRequest: MiddlewareHandler = async (context, next) => {
     // what starts the in-process ticker. A no-op on Workers.
     await app.startScheduler();
 
+    // The API refuses a blocked address itself, in the Hono app.
+    const adminPage = isAdminPage(app.config, context.url.pathname);
+    if (adminPage) {
+        const address = resolveClientAddress(context.request, readRemoteAddress(context));
+        if (address !== undefined && (await isAddressBlocked(address))) {
+            return blockedPage();
+        }
+    }
+
     const scope: RequestScope = { request: context.request };
     const response = await runInRequestScope(scope, () => next());
 
@@ -37,19 +50,56 @@ export const onRequest: MiddlewareHandler = async (context, next) => {
     if (context.cache.enabled) context.cache.set(false);
     // A media file is public and keeps the media route's own lifetime; a page
     // that read with a preview token answers one visitor.
-    return route === 'media' ? response : withCacheControl(response, PRIVATE_NO_STORE);
+    const set: Record<string, string> =
+        route === 'media' ? {} : { 'Cache-Control': PRIVATE_NO_STORE };
+    const append: Record<string, string> = {};
+    if (adminPage) {
+        // A header, since a `<meta>` policy cannot carry `frame-ancestors`.
+        // Appended: a policy the site sends too still applies.
+        append['Content-Security-Policy'] = "frame-ancestors 'self'";
+        const hsts = strictTransportSecurity(app.config.security?.hsts);
+        if (hsts !== undefined) set['Strict-Transport-Security'] = hsts;
+    }
+    return withHeaders(response, set, append);
 };
 
 export default onRequest;
 
-/** Set `Cache-Control`, copying a response whose headers are immutable. */
-function withCacheControl(response: Response, value: string): Response {
+/** Set `set` and append `append` on `response`, copying one whose headers are immutable. */
+function withHeaders(
+    response: Response,
+    set: Record<string, string>,
+    append: Record<string, string>
+): Response {
+    if (Object.keys(set).length === 0 && Object.keys(append).length === 0) {
+        return response;
+    }
     try {
-        response.headers.set('Cache-Control', value);
+        apply(response.headers, set, append);
         return response;
     } catch {
         const copy = new Response(response.body, response);
-        copy.headers.set('Cache-Control', value);
+        apply(copy.headers, set, append);
         return copy;
     }
+}
+
+function apply(
+    headers: Headers,
+    set: Record<string, string>,
+    append: Record<string, string>
+): void {
+    for (const [name, value] of Object.entries(set)) headers.set(name, value);
+    for (const [name, value] of Object.entries(append)) headers.append(name, value);
+}
+
+/** The 403 an admin page answers a blocked address with. */
+function blockedPage(): Response {
+    return new Response('Forbidden', {
+        status: 403,
+        headers: {
+            'Cache-Control': PRIVATE_NO_STORE,
+            'Content-Type': 'text/plain; charset=utf-8',
+        },
+    });
 }

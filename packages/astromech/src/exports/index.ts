@@ -40,7 +40,7 @@ export {
  * The key a plugin's per-client rate limit counts `ctx.clientAddress` under,
  * grouped the way core's sign-in limits group addresses.
  */
-export { rateLimitKey } from '@/transport/http/client-address';
+export { rateLimitKey } from '@/utilities/ip-address';
 export { withDefaults } from '@/utilities/options';
 export {
     resolveEntryUrl,

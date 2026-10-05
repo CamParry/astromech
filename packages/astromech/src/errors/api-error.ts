@@ -15,6 +15,7 @@ export type ApiErrorCode =
     | 'BAD_REQUEST'
     | 'METHOD_NOT_ALLOWED'
     | 'SIGN_UP_CLOSED'
+    | 'ADDRESS_BLOCKED'
     | 'capability_not_supported'
     | 'staged_change_exists';
 
