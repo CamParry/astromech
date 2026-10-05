@@ -48,7 +48,7 @@ Each script's header has the detail.
 
 - **Clarify before acting.** If a task is ambiguous, or the approach depends on an unclear requirement, ask.
 - **Delegate implementation to a sub-agent.** The main thread plans, decides and reviews. Edit directly only for a trivial one-liner or to correct a sub-agent.
-- **Give the sub-agent the whole plan**: file paths, exact changes and expected outcomes, so it does not re-research the codebase.
+- **Give the sub-agent the whole plan**: file paths, exact changes and expected outcomes, so it does not re-research the codebase. Start the brief by pointing it to `.claude/_agents/coder.md`, the rules every implementation agent follows.
 - **Verify what comes back.** Re-run the gate yourself. A sub-agent's report of a clean run is not evidence.
 - **Study a pattern before changing it.** Find where it already repeats. Change every copy, record the rest in a `roadmap/` file, or say why this one differs. A defect fix asks where else the same defect can occur.
 - **Run `pnpm run report:drift` before a branch merges**, and give each item a decision in the merge summary: share it now, add it to a `roadmap/` file, or leave it with a reason.

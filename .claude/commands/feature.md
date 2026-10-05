@@ -20,13 +20,13 @@ Follow this process. Don't skip phases. Stop and ask before acting whenever a re
 
 - **Commit or stash all in-progress changes in the main tree before any worktree work** — worktrees fork from the last commit and copying their output back silently overwrites uncommitted work.
 - Create a feature branch (`feat/<kebab-name>`). Confirm with me before branching off `main` if unsure.
-- If using a worktree: **don't trust `isolation: "worktree"`** — it forks from an unpredictable base here. Create it yourself from a verified base: `git worktree add -b <name> .claude/worktrees/<name> <verified-commit>`, confirm the base contains your latest commits, then run a non-isolated `coder` agent scoped to that absolute path.
+- If using a worktree: **don't trust `isolation: "worktree"`**, which forks from an unpredictable base here. Create it yourself from a verified base, beside the repo rather than inside it (a nested worktree resolves main's `node_modules` and `dist`): `git worktree add -b <branch> ../Astromech-worktrees/<branch> <verified-commit>`. Confirm the base contains your latest commits, set it up as `AGENTS.md` ("Branches and worktrees") says, then run a non-isolated agent scoped to that absolute path, briefed from `.claude/_agents/coder.md`.
 - Move the roadmap file `planned/ → in-progress/` now that work has started.
 
 ## 3. Implement
 
-- Delegate slices to `coder` sub-agents with complete plans (file paths, exact code, expected outcome) so they don't re-research.
-- Code follows the `code`, `ui`, `api`, and `css` skills. Mind the known gotchas (reserved instance keys, content visibility shapes, globalThis singletons, locale display-vs-content, lazy seeding) — recall the relevant project memory before touching those areas.
+- Delegate slices to sub-agents briefed from `.claude/_agents/coder.md`, with complete plans (file paths, exact code, expected outcome) so they don't re-research.
+- Code follows the `code` and `api` skills. The `css` and `ui` skills are parked under `.claude/_skills/`: read them as intent, not as rules. Mind the known gotchas (reserved instance keys, content visibility shapes, globalThis singletons, locale display-vs-content, lazy seeding) — recall the relevant project memory before touching those areas.
 
 ## 4. Test & verify — all of these, not a subset
 

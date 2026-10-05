@@ -28,11 +28,11 @@ Per `AGENTS.md`, clarify before acting; for structural decisions, discuss the di
 ## 4. Set up git
 
 - **Commit or stash all in-progress changes in the main tree first** — worktrees fork from the last commit and silently overwrite uncommitted work.
-- Branch (`refactor/<kebab-name>`). For a worktree, **don't trust `isolation: "worktree"`** (forks from an unpredictable base here) — create it from a verified base and run a non-isolated `coder` agent scoped to that absolute path.
+- Branch (`refactor/<kebab-name>`). For a worktree, **don't trust `isolation: "worktree"`** (forks from an unpredictable base here) — create it from a verified base at `../Astromech-worktrees/<branch>`, beside the repo rather than inside it, and run a non-isolated agent scoped to that absolute path, briefed from `.claude/_agents/coder.md`.
 
 ## 5. Execute in small, reversible steps
 
-- Delegate self-contained slices to `coder` sub-agents with full plans. Keep each step behaviour-preserving and independently green — don't pile structural changes into one untestable jump.
+- Delegate self-contained slices to sub-agents briefed from `.claude/_agents/coder.md`, with full plans. Keep each step behaviour-preserving and independently green — don't pile structural changes into one untestable jump.
 
 ## 6. Verify — prove behaviour is unchanged
 
