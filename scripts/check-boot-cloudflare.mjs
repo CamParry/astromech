@@ -38,8 +38,13 @@ import {
     REQUEST_TIMEOUT_MS,
     sleep,
 } from './check-helpers.mjs';
+import { relaunchAtLowerPriority } from './cpu-limits.mjs';
 import { stopProcessGroup } from './process-group.mjs';
 import { requireFreshDist } from './require-fresh-dist.mjs';
+
+// First, before anything prints: the build and the server inherit the priority
+// (`scripts/cpu-limits.mjs`).
+relaunchAtLowerPriority();
 
 const repoRoot = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const demoDir = join(repoRoot, 'apps', 'demo-cloudflare');

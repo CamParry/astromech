@@ -32,6 +32,11 @@
  * `skip <name> (needs <failed>)` line, and every other check still runs. The
  * summary at the end prints each failure's output. Within the test stage, each
  * package's suite runs even when an earlier package's fails.
+ *
+ * Run locally on macOS, the gate leaves the machine usable: it runs at a lower
+ * priority, the tests run fewer workers, and typecheck and lint check fewer
+ * packages at once (`scripts/cpu-limits.mjs`). CI runs at full speed, and so
+ * does a local run with `ASTROMECH_FULL_SPEED=1` set.
  */
 
 import { execFileSync, spawn } from 'node:child_process';
@@ -42,12 +47,30 @@ import { dirname, join, resolve } from 'node:path';
 import process from 'node:process';
 import { fileURLToPath } from 'node:url';
 import { environmentWithoutNodeEnv } from './check-helpers.mjs';
+import {
+    cpuLimitsApply,
+    relaunchAtLowerPriority,
+    WORKSPACE_CONCURRENCY,
+} from './cpu-limits.mjs';
 import { stopProcessGroup } from './process-group.mjs';
+
+// First, before anything prints: every check inherits the priority.
+relaunchAtLowerPriority();
 
 const repoRoot = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 
 // Each check runs with the tool's own `NODE_ENV`, whatever the shell sets.
 const environment = environmentWithoutNodeEnv('verify');
+
+// For a check that runs `pnpm -r` beside the tests. A limited run caps how many
+// packages it runs at once. pnpm 11 reads `pnpm_config_*` variables, not
+// `npm_config_*`.
+const besideTestsEnvironment = cpuLimitsApply
+    ? {
+          ...environment,
+          pnpm_config_workspace_concurrency: String(WORKSPACE_CONCURRENCY),
+      }
+    : environment;
 
 // The slowest healthy check, `test:run`, takes about eight minutes on a CI
 // runner, so this trips only on a hang. It sits inside the CI jobs'
@@ -79,7 +102,8 @@ const fastTestCommand = mode === 'fast' ? testCommandForBranch() : undefined;
 /**
  * Each stage runs in parallel; stages run in order. A check lists in `needs`
  * the earlier checks whose output it reads, and is skipped when one of them
- * fails. Every other check runs whatever failed before it.
+ * fails. Every other check runs whatever failed before it. A check's `env`,
+ * when set, replaces the environment it runs in.
  */
 const stagesByMode = {
     fast: [
@@ -87,10 +111,11 @@ const stagesByMode = {
             {
                 name: 'typecheck:packages',
                 command: 'pnpm -r -F "./packages/**" typecheck',
+                env: besideTestsEnvironment,
             },
             // Every plugin resolves core to source, so this stage needs no build.
             { name: 'test:packages', command: fastTestCommand },
-            { name: 'lint', command: 'pnpm run lint' },
+            { name: 'lint', command: 'pnpm run lint', env: besideTestsEnvironment },
             { name: 'check:unused', command: 'pnpm run check:unused' },
         ],
     ],
@@ -123,7 +148,7 @@ const stagesByMode = {
         [{ name: 'build', command: 'pnpm run build' }],
         [
             { name: 'test:run', command: 'pnpm run test:run' },
-            { name: 'lint', command: 'pnpm run lint' },
+            { name: 'lint', command: 'pnpm run lint', env: besideTestsEnvironment },
             { name: 'check:unused', command: 'pnpm run check:unused' },
             {
                 name: 'check:node-imports',
@@ -164,12 +189,12 @@ const stages = stagesByMode[mode];
 /** Checks still running, each the leader of its own process group. */
 const running = new Set();
 
-const run = (name, command) =>
+const run = (name, command, env = environment) =>
     new Promise((done) => {
         const started = Date.now();
         const child = spawn(command, {
             cwd: repoRoot,
-            env: environment,
+            env,
             shell: true,
             detached: true,
             stdio: ['ignore', 'pipe', 'pipe'],
@@ -257,7 +282,7 @@ for (const stage of stages) {
         }
     }
     const results = await Promise.all(
-        runnable.map(({ name, command }) => run(name, command))
+        runnable.map(({ name, command, env }) => run(name, command, env))
     );
     for (const result of results.filter(({ failed }) => failed)) {
         failures.push(result);

@@ -5,9 +5,11 @@ import {
     assertNoArgumentsAfterDoubleDash,
     baseRootTestOptions,
     baseTestOptions,
+    relaunchTestRunAtLowerPriority,
 } from './tests/_support/vitest-base-config';
 
 assertNoArgumentsAfterDoubleDash();
+relaunchTestRunAtLowerPriority();
 
 const alias = coreAliases();
 

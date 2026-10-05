@@ -3,11 +3,13 @@ import {
     assertNoArgumentsAfterDoubleDash,
     baseRootTestOptions,
     baseTestOptions,
+    relaunchTestRunAtLowerPriority,
 } from '../astromech/tests/_support/vitest-base-config';
 import { isolatedTests } from './tests/_support/isolated-tests';
 import { adminTestAliases } from './tests/_support/vitest-aliases';
 
 assertNoArgumentsAfterDoubleDash();
+relaunchTestRunAtLowerPriority();
 
 // Core's aliases plus the admin's `@/admin` and its virtual-module shims.
 const alias = adminTestAliases();

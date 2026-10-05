@@ -1,4 +1,9 @@
 import { defineConfig } from 'vitest/config';
+import {
+    cpuLimitsApply,
+    relaunchTestRunAtLowerPriority,
+    TEST_WORKERS,
+} from '../../scripts/cpu-limits.mjs';
 
 // The schema engine sits below core and is published on its own, so its tests
 // do not reach into core's test support. This config copies what
@@ -18,6 +23,9 @@ if (ignored !== '') {
     );
 }
 
+// A run started with the vitest command relaunches at a lower priority.
+relaunchTestRunAtLowerPriority();
+
 export default defineConfig({
     test: {
         environment: 'node',
@@ -28,6 +36,7 @@ export default defineConfig({
         hookTimeout: 10_000,
         restoreMocks: true,
         sequence: { shuffle: true },
+        ...(cpuLimitsApply ? { maxWorkers: TEST_WORKERS } : {}),
         // Reports go to `coverage/`, which git ignores.
         coverage: {
             provider: 'v8',

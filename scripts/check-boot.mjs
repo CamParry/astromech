@@ -52,7 +52,12 @@ import {
     step,
     waitForServer,
 } from './check-helpers.mjs';
+import { relaunchAtLowerPriority } from './cpu-limits.mjs';
 import { requireFreshDist } from './require-fresh-dist.mjs';
+
+// First, before anything prints: the build, server and browser inherit the
+// priority (`scripts/cpu-limits.mjs`).
+relaunchAtLowerPriority();
 
 const repoRoot = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const demoDir = join(repoRoot, 'apps', 'demo');
