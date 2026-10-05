@@ -344,3 +344,28 @@ describe('buildAdminConfig — globals', () => {
         expect(adminConfig.plugins).toEqual([]);
     });
 });
+
+describe('buildAdminConfig captcha', () => {
+    it('exposes the captcha provider and site key, never the secret', () => {
+        const config = baseConfig([], {
+            security: {
+                captcha: {
+                    provider: 'recaptcha',
+                    siteKey: 'site-key',
+                    minScore: 0.7,
+                    hostnames: ['example.test'],
+                },
+            },
+        });
+
+        const admin = buildAdminConfig(config, resolveConfig(config));
+
+        expect(admin.captcha).toEqual({ provider: 'recaptcha', siteKey: 'site-key' });
+    });
+
+    it('is null when no captcha is configured', () => {
+        const config = baseConfig();
+
+        expect(buildAdminConfig(config, resolveConfig(config)).captcha).toBeNull();
+    });
+});

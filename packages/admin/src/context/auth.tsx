@@ -7,6 +7,7 @@
 import type { QueryClient } from '@tanstack/react-query';
 import type { Me } from 'astromech';
 import { queryOptions, useQuery, useQueryClient } from '@tanstack/react-query';
+import { CAPTCHA_HEADER } from 'astromech/shared';
 import React, { createContext, useContext } from 'react';
 import { queryKeys } from '../hooks/use-query-keys';
 
@@ -24,7 +25,8 @@ export type AuthUser = {
 type AuthContextValue = {
     user: AuthUser | null;
     isLoading: boolean;
-    login: (email: string, password: string) => Promise<void>;
+    /** `captchaToken` goes in the captcha header when the site sets a captcha. */
+    login: (email: string, password: string, captchaToken?: string) => Promise<void>;
 };
 
 /** What `GET /api/me` answers. */
@@ -85,16 +87,28 @@ export function AuthProvider({ children }: AuthProviderProps) {
     const queryClient = useQueryClient();
     const { data, isPending } = useQuery(sessionQueryOptions);
 
-    async function login(email: string, password: string): Promise<void> {
+    async function login(
+        email: string,
+        password: string,
+        captchaToken?: string
+    ): Promise<void> {
         const res = await fetch(`${__ASTROMECH_BASE_PATH__}/api/auth/sign-in/email`, {
             method: 'POST',
             credentials: 'include',
-            headers: { 'Content-Type': 'application/json' },
+            headers: {
+                'Content-Type': 'application/json',
+                ...(captchaToken !== undefined && { [CAPTCHA_HEADER]: captchaToken }),
+            },
             body: JSON.stringify({ email, password }),
         });
         if (!res.ok) {
-            const body = (await res.json().catch(() => ({}))) as { message?: string };
-            throw new Error(body.message ?? 'Login failed');
+            // Better Auth answers `{ message }`; the API's own refusals (a blocked
+            // address) answer `{ error: { message } }`.
+            const body = (await res.json().catch(() => ({}))) as {
+                message?: string;
+                error?: { message?: string };
+            };
+            throw new Error(body.message ?? body.error?.message ?? 'Login failed');
         }
         await queryClient.refetchQueries({ queryKey: sessionQueryOptions.queryKey });
     }

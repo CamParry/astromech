@@ -39,10 +39,6 @@ export { FORM_ERROR_KEY } from './service/forms';
 export type { PublicForm, SubmitInput, SubmitResult } from './service/forms';
 export type { DeleteSubmissionResult, Submission } from './service/submissions';
 export type { SpamContext, SpamProvider, SpamVerdict } from './spam/types';
-export { turnstile } from './spam/providers/turnstile';
-export type { TurnstileOptions } from './spam/providers/turnstile';
-export { recaptcha } from './spam/providers/recaptcha';
-export type { RecaptchaOptions } from './spam/providers/recaptcha';
 export type {
     NotificationContext,
     NotificationProvider,
@@ -71,8 +67,8 @@ export const forms = definePlugin((options?: FormsOptions) => {
         service: createFormsService({ storeMeta, rateLimit, spam }),
         hookEvents: ['forms:beforeSubmit', 'forms:afterSubmit'],
         // Registered through the same public extension point a third party
-        // would use, and only when the site configured a provider.
-        ...(spam !== undefined && { hooks: [spamHook(spam)] }),
+        // would use. It does nothing without a `spam` option or a captcha.
+        hooks: [spamHook(spam)],
     };
 });
 

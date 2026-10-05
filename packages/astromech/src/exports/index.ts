@@ -42,6 +42,18 @@ export {
  */
 export { rateLimitKey } from '@/utilities/ip-address';
 export { withDefaults } from '@/utilities/options';
+/**
+ * The configured captcha check, so a plugin verifies a token without owning a
+ * provider. `resolveCaptcha` is undefined when the site sets none.
+ */
+export { resolveCaptcha, verifyCaptcha } from '@/security/captcha/verify';
+export { CAPTCHA_ACTIONS } from '@/security/captcha/types';
+export type {
+    CaptchaConfig,
+    CaptchaProviderName,
+    CaptchaVerdict,
+    CaptchaWidget,
+} from '@/security/captcha/types';
 export {
     resolveEntryUrl,
     resolveEntryPath,

@@ -1,8 +1,10 @@
 import type { FormEvent } from 'react';
 import { createFileRoute, Link } from '@tanstack/react-router';
+import { CAPTCHA_ACTIONS, CAPTCHA_HEADER } from 'astromech/shared';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { AuthCard } from '../../components/auth/auth-card';
+import { CaptchaWidget, useCaptcha } from '../../components/auth/captcha-widget';
 import { Button } from '../../components/ui/button';
 import { Input } from '../../components/ui/input';
 
@@ -14,6 +16,7 @@ declare const __ASTROMECH_BASE_PATH__: string;
 
 function ForgotPasswordPage() {
     const { t } = useTranslation();
+    const captcha = useCaptcha(CAPTCHA_ACTIONS.passwordReset);
     const [email, setEmail] = useState('');
     const [submitted, setSubmitted] = useState(false);
     const [error, setError] = useState<string | null>(null);
@@ -27,25 +30,35 @@ function ForgotPasswordPage() {
         try {
             const redirectTo =
                 window.location.origin + __ASTROMECH_BASE_PATH__ + '/reset-password';
+            const captchaToken = await captcha.getToken();
             const res = await fetch(
                 `${__ASTROMECH_BASE_PATH__}/api/auth/request-password-reset`,
                 {
                     method: 'POST',
                     credentials: 'include',
-                    headers: { 'Content-Type': 'application/json' },
+                    headers: {
+                        'Content-Type': 'application/json',
+                        ...(captchaToken !== undefined && {
+                            [CAPTCHA_HEADER]: captchaToken,
+                        }),
+                    },
                     body: JSON.stringify({ email, redirectTo }),
                 }
             );
 
             if (!res.ok) {
-                const data = (await res.json().catch(() => ({}))) as { message?: string };
-                throw new Error(data.message ?? 'Request failed');
+                const data = (await res.json().catch(() => ({}))) as {
+                    message?: string;
+                    error?: { message?: string };
+                };
+                throw new Error(data.message ?? data.error?.message ?? 'Request failed');
             }
 
             setSubmitted(true);
         } catch (err) {
             setError(err instanceof Error ? err.message : 'Request failed');
         } finally {
+            captcha.reset();
             setIsSubmitting(false);
         }
     }
@@ -79,6 +92,7 @@ function ForgotPasswordPage() {
                         required
                     />
                 </div>
+                <CaptchaWidget captcha={captcha} />
                 {error !== null && <p className="am-auth-error">{error}</p>}
                 <div className="am-auth-actions">
                     <Button

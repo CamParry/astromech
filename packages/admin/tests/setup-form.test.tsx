@@ -21,6 +21,7 @@ const { adminConfig, fieldTypes } = vi.hoisted(() => ({
         defaultLocale: 'en',
         locales: ['en'],
         users: { translatable: false, fields: [] as unknown[] },
+        captcha: null as { provider: string; siteKey: string } | null,
     },
     fieldTypes: {} as Record<string, unknown>,
 }));
@@ -74,6 +75,7 @@ beforeEach(() => {
     vi.stubGlobal('__ASTROMECH_BASE_PATH__', '/cms');
     vi.stubGlobal('fetch', fetchMock);
     adminConfig.users.fields = [];
+    adminConfig.captcha = null;
     setupResponse = () => json({ success: true });
     fetchMock.mockImplementation((input) => {
         const url = String(input);
@@ -155,6 +157,35 @@ describe('the setup form', () => {
                 data: { fields: { team: 'Ops' } },
             })
         );
+    });
+
+    it('signs in with a captcha token after creating the account', async () => {
+        adminConfig.captcha = { provider: 'turnstile', siteKey: 'site-key' };
+        vi.stubGlobal('turnstile', {
+            render: (
+                _container: HTMLElement,
+                options: { callback: (t: string) => void }
+            ) => {
+                options.callback('captcha-token');
+                return 'widget';
+            },
+            reset: vi.fn(),
+            remove: vi.fn(),
+        });
+        const page = mountPage();
+
+        await fillAccount(page);
+        await page.user.click(screen.getByRole('button', { name: 'Create account' }));
+
+        await waitFor(() => {
+            const signIn = fetchMock.mock.calls.find(
+                ([url]) => String(url) === '/cms/api/auth/sign-in/email'
+            );
+            expect(signIn?.[1]?.headers).toEqual({
+                'Content-Type': 'application/json',
+                'x-captcha-response': 'captcha-token',
+            });
+        });
     });
 
     it('shows a 422 field error on the user field it names', async () => {

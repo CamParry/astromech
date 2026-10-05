@@ -5,11 +5,14 @@
  */
 
 import type { RequestScope } from '@/request-scope/request-scope';
+import type { AstromechConfig } from '@/types/index';
 import type { MiddlewareHandler } from 'astro';
 import { migrationNames, rawConfig } from 'virtual:astromech/config';
 import { createAstromech } from '@/astromech';
 import { assertAuthSecret } from '@/auth/better-auth';
 import { setBundledMigrationNames } from '@/database/migration-registry';
+import { resolveEnv, resolveNodeEnv } from '@/env';
+import { AstromechError } from '@/errors/astromech-error';
 import { readRemoteAddress } from '@/integrations/astro/remote-address';
 import { isAdminPage, resolveInjectedRoute } from '@/integrations/astro/routes';
 import { runInRequestScope } from '@/request-scope/request-scope';
@@ -25,6 +28,7 @@ export const onRequest: MiddlewareHandler = async (context, next) => {
     // Before the application is created, so a site missing its secret serves
     // nothing.
     assertAuthSecret();
+    assertCaptchaSecret(rawConfig);
     if (migrationNames !== null) setBundledMigrationNames(migrationNames);
     const app = await createAstromech({ config: rawConfig });
     // The Node deployment has no external cron, so the serving integration is
@@ -64,6 +68,20 @@ export const onRequest: MiddlewareHandler = async (context, next) => {
 };
 
 export default onRequest;
+
+/**
+ * Refuse to serve a configured captcha without its secret in production, where
+ * every sign-in would otherwise fail with no sign of why.
+ */
+function assertCaptchaSecret(config: AstromechConfig): void {
+    if (config.security?.captcha === undefined) return;
+    if (resolveNodeEnv() !== 'production') return;
+    if (resolveEnv('ASTROMECH_CAPTCHA_SECRET') !== undefined) return;
+    throw new AstromechError(
+        'Astromech requires missing env var: ASTROMECH_CAPTCHA_SECRET. `security.captcha` is set, and the secret is how the server checks a token. ' +
+            'Set it in your environment or .env file, or on Cloudflare Workers with `wrangler secret put ASTROMECH_CAPTCHA_SECRET`.'
+    );
+}
 
 /** Set `set` and append `append` on `response`, copying one whose headers are immutable. */
 function withHeaders(

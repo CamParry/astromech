@@ -22,6 +22,8 @@ type AstromechGlobals = Record<string, unknown> & {
     clientAddressDropLogged?: boolean | undefined;
     /** Whether a forwarding header seen without `security.trustProxy` has been logged. */
     forwardedHeaderLogged?: boolean | undefined;
+    /** Whether a configured captcha with no secret has been logged. */
+    captchaSecretMissingLogged?: boolean | undefined;
     /** Fallbacks taken by the output parse in progress; undefined outside one. */
     outputFallbacks?: number | undefined;
 };

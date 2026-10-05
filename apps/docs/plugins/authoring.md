@@ -1463,20 +1463,20 @@ export type SpamProvider = {
     ): Promise<SpamVerdict>;
 };
 
-export function turnstile(options: TurnstileOptions): SpamProvider {
+export function altcha(options: AltchaOptions): SpamProvider {
     /* ... */
 }
 ```
 
 ```ts
-forms({ spam: turnstile({ siteKey, secretKey }) });
+forms({ spam: altcha({ siteKey, secretKey }) });
 ```
 
 The type is the public surface, the factories are conveniences, and a site can
 pass an object it wrote itself. Prefer this to a string union the moment there
 is a plausible second implementation you don't want to own.
 
-`@astromech/forms` has two such seams. Its spam providers take the shape above.
+`@astromech/forms` has two such seams. Its spam provider takes the shape above, and defaults to the site's captcha check.
 Its **notification providers** go further: one provider owns both halves of a
 notification kind — the `fields.block(...)` an editor fills in _and_ the delivery
 that reads it — so adding a kind is one file plus a registry entry, and the

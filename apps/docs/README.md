@@ -44,6 +44,10 @@ This is a living reference; it grows as the project does.
   session record that use it, the `security.trustProxy` option for a site
   behind a proxy, and why the address is counted from the end of
   `x-forwarded-for`.
+- [configuration/security.md](configuration/security.md) — the captcha in front
+  of sign-in, the password reset and forms: the `security.captcha` setting, its
+  secret, what each provider checks, rendering the widget on your own form, and
+  the content security policy sources each provider needs.
 - [content/entry-types.md](content/entry-types.md) — declaring entry types: the
   `entries` record, and `defineEntryType` for splitting a type into its own
   module.

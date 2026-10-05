@@ -3,9 +3,11 @@
  */
 
 import { createFileRoute, Link, redirect, useNavigate } from '@tanstack/react-router';
+import { CAPTCHA_ACTIONS } from 'astromech/shared';
 import React, { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { AuthCard } from '../../components/auth/auth-card';
+import { CaptchaWidget, useCaptcha } from '../../components/auth/captcha-widget';
 import { Button } from '../../components/ui/button';
 import { Input } from '../../components/ui/input';
 import { setupCheckQueryOptions, useAuth } from '../../context/auth';
@@ -18,6 +20,7 @@ function LoginPage() {
     const search = Route.useSearch();
     const navigate = useNavigate();
     const { t } = useTranslation();
+    const captcha = useCaptcha(CAPTCHA_ACTIONS.signIn);
 
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
@@ -30,11 +33,12 @@ function LoginPage() {
         setIsSubmitting(true);
 
         try {
-            await login(email, password);
+            await login(email, password, await captcha.getToken());
             await navigate({ to: '/' });
         } catch (err) {
             setError(err instanceof Error ? err.message : t('auth.loginFailed'));
         } finally {
+            captcha.reset();
             setIsSubmitting(false);
         }
     }
@@ -60,6 +64,7 @@ function LoginPage() {
                         required
                     />
                 </div>
+                <CaptchaWidget captcha={captcha} />
                 {error !== null ? (
                     <p className="am-auth-error">{error}</p>
                 ) : (

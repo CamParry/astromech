@@ -7,11 +7,12 @@ import type { Field, FieldErrors } from 'astromech';
 import { useQueryClient } from '@tanstack/react-query';
 import { createFileRoute, useNavigate } from '@tanstack/react-router';
 import { AstromechApiError } from 'astromech/fetch';
-import { isLayoutField } from 'astromech/shared';
+import { CAPTCHA_ACTIONS, isLayoutField } from 'astromech/shared';
 import React, { useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import adminConfig from 'virtual:astromech/admin-config';
 import { AuthCard } from '../../components/auth/auth-card';
+import { CaptchaWidget, useCaptcha } from '../../components/auth/captcha-widget';
 import {
     fieldChainForError,
     fieldErrorNames,
@@ -164,6 +165,8 @@ function SetupForm({
     onUserFieldErrors: () => void;
 }): React.ReactElement {
     const { login } = useAuth();
+    // The sign-in that follows the account is a sign-in like any other.
+    const captcha = useCaptcha(CAPTCHA_ACTIONS.signIn);
     const navigate = useNavigate();
     const queryClient = useQueryClient();
     const { t } = useTranslation();
@@ -237,10 +240,12 @@ function SetupForm({
         // Otherwise the cached answer sends a signed-out admin back here from login.
         queryClient.setQueryData(setupCheckQueryOptions.queryKey, { needsSetup: false });
         try {
-            await login(values.email, values.password);
+            await login(values.email, values.password, await captcha.getToken());
             await navigate({ to: '/' });
         } catch (err) {
             setError(err instanceof Error ? err.message : t('auth.setupFailed'));
+        } finally {
+            captcha.reset();
         }
     }
 
@@ -352,6 +357,7 @@ function SetupForm({
                     </FieldsFormProvider>
                 </div>
             )}
+            <CaptchaWidget captcha={captcha} />
             {error !== null && <p className="am-auth-error">{error}</p>}
             <div className="am-auth-actions">
                 <Button

@@ -131,6 +131,36 @@ describe('the Astro middleware', () => {
         expect(() => getAstromech()).toThrow(/no instance of Astromech exists/);
     });
 
+    it('refuses a production request when a captcha is configured without its secret', async () => {
+        setEnvSource({ NODE_ENV: 'production', BETTER_AUTH_SECRET: SECRET });
+        site.config = {
+            ...makeBootConfig(),
+            scheduler: noScheduler,
+            security: { captcha: { provider: 'turnstile', siteKey: 'site-key' } },
+        };
+        const next = vi.fn(page);
+
+        await expect(onRequest(context(), next)).rejects.toThrow(
+            /missing env var: ASTROMECH_CAPTCHA_SECRET.*wrangler secret put/
+        );
+        expect(next).not.toHaveBeenCalled();
+    });
+
+    it('serves a production request with a captcha and its secret', async () => {
+        setEnvSource({
+            NODE_ENV: 'production',
+            BETTER_AUTH_SECRET: SECRET,
+            ASTROMECH_CAPTCHA_SECRET: 'captcha-secret',
+        });
+        site.config = {
+            ...makeBootConfig(),
+            scheduler: noScheduler,
+            security: { captcha: { provider: 'turnstile', siteKey: 'site-key' } },
+        };
+
+        expect(await bodyOf(onRequest(context(), page))).toBe('page');
+    });
+
     it('serves a request in production with the secret from the env source', async () => {
         setEnvSource({ NODE_ENV: 'production', BETTER_AUTH_SECRET: SECRET });
 

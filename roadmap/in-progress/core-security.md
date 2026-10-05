@@ -22,8 +22,8 @@ is `DECISIONS.md`, "Security in core is defaults and shared mechanisms".
   (`packages/astromech/src/transport/http/client-address.ts`).
 - `nosniff`, `X-Frame-Options: DENY` and `Referrer-Policy` on every Hono
   response (`packages/astromech/src/transport/http/app.ts`).
-- `turnstile()` and `recaptcha()` spam providers in `@astromech/forms`
-  (`packages/plugins/forms/src/spam/`).
+- The captcha check (`packages/astromech/src/security/captcha/verify.ts`), which
+  `@astromech/forms` uses by default.
 
 ## Prior art
 
@@ -84,7 +84,7 @@ is `DECISIONS.md`, "Security in core is defaults and shared mechanisms".
 - [x] The block list and allow list tables, with `pnpm run db:generate` and the
       Cloudflare baseline hand-applied; the middleware and its cache; automatic
       blocks.
-- [ ] The captcha service: config, providers moved from `@astromech/forms`,
+- [x] The captcha service: config, providers moved from `@astromech/forms`,
       hCaptcha, the server check, the middleware on Better Auth's routes, a
       client renderer, and the admin sign-in and reset forms sending the token.
 - [x] Opt-in HSTS, and `frame-ancestors 'self'` on the admin page.

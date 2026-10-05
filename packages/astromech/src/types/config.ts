@@ -16,6 +16,7 @@ import type { SortOption } from './query';
 import type { CellKind } from './resolved';
 import type { DB } from '@/database/types';
 import type { ImageFormat } from '@/media/serving/image/url';
+import type { CaptchaConfig, CaptchaWidget } from '@/security/captcha/types';
 import type { Kysely } from 'kysely';
 import type { MigrationProvider } from 'kysely/migration';
 
@@ -606,6 +607,8 @@ export type AstromechConfig = {
         trustProxy?: TrustProxy;
         /** Send `Strict-Transport-Security` on API and admin responses. Off by default; `true` is one year. */
         hsts?: boolean | HstsConfig;
+        /** The captcha sign-in, the reset request and `@astromech/forms` check. The secret is `ASTROMECH_CAPTCHA_SECRET`. */
+        captcha?: CaptchaConfig;
     };
 };
 
@@ -686,6 +689,8 @@ export type AdminConfig = {
     globals: Record<string, AdminGlobal>;
     /** Host-defined admin pages, each rendering its own React component. */
     pages: ResolvedAdminPage[];
+    /** The captcha widget the sign-in and reset forms render, or null when none is set. Never the secret. */
+    captcha: CaptchaWidget | null;
     /** Static plugin metadata for the admin shell (serializable only). */
     plugins: {
         /** The plugin's derived namespace — admin URL segment and page-key prefix. */

@@ -96,6 +96,11 @@
     text-decoration: underline;
 }
 
+.am-auth-captcha {
+    display: flex;
+    justify-content: center;
+}
+
 .am-auth-error {
     padding: calc(var(--am-space) * 3) calc(var(--am-space) * 4);
     font-size: 0.875rem;

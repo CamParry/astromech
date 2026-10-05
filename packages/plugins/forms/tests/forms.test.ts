@@ -36,7 +36,7 @@ import { createPluginTestApp } from '@tests/plugin-app';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { PermissionDeniedError } from '@/errors/permission';
 import { defineHook } from '@/plugins/define-hook';
-import { forms, turnstile } from '../src/index';
+import { forms } from '../src/index';
 import { createSubmissionsRepository } from '../src/repository';
 import { getSubmission as getSubmissionMethod } from '../src/service/submissions';
 
@@ -44,10 +44,15 @@ const FORM = 'forms/form';
 
 const SPAM_SECRET_KEY = 'secret-key-never-leaves-the-server';
 
-const SPAM: NonNullable<FormsOptions['spam']> = turnstile({
+const SPAM: NonNullable<FormsOptions['spam']> = {
+    name: 'test-captcha',
     siteKey: 'site-key-public',
-    secretKey: SPAM_SECRET_KEY,
-});
+    // The secret lives in this closure, the way a real provider holds its own.
+    verify: (token) =>
+        Promise.resolve(
+            token === SPAM_SECRET_KEY ? { ok: true } : { ok: false, reason: 'bad token' }
+        ),
+};
 
 let app: PluginTestApp<'forms'>;
 
@@ -133,7 +138,11 @@ describe('forms.get', () => {
             ['email', 'email'],
             ['message', 'textarea'],
         ]);
-        expect(form?.spam).toEqual({ provider: 'turnstile', siteKey: SPAM.siteKey });
+        expect(form?.spam).toEqual({
+            provider: 'test-captcha',
+            siteKey: SPAM.siteKey,
+            action: 'form_submit',
+        });
     });
 
     it('leaks neither the notification settings nor the spam secret', async () => {

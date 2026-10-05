@@ -105,6 +105,7 @@ const ambientReadExceptions = [
     'packages/astromech/src/globals/internal/access.ts',
     'packages/astromech/src/media/internal/media-url.ts',
     'packages/astromech/src/media/serving/handler.ts',
+    'packages/astromech/src/security/captcha/verify.ts',
 ];
 
 // A module's `internal/` is importable only from inside that module (DECISIONS.md,
