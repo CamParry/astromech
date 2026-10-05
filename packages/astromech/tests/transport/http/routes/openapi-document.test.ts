@@ -914,6 +914,16 @@ describe('the document’s coverage', () => {
         expect(doc.paths['/auth/reference']).toBeUndefined();
     });
 
+    it('leaves out the Better Auth routes Astromech always refuses', async () => {
+        const { document: doc } = await servedDocument([]);
+
+        // Sign-up always answers 403 and change-email is off, so neither is an
+        // operation a client could call.
+        expect(doc.paths['/auth/sign-up/email']).toBeUndefined();
+        expect(doc.paths['/auth/change-email']).toBeUndefined();
+        expect(doc.paths['/auth/sign-in/email']).toBeDefined();
+    });
+
     it('names Better Auth’s components apart from core’s', async () => {
         const { document: doc } = await servedDocument([]);
         const user = component(doc, 'User');

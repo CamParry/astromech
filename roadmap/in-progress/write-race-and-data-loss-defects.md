@@ -121,10 +121,10 @@ item 8 proposed, would protect libsql only.
       `check:boot:cloudflare` cannot make it, having no session. Also confirm
       the `better-auth/plugins` import adds only `openAPI` to the Worker
       bundle.
-- [ ] **Refused auth routes in the document.** Better Auth's generator lists
-      every endpoint, so the document shows `/auth/sign-up/email`, which
-      always answers 403, and `/auth/change-email`, which is off. Decide
-      whether `transport/http/routes/auth-document.ts` leaves them out.
+- [x] **Refused auth routes in the document.** `auth-document.ts` leaves out
+      `/auth/sign-up/email`, which always answers 403, and `/auth/change-email`,
+      which is off. `REFUSED_AUTH_PATHS` in `auth/better-auth.ts` names them
+      beside the refusals.
 - [x] **Plugin versions.** Each `packages/plugins/*/src/index.ts` reads its
       version from its `package.json` with a JSON import, which tsup inlines,
       and the plugin contract
