@@ -2,6 +2,10 @@
 name: testing
 description: How Astromech's tests are written, run and reviewed. Use when writing, changing or reviewing a test, a helper under a package's tests/_support, or a vitest.config.ts.
 user-invocable: false
+paths:
+    - 'packages/**/tests/**'
+    - '**/*.test.{ts,tsx}'
+    - '**/vitest.config.ts'
 ---
 
 This skill says what a good test is here and how to run tests while you work. Where test files live and the module-isolation list are in each package's `AGENTS.md`; the gate commands are in the root `AGENTS.md`.
@@ -32,6 +36,8 @@ If following it would make the code or the test worse, or would need a workaroun
 ## Writing a test with the code
 
 Write one failing test, see it fail for the reason you expect, then write the code that makes it pass, one small step at a time. Take the expected values from the requirement, not from the implementation: a test copied from the code agrees with every defect in it. A test you never saw fail may pass whatever the code does, so if the code came first, break it briefly and watch the test catch it.
+
+Before handing work back, check each new test once more: break the line it covers (or revert the fix), run it, see it fail, then restore the line. Reviewers keep finding tests that pass whatever the code does, such as an `it.fails` that passes on any error, and this check catches them first.
 
 ## Real dependencies, and the few you replace
 

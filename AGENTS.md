@@ -51,6 +51,7 @@ Each script's header has the detail.
 - **Give the sub-agent the whole plan**: file paths, exact changes and expected outcomes, so it does not re-research the codebase. Start the brief by pointing it to `.claude/_agents/coder.md`, the rules every implementation agent follows.
 - **Verify what comes back.** Re-run the gate yourself. A sub-agent's report of a clean run is not evidence.
 - **Study a pattern before changing it.** Find where it already repeats. Change every copy, record the rest in a `roadmap/` file, or say why this one differs. A defect fix asks where else the same defect can occur.
+- **Back each recommendation with prior art.** Name a CMS or framework that does it, with a link, or say none was found. Say whether each claim about platform behaviour comes from docs or from a test.
 - **Run `pnpm run report:drift` before a branch merges**, and give each item a decision in the merge summary: share it now, add it to a `roadmap/` file, or leave it with a reason.
 - **Don't commit while sub-agents are writing in the same worktree.** The pre-commit hook stashes repo-wide and can clobber their edits.
 - **When the focus of work shifts**, check whether a lesson belongs in a skill and whether a `roadmap/` file needs to move.
@@ -86,4 +87,4 @@ A fact lives in one file; everywhere else links to it. `ARCHITECTURE.md` and `TE
 
 ## Conventions
 
-Code, UI, API, CSS, docs and testing rules live in the skills under `.claude/skills/` (`code`, `ui`, `api`, `css`, `docs`, `testing`), which load for the files they cover. Don't repeat them here.
+Code, API and testing rules live in the skills under `.claude/skills/` (`code`, `api`, `testing`). Each loads by itself when you work on a file matching the `paths` in its frontmatter. The `css`, `docs` and `ui` skills are parked under `.claude/_skills/`: read them as intent, not as rules. Don't repeat any of them here.
