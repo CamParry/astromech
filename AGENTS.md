@@ -16,7 +16,7 @@ Nested `AGENTS.md` files cover `packages/astromech`, `packages/admin`, `packages
 
 While working, run the test file you touched (`pnpm -F <package> exec vitest run <path>`; the `testing` skill has the detail). Run `pnpm run verify:fast` before handing work back (typecheck, tests, lint, `check:unused`; no build, no coverage thresholds). Run `pnpm run verify` before a change lands. `pnpm run verify:runtime` is the version-sensitive subset CI runs on the floor Node version. **Never `--no-verify`**: if the pre-commit hook fails, fix the cause.
 
-`verify` runs every check below except four: `format:check` and `lint:css` (the hook runs them), `check:config` (run it when you edit the config path) and `check:install` (needs the npm registry, so CI runs it separately).
+`verify` runs every check below except five: `format:check` and `lint:css` (the hook runs them), `check:hooks` (the hook runs it when `.claude/hooks/` changes), `check:config` (run it when you edit the config path) and `check:install` (needs the npm registry, so CI runs it separately).
 
 | Command                          | Checks                                                                                                                                                 |
 | -------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------ |
@@ -34,6 +34,7 @@ While working, run the test file you touched (`pnpm -F <package> exec vitest run
 | `pnpm run check:boot`            | boots the built demo and drives the admin in chromium; needs `build`                                                                                   |
 | `pnpm run check:boot:cloudflare` | serves `apps/demo-cloudflare` on workerd (see its `AGENTS.md`)                                                                                         |
 | `pnpm run check:install`         | installs packed tarballs into a scratch site per `apps/docs/installation.md`, plus `@astromech/backups`                                                |
+| `pnpm run check:hooks`           | the Claude Code Bash hook in `.claude/hooks/`, through its `node:test` suite                                                                           |
 | `pnpm run report:drift`          | not a check: lists drift patterns, copies and test weakening a branch adds; always exits 0                                                             |
 
 Each script's header has the detail.

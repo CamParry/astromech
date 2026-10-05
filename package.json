@@ -22,6 +22,7 @@
         "check:boot": "node scripts/check-boot.mjs",
         "check:boot:cloudflare": "node scripts/check-boot-cloudflare.mjs",
         "check:install": "node scripts/check-install.mjs",
+        "check:hooks": "node --test \".claude/hooks/*.test.mjs\"",
         "report:drift": "node scripts/report-drift.mjs",
         "roadmap": "node scripts/roadmap-index.mjs",
         "format": "prettier --write .",
@@ -69,7 +70,8 @@
         ],
         "*.{json,jsonc,md,astro,yml,yaml,mjs}": [
             "prettier --write"
-        ]
+        ],
+        ".claude/hooks/**": "sh -c 'pnpm run check:hooks'"
     },
     "engines": {
         "node": ">=22.13.0"
