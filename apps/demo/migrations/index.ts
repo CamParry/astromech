@@ -12,6 +12,7 @@ import * as m0008 from './0008_drop-version-status';
 import * as m0009 from './0009_entry-content-trashed';
 import * as m0010 from './0010_rate-limits';
 import * as m0011 from './0011_cron-run-result';
+import * as m0012 from './0012_sign-in-failures';
 
 export const migrationProvider: MigrationProvider = {
     async getMigrations() {
@@ -28,6 +29,7 @@ export const migrationProvider: MigrationProvider = {
             '0009_entry-content-trashed': m0009,
             '0010_rate-limits': m0010,
             '0011_cron-run-result': m0011,
+            '0012_sign-in-failures': m0012,
         };
     },
 };

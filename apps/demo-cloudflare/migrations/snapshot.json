@@ -1601,6 +1601,68 @@
                 }
             ]
         },
+        "sign_in_failures": {
+            "name": "sign_in_failures",
+            "columns": [
+                {
+                    "key": "id",
+                    "name": "id",
+                    "kind": "id",
+                    "type": "text",
+                    "notNull": true,
+                    "primaryKey": true
+                },
+                {
+                    "key": "key",
+                    "name": "key",
+                    "kind": "text",
+                    "type": "text",
+                    "notNull": true,
+                    "primaryKey": false
+                },
+                {
+                    "key": "count",
+                    "name": "count",
+                    "kind": "integer",
+                    "type": "integer",
+                    "notNull": true,
+                    "primaryKey": false
+                },
+                {
+                    "key": "windowStart",
+                    "name": "window_start",
+                    "kind": "integer",
+                    "type": "integer",
+                    "notNull": true,
+                    "primaryKey": false
+                },
+                {
+                    "key": "lockCount",
+                    "name": "lock_count",
+                    "kind": "integer",
+                    "type": "integer",
+                    "notNull": true,
+                    "primaryKey": false,
+                    "default": 0
+                },
+                {
+                    "key": "lockedUntil",
+                    "name": "locked_until",
+                    "kind": "integer",
+                    "type": "integer",
+                    "notNull": false,
+                    "primaryKey": false
+                }
+            ],
+            "fks": [],
+            "indexes": [
+                {
+                    "name": "sign_in_failures_key_unique",
+                    "columns": ["key"],
+                    "unique": true
+                }
+            ]
+        },
         "user_content": {
             "name": "user_content",
             "columns": [

@@ -17,6 +17,13 @@ export const SIGN_UP_CLOSED = {
     message: 'Sign-up is closed. Ask an administrator to create your account.',
 } as const;
 
+/** The refusal a sign-in gets while its account is locked, with `Retry-After`. */
+export const ACCOUNT_LOCKED = {
+    code: 'ACCOUNT_LOCKED',
+    message:
+        'Too many failed sign-ins for this account. Try again later, or reset your password.',
+} as const;
+
 /** The body `POST /setup` takes. Eight characters is Better Auth's own floor. */
 export const firstAdminSchema = z.object({
     name: z.string().min(1, 'Name is required'),

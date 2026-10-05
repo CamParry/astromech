@@ -11,13 +11,11 @@
 import { createTestDb, makeTestConfig, setupTestConfig } from '@tests/harness';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { currentServices } from '@/app-context/services';
-import {
-    DEFAULT_PREVIEW_TOKEN_TTL_MS,
-    hashPreviewToken,
-} from '@/entries/internal/preview';
+import { DEFAULT_PREVIEW_TOKEN_TTL_MS } from '@/entries/internal/preview';
 import { entryRepository } from '@/entries/repository/entries-table';
 import { CapabilityError } from '@/errors/capability';
 import { ResourceConflictError, ResourceNotFoundError } from '@/errors/resource';
+import { sha256Hex } from '@/utilities/hash';
 
 const api = currentServices.entries;
 
@@ -32,7 +30,7 @@ beforeEach(async () => {
  *  with the clock passed in, so expiry can be asserted without moving it. */
 async function isValid(entryId: string, token: string, at: Date): Promise<boolean> {
     const previewToken = entryRepository.previewToken;
-    const record = await previewToken.findByHash(await hashPreviewToken(token));
+    const record = await previewToken.findByHash(await sha256Hex(token));
     if (!record || record.id !== entryId) return false;
     return record.expiresAt === null || record.expiresAt.getTime() > at.getTime();
 }

@@ -47,7 +47,7 @@ preview beside the form that follows the editor's unsaved changes. Raised on
 - [ ] The admin: the preview pane, the hidden form, debounce and abort, scroll
       restore, device widths.
 - [ ] `frame-ancestors 'self'` on the admin page
-      (`roadmap/planned/core-security.md`); the docs on what a site needs.
+      (`roadmap/in-progress/core-security.md`); the docs on what a site needs.
 
 ## Testing
 

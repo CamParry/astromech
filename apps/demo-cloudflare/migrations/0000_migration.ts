@@ -338,6 +338,19 @@ export async function up(db: Kysely<unknown>): Promise<void> {
         db
     );
     await sql`
+        CREATE TABLE \`sign_in_failures\` (
+            \`id\` text PRIMARY KEY NOT NULL,
+            \`key\` text NOT NULL,
+            \`count\` integer NOT NULL,
+            \`window_start\` integer NOT NULL,
+            \`lock_count\` integer DEFAULT 0 NOT NULL,
+            \`locked_until\` integer
+        )
+    `.execute(db);
+    await sql`CREATE UNIQUE INDEX \`sign_in_failures_key_unique\` ON \`sign_in_failures\` (\`key\`)`.execute(
+        db
+    );
+    await sql`
         CREATE TABLE \`user_content\` (
             \`id\` text PRIMARY KEY NOT NULL,
             \`user_id\` text NOT NULL,

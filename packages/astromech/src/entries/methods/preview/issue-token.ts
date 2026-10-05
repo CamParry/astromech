@@ -1,11 +1,11 @@
 import { z } from '@hono/zod-openapi';
 import { ResourceConflictError, ResourceNotFoundError } from '@/errors/resource';
 import { defineServiceMethod } from '@/services/define-service-method';
+import { sha256Hex } from '@/utilities/hash';
 import { entryAccess } from '../../internal/access';
 import {
     DEFAULT_PREVIEW_TOKEN_TTL_MS,
     generatePreviewSecret,
-    hashPreviewToken,
 } from '../../internal/preview';
 import { getEntryResource } from '../../read-entry';
 import { entryRepository } from '../../repository/entries-table';
@@ -41,7 +41,7 @@ export const issuePreviewToken = defineServiceMethod({
         }
 
         const token = generatePreviewSecret();
-        const hash = await hashPreviewToken(token);
+        const hash = await sha256Hex(token);
         const expiry =
             expiresAt === undefined
                 ? new Date(Date.now() + DEFAULT_PREVIEW_TOKEN_TTL_MS)

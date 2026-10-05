@@ -42,6 +42,16 @@ not what it wrote".
       transport on the context.
 - [ ] **The core table**, with a migration and a hand edit to the Cloudflare
       baseline. Decide retention when it is built (Strapi defaults to 90 days).
+- [ ] **Security events** (`roadmap/in-progress/core-security.md`). Each has one
+      call site, and none logs until this table exists:
+      a failed sign-in in the `hooks.after` branch of
+      `packages/astromech/src/auth/better-auth.ts`, and the lock refusal in its
+      `hooks.before`; an account lock where `lock()` answers true in
+      `packages/astromech/src/security/sign-in-failures.ts`; an automatic block
+      at the upsert in the same file; a manual block, unblock, allow or remove
+      through `defineService`'s `bind` (they are `mutates: true`); a captcha
+      failure in the `requireCaptcha` middleware and in the forms plugin's spam
+      hook.
 - [ ] **The assistant's approval row** gains a reference to the core row.
 - [ ] **A read path** for the admin, which resolves the user's name at render
       time and falls back to the stored email.

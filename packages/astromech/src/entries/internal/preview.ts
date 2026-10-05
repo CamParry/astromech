@@ -4,6 +4,7 @@ import type { EntryQueryParams, Field, QueryResult, ResolvedConfig } from '@/typ
 import { applyVisibility } from '@/content/visibility';
 import { resolveEntryType } from '@/entries/entry-types';
 import { flattenEntryFields } from '@/fields/flatten';
+import { sha256Hex } from '@/utilities/hash';
 import { entryRepository } from '../repository/entries-table';
 
 /**
@@ -112,15 +113,6 @@ export async function getPreviewEntry(
 /** How long a preview token lasts when the caller names no expiry: seven days. */
 export const DEFAULT_PREVIEW_TOKEN_TTL_MS = 7 * 24 * 60 * 60 * 1000;
 
-/** SHA-256 hex of a token (crypto.subtle, so Workers-safe). */
-export async function hashPreviewToken(plaintext: string): Promise<string> {
-    const bytes = new TextEncoder().encode(plaintext);
-    const buffer = await crypto.subtle.digest('SHA-256', bytes);
-    return Array.from(new Uint8Array(buffer))
-        .map((b) => b.toString(16).padStart(2, '0'))
-        .join('');
-}
-
 /** Generate a high-entropy preview token secret (32 random bytes, hex). */
 export function generatePreviewSecret(): string {
     const bytes = crypto.getRandomValues(new Uint8Array(32));
@@ -131,9 +123,7 @@ export function generatePreviewSecret(): string {
 
 /** True if `token` is a current preview token for the canonical `entryId`. */
 async function verifyPreviewToken(entryId: string, token: string): Promise<boolean> {
-    const record = await entryRepository.previewToken.findByHash(
-        await hashPreviewToken(token)
-    );
+    const record = await entryRepository.previewToken.findByHash(await sha256Hex(token));
     if (!record || record.id !== entryId) return false;
     return record.expiresAt === null || record.expiresAt.getTime() > Date.now();
 }
