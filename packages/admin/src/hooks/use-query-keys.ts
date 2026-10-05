@@ -98,6 +98,13 @@ export const queryKeys = {
         count: () => ['notifications', 'count'] as const,
     },
 
+    /** The block list and allow list. */
+    security: {
+        all: () => ['security'] as const,
+        blocked: () => ['security', 'blocked'] as const,
+        allowed: () => ['security', 'allowed'] as const,
+    },
+
     auth: {
         /** The signed-in user; route guards and the React tree share it. */
         session: () => ['session'] as const,

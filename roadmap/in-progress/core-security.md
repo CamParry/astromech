@@ -91,7 +91,7 @@ is `DECISIONS.md`, "Security in core is defaults and shared mechanisms".
 - [ ] Security events written to the audit trail. Waits for the table in
       `roadmap/planned/audit-trail.md`, which lists each event's call site; the
       Security screen shows no events until then.
-- [ ] The Security screen and its permission.
+- [x] The Security screen and its permission.
 - [ ] Docs: the defaults, the settings, and the CSP sources a captcha needs.
 
 ## Testing

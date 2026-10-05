@@ -24,6 +24,8 @@ export const isolatedTests = [
     'tests/components/entries/entries-list-page.test.tsx',
     'tests/components/globals/global-edit-page.test.tsx',
     'tests/components/layout/sidebar-globals.test.tsx',
+    'tests/components/layout/sidebar-security.test.tsx',
+    'tests/components/security/security-page.test.tsx',
     'tests/components/fields/plugin-field-loading.test.tsx',
     'tests/components/fields/reference-field-loading.test.tsx',
     'tests/components/media/media-detail-modal-replace.test.tsx',

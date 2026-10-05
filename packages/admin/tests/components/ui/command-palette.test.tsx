@@ -145,6 +145,7 @@ describe('the command palette', () => {
             'Dashboard',
             'Media',
             'Users',
+            'Security',
             'Posts',
             'Pages',
             'Footer',
@@ -162,7 +163,12 @@ describe('the command palette', () => {
         await view.user.keyboard('se');
 
         await waitFor(() => {
-            expect(optionLabels()).toEqual(['Users', 'SEO: Settings', 'SEO: Sitemap']);
+            expect(optionLabels()).toEqual([
+                'Users',
+                'Security',
+                'SEO: Settings',
+                'SEO: Sitemap',
+            ]);
         });
     });
 
@@ -263,12 +269,13 @@ describe('the command palette', () => {
         expect(optionLabels()).not.toContain('Settings');
     });
 
-    it('hides Media and Users from a user who cannot read them', async () => {
+    it('hides Media, Users and Security from a user who cannot open them', async () => {
         const view = mountPalette(['entry:post:read']);
         await openPalette(view);
 
         expect(optionLabels()).not.toContain('Media');
         expect(optionLabels()).not.toContain('Users');
+        expect(optionLabels()).not.toContain('Security');
     });
 
     it('lists the globals and app pages the user may open', async () => {

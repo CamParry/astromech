@@ -8,7 +8,15 @@ import type { PluginNavItem } from 'astromech';
 import type { TFunction } from 'i18next';
 import type { LucideIcon } from 'lucide-react';
 import { globalPermission, hasPermission } from 'astromech/shared';
-import { Database, Globe, Image, LayoutDashboard, Puzzle, Users } from 'lucide-react';
+import {
+    Database,
+    Globe,
+    Image,
+    LayoutDashboard,
+    Puzzle,
+    ShieldCheck,
+    Users,
+} from 'lucide-react';
 import { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import adminConfig from 'virtual:astromech/admin-config';
@@ -38,7 +46,7 @@ export type AdminNav = {
     /** The site's own admin pages. */
     pages: AdminNavLink[];
     plugins: AdminNavPlugin[];
-    /** Users, when the user may read them. */
+    /** Users, when the user may read them, and Security, when they may manage it. */
     system: AdminNavLink[];
 };
 
@@ -98,9 +106,14 @@ function buildAdminNav(permissions: string[], t: TFunction): AdminNav {
             items: filterNavItems(plugin.nav, allowed),
         }))
         .filter((plugin) => plugin.items.length > 0);
-    const system: AdminNavLink[] = allowed('users:read')
-        ? [{ to: '/users', label: t('nav.users'), Icon: Users }]
-        : [];
+    const system: AdminNavLink[] = [
+        ...(allowed('users:read')
+            ? [{ to: '/users', label: t('nav.users'), Icon: Users }]
+            : []),
+        ...(allowed('security:manage')
+            ? [{ to: '/security', label: t('nav.security'), Icon: ShieldCheck }]
+            : []),
+    ];
 
     return { primary, entryTypes, globals, pages, plugins, system };
 }
