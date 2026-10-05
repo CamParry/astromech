@@ -221,6 +221,65 @@ describe('branch deletion', () => {
     });
 });
 
+describe('process kills', () => {
+    it('refuses pkill and killall, pointing at kill <pid>', () => {
+        for (const command of [
+            'pkill -f astro',
+            'killall node',
+            'sudo pkill node',
+            'cd /tmp; pkill -f "astro dev"',
+        ]) {
+            const result = runHook(command);
+            assert.equal(result.decision, 'deny', command);
+            assert.match(result.reason, /kill <pid>/, command);
+        }
+    });
+
+    it('lets kill <pid> run', () => {
+        assert.equal(runHook('kill 1234').decision, null);
+        assert.equal(runHook('command -v pkill').decision, null);
+    });
+});
+
+describe('git stash', () => {
+    it('refuses a stash inside the worktree directory, pointing at a wip commit', () => {
+        for (const command of [
+            `cd "${worktree}" && git stash`,
+            `cd "${worktree}" && git stash push -m wip`,
+            `cd "${worktree}" && git stash save`,
+            `cd "${worktree}" && git stash -u`,
+            `cd "${worktree}" && echo $(git stash)`,
+        ]) {
+            const result = runHook(command);
+            assert.equal(result.decision, 'deny', command);
+            assert.match(result.reason, /wip:/, command);
+        }
+    });
+
+    it('asks before a stash in the main checkout', () => {
+        assert.equal(runHook(`cd "${site}" && git stash`).decision, 'ask');
+        assert.equal(
+            runHook(`cd "${site}" && git stash push -m "before worktree work"`).decision,
+            'ask'
+        );
+    });
+
+    it('lets the stash be read and applied anywhere', () => {
+        for (const command of [
+            'git stash list',
+            'git stash show -p',
+            'git stash pop',
+            'git stash apply',
+        ]) {
+            assert.equal(
+                runHook(`cd "${worktree}" && ${command}`).decision,
+                null,
+                command
+            );
+        }
+    });
+});
+
 describe('commands it cannot parse', () => {
     it('asks rather than guess', () => {
         for (const command of [

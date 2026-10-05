@@ -1,8 +1,10 @@
 #!/usr/bin/env node
 /**
- * PreToolUse hook for Bash. It guards git calls that can destroy uncommitted work.
- * Why: several sessions and agents share this repository, so `git reset --hard` can wipe another
- * session's work.
+ * PreToolUse hook for Bash. It guards git calls that can destroy uncommitted work, and process
+ * and stash commands that reach into other sessions' work.
+ * Why: several sessions and agents share this machine and repository, so `git reset --hard` can
+ * wipe another session's work, a broad `pkill` can stop its server, and `git stash` (repo-wide)
+ * empties a worktree other agents are writing in.
  *
  * It splits the command into simple commands (honouring quotes, dropping heredoc bodies and
  * comments), follows `cd` and `git -C`, and decides each call by the directory it runs in. The
@@ -18,6 +20,8 @@
  * | `branch -D <names>`: any other name                         | ask                 | ask       |
  * | `push --force`, `-f`, `--force-with-lease`, `+<ref>`        | ask                 | ask       |
  * | `stash drop`, `stash clear` (the stash is repo-wide)        | ask                 | ask       |
+ * | `stash`, `stash push`, `stash save`                         | deny                | ask       |
+ * | `pkill`, `killall`                                          | deny                | deny      |
  * | a command it cannot parse                                   | ask                 | ask       |
  *
  * Silent means no output, so the normal permission flow decides; the hook never answers `allow`,
@@ -29,7 +33,7 @@ import { homedir } from 'node:os';
 import { basename, dirname, isAbsolute, join, resolve, sep } from 'node:path';
 
 // Commands that mention none of these words cannot match a rule, so they skip the parse.
-const TRIGGER = /git/;
+const TRIGGER = /git|pkill|killall/;
 
 function main() {
     const input = readInput();
@@ -87,6 +91,22 @@ function respond(decision, reasons) {
 function judge(finding, worktrees) {
     const quoted = `\`${finding.label}\``;
     switch (finding.kind) {
+        case 'process-kill':
+            return {
+                decision: 'deny',
+                reason: `${quoted} is refused: it matches processes by name, so it can stop another session's server or test run. Stop the process you started by its PID with \`kill <pid>\`.`,
+            };
+        case 'stash':
+            if (isInside(finding.directory, worktrees())) {
+                return {
+                    decision: 'deny',
+                    reason: `${quoted} is refused in the shared worktree directory: the stash belongs to the whole repository, and stashing empties a worktree other agents are writing in. Make a \`wip:\` commit instead.`,
+                };
+            }
+            return {
+                decision: 'ask',
+                reason: `${quoted} stashes changes ${where(finding.directory, worktrees())}; the stash is shared by every worktree.`,
+            };
         case 'working-tree':
             if (isInside(finding.directory, worktrees())) return undefined;
             return {
@@ -295,7 +315,9 @@ function inspectCommand(words, directory, findings) {
 
     if (name === 'cd' || name === 'pushd') return changeDirectory(rest, directory);
     if (name === 'popd') return null;
-    if (name === 'git') {
+    if (name === 'pkill' || name === 'killall') {
+        findings.push({ kind: 'process-kill', label: name });
+    } else if (name === 'git') {
         inspectGit(rest, directory, findings);
     } else if (SHELLS.has(name)) {
         const script = shellScript(rest);
@@ -477,6 +499,8 @@ function inspectGit(args, startDirectory, findings) {
                     label,
                     why: 'deletes stash entries, which every worktree of the repository shares',
                 });
+            } else if (action === 'push' || action === 'save') {
+                findings.push({ kind: 'stash', label, directory });
             }
             return;
         }
