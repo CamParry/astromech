@@ -101,3 +101,35 @@ password, and succeeds after the lock ends; a successful sign-in clears the
 count; password reset works while locked; an address over the limit across
 accounts is blocked and an allow-listed one never is; a captcha token for one
 action is refused on another form; an unblock applies after the cache lifetime.
+
+## Checks against real providers and Cloudflare
+
+Merged on 2026-10-05. The tests stub `fetch` for siteverify, and
+`check:boot:cloudflare` runs on local workerd; `check:boot` opens the Security
+screen in chromium. These need real keys or a deployed Worker:
+
+- [ ] Each provider's real siteverify answer with a real site key and secret:
+      Turnstile's `action` and `hostname`, reCAPTCHA v3's `action`, `score` and
+      `hostname`, hCaptcha's `hostname`.
+- [ ] The widgets in a browser: two Turnstile widgets on one page with
+      `render=explicit`, token expiry and reset, reCAPTCHA v3's `execute`; the
+      admin sign-in, setup and forgot-password pages with a captcha on and
+      Astro `security.csp` set to the documented sources.
+- [ ] The hostname check behind a real proxy or CDN, and `hostnames` with
+      Turnstile's test secret, which answers `example.com`.
+- [ ] On a deployed Worker: `ASTROMECH_CAPTCHA_SECRET` set with
+      `wrangler secret put` is read, its absence refuses requests in
+      production, and `cf-connecting-ip` reaches siteverify as `remoteip`.
+- [ ] On production D1: the three new tables, the `sign_in_failures` upsert
+      with `RETURNING`, and an unblock reaching other isolates within 60
+      seconds.
+
+## Left open
+
+- **`cf-connecting-ip` is trusted on workerd unchecked**
+  (`roadmap/completed/auth-rate-limit-defects.md`), so a forged value could
+  dodge a block there.
+- **A blocked shared address blocks everyone behind it** for the hour; the
+  allow list is the remedy.
+- **The captcha check runs before Better Auth's limiter**, so a client can
+  drive one siteverify call per attempt; a missing token costs none.
