@@ -14,7 +14,7 @@ Nested `AGENTS.md` files cover `packages/astromech`, `packages/admin`, `packages
 
 ## Commands and the gate
 
-While working, run the test file you touched (`pnpm -F <package> exec vitest run <path>`; the `testing` skill has the detail). Run `pnpm run verify:fast` before handing work back (typecheck, tests, lint, `check:unused`; no build, no coverage thresholds). Run `pnpm run verify` before a change lands. `pnpm run verify:runtime` is the version-sensitive subset CI runs on the floor Node version. **Never `--no-verify`**: if the pre-commit hook fails, fix the cause.
+While working, run the test file you touched (`pnpm -F <package> exec vitest run <path>`; the `testing` skill has the detail). Run `pnpm run verify:fast` before handing work back (typecheck, tests, lint, `check:unused`; no build, and coverage thresholds only for the packages the branch changes). Run `pnpm run verify` before a change lands. `pnpm run verify:runtime` is the version-sensitive subset CI runs on the floor Node version. **Never `--no-verify`**: if the pre-commit hook fails, fix the cause.
 
 `verify` runs every check below except four: `format:check` and `lint:css` (the hook runs them), `check:config` (run it when you edit the config path) and `check:install` (needs the npm registry, so CI runs it separately).
 

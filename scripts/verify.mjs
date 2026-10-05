@@ -4,6 +4,10 @@
  * `--fast` runs only the stages that need no build: the published packages'
  * typechecks, their test suites, lint and `check:unused`. That is the loop to
  * run while working. The full run adds the build and everything downstream of it.
+ * Fast mode checks coverage thresholds only for the packages the branch
+ * changes since its merge base with `origin/main` (committed, staged, unstaged
+ * or untracked), and prints which ones; the other suites run without coverage.
+ * The full and runtime modes check coverage in every package.
  *
  * `--runtime` runs only the checks whose result can vary with the Node version:
  * the test suites and the two boot checks, over a `build:js` (no declarations,
@@ -30,10 +34,11 @@
  * package's suite runs even when an earlier package's fails.
  */
 
-import { spawn } from 'node:child_process';
+import { execFileSync, spawn } from 'node:child_process';
 import console from 'node:console';
+import { existsSync, readdirSync, readFileSync } from 'node:fs';
 import { constants } from 'node:os';
-import { dirname, resolve } from 'node:path';
+import { dirname, join, resolve } from 'node:path';
 import process from 'node:process';
 import { fileURLToPath } from 'node:url';
 import { environmentWithoutNodeEnv } from './check-helpers.mjs';
@@ -68,10 +73,8 @@ const mode = process.argv.includes('--fast')
       ? 'runtime'
       : 'full';
 
-// Every package's suite runs, one package at a time to bound memory, and
-// pnpm's closing summary names each package that failed.
-const TEST_PACKAGES =
-    'pnpm -r --no-bail --workspace-concurrency=1 -F "./packages/**" test:run';
+/** Only fast mode reads the branch's changes. */
+const fastTestCommand = mode === 'fast' ? testCommandForBranch() : undefined;
 
 /**
  * Each stage runs in parallel; stages run in order. A check lists in `needs`
@@ -86,7 +89,7 @@ const stagesByMode = {
                 command: 'pnpm -r -F "./packages/**" typecheck',
             },
             // Every plugin resolves core to source, so this stage needs no build.
-            { name: 'test:packages', command: TEST_PACKAGES },
+            { name: 'test:packages', command: fastTestCommand },
             { name: 'lint', command: 'pnpm run lint' },
             { name: 'check:unused', command: 'pnpm run check:unused' },
         ],
@@ -290,6 +293,90 @@ if (interrupted) {
     process.exitCode = 1;
 } else {
     console.log(passed[mode]);
+}
+
+/**
+ * Fast mode's test command: `test:coverage` for each package the branch
+ * changes, so a coverage threshold fails here rather than at the full gate, and
+ * `test:run` for the rest. Prints which packages run with coverage.
+ */
+function testCommandForBranch() {
+    const packages = listPackages();
+    const changed = changedPackages(packages);
+    if (changed === undefined) {
+        console.log(
+            'coverage: none (origin/main is missing or shares no commit with HEAD)'
+        );
+    } else if (changed.length === 0) {
+        console.log('coverage: none (no package changed since origin/main)');
+    } else {
+        console.log(`coverage: ${changed.join(', ')} (changed since origin/main)`);
+    }
+    const covered = changed ?? [];
+    const rest = packages
+        .map(({ name }) => name)
+        .filter((name) => !covered.includes(name));
+    if (covered.length === 0) return testPackages('test:run', rest);
+    if (rest.length === 0) return testPackages('test:coverage', covered);
+    // Both runs happen whatever the first one's result, and either failing fails the check.
+    return [
+        `${testPackages('test:coverage', covered)}; coverage=$?`,
+        `${testPackages('test:run', rest)}; rest=$?`,
+        '[ $coverage -eq 0 ] && [ $rest -eq 0 ]',
+    ].join('; ');
+}
+
+/**
+ * A command running `script` in each named package, one package at a time to
+ * bound memory. It carries on past a failing package, and pnpm's closing
+ * summary names each one that failed.
+ */
+function testPackages(script, names) {
+    const filters = names.map((name) => `-F "${name}"`).join(' ');
+    return `pnpm -r --no-bail --workspace-concurrency=1 ${filters} ${script}`;
+}
+
+/** The workspace packages under `packages/` and `packages/plugins/`, each with its directory and name. */
+function listPackages() {
+    return ['packages', 'packages/plugins']
+        .flatMap((parent) =>
+            readdirSync(join(repoRoot, parent), { withFileTypes: true })
+                .filter((entry) => entry.isDirectory())
+                .map((entry) => `${parent}/${entry.name}`)
+        )
+        .filter((dir) => existsSync(join(repoRoot, dir, 'package.json')))
+        .map((dir) => ({
+            dir,
+            name: JSON.parse(readFileSync(join(repoRoot, dir, 'package.json'), 'utf8'))
+                .name,
+        }));
+}
+
+/**
+ * The names of the packages with a file that differs from the merge base with
+ * `origin/main`: committed, staged, unstaged or untracked. Undefined when there
+ * is no merge base, as in a clone without `origin/main`.
+ */
+function changedPackages(packages) {
+    const git = (...args) =>
+        execFileSync('git', args, {
+            cwd: repoRoot,
+            encoding: 'utf8',
+            stdio: ['ignore', 'pipe', 'ignore'],
+        });
+    let mergeBase;
+    try {
+        mergeBase = git('merge-base', 'origin/main', 'HEAD').trim();
+    } catch {
+        return undefined;
+    }
+    const paths = [
+        ...git('diff', '--name-only', '-z', mergeBase).split('\0'),
+        ...git('ls-files', '--others', '--exclude-standard', '-z').split('\0'),
+    ];
+    return packages
+        .filter(({ dir }) => paths.some((path) => path.startsWith(`${dir}/`)))
+        .map(({ name }) => name);
 }
 
 /**
