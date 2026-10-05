@@ -21,6 +21,13 @@
  *   the generator reads the existing file and skips the write when the content
  *   is unchanged, so once it is current both app builds read it and neither
  *   writes, and the race is gone.
+ *
+ * A failed check does not stop the gate. Only the build stages and
+ * `routes:generate` write something a later check reads, so a check that
+ * reads one (its `needs`) is skipped when that one fails, with a
+ * `skip <name> (needs <failed>)` line, and every other check still runs. The
+ * summary at the end prints each failure's output. Within the test stage, each
+ * package's suite runs even when an earlier package's fails.
  */
 
 import { spawn } from 'node:child_process';
@@ -49,9 +56,10 @@ const STOP_GRACE_MS = 10_000;
 const PIPE_GRACE_MS = 5000;
 
 // Lines vitest (and most tools) use to name a failure, for a failing check's
-// summary.
+// summary. `[ERROR]` and `Summary:` are pnpm's lines naming each package whose
+// script failed in a recursive run.
 const SUMMARY_PATTERN =
-    /FAIL|✗|×|AssertionError|Error:|Test Files|Tests |ERROR: Coverage/;
+    /FAIL|✗|×|AssertionError|Error:|Test Files|Tests |ERROR: Coverage|\[ERROR\]|^Summary: /;
 const SUMMARY_LINES = 60;
 
 const mode = process.argv.includes('--fast')
@@ -60,51 +68,90 @@ const mode = process.argv.includes('--fast')
       ? 'runtime'
       : 'full';
 
-/** Each stage runs in parallel; stages run in order. */
+// Every package's suite runs, one package at a time to bound memory, and
+// pnpm's closing summary names each package that failed.
+const TEST_PACKAGES =
+    'pnpm -r --no-bail --workspace-concurrency=1 -F "./packages/**" test:run';
+
+/**
+ * Each stage runs in parallel; stages run in order. A check lists in `needs`
+ * the earlier checks whose output it reads, and is skipped when one of them
+ * fails. Every other check runs whatever failed before it.
+ */
 const stagesByMode = {
     fast: [
         [
-            ['typecheck:packages', 'pnpm -r -F "./packages/**" typecheck'],
-            [
-                'test:packages',
-                // Every plugin resolves core to source, so this stage needs no build.
-                'pnpm -F @astromech/schema-engine test:run && pnpm -F astromech test:run && pnpm -F @astromech/admin test:run && pnpm -F @astromech/forms -F @astromech/menus -F @astromech/redirects -F @astromech/backups -F @astromech/seo -F @astromech/assistant test:run',
-            ],
-            ['lint', 'pnpm run lint'],
-            ['check:unused', 'pnpm run check:unused'],
+            {
+                name: 'typecheck:packages',
+                command: 'pnpm -r -F "./packages/**" typecheck',
+            },
+            // Every plugin resolves core to source, so this stage needs no build.
+            { name: 'test:packages', command: TEST_PACKAGES },
+            { name: 'lint', command: 'pnpm run lint' },
+            { name: 'check:unused', command: 'pnpm run check:unused' },
         ],
     ],
     runtime: [
         // No declarations: nothing this mode runs reads a `.d.ts`.
-        [['build:js', 'pnpm run build:js']],
+        [{ name: 'build:js', command: 'pnpm run build:js' }],
         // routes:generate primes routeTree.gen.ts for the concurrent boot
         // builds below (see the header comment); test:run is independent of it.
         [
-            ['test:run', 'pnpm run test:run'],
-            ['routes:generate', 'pnpm -F @astromech/admin routes:generate'],
+            { name: 'test:run', command: 'pnpm run test:run' },
+            {
+                name: 'routes:generate',
+                command: 'pnpm -F @astromech/admin routes:generate',
+            },
         ],
         [
-            ['check:boot', 'pnpm run check:boot'],
-            ['check:boot:cloudflare', 'pnpm run check:boot:cloudflare'],
+            {
+                name: 'check:boot',
+                command: 'pnpm run check:boot',
+                needs: ['build:js', 'routes:generate'],
+            },
+            {
+                name: 'check:boot:cloudflare',
+                command: 'pnpm run check:boot:cloudflare',
+                needs: ['build:js', 'routes:generate'],
+            },
         ],
     ],
     full: [
-        [['build', 'pnpm run build']],
+        [{ name: 'build', command: 'pnpm run build' }],
         [
-            ['test:run', 'pnpm run test:run'],
-            ['lint', 'pnpm run lint'],
-            ['check:unused', 'pnpm run check:unused'],
-            ['check:node-imports', 'pnpm run check:node-imports'],
-            ['check:exports', 'pnpm run check:exports'],
-            ['check:docs', 'pnpm run check:docs'],
+            { name: 'test:run', command: 'pnpm run test:run' },
+            { name: 'lint', command: 'pnpm run lint' },
+            { name: 'check:unused', command: 'pnpm run check:unused' },
+            {
+                name: 'check:node-imports',
+                command: 'pnpm run check:node-imports',
+                needs: ['build'],
+            },
+            { name: 'check:exports', command: 'pnpm run check:exports' },
+            { name: 'check:docs', command: 'pnpm run check:docs' },
         ],
-        [['typecheck', 'pnpm run typecheck']],
+        // The demo apps import the packages through `exports`, which points at
+        // `dist`, so their typecheck reads the build's declarations.
+        [{ name: 'typecheck', command: 'pnpm run typecheck', needs: ['build'] }],
         // Prime routeTree.gen.ts so the two boot builds below both read it
         // unchanged and neither writes it. See the header comment.
-        [['routes:generate', 'pnpm -F @astromech/admin routes:generate']],
         [
-            ['check:boot', 'pnpm run check:boot'],
-            ['check:boot:cloudflare', 'pnpm run check:boot:cloudflare'],
+            {
+                name: 'routes:generate',
+                command: 'pnpm -F @astromech/admin routes:generate',
+            },
+        ],
+        [
+            {
+                name: 'check:boot',
+                command: 'pnpm run check:boot',
+                needs: ['build', 'routes:generate'],
+            },
+            {
+                name: 'check:boot:cloudflare',
+                command: 'pnpm run check:boot:cloudflare',
+                needs: ['build', 'routes:generate'],
+            },
         ],
     ],
 };
@@ -190,11 +237,32 @@ for (const signal of ['SIGINT', 'SIGTERM']) {
 
 const failures = [];
 
+/** Each check that failed or was skipped, mapped to the failed check it traces to. */
+const unavailable = new Map();
+
 for (const stage of stages) {
-    const results = await Promise.all(stage.map(([name, command]) => run(name, command)));
-    failures.push(...results.filter((result) => result.failed));
-    if (failures.length > 0 || interrupted) break;
+    if (interrupted) break;
+    const runnable = [];
+    for (const check of stage) {
+        const missing = (check.needs ?? []).find((need) => unavailable.has(need));
+        if (missing === undefined) {
+            runnable.push(check);
+        } else {
+            const failed = unavailable.get(missing);
+            unavailable.set(check.name, failed);
+            console.log(`skip ${check.name} (needs ${failed})`);
+        }
+    }
+    const results = await Promise.all(
+        runnable.map(({ name, command }) => run(name, command))
+    );
+    for (const result of results.filter(({ failed }) => failed)) {
+        failures.push(result);
+        unavailable.set(result.name, result.name);
+    }
 }
+
+const skipped = unavailable.size - failures.length;
 
 const passed = {
     fast: '\nFast checks passed.',
@@ -215,7 +283,8 @@ if (interrupted) {
             : '';
         console.error(`\n----- ${failure.name} -----\n${heading}${failure.output}`);
     }
-    console.error(`\n${failures.length} check(s) failed.`);
+    const skippedNote = skipped > 0 ? `, ${skipped} skipped` : '';
+    console.error(`\n${failures.length} check(s) failed${skippedNote}.`);
     // Not `process.exit(1)`: a write to a piped stderr can still be queued, and
     // exiting at once drops it. Nothing else holds the event loop open by now.
     process.exitCode = 1;
