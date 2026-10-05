@@ -42,11 +42,20 @@
  * a second gate, build, test run or boot check started meanwhile, in any
  * worktree, waits for this one to finish rather than run beside it. The checks
  * this starts go ahead under its lock.
+ *
+ * Each check's whole output goes to a log file in the worktree's git
+ * directory, `verify/<check>.log`, and a `FAIL` line names its path. To see
+ * more of a failure, search that log; don't rerun the check. A passing run
+ * writes `verify/stamp.json` there, recording the mode, HEAD and the
+ * uncommitted changes, and a failed run removes it. `pnpm run verify:status`
+ * reads it, so a run already made on the same tree need not be repeated. A run
+ * whose tree changes while it runs writes no stamp. `scripts/verify-stamp.mjs`
+ * has the detail.
  */
 
 import { execFileSync, spawn } from 'node:child_process';
 import console from 'node:console';
-import { existsSync, readdirSync, readFileSync } from 'node:fs';
+import { createWriteStream, existsSync, readdirSync, readFileSync } from 'node:fs';
 import { constants } from 'node:os';
 import { dirname, join, resolve } from 'node:path';
 import process from 'node:process';
@@ -59,6 +68,14 @@ import {
 } from './cpu-limits.mjs';
 import { stopProcessGroup } from './process-group.mjs';
 import { waitForRunLock } from './run-lock.mjs';
+import {
+    logPath,
+    prepareVerifyDirectory,
+    removeStamp,
+    stampPath,
+    treeState,
+    writeStamp,
+} from './verify-stamp.mjs';
 
 // First, before anything prints: every check inherits the priority.
 relaunchAtLowerPriority();
@@ -68,6 +85,11 @@ relaunchAtLowerPriority();
 await waitForRunLock('verify');
 
 const repoRoot = resolve(dirname(fileURLToPath(import.meta.url)), '..');
+
+const verifyDirectory = prepareVerifyDirectory(repoRoot);
+
+/** The tree the checks start from, compared with the tree at the end. */
+const startingTree = treeState(repoRoot);
 
 // Each check runs with the tool's own `NODE_ENV`, whatever the shell sets.
 const environment = environmentWithoutNodeEnv('verify');
@@ -210,9 +232,15 @@ const run = (name, command, env = environment) =>
             stdio: ['ignore', 'pipe', 'pipe'],
         });
         running.add(child);
+        const log = logPath(verifyDirectory, name);
+        const logStream = createWriteStream(log);
         let output = '';
-        child.stdout.on('data', (chunk) => (output += chunk));
-        child.stderr.on('data', (chunk) => (output += chunk));
+        const record = (chunk) => {
+            output += chunk;
+            logStream.write(chunk);
+        };
+        child.stdout.on('data', record);
+        child.stderr.on('data', record);
 
         let timedOut = false;
         let heldOpen = false;
@@ -232,17 +260,22 @@ const run = (name, command, env = environment) =>
             await stopping;
             child.stdout.destroy();
             child.stderr.destroy();
+            await new Promise((fulfil) => logStream.end(fulfil));
             running.delete(child);
             const failed = timedOut || code !== 0;
             const seconds = ((Date.now() - started) / 1000).toFixed(1);
             const note = timedOut ? ', timed out' : '';
-            console.log(`${failed ? 'FAIL' : 'ok  '} ${name} (${seconds}s${note})`);
+            console.log(
+                failed
+                    ? `FAIL ${name} (${seconds}s${note}) log: ${log}`
+                    : `ok   ${name} (${seconds}s)`
+            );
             if (heldOpen) {
                 console.log(
                     `warn ${name} exited, but a process it started held its output open and was stopped`
                 );
             }
-            done({ name, failed, timedOut, output });
+            done({ name, failed, timedOut, output, log });
         };
 
         // `close` waits for the output pipes as well as the process. A process
@@ -314,20 +347,41 @@ if (interrupted) {
     for (const failure of failures) {
         const summary = summarise(failure.output);
         if (summary !== '') {
-            console.error(`\n----- ${failure.name} (summary) -----\n${summary}`);
+            console.error(
+                `\n----- ${failure.name} (summary; whole output in ${failure.log}) -----\n${summary}`
+            );
         }
         const heading = failure.timedOut
             ? `${failure.name} timed out after ${CHECK_TIMEOUT_MS / 60_000} minutes. Its output so far:\n`
             : '';
         console.error(`\n----- ${failure.name} -----\n${heading}${failure.output}`);
     }
+    removeStamp(verifyDirectory);
     const skippedNote = skipped > 0 ? `, ${skipped} skipped` : '';
     console.error(`\n${failures.length} check(s) failed${skippedNote}.`);
+    // Last, so the paths stay on screen: search these rather than rerun.
+    for (const failure of failures) {
+        console.error(`log ${failure.name}: ${failure.log}`);
+    }
     // Not `process.exit(1)`: a write to a piped stderr can still be queued, and
     // exiting at once drops it. Nothing else holds the event loop open by now.
     process.exitCode = 1;
 } else {
     console.log(passed[mode]);
+    const endingTree = treeState(repoRoot);
+    if (
+        endingTree.head === startingTree.head &&
+        endingTree.changes === startingTree.changes
+    ) {
+        writeStamp(verifyDirectory, mode, startingTree);
+        console.log(
+            `Recorded in ${stampPath(verifyDirectory)} (pnpm run verify:status).`
+        );
+    } else {
+        console.log(
+            'The tree changed while the checks ran, so no stamp was written. Run again on a settled tree to record a pass.'
+        );
+    }
 }
 
 /**

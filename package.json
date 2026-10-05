@@ -10,6 +10,7 @@
         "verify": "node scripts/verify.mjs",
         "verify:fast": "node scripts/verify.mjs --fast",
         "verify:runtime": "node scripts/verify.mjs --runtime",
+        "verify:status": "node scripts/verify-status.mjs",
         "build": "node scripts/run-at-lower-priority.mjs --lock pnpm -r -F \"./packages/**\" build",
         "build:js": "node scripts/run-at-lower-priority.mjs --lock pnpm -r -F \"./packages/**\" build:js",
         "typecheck": "node scripts/run-at-lower-priority.mjs pnpm -r -F \"./packages/**\" typecheck && pnpm -F astromech-demo typecheck && pnpm -F astromech-demo-cloudflare typecheck",

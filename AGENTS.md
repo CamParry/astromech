@@ -14,7 +14,7 @@ Nested `AGENTS.md` files cover `packages/astromech`, `packages/admin`, `packages
 
 ## Commands and the gate
 
-While working, run the test file you touched (`pnpm -F <package> exec vitest run <path>`; the `testing` skill has the detail). Run `pnpm run verify:fast` before handing work back (typecheck, tests, lint, `check:unused`; no build, and coverage thresholds only for the packages the branch changes). Run `pnpm run verify` before a change lands. `pnpm run verify:runtime` is the version-sensitive subset CI runs on the floor Node version. **Never `--no-verify`**: if the pre-commit hook fails, fix the cause.
+While working, run the test file you touched (`pnpm -F <package> exec vitest run <path>`; the `testing` skill has the detail). Run `pnpm run verify:fast` before handing work back (typecheck, tests, lint, `check:unused`; no build, and coverage thresholds only for the packages the branch changes). Run `pnpm run verify` before a change lands. `pnpm run verify:runtime` is the version-sensitive subset CI runs on the floor Node version. Each check writes its whole output to a log, and a failing check's `FAIL` line names the file: search the log rather than rerun the check. A passing run writes a stamp that `pnpm run verify:status` compares with the worktree. **Never `--no-verify`**: if the pre-commit hook fails, fix the cause.
 
 `verify` runs every check below except four: `format:check` and `lint:css` (the hook runs them), `check:config` (run it when you edit the config path) and `check:install` (needs the npm registry, so CI runs it separately).
 
@@ -50,7 +50,7 @@ Each script's header has the detail.
 - **Clarify before acting.** If a task is ambiguous, or the approach depends on an unclear requirement, ask.
 - **Delegate implementation to a sub-agent.** The main thread plans, decides and reviews. Edit directly only for a trivial one-liner or to correct a sub-agent.
 - **Give the sub-agent the whole plan**: file paths, exact changes and expected outcomes, so it does not re-research the codebase.
-- **Verify what comes back.** Re-run the gate yourself. A sub-agent's report of a clean run is not evidence.
+- **Verify what comes back.** Run `pnpm run verify:status --fast` in the worktree (`--full` for the full gate). It exits 0 only when that gate passed on the worktree's current HEAD and uncommitted changes; otherwise re-run the gate yourself. A sub-agent's report of a clean run is not evidence. The stamp is, because the gate script writes it, not the agent.
 - **Study a pattern before changing it.** Find where it already repeats. Change every copy, record the rest in a `roadmap/` file, or say why this one differs. A defect fix asks where else the same defect can occur.
 - **Run `pnpm run report:drift` before a branch merges**, and give each item a decision in the merge summary: share it now, add it to a `roadmap/` file, or leave it with a reason.
 - **Don't commit while sub-agents are writing in the same worktree.** The pre-commit hook stashes repo-wide and can clobber their edits.
