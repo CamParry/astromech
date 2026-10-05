@@ -34,7 +34,6 @@ import {
     assertNoArgumentsAfterDoubleDash,
     baseRootTestOptions,
     baseTestOptions,
-    relaunchTestRunAtLowerPriority,
 } from './vitest-base-config';
 
 export type PluginVitestOptions = {
@@ -62,7 +61,6 @@ function fromAdmin(path: string): string {
 
 export function pluginVitestConfig(options: PluginVitestOptions = {}): ViteUserConfig {
     assertNoArgumentsAfterDoubleDash();
-    relaunchTestRunAtLowerPriority();
     // Vitest reads `coverage` only from the root config, so both returns below
     // set it there.
     // Reports go to `coverage/`, which git ignores.

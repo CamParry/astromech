@@ -11,10 +11,6 @@ import type { TestUserConfig } from 'vitest/config';
 import { fileURLToPath } from 'node:url';
 import { cpuLimitsApply, TEST_WORKERS } from '../../../../scripts/cpu-limits.mjs';
 
-// Each config calls this as it loads: a run started with the vitest command
-// relaunches at a lower priority.
-export { relaunchTestRunAtLowerPriority } from '../../../../scripts/cpu-limits.mjs';
-
 /**
  * Options each project spreads into its own `test`. An inline project does not
  * inherit the root config's `test`, so core and the admin spread these into
@@ -51,7 +47,8 @@ export const baseRootTestOptions = {
     // leftovers fails. Vitest prints the seed as the run starts;
     // `--sequence.seed=<n>` replays that order.
     sequence: { shuffle: true },
-    // Fewer workers on a laptop, so a run leaves it usable.
+    // Fewer workers on a laptop, so a run leaves it usable. A direct vitest
+    // run gets these but not the lower priority (`scripts/cpu-limits.mjs`).
     ...(cpuLimitsApply ? { maxWorkers: TEST_WORKERS } : {}),
 } satisfies TestUserConfig;
 

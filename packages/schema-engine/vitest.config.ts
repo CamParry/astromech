@@ -1,9 +1,5 @@
 import { defineConfig } from 'vitest/config';
-import {
-    cpuLimitsApply,
-    relaunchTestRunAtLowerPriority,
-    TEST_WORKERS,
-} from '../../scripts/cpu-limits.mjs';
+import { cpuLimitsApply, TEST_WORKERS } from '../../scripts/cpu-limits.mjs';
 
 // The schema engine sits below core and is published on its own, so its tests
 // do not reach into core's test support. This config copies what
@@ -22,9 +18,6 @@ if (ignored !== '') {
             `\`pnpm -F @astromech/schema-engine test:run ${ignored}\`.`
     );
 }
-
-// A run started with the vitest command relaunches at a lower priority.
-relaunchTestRunAtLowerPriority();
 
 export default defineConfig({
     test: {
