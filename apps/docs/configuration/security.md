@@ -1,8 +1,96 @@
 # Security
 
 What Astromech protects with no configuration, and the settings that add more:
-the captcha in front of sign-in, the password reset and your forms, and the
-sources a captcha needs when your site sets a content security policy.
+the block list and allow list, the `Strict-Transport-Security` header, the
+captcha in front of sign-in, the password reset and your forms, and the sources
+a captcha needs when your site sets a content security policy.
+
+## What is on by default
+
+A site with no `security` setting still has:
+
+- **Sign-in limits per address.** Better Auth counts requests per address and
+  path and answers `429` over the limit. The address is the connecting one, so
+  set `security.trustProxy` behind a proxy:
+  [trust-proxy.md](trust-proxy.md).
+- **An account lock.** Five refused sign-ins as one email within 15 minutes lock
+  that email for 5 minutes. Each further lock doubles: 10, 20, 40, then 60
+  minutes, the longest. While it lasts, sign-in answers `429` with the code
+  `ACCOUNT_LOCKED` and a `Retry-After` header, even for the right password. A
+  successful sign-in or a completed password reset clears the count, and a
+  password reset works while an account is locked, so a stranger who locks your
+  account cannot keep you out of it. A lock level resets after a day with no
+  further failures. An email that has no account locks the same way, so a lock
+  never tells anyone which emails have one.
+- **Automatic address blocks.** An address that gets 20 sign-ins refused within
+  15 minutes, across any accounts, is blocked for an hour. An IPv6 address is
+  blocked as its `/64` network. An address on the allow list is never blocked,
+  and an automatic block never shortens a block you added by hand.
+- **Response headers on the API.** `X-Content-Type-Options: nosniff`,
+  `X-Frame-Options: DENY` and `Referrer-Policy: strict-origin-when-cross-origin`,
+  with Hono's other defensive defaults such as `Cross-Origin-Opener-Policy`. The
+  first three, and `Permissions-Policy`, can be changed with `security.headers`.
+- **`frame-ancestors 'self'` on the admin pages**, so another site cannot frame
+  your admin. The admin can still frame your own site.
+
+`Strict-Transport-Security` is not sent unless you ask for it; see
+[HSTS](#hsts).
+
+## Blocked and allowed addresses
+
+The block list holds addresses and CIDR ranges (`203.0.113.7`,
+`198.51.100.0/24`) that get `403` from the admin pages and everything under
+`/cms/api`. The allow list holds addresses that no block applies to, such as an
+office. Media files and your site's own pages are not covered: a page built
+ahead of time never reaches Astromech, so block those at your host or CDN.
+
+Manage both lists in the admin under **System → Security**, which needs the
+`security:manage` permission (administrators have it). A block takes an optional
+reason and an expiry of an hour, a day, a week or none; one the server added
+after repeated failed sign-ins is marked Automatic and expires on its own. You
+cannot block a range that covers your own address.
+
+Each server process, and each Workers isolate, keeps its copy of the lists for
+up to 60 seconds, so a change reaches the others within a minute. If you lock
+yourself out of the admin anyway, remove the block from a terminal on the
+server, which has no address to block:
+
+```sh
+astromech call security.listBlocked
+astromech call security.unblock --args '{"id":"…"}'
+```
+
+`security.listAllowed`, `security.allow`, `security.block` and
+`security.removeAllowed` are there too; [../cli.md](../cli.md) covers `call`.
+
+## HSTS
+
+`security.hsts` sends `Strict-Transport-Security` on API and admin responses. It
+is off by default, because a browser that has seen the header refuses plain HTTP
+for the whole host until `max-age` runs out, which can break a staging site or
+another service on the same host name.
+
+```ts
+export default defineConfig({
+    security: {
+        hsts: true, // max-age=31536000
+    },
+});
+```
+
+| Value                                                          | Header sent                                    |
+| -------------------------------------------------------------- | ---------------------------------------------- |
+| unset or `false`                                               | none                                           |
+| `true`                                                         | `max-age=31536000`                             |
+| `{ maxAge: 86400 }`                                            | `max-age=86400`                                |
+| `{ maxAge: 31536000, includeSubDomains: true }`                | `max-age=31536000; includeSubDomains`          |
+| `{ maxAge: 31536000, includeSubDomains: true, preload: true }` | `max-age=31536000; includeSubDomains; preload` |
+
+`preload` needs `includeSubDomains` and a `maxAge` of at least a year, or the
+browsers' preload lists refuse the host, so Astromech refuses to start with
+anything less. The header covers the whole host, not just `/cms`: only turn it on
+when every page and subdomain on it serves HTTPS. Your own pages are not sent
+the header by Astromech; set it for them at your host.
 
 ## Captcha
 

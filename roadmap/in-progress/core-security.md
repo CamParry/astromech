@@ -92,7 +92,7 @@ is `DECISIONS.md`, "Security in core is defaults and shared mechanisms".
       `roadmap/planned/audit-trail.md`, which lists each event's call site; the
       Security screen shows no events until then.
 - [x] The Security screen and its permission.
-- [ ] Docs: the defaults, the settings, and the CSP sources a captcha needs.
+- [x] Docs: the defaults, the settings, and the CSP sources a captcha needs.
 
 ## Testing
 

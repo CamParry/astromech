@@ -33,12 +33,13 @@ host name from the browser, as the table in
 [../installation.md](../installation.md#4-set-the-environment) describes. The
 server also reads these:
 
-| Variable              | What it is                                                                                                                                                              |
-| --------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `HOST`                | The address to listen on. Defaults to Astro's `server.host`, which is `localhost`. Use `0.0.0.0` to accept connections from other machines or from outside a container. |
-| `PORT`                | The port to listen on. Defaults to Astro's `server.port`, which is `4321`.                                                                                              |
-| `DATABASE_URL`        | The database `libsql()` opens when the config passes no `url`. Defaults to `file:./database.db`.                                                                        |
-| `DATABASE_AUTH_TOKEN` | The auth token `libsql()` sends when the config passes no `authToken`.                                                                                                  |
+| Variable                   | What it is                                                                                                                                                              |
+| -------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `HOST`                     | The address to listen on. Defaults to Astro's `server.host`, which is `localhost`. Use `0.0.0.0` to accept connections from other machines or from outside a container. |
+| `PORT`                     | The port to listen on. Defaults to Astro's `server.port`, which is `4321`.                                                                                              |
+| `DATABASE_URL`             | The database `libsql()` opens when the config passes no `url`. Defaults to `file:./database.db`.                                                                        |
+| `DATABASE_AUTH_TOKEN`      | The auth token `libsql()` sends when the config passes no `authToken`.                                                                                                  |
+| `ASTROMECH_CAPTCHA_SECRET` | The captcha provider's secret. Required when the config sets `security.captcha`; see [../configuration/security.md](../configuration/security.md#captcha).              |
 
 [../configuration/database.md](../configuration/database.md#libsql) covers the
 database options.

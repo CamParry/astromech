@@ -41,13 +41,16 @@ This is a living reference; it grows as the project does.
   and cache tag, and what a prerendered page can read.
 - [configuration/trust-proxy.md](configuration/trust-proxy.md) — where the
   connecting address of a request comes from, the sign-in rate limits and
-  session record that use it, the `security.trustProxy` option for a site
-  behind a proxy, and why the address is counted from the end of
-  `x-forwarded-for`.
-- [configuration/security.md](configuration/security.md) — the captcha in front
-  of sign-in, the password reset and forms: the `security.captcha` setting, its
-  secret, what each provider checks, rendering the widget on your own form, and
-  the content security policy sources each provider needs.
+  session record, account lock, block lists and captcha that use it, the
+  `security.trustProxy` option for a site behind a proxy, and why the address
+  is counted from the end of `x-forwarded-for`.
+- [configuration/security.md](configuration/security.md) — what is on with no
+  config (the account lock, automatic address blocks, response headers,
+  `frame-ancestors` on the admin), the block list and allow list and the
+  Security screen, recovering with `astromech call security.unblock`,
+  `security.hsts`, the `security.captcha` setting and its secret, what each
+  provider checks, rendering the widget on your own form, and the content
+  security policy sources each provider needs.
 - [content/entry-types.md](content/entry-types.md) — declaring entry types: the
   `entries` record, and `defineEntryType` for splitting a type into its own
   module.
