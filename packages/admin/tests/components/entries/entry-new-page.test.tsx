@@ -2,9 +2,11 @@
  * @vitest-environment happy-dom
  *
  * The entry create page: it renders the type's own fields beside the title,
- * a publish sends a create with them and opens the new entry, a 422 lands on
- * the field it names and the page stays put, a user who may not create is
- * sent back to the list, and the title input is described by its error.
+ * a publish sends a create with them and opens the new entry, Save creates
+ * the status the select holds, a schedule needs a date only when the save
+ * sends it, a user without publish can only save unpublished, a 422 lands on
+ * the field it names and the page stays put, a user who may not create is sent
+ * back to the list, and the title input is described by its error.
  */
 
 import type { AdminEntryType, Entry } from '@/types/index';
@@ -95,6 +97,73 @@ describe('EntryNewPage', () => {
         expect(await screen.findByText('Post created.')).not.toBeNull();
     });
 
+    it('saves unpublished without publish, offering no Publish and a read-only status', async () => {
+        entries.create.mockResolvedValue({ id: 'p1', locale: 'en' } as Entry);
+        const page = mountPage(['entry:post:read', 'entry:post:create']);
+
+        await page.user.type(await screen.findByLabelText(/Title/), 'Hello world');
+        expect(screen.queryByRole('button', { name: 'Publish' })).toBeNull();
+        expect(screen.getAllByRole('button', { name: 'Save' })).toHaveLength(1);
+        const select = screen.getByRole('combobox', { name: 'Status' });
+        expect(select.textContent).toContain('Unpublished');
+        expect(select.getAttribute('aria-readonly')).toBe('true');
+        expect(
+            screen.getByText('Only users who can publish can change the status.')
+        ).not.toBeNull();
+        await page.user.click(screen.getByRole('button', { name: 'Save' }));
+
+        await waitFor(() => expect(page.location()).toBe('/entries/post/p1?locale=en'));
+        expect(entries.create).toHaveBeenCalledWith({
+            type: 'post',
+            data: { title: 'Hello world', fields: {}, status: 'unpublished' },
+        });
+    });
+
+    it('saves the status the select holds', async () => {
+        entries.create.mockResolvedValue({ id: 'p1', locale: 'en' } as Entry);
+        const page = mountPage();
+
+        await page.user.type(await screen.findByLabelText(/Title/), 'Hello world');
+        await page.user.click(screen.getByRole('combobox', { name: 'Status' }));
+        await page.user.click(await screen.findByRole('option', { name: 'Scheduled' }));
+        await page.user.type(screen.getByLabelText('Publish date'), '2027-02-01T09:00');
+        await page.user.click(screen.getByRole('button', { name: 'Save' }));
+
+        await waitFor(() => expect(entries.create).toHaveBeenCalledTimes(1));
+        expect(entries.create).toHaveBeenCalledWith({
+            type: 'post',
+            data: {
+                title: 'Hello world',
+                fields: {},
+                status: 'scheduled',
+                publishedAt: new Date('2027-02-01T09:00'),
+            },
+        });
+    });
+
+    it('refuses a save that schedules with no date, and publishes without one', async () => {
+        entries.create.mockResolvedValue({ id: 'p1', locale: 'en' } as Entry);
+        const page = mountPage();
+
+        await page.user.type(await screen.findByLabelText(/Title/), 'Hello world');
+        await page.user.click(screen.getByRole('combobox', { name: 'Status' }));
+        await page.user.click(await screen.findByRole('option', { name: 'Scheduled' }));
+        await page.user.click(screen.getByRole('button', { name: 'Save' }));
+        expect(
+            await screen.findByText('Publish date is required when scheduled')
+        ).not.toBeNull();
+        expect(await screen.findByText('Please fix Publish date.')).not.toBeNull();
+        expect(entries.create).not.toHaveBeenCalled();
+
+        await page.user.click(screen.getByRole('button', { name: 'Publish' }));
+
+        await waitFor(() => expect(entries.create).toHaveBeenCalledTimes(1));
+        expect(entries.create).toHaveBeenCalledWith({
+            type: 'post',
+            data: { title: 'Hello world', fields: {}, status: 'published' },
+        });
+    });
+
     it('puts a 422 field error on the field it names and stays on the page', async () => {
         entries.create.mockRejectedValue(
             new AstromechApiError({
@@ -112,9 +181,7 @@ describe('EntryNewPage', () => {
             await screen.findByRole('textbox', { name: 'Excerpt' }),
             'Hi'
         );
-        await page.user.click(
-            screen.getByRole('button', { name: 'Save as Unpublished' })
-        );
+        await page.user.click(screen.getByRole('button', { name: 'Save' }));
 
         expect(await screen.findByText('Excerpt is too short')).not.toBeNull();
         const excerpt = await screen.findByRole('textbox', { name: 'Excerpt' });

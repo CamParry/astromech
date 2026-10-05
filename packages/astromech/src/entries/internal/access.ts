@@ -1,18 +1,19 @@
 import type { EntryAction } from '@/permissions/entry-permission';
 import type { Permission, ServiceMethodAccess } from '@/types/index';
+import { needsPublish } from '@/content/publish-access';
 import { PERMISSION_ENTRY_READ_FULL } from '@/permissions/core-permissions';
 import { entryPermission } from '@/permissions/entry-permission';
 
 /**
  * The permissions an entries method needs: `action` on each type the call names,
- * plus `publish` when its `data` or `overrides` sets `status: 'published'`, and
- * `entry:read:full` when it asks for `full`, whatever the method.
+ * plus `publish` when a create's or update's `data` or `overrides` sets a status
+ * or date (`needsPublish`), and `entry:read:full` when it asks for `full`.
  */
 export function entryAccess(action: EntryAction): ServiceMethodAccess {
     return (input) => {
         const types = typesOf(input);
         const demanded: Permission[] = types.map((type) => entryPermission(type, action));
-        if (action !== 'publish' && publishesOnWrite(input)) {
+        if (setsPublishState(input, action)) {
             demanded.push(...types.map((type) => entryPermission(type, 'publish')));
         }
         if (wantsFullShape(input)) demanded.push(PERMISSION_ENTRY_READ_FULL);
@@ -45,16 +46,12 @@ function typeField(input: unknown): unknown {
     return (input as { type?: unknown }).type;
 }
 
-/** Whether a write's payload sets `status: 'published'`. */
-function publishesOnWrite(input: unknown): boolean {
+/** Whether a create's or update's payload sets a status or date only `publish` may. */
+function setsPublishState(input: unknown, action: EntryAction): boolean {
+    if (action !== 'create' && action !== 'update') return false;
     if (typeof input !== 'object' || input === null) return false;
     const { data, overrides } = input as { data?: unknown; overrides?: unknown };
-    return [data, overrides].some(
-        (payload) =>
-            typeof payload === 'object' &&
-            payload !== null &&
-            (payload as { status?: unknown }).status === 'published'
-    );
+    return [data, overrides].some((payload) => needsPublish(payload, action));
 }
 
 /** Whether the call asks for the full (admin) shape rather than the public one. */

@@ -107,7 +107,10 @@ item 8 proposed, would protect libsql only.
       Grep `throw new Error` under `methods/` and `internal/` for the rest of
       the class. A user or media update whose row is deleted after the read,
       sending unchanged fields, answers 500 (`it.fails` in
-      `packages/astromech/tests/users/last-admin.test.ts`).
+      `packages/astromech/tests/users/last-admin.test.ts`). `users.create` with an
+      email that already exists answers 500 `INTERNAL_ERROR`
+      (`SQLITE_CONSTRAINT: UNIQUE constraint failed: users.email`) rather than
+      a 409 or 422 naming `email`.
 - [x] **OpenAPI coverage** as decided above (`DECISIONS.md`, "The OpenAPI
       document covers every mounted route but the internal ones"). The
       cross-type `POST /entries/query` and `POST /entries/count` were already

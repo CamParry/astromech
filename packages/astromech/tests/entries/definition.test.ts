@@ -88,7 +88,8 @@ describe('entryCatalogue', () => {
         expect(catalogue.update.access).toBe('plugin:forms:entry:form:update');
         expect(catalogue.update.summary).toBe(
             'Update an entry. Fields merge: omitted fields keep their current ' +
-                'value, and arrays are replaced whole. Entry type: "forms/form".'
+                'value, and arrays are replaced whole. Naming `status` or ' +
+                '`publishedAt` also needs the publish permission. Entry type: "forms/form".'
         );
     });
 });

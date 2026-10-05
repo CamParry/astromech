@@ -1,8 +1,8 @@
 import type { MediaResource } from '../repository';
 import { z } from '@hono/zod-openapi';
-import { defaultContentLocale } from '@/config/content-locale';
 import { resolveResourceLocale } from '@/content/locale';
 import { defineServiceMethod } from '@/services/define-service-method';
+import { defaultContentLocale } from '@/utilities/locale';
 import { mediaRepository } from '../repository';
 import { mediaSchema } from '../schema';
 

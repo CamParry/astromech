@@ -8,13 +8,14 @@ import { entrySchema, updateEntryPayloadSchema } from '../schema';
 
 /**
  * Takes one `id` or a list of `ids`, written atomically. A locale with no content
- * row is created from the default locale's, firing the create hooks rather than
- * the update hooks; `staged` writes the staged change instead.
+ * row is created from the default locale's, unpublished unless `data` names a
+ * status, firing the create hooks; `staged` writes the staged change instead.
  */
 export const updateEntries = defineServiceMethod({
     summary:
         'Update an entry. Fields merge: omitted fields keep their current ' +
-        'value, and arrays are replaced whole.',
+        'value, and arrays are replaced whole. Naming `status` or ' +
+        '`publishedAt` also needs the publish permission.',
     input: oneOrMany(
         z.strictObject({
             type: z.string(),

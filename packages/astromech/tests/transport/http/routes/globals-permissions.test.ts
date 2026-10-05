@@ -151,6 +151,28 @@ describe('publishing', () => {
         }
     );
 
+    describe.each([
+        ['published', { status: 'published' }],
+        ['scheduled', { status: 'scheduled', publishedAt: '2099-01-01T00:00:00.000Z' }],
+        ['unpublished', { status: 'unpublished' }],
+        ['a publish date', { publishedAt: '2000-01-01T00:00:00.000Z' }],
+    ])('a PUT setting %s', (_label, data) => {
+        it('403s without global:<key>:publish', async () => {
+            const res = await app(
+                roleWith(['global:site:read', 'global:site:update'])
+            ).request('/globals/site', put(data));
+            expect(res.status).toBe(403);
+        });
+
+        it('admits it with global:<key>:publish', async () => {
+            const res = await app(roleWith(publisher)).request(
+                '/globals/site',
+                put(data)
+            );
+            expect(res.status).toBe(200);
+        });
+    });
+
     it('gates merging a staged change on global:<key>:publish', async () => {
         await app(adminRole).request('/globals/site/staged', json({}));
 

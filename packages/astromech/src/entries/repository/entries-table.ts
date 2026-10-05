@@ -90,17 +90,8 @@ function buildListWhere(
             conditions.push(eb('entryContent.locale', '=', localeVal ?? defaultLocale));
         }
 
-        if (params.publishedAsOf !== undefined) {
-            conditions.push(
-                eb.or([
-                    eb('entryContent.publishedAt', 'is', null),
-                    compareTimestamps(
-                        'entryContent.publishedAt',
-                        '<=',
-                        params.publishedAsOf
-                    ),
-                ])
-            );
+        if (params.publiclyVisible !== undefined) {
+            conditions.push(publiclyVisibleWhere(eb, params.publiclyVisible));
         }
 
         // search
@@ -153,6 +144,25 @@ function buildListWhere(
 
         return eb.and(conditions);
     };
+}
+
+/**
+ * The SQL form of `isPubliclyVisible`'s status and date checks; the trash
+ * condition is the list's own.
+ */
+function publiclyVisibleWhere(
+    eb: JoinedEb,
+    { asOf, typesWithoutStatuses }: NonNullable<ListParams['publiclyVisible']>
+): Expression<SqlBool> {
+    const published = eb.and([
+        eb('entryContent.status', '=', 'published'),
+        eb.or([
+            eb('entryContent.publishedAt', 'is', null),
+            compareTimestamps('entryContent.publishedAt', '<=', asOf),
+        ]),
+    ]);
+    if (typesWithoutStatuses.length === 0) return published;
+    return eb.or([published, eb('entryContent.type', 'in', typesWithoutStatuses)]);
 }
 
 /**

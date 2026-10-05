@@ -14,7 +14,8 @@ export const updateGlobal = defineServiceMethod({
     summary:
         'Update a global. Fields merge: omitted fields keep their current ' +
         'value, and arrays are replaced whole. `staged` writes the staged ' +
-        'change instead of the canonical row.',
+        'change instead of the canonical row. Naming `status` or ' +
+        '`publishedAt` also needs the publish permission.',
     input: localised.extend({
         staged: z.boolean().optional(),
         data: updateGlobalSchema,

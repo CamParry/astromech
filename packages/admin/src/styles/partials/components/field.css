@@ -90,6 +90,18 @@
     &::placeholder {
         color: var(--am-input-placeholder-color);
     }
+
+    /*
+     * The attribute, not `:read-only`, which also matches a `<select>`. An
+     * error's border wins over the read-only one.
+     */
+    &[readonly] {
+        background-color: var(--am-input-readonly-background-color);
+    }
+
+    &[readonly]:not(.am-input-error) {
+        border-color: var(--am-input-readonly-border-color);
+    }
 }
 
 .am-input-error {

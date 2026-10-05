@@ -294,7 +294,7 @@ describe('redirects — slug-change hook', () => {
     it('records a redirect when a root entry slug changes', async () => {
         const post = await app.entries.create({
             type: 'post',
-            data: { title: 'Hello' },
+            data: { title: 'Hello', status: 'published' },
         });
         expect(post.slug).toBe('hello');
 
@@ -312,7 +312,7 @@ describe('redirects — slug-change hook', () => {
     it('creates nothing when the slug is unchanged', async () => {
         const post = await app.entries.create({
             type: 'post',
-            data: { title: 'Stable' },
+            data: { title: 'Stable', status: 'published' },
         });
         await app.entries.update({
             type: 'post',

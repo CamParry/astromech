@@ -1,8 +1,8 @@
 /** The locale a call on any resource addresses, and the resource read in it. */
 
 import type { ResolvedConfig, ResourceType } from '@/types/index';
-import { defaultContentLocale } from '@/config/content-locale';
 import { ResourceNotFoundError, ResourceValidationError } from '@/errors/resource';
+import { defaultContentLocale } from '@/utilities/locale';
 import { RESOURCE_CONFIG } from './resources';
 
 /**

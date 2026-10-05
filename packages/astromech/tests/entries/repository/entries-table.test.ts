@@ -360,7 +360,7 @@ describe('findMany and count', () => {
         expect(trashed.map((e) => e.title)).toEqual(['A']);
     });
 
-    it('leaves rows published after publishedAsOf out of the rows and the count', async () => {
+    it('leaves rows published after the publiclyVisible time out of the rows and the count', async () => {
         const asOf = new Date();
         const published = { type: 'post', status: 'published' } as const;
         await entryRepository.create({
@@ -375,7 +375,7 @@ describe('findMany and count', () => {
             slug: 'at',
             publishedAt: asOf,
         });
-        await entryRepository.create({ type: 'post', title: 'Unset', slug: 'unset' });
+        await entryRepository.create({ ...published, title: 'Unset', slug: 'unset' });
         await entryRepository.create({
             ...published,
             title: 'Future',
@@ -383,7 +383,10 @@ describe('findMany and count', () => {
             publishedAt: new Date(asOf.getTime() + 60_000),
         });
 
-        const params = { type: 'post', publishedAsOf: asOf } as const;
+        const params = {
+            type: 'post',
+            publiclyVisible: { asOf, typesWithoutStatuses: [] },
+        } as const;
         const rows = await entryRepository.findMany({
             ...params,
             sort: { title: 'asc' },
@@ -396,7 +399,7 @@ describe('findMany and count', () => {
     // offset; as strings, both sort after `asOf` (`Z` after `.000Z`, `12:00+02:00`
     // after `11:00Z`), but both are at or before it.
     it.each(['2020-01-01T11:00:00Z', '2020-01-01T12:00:00+02:00'])(
-        'compares publishedAsOf with a publishedAt stored as %s by time',
+        'compares the publiclyVisible time with a publishedAt stored as %s by time',
         async (stored) => {
             const asOf = new Date('2020-01-01T11:00:00.000Z');
             const entry = await entryRepository.create({
@@ -412,7 +415,10 @@ describe('findMany and count', () => {
                 .where('entryId', '=', entry.id)
                 .execute();
 
-            const params = { type: 'post', publishedAsOf: asOf } as const;
+            const params = {
+                type: 'post',
+                publiclyVisible: { asOf, typesWithoutStatuses: [] },
+            } as const;
             const rows = await entryRepository.findMany(params);
             expect(rows.map((e) => e.title)).toEqual(['Stored']);
             expect(await entryRepository.count(params)).toBe(1);

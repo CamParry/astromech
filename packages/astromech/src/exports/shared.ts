@@ -11,14 +11,18 @@ export { flattenEntryFields, flattenFieldNodes, isLayoutField } from '@/fields/f
 export { safeParseFields } from '@/fields/parse-fields';
 export { buildRichTextExtensions } from '@/fields/rich-text/extensions';
 export { qualifyEntryType } from '@/entries/entry-types';
-export { resolveEntryUrl } from '@/entries/entry-url';
+export {
+    resolveEntryLocalePath,
+    resolveEntryLocaleUrl,
+    resolveEntryUrl,
+} from '@/entries/entry-url';
 export { entryValidationMode } from '@/entries/validation-mode';
 export { buildVariantUrl } from '@/media/serving/image/url';
 export { entryPermission } from '@/permissions/entry-permission';
 export { globalPermission } from '@/permissions/global-permission';
 export { formatAiContextMessage } from '@/utilities/ai-context';
 export { deepEqual } from '@/utilities/deep-equal';
-export { resolveContentLocale } from '@/utilities/locale';
+export { defaultContentLocale, resolveContentLocale } from '@/utilities/locale';
 export { hasPermission } from '@/utilities/permission-match';
 export { MEDIA_MIME_TYPE_FILTERS, MEDIA_SORT_FIELDS } from '@/types/query';
 export { ENTRY_STATUSES, isEntryStatus } from '@/types/domain';

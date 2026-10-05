@@ -105,8 +105,9 @@ function entryPath(ctx: PluginContext, type: string, entry: Entry): string | nul
 
 export const seoService = {
     /**
-     * Only published entries with a path are listed. Public, so the app's
-     * `/sitemap.xml` endpoint can call it.
+     * Only live entries with a path are listed: the read is public, so it
+     * returns only the rows a visitor sees. Public, so the app's `/sitemap.xml`
+     * endpoint can call it.
      */
     getSitemap: defineServiceMethod({
         summary: 'List sitemap URLs for all SEO-tracked entries.',
@@ -119,7 +120,6 @@ export const seoService = {
 
             const urls: SeoSitemapUrl[] = [];
             for (const { type, entry } of tracked) {
-                if (entry.status !== 'published') continue;
                 const loc = entryPath(ctx, type, entry);
                 if (!loc) continue;
                 const lastmod = new Date(entry.updatedAt).toISOString();
@@ -131,8 +131,9 @@ export const seoService = {
     }),
 
     /**
-     * Only a published entry resolves. An empty `seo` title falls back to the
-     * entry's title, and `ogImage` is the plugin's default image setting.
+     * Only a live entry resolves, since the read is public. An empty `seo` title
+     * falls back to the entry's title, and `ogImage` is the plugin's default
+     * image setting.
      */
     getMeta: defineServiceMethod({
         summary: 'Resolve the SEO meta tags for one entry by type + slug.',
@@ -146,9 +147,7 @@ export const seoService = {
 
             if (type === '' || slug === '' || !trackedTypes.includes(type)) return null;
             const { data } = await ctx.entries.query({ type, limit: 'all' });
-            const entry = data.find(
-                (candidate) => candidate.slug === slug && candidate.status === 'published'
-            );
+            const entry = data.find((candidate) => candidate.slug === slug);
             if (!entry) return null;
             const ogImage = await resolveDefaultOgImage(ctx);
 

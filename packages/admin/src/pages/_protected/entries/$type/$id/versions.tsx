@@ -4,13 +4,14 @@
  */
 
 import { createFileRoute, redirect } from '@tanstack/react-router';
+import { defaultContentLocale } from 'astromech/shared';
 import React from 'react';
+import adminConfig from 'virtual:astromech/admin-config';
 import { EntryVersionsPage } from '../../../../../components/entries/entry-versions-page';
 import {
     entryQueryOptions,
     entryVersionsQueryOptions,
 } from '../../../../../hooks/entries';
-import { defaultContentLocale } from '../../../../../utilities/content-locale';
 import {
     pluginEntryRouteParams,
     validateEntryEditSearch,
@@ -36,7 +37,7 @@ export const Route = createFileRoute('/_protected/entries/$type/$id/versions')({
     },
     loaderDeps: ({ search }) => ({ locale: search.locale }),
     loader: ({ context, params, deps }) => {
-        const locale = deps.locale ?? defaultContentLocale();
+        const locale = deps.locale ?? defaultContentLocale(adminConfig);
         return Promise.all([
             context.queryClient.ensureQueryData(
                 entryQueryOptions(params.type, params.id, locale)

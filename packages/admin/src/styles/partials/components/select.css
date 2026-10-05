@@ -17,6 +17,16 @@
     &[data-placeholder] {
         color: var(--am-input-placeholder-color);
     }
+
+    &[data-readonly] {
+        cursor: default;
+        background-color: var(--am-input-readonly-background-color);
+        border-color: var(--am-input-readonly-border-color);
+
+        & .am-select-icon {
+            color: var(--am-color-text-placeholder);
+        }
+    }
 }
 
 .am-select-trigger-prefix {

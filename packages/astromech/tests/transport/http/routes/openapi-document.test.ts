@@ -114,7 +114,10 @@ describe('the emitted document', () => {
     it('describes a route from its own method contract', () => {
         const doc = document();
         const post = doc.paths['/entries/{type}']?.['post'];
-        expect(post?.summary).toBe('Create an entry. Entry type: "{type}".');
+        expect(post?.summary).toBe(
+            'Create an entry. A status other than `unpublished`, or a `publishedAt`, ' +
+                'also needs the publish permission. Entry type: "{type}".'
+        );
         // `type` is in the path, so the body is the method's `data` alone — the
         // flat payload the wire has always sent.
         expect(bodyProperties(post, doc)).toContain('title');

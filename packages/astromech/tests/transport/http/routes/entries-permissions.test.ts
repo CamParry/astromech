@@ -1,7 +1,7 @@
 /**
  * The permission matrix of `routes/entries.ts`: which `entry:post:<action>` each
  * route demands, and what it answers to a role that lacks it — including the
- * publish grant a write carrying `status: 'published'` demands, and the fact
+ * publish grant a write naming a status or publish date demands, and the fact
  * that the permission is checked BEFORE the entry type is resolved on every
  * route, the cross-type `POST /query` included.
  */
@@ -219,6 +219,58 @@ describe('the publish escalation on a write', () => {
             json({ ids: [id], data: { status: 'published' } })
         );
         expect(res.status).toBe(403);
+    });
+
+    describe.each([
+        ['scheduled', { status: 'scheduled', publishedAt: '2999-01-01T00:00:00.000Z' }],
+        ['unpublished', { status: 'unpublished' }],
+        ['a publish date', { publishedAt: '2000-01-01T00:00:00.000Z' }],
+    ])('an update setting %s', (_label, data) => {
+        const editor = ['entry:post:read', 'entry:post:update'];
+
+        it('403s PUT and bulk-update without publish', async () => {
+            const put = await request(roleWith(editor), `/post/${id}`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(data),
+            });
+            expect(put.status).toBe(403);
+            const bulk = await request(
+                roleWith(editor),
+                '/post/bulk-update',
+                json({ ids: [id], data })
+            );
+            expect(bulk.status).toBe(403);
+        });
+
+        it('admits PUT and bulk-update with publish', async () => {
+            const publisher = roleWith([...editor, 'entry:post:publish']);
+            const put = await request(publisher, `/post/${id}`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(data),
+            });
+            expect(put.status).toBe(200);
+            const bulk = await request(
+                publisher,
+                '/post/bulk-update',
+                json({ ids: [id], data })
+            );
+            expect(bulk.status).toBe(200);
+        });
+    });
+
+    it('admits a PUT that names no status or date on update alone', async () => {
+        const res = await request(
+            roleWith(['entry:post:read', 'entry:post:update']),
+            `/post/${id}`,
+            {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ title: 'Renamed', fields: { body: 'v3' } }),
+            }
+        );
+        expect(res.status).toBe(200);
     });
 });
 

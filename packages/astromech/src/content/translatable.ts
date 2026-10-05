@@ -7,8 +7,8 @@
 import type { ContentRef, Resource } from './repository/types';
 import type { DataField } from '@/types/fields';
 import type { JsonObject, ResolvedConfig, ResourceType } from '@/types/index';
-import { defaultContentLocale } from '@/config/content-locale';
 import { flattenFieldNodes } from '@/fields/flatten';
+import { defaultContentLocale } from '@/utilities/locale';
 import { RESOURCE_CONFIG } from './resources';
 
 /** The read `inheritSharedFields` needs: one locale of one item. */

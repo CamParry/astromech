@@ -623,6 +623,43 @@ describe('publish / unpublish / schedule', () => {
         // Tier-1 timestamps persist as ISO-TEXT (millisecond precision).
         expect(sch.publishedAt?.getTime()).toBe(future.getTime());
     });
+
+    it('refuses a create that schedules with no publish date', async () => {
+        await expect(
+            api.create({ type: 'post', data: { title: 'S', status: 'scheduled' } })
+        ).rejects.toMatchObject({
+            name: 'ValidationError',
+            fields: { publishedAt: [expect.any(String)] },
+        });
+        const { data } = await api.query({ type: 'post', full: true });
+        expect(data).toEqual([]);
+    });
+
+    it.each([
+        ['schedules an unpublished entry', 'unpublished', { status: 'scheduled' }],
+        ['clears a scheduled entry’s date', 'scheduled', { publishedAt: null }],
+    ] as const)(
+        'refuses an update that %s with no publish date',
+        async (_label, from, data) => {
+            const e = await api.create({ type: 'post', data: { title: 'S' } });
+            if (from === 'scheduled') {
+                await api.schedule({
+                    type: 'post',
+                    id: e.id,
+                    publishedAt: new Date('2999-01-01'),
+                });
+            }
+
+            await expect(
+                api.update({ type: 'post', id: e.id, data })
+            ).rejects.toMatchObject({
+                name: 'ValidationError',
+                fields: { publishedAt: [expect.any(String)] },
+            });
+            const stored = await api.get({ type: 'post', id: e.id, full: true });
+            expect(stored?.status).toBe(from);
+        }
+    );
 });
 
 describe('trash / restore / delete / emptyTrash', () => {
@@ -1224,6 +1261,36 @@ describe('duplicate', () => {
         ).toBeNull();
     });
 
+    it('schedules the copy for the date overrides name', async () => {
+        const src = await api.create({ type: 'post', data: { title: 'Original' } });
+        const publishedAt = new Date('2999-01-01T00:00:00.000Z');
+
+        const dup = await api.duplicate({
+            type: 'post',
+            id: src.id,
+            overrides: { status: 'scheduled', publishedAt },
+        });
+
+        expect(dup).toMatchObject({ status: 'scheduled', publishedAt });
+    });
+
+    it('refuses a scheduled copy with no publish date, writing nothing', async () => {
+        const src = await api.create({ type: 'post', data: { title: 'Original' } });
+
+        await expect(
+            api.duplicate({
+                type: 'post',
+                id: src.id,
+                overrides: { status: 'scheduled' },
+            })
+        ).rejects.toMatchObject({
+            name: 'ValidationError',
+            fields: { publishedAt: [expect.any(String)] },
+        });
+        const { data } = await api.query({ type: 'post', full: true });
+        expect(data.map((entry) => entry.id)).toEqual([src.id]);
+    });
+
     // CHARACTERIZED: duplicate re-uniquifies the source slug ("original" -> "-2").
     it('uniquifies the copied slug', async () => {
         const src = await api.create({ type: 'post', data: { title: 'Original' } });
@@ -1474,6 +1541,52 @@ describe('hooks', () => {
         await api.restore({ type: 'post', id: e.id });
 
         expect(seen).toEqual([{ status: 'unpublished' }]);
+    });
+
+    it('fires afterUpdate when a staged change merges, with the row as it was and the merged values', async () => {
+        const base = makeTestConfig();
+        const post = base.entries['post'];
+        if (!post) throw new Error('test harness missing `post` entry type');
+        const resolved = setupTestConfig({
+            ...base,
+            entries: { ...base.entries, post: { ...post, staging: true } },
+        });
+        const seen: { slug: string | null; data: unknown }[] = [];
+        registerTestPlugins(
+            [
+                {
+                    package: '@test/probe',
+                    hooks: [
+                        defineHook('entry:afterUpdate', (ctx) => {
+                            seen.push({ slug: ctx.entry.slug, data: ctx.data });
+                        }),
+                    ],
+                },
+            ],
+            resolved
+        );
+        const e = await api.create({ type: 'post', data: { title: 'A' } });
+        await api.createStaged({ type: 'post', id: e.id });
+        await api.update({
+            type: 'post',
+            id: e.id,
+            staged: true,
+            data: { title: 'B', slug: 'b', fields: { body: 'staged' } },
+        });
+        seen.length = 0;
+
+        await api.mergeStaged({ type: 'post', id: e.id });
+
+        expect(seen).toEqual([
+            {
+                slug: 'a',
+                data: {
+                    title: 'B',
+                    slug: 'b',
+                    fields: expect.objectContaining({ body: 'staged' }),
+                },
+            },
+        ]);
     });
 
     it('fires one beforeCreate/afterCreate pair for a duplicate, with the first locale', async () => {

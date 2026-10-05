@@ -65,9 +65,15 @@ describe('slug-change hook on a slug url template', () => {
     });
 
     it('records nothing when a restore re-slugs an entry whose path another took', async () => {
-        const first = await app.entries.create({ type: 'post', data: { title: 'Same' } });
+        const first = await app.entries.create({
+            type: 'post',
+            data: { title: 'Same', status: 'published' },
+        });
         await app.entries.trash({ type: 'post', id: first.id });
-        await app.entries.create({ type: 'post', data: { title: 'Same' } });
+        await app.entries.create({
+            type: 'post',
+            data: { title: 'Same', status: 'published' },
+        });
 
         const restored = await app.entries.restore({ type: 'post', id: first.id });
 
@@ -76,7 +82,10 @@ describe('slug-change hook on a slug url template', () => {
     });
 
     it('records an enabled 301 from the old path to the new one', async () => {
-        const post = await app.entries.create({ type: 'post', data: { title: 'Hello' } });
+        const post = await app.entries.create({
+            type: 'post',
+            data: { title: 'Hello', status: 'published' },
+        });
 
         await app.entries.update({
             type: 'post',
@@ -92,7 +101,10 @@ describe('slug-change hook on a slug url template', () => {
     });
 
     it('points every earlier path straight at the newest one', async () => {
-        const post = await app.entries.create({ type: 'post', data: { title: 'A' } });
+        const post = await app.entries.create({
+            type: 'post',
+            data: { title: 'A', status: 'published' },
+        });
 
         await app.entries.update({ type: 'post', id: post.id, data: { slug: 'b' } });
         await app.entries.update({ type: 'post', id: post.id, data: { slug: 'c' } });
@@ -107,7 +119,10 @@ describe('slug-change hook on a slug url template', () => {
     });
 
     it('leaves no loop when a slug changes back, so the live path answers nothing', async () => {
-        const post = await app.entries.create({ type: 'post', data: { title: 'A' } });
+        const post = await app.entries.create({
+            type: 'post',
+            data: { title: 'A', status: 'published' },
+        });
 
         await app.entries.update({ type: 'post', id: post.id, data: { slug: 'b' } });
         await app.entries.update({ type: 'post', id: post.id, data: { slug: 'a' } });
@@ -118,7 +133,10 @@ describe('slug-change hook on a slug url template', () => {
     });
 
     it('records no second copy of an enabled rule that already exists', async () => {
-        const post = await app.entries.create({ type: 'post', data: { title: 'A' } });
+        const post = await app.entries.create({
+            type: 'post',
+            data: { title: 'A', status: 'published' },
+        });
         await addRule({ from: '/blog/a', to: '/blog/b', enabled: true });
 
         await app.entries.update({ type: 'post', id: post.id, data: { slug: 'b' } });
@@ -127,7 +145,10 @@ describe('slug-change hook on a slug url template', () => {
     });
 
     it('keeps an enabled rule that already redirects the old path elsewhere', async () => {
-        const post = await app.entries.create({ type: 'post', data: { title: 'A' } });
+        const post = await app.entries.create({
+            type: 'post',
+            data: { title: 'A', status: 'published' },
+        });
         await addRule({ from: '/blog/a', to: '/elsewhere', enabled: true });
 
         await app.entries.update({ type: 'post', id: post.id, data: { slug: 'b' } });
@@ -137,7 +158,10 @@ describe('slug-change hook on a slug url template', () => {
     });
 
     it('leaves a disabled rule alone', async () => {
-        const post = await app.entries.create({ type: 'post', data: { title: 'A' } });
+        const post = await app.entries.create({
+            type: 'post',
+            data: { title: 'A', status: 'published' },
+        });
         await addRule({ from: '/blog/b', to: '/elsewhere', enabled: false });
         await addRule({ from: '/older', to: '/blog/a', enabled: false });
 
@@ -155,7 +179,10 @@ describe('slug-change hook on a slug url template', () => {
     });
 
     it('records nothing for a type with no url template', async () => {
-        const note = await app.entries.create({ type: 'note', data: { title: 'Note' } });
+        const note = await app.entries.create({
+            type: 'note',
+            data: { title: 'Note', status: 'published' },
+        });
 
         await app.entries.update({
             type: 'note',
@@ -167,7 +194,10 @@ describe('slug-change hook on a slug url template', () => {
     });
 
     it('re-points and enables a disabled rule at the old path, since a path holds one rule', async () => {
-        const post = await app.entries.create({ type: 'post', data: { title: 'A' } });
+        const post = await app.entries.create({
+            type: 'post',
+            data: { title: 'A', status: 'published' },
+        });
         await addRule({
             from: '/blog/a',
             to: '/elsewhere',
@@ -192,7 +222,10 @@ describe('slug-change hook with generateOnSlugChange off', () => {
     });
 
     it('records nothing when a slug changes', async () => {
-        const post = await app.entries.create({ type: 'post', data: { title: 'Hello' } });
+        const post = await app.entries.create({
+            type: 'post',
+            data: { title: 'Hello', status: 'published' },
+        });
 
         await app.entries.update({
             type: 'post',
@@ -212,7 +245,7 @@ describe('slug-change hook on a url template that names a field', () => {
     it('records a redirect when that field changes', async () => {
         const post = await app.entries.create({
             type: 'post',
-            data: { title: 'Hello', fields: { category: 'news' } },
+            data: { title: 'Hello', status: 'published', fields: { category: 'news' } },
         });
 
         await app.entries.update({
@@ -225,7 +258,10 @@ describe('slug-change hook on a url template that names a field', () => {
     });
 
     it('records nothing when the field was empty, since the old path does not exist', async () => {
-        const post = await app.entries.create({ type: 'post', data: { title: 'Hello' } });
+        const post = await app.entries.create({
+            type: 'post',
+            data: { title: 'Hello', status: 'published' },
+        });
 
         await app.entries.update({
             type: 'post',
@@ -235,5 +271,190 @@ describe('slug-change hook on a url template that names a field', () => {
 
         expect(await rules()).toEqual([]);
         expect(await lookup('/')).toBeNull();
+    });
+});
+
+describe('slug-change hook and what was live', () => {
+    beforeEach(async () => {
+        const config = configWith('/blog/{slug}');
+        const post = config.entries['post'];
+        const note = config.entries['note'];
+        if (!post || !note) throw new Error('test harness missing `post` or `note`');
+        app = await createPluginTestApp('redirects', {
+            ...config,
+            entries: {
+                ...config.entries,
+                post: { ...post, staging: true },
+                note: { ...note, url: '/notes/{slug}', statuses: false },
+            },
+        });
+    });
+
+    it.each([
+        ['an unpublished entry is renamed', { status: 'unpublished' }, {}],
+        [
+            'a scheduled entry is renamed',
+            { status: 'scheduled', publishedAt: new Date('2099-01-01T00:00:00Z') },
+            {},
+        ],
+        [
+            'a published entry whose publish date has not come is renamed',
+            { status: 'published', publishedAt: new Date('2099-01-01T00:00:00Z') },
+            {},
+        ],
+        [
+            'one write renames and publishes an unpublished entry',
+            { status: 'unpublished' },
+            { status: 'published' },
+        ],
+    ] as const)('records nothing when %s', async (_, created, update) => {
+        const post = await app.entries.create({
+            type: 'post',
+            data: { title: 'A', ...created },
+        });
+
+        await app.entries.update({
+            type: 'post',
+            id: post.id,
+            data: { slug: 'b', ...update },
+        });
+
+        expect(await rules()).toEqual([]);
+    });
+
+    it('records a redirect when one write renames and unpublishes a published entry', async () => {
+        const post = await app.entries.create({
+            type: 'post',
+            data: { title: 'A', status: 'published' },
+        });
+
+        await app.entries.update({
+            type: 'post',
+            id: post.id,
+            data: { slug: 'b', status: 'unpublished' },
+        });
+
+        expect(await rules()).toEqual([['/blog/a', '/blog/b']]);
+    });
+
+    it('records a redirect for a type without statuses, whose entries are always live', async () => {
+        const note = await app.entries.create({ type: 'note', data: { title: 'A' } });
+
+        await app.entries.update({ type: 'note', id: note.id, data: { slug: 'b' } });
+
+        expect(await rules()).toEqual([['/notes/a', '/notes/b']]);
+    });
+
+    it('records nothing for a staged slug change, whatever status the staged row holds', async () => {
+        const post = await app.entries.create({
+            type: 'post',
+            data: { title: 'A', status: 'published' },
+        });
+        await app.entries.createStaged({ type: 'post', id: post.id });
+        await app.entries.update({
+            type: 'post',
+            id: post.id,
+            staged: true,
+            data: { status: 'published' },
+        });
+
+        await app.entries.update({
+            type: 'post',
+            id: post.id,
+            staged: true,
+            data: { slug: 'b' },
+        });
+
+        expect(await rules()).toEqual([]);
+    });
+
+    it('records a redirect when a staged slug change is merged into a published entry', async () => {
+        const post = await app.entries.create({
+            type: 'post',
+            data: { title: 'A', status: 'published' },
+        });
+        await app.entries.createStaged({ type: 'post', id: post.id });
+        await app.entries.update({
+            type: 'post',
+            id: post.id,
+            staged: true,
+            data: { slug: 'b' },
+        });
+        expect(await rules()).toEqual([]);
+
+        await app.entries.mergeStaged({ type: 'post', id: post.id });
+
+        expect(await rules()).toEqual([['/blog/a', '/blog/b']]);
+    });
+
+    it('records nothing when a staged slug change is merged into an unpublished entry', async () => {
+        const post = await app.entries.create({ type: 'post', data: { title: 'A' } });
+        await app.entries.createStaged({ type: 'post', id: post.id });
+        await app.entries.update({
+            type: 'post',
+            id: post.id,
+            staged: true,
+            data: { slug: 'b' },
+        });
+
+        const merged = await app.entries.mergeStaged({ type: 'post', id: post.id });
+
+        expect(merged.slug).toBe('b');
+        expect(await rules()).toEqual([]);
+    });
+
+    it('records a redirect to the merged slug when the merge made it unique', async () => {
+        const post = await app.entries.create({
+            type: 'post',
+            data: { title: 'A', status: 'published' },
+        });
+        await app.entries.createStaged({ type: 'post', id: post.id });
+        await app.entries.update({
+            type: 'post',
+            id: post.id,
+            staged: true,
+            data: { slug: 'b' },
+        });
+        await app.entries.create({
+            type: 'post',
+            data: { title: 'B', status: 'published' },
+        });
+
+        const merged = await app.entries.mergeStaged({ type: 'post', id: post.id });
+
+        expect(merged.slug).toBe('b-2');
+        expect(await rules()).toEqual([['/blog/a', '/blog/b-2']]);
+    });
+});
+
+describe('slug-change hook in a locale other than the default', () => {
+    beforeEach(async () => {
+        app = await createPluginTestApp('redirects', configWith('/blog/{slug}'));
+    });
+
+    it("records a redirect between that locale's own paths", async () => {
+        const post = await app.entries.create({
+            type: 'post',
+            data: { title: 'Hello', status: 'published' },
+        });
+        await app.entries.update({
+            type: 'post',
+            id: post.id,
+            locale: 'de',
+            data: { slug: 'hallo', status: 'published' },
+        });
+
+        await app.entries.update({
+            type: 'post',
+            id: post.id,
+            locale: 'de',
+            data: { slug: 'servus' },
+        });
+
+        expect(await rules()).toEqual([['/de/blog/hallo', '/de/blog/servus']]);
+        expect(await lookup('/de/blog/hallo')).toEqual({
+            to: '/de/blog/servus',
+            status: '301',
+        });
     });
 });

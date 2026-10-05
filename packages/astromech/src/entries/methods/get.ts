@@ -1,6 +1,7 @@
 import type { EntryResource } from '../repository/types';
 import type { VisibilityShape } from '@/content/visibility';
 import { z } from '@hono/zod-openapi';
+import { hasStatuses } from '@/content/resources';
 import { applyVisibility } from '@/content/visibility';
 import { resolveEntryType } from '@/entries/entry-types';
 import { ValidationError } from '@/errors/validation';
@@ -50,6 +51,11 @@ export const getEntry = defineServiceMethod({
         const entryType = resolveEntryType(config, type);
         const fields = entryType ? flattenEntryFields(entryType.fields) : [];
 
-        return applyVisibility(record, { shape, fields, audience: { now: new Date() } });
+        return applyVisibility(record, {
+            shape,
+            fields,
+            statuses: hasStatuses('entry', config, type),
+            audience: { now: new Date() },
+        });
     },
 });

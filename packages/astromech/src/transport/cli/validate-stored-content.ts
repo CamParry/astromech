@@ -6,7 +6,6 @@
 
 import type { FieldErrors } from '@/types/fields';
 import type { AppContext, EntryStatus, JsonObject, ResourceType } from '@/types/index';
-import { defaultContentLocale } from '@/config/content-locale';
 import { definitionsOf, fieldParseContext } from '@/content/prepare-fields';
 import { isTranslatable } from '@/content/resources';
 import { resolveEntryType } from '@/entries/entry-types';
@@ -14,6 +13,7 @@ import { entryRepository } from '@/entries/repository/entries-table';
 import { safeParseFields } from '@/fields/parse-fields';
 import { mediaRepository } from '@/media/repository';
 import { userRepository } from '@/users/repository';
+import { defaultContentLocale } from '@/utilities/locale';
 
 /** Scope of a report run. `type` is an ENTRY type; it never covers media, users or globals. */
 export type ValidationScope = { type?: string };

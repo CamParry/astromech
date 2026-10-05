@@ -1,19 +1,11 @@
 /**
- * The content locale the admin falls back to when a route carries none. The
- * admin's display locale (`en-GB`) is not necessarily a content locale, so it
- * resolves down its lookup chain first.
+ * The admin's locale switcher options. The default content locale comes from
+ * core's `defaultContentLocale`, since the admin's display locale (`en-GB`)
+ * need not be a content locale.
  */
 
-import { resolveContentLocale } from 'astromech/shared';
+import { defaultContentLocale } from 'astromech/shared';
 import adminConfig from 'virtual:astromech/admin-config';
-
-export function defaultContentLocale(): string {
-    return (
-        resolveContentLocale(adminConfig.defaultLocale, adminConfig.locales) ??
-        adminConfig.locales[0] ??
-        adminConfig.defaultLocale
-    );
-}
 
 /**
  * Locale options for a translatable resource's locale switcher: the content
@@ -23,7 +15,7 @@ export function defaultContentLocale(): string {
 export function localeOptions(itemLocales: string[]): { value: string; label: string }[] {
     // The content default, not `adminConfig.defaultLocale`: that is the
     // admin's display tag (`en-GB`), which need not be a content locale.
-    const defaultLocale = defaultContentLocale();
+    const defaultLocale = defaultContentLocale(adminConfig);
     const { locales } = adminConfig;
     const sorted = [defaultLocale, ...locales.filter((l) => l !== defaultLocale).sort()];
     return sorted.map((loc) => ({

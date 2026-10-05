@@ -37,6 +37,28 @@ describe('a translatable global', () => {
         expect(de.locales).toEqual(['de', 'en']);
     });
 
+    it.each(['published', 'scheduled'] as const)(
+        'starts a new locale unpublished, with no publish date, when the default one is %s',
+        async (status) => {
+            await api.update({
+                key: 'site',
+                data: {
+                    fields: { title: 'EN' },
+                    status,
+                    publishedAt: new Date('2999-01-01'),
+                },
+            });
+
+            const de = await api.update({
+                key: 'site',
+                locale: 'de',
+                data: { fields: { title: 'DE' } },
+            });
+
+            expect(de).toMatchObject({ status: 'unpublished', publishedAt: null });
+        }
+    );
+
     it('propagates a shared field back to the other locales', async () => {
         await api.update({
             key: 'site',

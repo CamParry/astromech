@@ -80,19 +80,30 @@ function makeEntry(id: string, title: string, locales: string[]): Entry {
 afterEach(() => {
     for (const fn of Object.values(entries)) fn.mockReset();
     adminConfig.entryTypes = {};
+    adminConfig.defaultLocale = 'en';
 });
+
+/** `POST` with statuses on, for the status a new locale is saved with. */
+const POST_WITH_STATUSES: AdminEntryType = {
+    ...POST,
+    capabilities: { ...POST.capabilities, statuses: true },
+};
 
 /** Mount the create page in French over these English entries; return the modal. */
 async function mountInFrench(
-    sources: Entry[]
+    sources: Entry[],
+    options: { entryType?: AdminEntryType; permissions?: string[] } = {}
 ): Promise<{ page: RenderAdminResult; modal: HTMLElement }> {
-    adminConfig.entryTypes = { post: POST };
+    adminConfig.entryTypes = { post: options.entryType ?? POST };
     entries.query.mockResolvedValue({
         data: sources,
         pagination: { page: 1, pages: 1, total: sources.length, limit: 0 },
     });
     const page = renderAdmin(<EntryNewPage type="post" requestedLocale="fr" />, {
         url: '/entries/post/new?locale=fr',
+        ...(options.permissions !== undefined
+            ? { permissions: options.permissions }
+            : {}),
     });
     const modal = await screen.findByRole('dialog', { name: TITLE });
     return { page, modal };
@@ -138,6 +149,26 @@ describe('the create-in-locale modal', () => {
             locale: 'en',
             limit: 'all',
         });
+    });
+
+    // `defaultLocale` is the admin's display locale; the content default is the
+    // configured locale it falls back to, and the repository matches a locale exactly.
+    it('offers the default content locale’s entries when the display locale is a region of it', async () => {
+        adminConfig.defaultLocale = 'en-GB';
+        const sources = [makeEntry('e1', 'Hello', ['en'])];
+        entries.query.mockImplementation((params) =>
+            Promise.resolve({
+                data: (params as { locale: string }).locale === 'en' ? sources : [],
+                pagination: { page: 1, pages: 1, total: 1, limit: 0 },
+            })
+        );
+        adminConfig.entryTypes = { post: POST };
+        const page = renderAdmin(<EntryNewPage type="post" requestedLocale="fr" />, {
+            url: '/entries/post/new?locale=fr',
+        });
+        const modal = await screen.findByRole('dialog', { name: TITLE });
+
+        expect(await pickerOptions(page, modal)).toEqual(['Hello']);
     });
 
     // Choosing an entry that already has the locale would send `update` over
@@ -195,6 +226,53 @@ describe('the create-in-locale modal', () => {
             data: { title: 'Bonjour', fields: {} },
         });
         expect(entries.create).not.toHaveBeenCalled();
+    });
+
+    it('adds a blank locale without naming a status for a user without publish', async () => {
+        entries.update.mockResolvedValue({ id: 'e1', locale: 'fr' });
+        const { page, modal } = await mountInFrench([makeEntry('e1', 'Hello', ['en'])], {
+            entryType: POST_WITH_STATUSES,
+            permissions: ['entry:post:read', 'entry:post:create', 'entry:post:update'],
+        });
+
+        await chooseSource(page, modal, 'Start blank in this locale', 'Hello');
+        await page.user.click(continueButton(modal));
+        await waitFor(() =>
+            expect(screen.queryByRole('dialog', { name: TITLE })).toBeNull()
+        );
+        await page.user.type(screen.getByLabelText(/Title/), 'Bonjour');
+        await page.user.click(screen.getByRole('button', { name: 'Save' }));
+
+        await waitFor(() => expect(page.location()).toBe('/entries/post/e1?locale=fr'));
+        expect(entries.update).toHaveBeenCalledWith({
+            type: 'post',
+            id: 'e1',
+            locale: 'fr',
+            data: { title: 'Bonjour', fields: {} },
+        });
+    });
+
+    it('publishes a blank locale when a user with publish presses Publish', async () => {
+        entries.update.mockResolvedValue({ id: 'e1', locale: 'fr' });
+        const { page, modal } = await mountInFrench([makeEntry('e1', 'Hello', ['en'])], {
+            entryType: POST_WITH_STATUSES,
+        });
+
+        await chooseSource(page, modal, 'Start blank in this locale', 'Hello');
+        await page.user.click(continueButton(modal));
+        await waitFor(() =>
+            expect(screen.queryByRole('dialog', { name: TITLE })).toBeNull()
+        );
+        await page.user.type(screen.getByLabelText(/Title/), 'Bonjour');
+        await page.user.click(screen.getByRole('button', { name: 'Publish' }));
+
+        await waitFor(() => expect(page.location()).toBe('/entries/post/e1?locale=fr'));
+        expect(entries.update).toHaveBeenCalledWith({
+            type: 'post',
+            id: 'e1',
+            locale: 'fr',
+            data: { title: 'Bonjour', fields: {}, status: 'published' },
+        });
     });
 
     it('creates a standalone entry in the locale', async () => {

@@ -1,8 +1,6 @@
 /**
- * PublishPanel — sidebar panel for managing entry publish status.
- *
- * Renders status select, datetime picker (when scheduled), and shows
- * the published date when the entry is live.
+ * The sidebar panel for an entry's or a global's status: the status select,
+ * the publish date while scheduled, and the published date once it is live.
  */
 
 import type { EntryStatus } from 'astromech';
@@ -10,7 +8,9 @@ import { ENTRY_STATUSES, isEntryStatus } from 'astromech/shared';
 import React from 'react';
 import { useTranslation } from 'react-i18next';
 import { formatDatetime } from '../../utilities/dates';
+import { FieldControlProvider } from '../fields/field-control-context';
 import { Input } from '../ui/input';
+import { Stack } from '../ui/page';
 import { Panel } from '../ui/panel';
 import { Select } from '../ui/select';
 import { ENTRY_STATUS_LABEL_KEYS } from '../ui/status-badge';
@@ -23,7 +23,14 @@ export type PublishPanelProps = {
     entryPublishedAt?: Date | string | null | undefined;
     onStatusChange: (status: EntryStatus) => void;
     onPublishedAtChange: (value: string) => void;
+    /** The publish date's error, such as a schedule with no date. */
+    publishedAtError?: string | undefined;
+    /** The whole form is read-only, which its own banner says. */
+    disabled?: boolean;
+    /** The status and date show their values but cannot change; `hint` says why. */
     readOnly?: boolean;
+    /** A note under the status select that also describes the date, such as why neither can change. */
+    hint?: string | undefined;
 };
 
 export function PublishPanel({
@@ -32,9 +39,14 @@ export function PublishPanel({
     entryPublishedAt,
     onStatusChange,
     onPublishedAtChange,
+    publishedAtError,
+    disabled = false,
     readOnly = false,
+    hint,
 }: PublishPanelProps): React.ReactElement {
     const { t } = useTranslation();
+    const statusId = React.useId();
+    const hintId = React.useId();
 
     const statusOptions = ENTRY_STATUSES.map((value) => ({
         value,
@@ -46,32 +58,48 @@ export function PublishPanel({
 
     return (
         <Panel title={t('entries.statusPanel')}>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+            <Stack gap={4}>
                 <div className="am-field">
-                    <label className="am-field-label">{t('entries.statusField')}</label>
-                    <Select
-                        value={status}
-                        onValueChange={(v) => {
-                            if (isEntryStatus(v)) onStatusChange(v);
+                    <label className="am-field-label" htmlFor={statusId}>
+                        {t('entries.statusField')}
+                    </label>
+                    <FieldControlProvider
+                        value={{
+                            hasError: false,
+                            errorId: undefined,
+                            descriptionId: hint !== undefined ? hintId : undefined,
                         }}
-                        options={statusOptions}
-                        disabled={readOnly}
-                    />
+                    >
+                        <Select
+                            id={statusId}
+                            value={status}
+                            onValueChange={(v) => {
+                                if (isEntryStatus(v)) onStatusChange(v);
+                            }}
+                            options={statusOptions}
+                            disabled={disabled}
+                            readOnly={readOnly}
+                        />
+                    </FieldControlProvider>
+                    {hint !== undefined && (
+                        <p id={hintId} className="am-field-hint">
+                            {hint}
+                        </p>
+                    )}
                 </div>
 
                 {status === 'scheduled' && (
-                    <div className="am-field">
-                        <label className="am-field-label" htmlFor="entry-published-at">
-                            {t('entries.publishedAtField')}
-                        </label>
-                        <Input
-                            id="entry-published-at"
-                            type="datetime-local"
-                            value={publishedAt}
-                            onChange={(e) => onPublishedAtChange(e.target.value)}
-                            disabled={readOnly}
-                        />
-                    </div>
+                    <Input
+                        id="entry-published-at"
+                        label={t('entries.publishedAtField')}
+                        error={publishedAtError}
+                        type="datetime-local"
+                        value={publishedAt}
+                        onChange={(e) => onPublishedAtChange(e.target.value)}
+                        disabled={disabled}
+                        readOnly={readOnly}
+                        aria-describedby={hint !== undefined ? hintId : undefined}
+                    />
                 )}
 
                 {status === 'published' && formattedPublishedAt != null && (
@@ -82,7 +110,7 @@ export function PublishPanel({
                         <p className="am-text-sm am-text-muted">{formattedPublishedAt}</p>
                     </div>
                 )}
-            </div>
+            </Stack>
         </Panel>
     );
 }

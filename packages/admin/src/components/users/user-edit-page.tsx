@@ -8,6 +8,7 @@
 
 import type { JsonObject, User, UserUpdateData } from 'astromech';
 import { useNavigate } from '@tanstack/react-router';
+import { defaultContentLocale } from 'astromech/shared';
 import React, { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import adminConfig from 'virtual:astromech/admin-config';
@@ -18,7 +19,7 @@ import { useFieldsForm } from '../../hooks/use-fields-form';
 import { usePermissions } from '../../hooks/use-permissions';
 import { userMutations, useUser } from '../../hooks/users';
 import { EntryNamespaceProvider, labelNamespace } from '../../i18n/entry-namespace';
-import { defaultContentLocale, localeOptions } from '../../utilities/content-locale';
+import { localeOptions } from '../../utilities/content-locale';
 import { FieldColumn, FieldsForm } from '../forms/fields-form';
 import { Breadcrumb } from '../ui/breadcrumb';
 import { Button } from '../ui/button';
@@ -54,7 +55,7 @@ export function UserEditPage({ id }: UserEditPageProps): React.ReactElement {
 
     // The page is addressed by `/:id` alone, so the locale being edited is
     // its own state rather than a search param.
-    const [locale, setLocale] = useState(defaultContentLocale);
+    const [locale, setLocale] = useState(() => defaultContentLocale(adminConfig));
     const { data: user, isLoading } = useUser(id, locale);
 
     useEffect(() => {

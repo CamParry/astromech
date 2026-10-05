@@ -17,8 +17,8 @@ const RESERVED_KEYS: ReadonlySet<string> = new Set(Object.values(RESERVED_KEY));
 
 /**
  * The record shape the filter reads. Every member but `fields` is optional: a
- * resource without statuses, scheduling or a trash carries none of them, and an
- * absent column counts as null.
+ * resource without scheduling or a trash carries none of them, and an absent
+ * column counts as null.
  */
 export type VisibleRecord = {
     fields: JsonObject;
@@ -46,26 +46,37 @@ export type VisibilityOptions = {
      */
     fields: Field[];
     audience: AudienceContext;
-    /**
-     * Preview mode (forward versioning): the caller has already authorized this
-     * row via a preview token, so bypass the publish/schedule gate — the trashed
-     * check still applies. Only meaningful with `shape: 'public'`.
-     */
-    preview?: boolean;
-};
+} & (
+    | {
+          /**
+           * Preview mode: the caller has already authorized this row via a
+           * preview token, so bypass the publish/schedule gate; the trashed
+           * check still applies. Only meaningful with `shape: 'public'`.
+           */
+          preview: true;
+      }
+    | {
+          preview?: false;
+          /** The record's type has statuses; without them every row is live. */
+          statuses: boolean;
+      }
+);
 
 /**
- * True when the row passes the public audience filter: status is 'published' or
- * absent, publishedAt is null/absent or past, and deletedAt is null/absent. An
- * absent column counts as null.
+ * True when a public read returns the row: it is not trashed, and its type has
+ * no statuses or it is published with no publish date or one that has passed.
+ * An absent column counts as null. `now` defaults to the current time.
  */
-function passesPublicRowFilter(e: VisibleRecord, now: Date): boolean {
-    // A resource with `statuses: false` reports no status — always visible.
-    if (e.status !== undefined && e.status !== null && e.status !== 'published')
-        return false;
-    if (e.publishedAt != null && e.publishedAt > now) return false;
-    if (e.deletedAt != null) return false;
-    return true;
+export function isPubliclyVisible(
+    record: Pick<VisibleRecord, 'status' | 'publishedAt' | 'deletedAt'>,
+    options: { statuses: boolean; now?: Date }
+): boolean {
+    if (record.deletedAt != null) return false;
+    // Without statuses every row is live, whatever its status column reads.
+    if (!options.statuses) return true;
+    if (record.status !== 'published') return false;
+    const now = options.now ?? new Date();
+    return record.publishedAt == null || record.publishedAt <= now;
 }
 
 /**
@@ -156,9 +167,10 @@ export function applyVisibility<T extends VisibleRecord>(
 
     if (shape === 'full') return record;
 
-    const rowOk = opts.preview
-        ? passesPreviewRowFilter(record)
-        : passesPublicRowFilter(record, audience.now);
+    const rowOk =
+        opts.preview === true
+            ? passesPreviewRowFilter(record)
+            : isPubliclyVisible(record, { statuses: opts.statuses, now: audience.now });
     if (!rowOk) return null;
 
     // Clone the root first — `children` clones every nested scope it reports,

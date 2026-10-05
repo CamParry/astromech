@@ -1,6 +1,5 @@
 import type { UserResource } from '../repository';
 import { z } from '@hono/zod-openapi';
-import { defaultContentLocale } from '@/config/content-locale';
 import { resolveResourceLocale } from '@/content/locale';
 import { patchedFieldNames, prepareFields } from '@/content/prepare-fields';
 import { propagateSharedFields } from '@/content/translatable';
@@ -8,6 +7,7 @@ import { changesVersionedContent, snapshotVersion } from '@/content/versions';
 import { transaction } from '@/database/transaction';
 import { ResourceNotFoundError } from '@/errors/resource';
 import { defineServiceMethod } from '@/services/define-service-method';
+import { defaultContentLocale } from '@/utilities/locale';
 import { assertKeepsAnAdmin, lastAdminError } from '../internal/last-admin';
 import { syncUserRelationships } from '../relationships';
 import { userRepository } from '../repository';

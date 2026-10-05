@@ -169,6 +169,27 @@ the updated entry type's `url` template (e.g. `url: '/blog/{slug}'`), the same
 template that powers the admin **View** link. Entry types without a `url`
 template are skipped, so the plugin never guesses a path.
 
+A redirect is recorded only when a path that was live changes: the locale was
+published, with its publish date passed, and not trashed, before the write.
+An entry type without statuses is always live. This is the rule a public read
+applies, `isPubliclyVisible` from `astromech`. Renaming an unpublished or scheduled entry
+records nothing, and so does publishing one under a new slug, since its old
+path never served a page. A write that renames a published entry and
+unpublishes it in one call still records the redirect: links to the old path
+exist, and they reach the new one once the entry is published again.
+
+A staged write records nothing, since a staged change is not public. Merging
+a staged change that gives a published entry a new slug records the redirect,
+to the slug the merge stored: `-2` and so on are added when another entry
+holds the staged one.
+
+Both paths carry the locale the way a site's routes do with Astro's i18n
+default (`prefixDefaultLocale: false`): the default content locale is
+unprefixed and every other locale is prefixed with `/{locale}`. A slug change
+in `de` records `/de/blog/hallo` to `/de/blog/servus`. Core builds the path
+with `resolveEntryLocalePath` from `astromech`, so a site whose routes put the
+locale elsewhere gets redirects from paths it does not serve.
+
 An entry whose template names a value it doesn't have (an empty slug, or a
 missing field in `/{category}/{slug}`) has no URL, so no redirect is recorded
 for it.

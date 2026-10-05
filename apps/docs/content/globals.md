@@ -150,7 +150,8 @@ they live on the default locale's row and propagate to every other locale, so
 writing the logo once sets it everywhere.
 
 Writing a locale that has no row yet creates it, inheriting the shared fields
-from the default locale:
+from the default locale. The new locale starts unpublished, whatever the
+default locale's status, unless the write names `status`:
 
 ```ts
 await app.globals.update({
@@ -206,6 +207,10 @@ await app.globals.update({
 });
 ```
 
+An `update` that names `status` or `publishedAt` needs `global:<key>:publish`
+as well as `global:<key>:update`, whatever the value, as `publish`, `unpublish`
+and `schedule` do. A role without `publish` saves by leaving both out.
+
 Each locale publishes independently. Publishing and scheduling check the stored
 fields as a publish, since a scheduled global goes live unattended: a `required`
 field left empty refuses the call with a 422 naming it. A staged write takes no
@@ -221,7 +226,9 @@ stored as given. Otherwise a global that is already published keeps its date,
 through a re-publish or any save, and one becoming published (from a draft or
 a schedule) is stamped with the current time, so publishing a scheduled global
 puts it live at once.
-Unpublishing clears the date, and scheduling keeps the one it names. A
+Unpublishing clears the date, and scheduling keeps the one it names. A write
+that leaves a global scheduled with no date is refused with a 422 naming
+`publishedAt`. A
 scheduled global goes live on the first run of the built-in `scheduled-publish`
 job after its date, as a scheduled entry does
 ([../configuration/scheduler.md](../configuration/scheduler.md)). The job
@@ -264,7 +271,8 @@ staged edit does not move the global's until the merge.
 Each global derives its own permissions from its key:
 
 - `global:<key>:read`, `global:<key>:update`, `global:<key>:publish` for a host
-  global.
+  global. `publish` covers the status methods and any `update` that names
+  `status` or `publishedAt`.
 - `plugin:<namespace>:global:<key>:<action>` for a plugin's.
 
 Grant them with `globalPermissions`:

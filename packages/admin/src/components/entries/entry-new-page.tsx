@@ -8,6 +8,7 @@ import type { Entry, EntryUpdateData } from 'astromech';
 import { useQueryClient } from '@tanstack/react-query';
 import { useNavigate } from '@tanstack/react-router';
 import { astromechUntypedClient } from 'astromech/fetch';
+import { defaultContentLocale } from 'astromech/shared';
 import React, { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import adminConfig from 'virtual:astromech/admin-config';
@@ -18,7 +19,6 @@ import { useEntryForm } from '../../hooks/use-entry-form';
 import { queryKeys } from '../../hooks/use-query-keys';
 import { EntryNamespaceProvider } from '../../i18n/entry-namespace';
 import { resolveForm } from '../../rendering/resolve';
-import { defaultContentLocale } from '../../utilities/content-locale';
 import { entryEditPath, entryTypeBasePath } from '../../utilities/entry-admin-path';
 import { FieldColumn, FieldsForm } from '../forms/fields-form';
 import { NotFoundPage } from '../layout/not-found-page';
@@ -44,7 +44,7 @@ export function EntryNewPage({
     return (
         <EntryNewBody
             entryType={entryType}
-            requestedLocale={requestedLocale ?? defaultContentLocale()}
+            requestedLocale={requestedLocale ?? defaultContentLocale(adminConfig)}
         />
     );
 }
@@ -69,13 +69,15 @@ function EntryNewBody({
     requestedLocale: string;
 }): React.ReactElement {
     const { type, config, basePath, namespace } = entryType;
+    const canPublish = entryType.can('publish');
     const navigate = useNavigate();
     const { toast } = useToast();
     const { t } = useTranslation();
     const queryClient = useQueryClient();
 
     const hasI18n = config.capabilities.translatable;
-    const isNonDefaultLocale = hasI18n && requestedLocale !== defaultContentLocale();
+    const isNonDefaultLocale =
+        hasI18n && requestedLocale !== defaultContentLocale(adminConfig);
 
     // For non-default-locale creates, hold the entry this locale is being added
     // to (chosen via "blank in this locale"). null = a new entry of its own.
@@ -117,15 +119,17 @@ function EntryNewBody({
 
     /**
      * Adding a locale to an existing entry is an `update` on that locale, which
-     * creates the content row; a new entry is a `create`.
+     * creates the content row unpublished; a new entry is a `create`. The update
+     * names a status only when it is not that default, since naming one needs publish.
      */
     function writeEntry(payload: EntryUpdateData): Promise<Entry> {
         if (chosenEntryId !== null) {
+            const { status, ...rest } = payload;
             return astromechUntypedClient.entries.update({
                 type,
                 id: chosenEntryId,
                 locale: requestedLocale,
-                data: payload,
+                data: status === 'unpublished' ? rest : payload,
             });
         }
         return astromechUntypedClient.entries.create({
@@ -142,7 +146,7 @@ function EntryNewBody({
                         open={modalOpen}
                         type={type}
                         locale={requestedLocale}
-                        defaultLocale={adminConfig.defaultLocale}
+                        defaultLocale={defaultContentLocale(adminConfig)}
                         onCancel={() => void navigate({ to: basePath })}
                         onChooseStandalone={() => {
                             setChosenEntryId(null);
@@ -152,7 +156,7 @@ function EntryNewBody({
                             setChosenEntryId(sourceId);
                             setModalOpen(false);
                         }}
-                        // The missing row inherits the source's own columns.
+                        // The missing row takes the source's title, slug and shared fields.
                         onChooseTranslate={(source) =>
                             createTranslation.mutate({
                                 id: source.id,
@@ -171,7 +175,7 @@ function EntryNewBody({
                         />
                     </PageTitle>
                     <ButtonGroup>
-                        {hasStatuses ? (
+                        {hasStatuses && canPublish ? (
                             <>
                                 <Button
                                     variant="secondary"
@@ -179,7 +183,7 @@ function EntryNewBody({
                                     onClick={handleSave}
                                     disabled={mutation.isPending}
                                 >
-                                    {t('entries.saveAsUnpublished')}
+                                    {t('common.save')}
                                 </Button>
                                 <Button
                                     variant="primary"
@@ -219,7 +223,13 @@ function EntryNewBody({
                         }
                         sidebar={
                             <>
-                                {hasStatuses && <StatusField form={form} />}
+                                {hasStatuses && (
+                                    <StatusField
+                                        form={form}
+                                        publishedAtError={entryForm.publishedAtError}
+                                        canPublish={canPublish}
+                                    />
+                                )}
                                 {hasSlug && <SlugField form={form} />}
                                 <FieldColumn form={entryForm} fields={sidebar} />
                             </>

@@ -67,7 +67,7 @@ export function Stack({
     gap,
     children,
 }: {
-    gap: 5 | 8;
+    gap: 4 | 5 | 8;
     children: React.ReactNode;
 }): React.ReactElement {
     return <div className={`am-stack am-stack-gap-${gap}`}>{children}</div>;

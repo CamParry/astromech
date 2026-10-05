@@ -6,7 +6,7 @@
 
 import type { Media } from 'astromech';
 import { useForm, useStore } from '@tanstack/react-form';
-import { deepEqual } from 'astromech/shared';
+import { deepEqual, defaultContentLocale } from 'astromech/shared';
 import React, { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import adminConfig from 'virtual:astromech/admin-config';
@@ -14,7 +14,7 @@ import { mediaMutations, useMediaItem, useMediaUsage } from '../../hooks/media';
 import { useAdminMutation } from '../../hooks/use-admin-mutation';
 import { useUnsavedChangesGuard } from '../../hooks/use-unsaved-changes-guard';
 import { formatBytes } from '../../utilities/bytes';
-import { defaultContentLocale, localeOptions } from '../../utilities/content-locale';
+import { localeOptions } from '../../utilities/content-locale';
 import { formatDatetime } from '../../utilities/dates';
 import { FileTypeIcon, versionedMediaUrl } from '../../utilities/media';
 import { Button } from '../ui/button';
@@ -49,7 +49,7 @@ export function MediaDetailModal({
 }: MediaDetailModalProps): React.ReactElement {
     // The modal is addressed by `?item=` alone, so the locale being edited is
     // its own state rather than a search param.
-    const [locale, setLocale] = useState(defaultContentLocale);
+    const [locale, setLocale] = useState(() => defaultContentLocale(adminConfig));
     const {
         data: item,
         isLoading,

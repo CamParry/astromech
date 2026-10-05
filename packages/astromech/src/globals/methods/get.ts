@@ -50,15 +50,13 @@ export const getGlobal = defineServiceMethod({
         const visible = applyVisibility(
             {
                 fields: current.fields,
-                // Without statuses every row is live, though its column reads
-                // `unpublished`, so the publish gate is left out.
-                ...(global.capabilities.statuses
-                    ? { status: current.status, publishedAt: current.publishedAt }
-                    : {}),
+                status: current.status,
+                publishedAt: current.publishedAt,
             },
             {
                 shape,
                 fields: flattenEntryFields(global.fields),
+                statuses: global.capabilities.statuses,
                 audience: { now: new Date() },
             }
         );

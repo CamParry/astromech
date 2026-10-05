@@ -3,9 +3,10 @@
  * exist — only `update` creates one — and each needs the `statuses` capability.
  */
 
-import { createTestDb, setupTestConfig } from '@tests/harness';
+import { roleWith } from '@tests/fixtures';
+import { contextAs, createTestDb, setupTestConfig } from '@tests/harness';
 import { beforeEach, describe, expect, it } from 'vitest';
-import { currentServices } from '@/app-context/services';
+import { createServices, currentServices } from '@/app-context/services';
 import { CapabilityError } from '@/errors/capability';
 import { ResourceNotFoundError } from '@/errors/resource';
 import { makeGlobalsConfig } from './globals-config';
@@ -144,6 +145,19 @@ describe('status through update', () => {
         expect(saved.publishedAt?.getTime()).toBe(future.getTime());
     });
 
+    it('refuses a scheduled status with no publish date', async () => {
+        await api.update({ key: 'contact', data: { fields: {} } });
+
+        await expect(
+            api.update({ key: 'contact', data: { status: 'scheduled' } })
+        ).rejects.toMatchObject({
+            name: 'ValidationError',
+            fields: { publishedAt: [expect.any(String)] },
+        });
+        const stored = await api.get({ key: 'contact', full: true });
+        expect(stored?.status).toBe('unpublished');
+    });
+
     it('writes no version for a status change alone', async () => {
         await api.update({ key: 'contact', data: { fields: { email: 'a@b.dev' } } });
         await api.update({ key: 'contact', data: { status: 'published' } });
@@ -184,5 +198,78 @@ describe('a first save', () => {
 
         expect(saved.status).toBe('published');
         expect(saved.publishedAt).toBeInstanceOf(Date);
+    });
+});
+
+describe('status through update, on the scoped handle', () => {
+    const editor = roleWith(['global:contact:read', 'global:contact:update']);
+    const publisher = roleWith([
+        'global:contact:read',
+        'global:contact:update',
+        'global:contact:publish',
+    ]);
+
+    /** Call `fn` as a promise, so a synchronous refusal reaches `rejects`. */
+    async function attempt<T>(fn: () => Promise<T>): Promise<T> {
+        return fn();
+    }
+
+    it.each([
+        ['publishes', { status: 'published' }],
+        ['schedules', { status: 'scheduled', publishedAt: new Date('2999-01-01') }],
+        ['unpublishes', { status: 'unpublished' }],
+        ['moves the publish date', { publishedAt: new Date('2000-01-01') }],
+    ] as const)(
+        'refuses an update that %s without the publish grant',
+        async (_l, data) => {
+            await api.update({
+                key: 'contact',
+                data: { fields: {}, status: 'published' },
+            });
+            const before = await api.get({ key: 'contact', full: true });
+            const scoped = createServices(contextAs(editor), { overrideAccess: false });
+
+            await expect(
+                attempt(() => scoped.globals.update({ key: 'contact', data }))
+            ).rejects.toMatchObject({
+                name: 'PermissionDeniedError',
+                permission: 'global:contact:publish',
+            });
+
+            const after = await api.get({ key: 'contact', full: true });
+            expect(after?.status).toBe('published');
+            expect(after?.publishedAt).toEqual(before?.publishedAt);
+        }
+    );
+
+    it('saves a published global’s fields on the update grant alone', async () => {
+        await api.update({ key: 'contact', data: { fields: {}, status: 'published' } });
+
+        const saved = await createServices(contextAs(editor), {
+            overrideAccess: false,
+        }).globals.update({ key: 'contact', data: { fields: { email: 'a@b.dev' } } });
+
+        expect(saved).toMatchObject({
+            fields: { email: 'a@b.dev' },
+            status: 'published',
+        });
+    });
+
+    it('schedules and unpublishes through an update for a role holding the publish grant', async () => {
+        await api.update({ key: 'contact', data: { fields: {}, status: 'published' } });
+        const scoped = createServices(contextAs(publisher), { overrideAccess: false });
+        const publishedAt = new Date('2999-01-01');
+
+        const scheduled = await scoped.globals.update({
+            key: 'contact',
+            data: { status: 'scheduled', publishedAt },
+        });
+        expect(scheduled).toMatchObject({ status: 'scheduled', publishedAt });
+
+        const unpublished = await scoped.globals.update({
+            key: 'contact',
+            data: { status: 'unpublished' },
+        });
+        expect(unpublished).toMatchObject({ status: 'unpublished', publishedAt: null });
     });
 });

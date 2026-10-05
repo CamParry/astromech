@@ -58,6 +58,16 @@ await Astromech.entries.update({
 
 The same applies to `Astromech.users.update()` and `Astromech.media.update()`.
 
+An update that names a locale the entry has no row in yet adds that locale. The
+new row takes the default locale's title, slug and shared fields, and starts
+`unpublished` with no publish date, whatever the default locale's status. To
+publish or schedule it in the same call, name `status` (and `publishedAt`) in
+`data`, which needs the type's `publish` permission.
+
+`Astromech.entries.duplicate()` copies an entry into a new one, `unpublished`
+unless `overrides` names a `status`. A write that leaves an entry scheduled with
+no date is refused with a 422 naming `publishedAt`.
+
 ## Trash and restore
 
 `Astromech.entries.trash()` moves an entry to the trash with every locale, and

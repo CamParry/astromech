@@ -86,14 +86,22 @@ describe('resolvePublishedAt', () => {
                 now,
             })
         ).toBe(future);
-        expect(
-            resolvePublishedAt({
-                status: 'scheduled',
-                given: undefined,
-                current: null,
-                now,
-            })
-        ).toBeNull();
+    });
+
+    it('refuses a write that leaves the row scheduled with no date', () => {
+        for (const input of [
+            { status: 'scheduled', given: undefined, current: null },
+            { status: 'scheduled', given: undefined, current: row('unpublished', null) },
+            { status: 'scheduled', given: null, current: row('scheduled', future) },
+            { status: undefined, given: null, current: row('scheduled', future) },
+        ] as const) {
+            expect(() => resolvePublishedAt({ ...input, now })).toThrow(
+                expect.objectContaining({
+                    name: 'ValidationError',
+                    fields: { publishedAt: [expect.any(String)] },
+                })
+            );
+        }
     });
 
     it('leaves the column alone when the write sets no status', () => {

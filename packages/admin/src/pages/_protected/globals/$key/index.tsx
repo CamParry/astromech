@@ -4,10 +4,11 @@
  */
 
 import { createFileRoute, redirect } from '@tanstack/react-router';
+import { defaultContentLocale } from 'astromech/shared';
 import React from 'react';
+import adminConfig from 'virtual:astromech/admin-config';
 import { GlobalEditPage } from '../../../../components/globals/global-edit-page';
 import { globalQueryOptions } from '../../../../hooks/globals';
-import { defaultContentLocale } from '../../../../utilities/content-locale';
 import { validateEntryEditSearch } from '../../../../utilities/entry-admin-path';
 import { pluginGlobalRouteParams } from '../../../../utilities/global-admin-path';
 
@@ -34,7 +35,10 @@ export const Route = createFileRoute('/_protected/globals/$key/')({
     loaderDeps: ({ search }) => ({ locale: search.locale }),
     loader: ({ context, params, deps }) =>
         context.queryClient.ensureQueryData(
-            globalQueryOptions(params.key, deps.locale ?? defaultContentLocale())
+            globalQueryOptions(
+                params.key,
+                deps.locale ?? defaultContentLocale(adminConfig)
+            )
         ),
     component: GlobalEditRoutePage,
 });

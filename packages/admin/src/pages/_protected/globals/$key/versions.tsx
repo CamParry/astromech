@@ -4,13 +4,14 @@
  */
 
 import { createFileRoute, redirect } from '@tanstack/react-router';
+import { defaultContentLocale } from 'astromech/shared';
 import React from 'react';
+import adminConfig from 'virtual:astromech/admin-config';
 import { GlobalVersionsPage } from '../../../../components/globals/global-versions-page';
 import {
     globalQueryOptions,
     globalVersionsQueryOptions,
 } from '../../../../hooks/globals';
-import { defaultContentLocale } from '../../../../utilities/content-locale';
 import { validateEntryEditSearch } from '../../../../utilities/entry-admin-path';
 import { pluginGlobalRouteParams } from '../../../../utilities/global-admin-path';
 
@@ -34,7 +35,7 @@ export const Route = createFileRoute('/_protected/globals/$key/versions')({
     },
     loaderDeps: ({ search }) => ({ locale: search.locale }),
     loader: ({ context, params, deps }) => {
-        const locale = deps.locale ?? defaultContentLocale();
+        const locale = deps.locale ?? defaultContentLocale(adminConfig);
         return Promise.all([
             context.queryClient.ensureQueryData(globalQueryOptions(params.key, locale)),
             context.queryClient.ensureQueryData(
