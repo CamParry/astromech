@@ -48,6 +48,7 @@ export type OpenApiOperation = {
 /** The document, loosely. */
 export type OpenApiDocument = {
     openapi: string;
+    info: { title: string; version: string };
     servers?: { url: string }[];
     security?: Record<string, string[]>[];
     paths: Record<string, Record<string, OpenApiOperation>>;

@@ -24,6 +24,7 @@ import { HTTP_ROUTES } from '@/transport/http/routes/http-routes';
 import { mediaRouter } from '@/transport/http/routes/media';
 import { notificationsRouter } from '@/transport/http/routes/notifications';
 import { usersRouter } from '@/transport/http/routes/users';
+import { version } from '../../../../package.json';
 
 type Schema = OpenApiSchema;
 type Operation = OpenApiOperation;
@@ -692,6 +693,11 @@ describe('the served document', () => {
         // A public method is served without a session, so it asks for none.
         expect(doc.paths['/plugins/probe/ping']?.['post']?.security).toEqual([]);
         expect(doc.paths['/plugins/probe/echo']?.['post']?.security).toBeUndefined();
+    });
+
+    it('declares core’s package version as the API version', async () => {
+        const { document: doc } = await servedDocument([]);
+        expect(doc.info.version).toBe(version);
     });
 
     it('names every operation by a unique id, its method id where it has one route', async () => {
