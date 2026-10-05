@@ -10,6 +10,7 @@ import type { ConfirmOptions } from '@/policies/confirmation';
 import type { MethodFilter } from '@/policies/method-filter';
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
 import { getDatabaseDriver } from '@/database/driver-registry';
+import { disposeBindings } from '@/integrations/cloudflare/bindings';
 import { countExclusions, filterMethods } from '@/policies/method-filter';
 import { bootApplication } from '@/transport/cli/config';
 import { bootedManifest } from '@/transport/cli/methods';
@@ -95,5 +96,10 @@ export async function runMcpServer(
     reportExclusions(excluded);
 
     const transport = new StdioServerTransport();
+    // A Cloudflare binding resolved at boot holds wrangler's platform proxy
+    // open, which keeps the process alive after the client disconnects. The
+    // stdio transport does not close itself when stdin ends.
+    transport.onclose = () => void disposeBindings();
+    process.stdin.once('end', () => void server.close());
     await server.connect(transport);
 }

@@ -8,8 +8,10 @@
  */
 
 import { execFile } from 'node:child_process';
+import { mkdir, writeFile } from 'node:fs/promises';
 import { createRequire } from 'node:module';
 import { join, resolve } from 'node:path';
+import { pathToFileURL } from 'node:url';
 import { promisify } from 'node:util';
 import { createTempSite, writeSiteConfig } from '@tests/cli';
 import { describe, expect, it } from 'vitest';
@@ -94,6 +96,42 @@ describe('astromech', () => {
             expect(result.stdout).toMatch(
                 /^\s+permissions\s+List grantable permissions/m
             );
+        },
+        SPAWN_TIMEOUT_MS
+    );
+
+    it(
+        'exits once a command that resolved a Cloudflare binding finishes',
+        async () => {
+            // The wrangler platform proxy `resolveBinding` opens keeps the process
+            // alive until `disposeBindings()` runs. The child runs in the package
+            // root, whose `wrangler.jsonc` declares the `DB` binding.
+            const site = await createTempSite();
+            await mkdir(join(site, 'migrations'));
+            await writeFile(
+                join(site, 'migrations/index.ts'),
+                'export const migrationProvider = { getMigrations: async () => ({}) };\n'
+            );
+            const driver = pathToFileURL(
+                join(packageRoot, 'src/database/drivers/d1.ts')
+            ).href;
+            const configPath = join(site, 'astromech.config.mjs');
+            await writeFile(
+                configPath,
+                `import { d1 } from ${JSON.stringify(driver)};
+export default {
+    db: d1({ binding: 'DB' }),
+    migrationsDir: ${JSON.stringify(join(site, 'migrations'))},
+    entries: {},
+};
+`
+            );
+
+            const result = await cli(['db:init', '--config', configPath]);
+
+            expect(result.stderr).toBe('');
+            expect(result.stdout).toContain('Database migrations applied');
+            expect(result.code).toBe(0);
         },
         SPAWN_TIMEOUT_MS
     );

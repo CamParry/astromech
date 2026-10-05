@@ -57,6 +57,9 @@ a failing test first.
       production D1 from the CLI.
 - [x] The dashboard checks read permission and makes one request.
 - [x] `name` on the database driver.
+- [x] The CLI disposes the wrangler platform proxy when any command finishes
+      or fails, so `db:init` against a D1 binding exits; `mcp` disposes it on
+      shutdown.
 
 ## Checks on Cloudflare
 
@@ -76,10 +79,6 @@ production D1.
 
 ## Left open
 
-- **`db:init` against a D1 binding never exits**: it applies the migrations
-  and hangs, with or without `--allow-remote`, because the wrangler platform
-  proxy is never disposed (`disposeBindings` in
-  `packages/astromech/src/integrations/cloudflare/bindings.ts`).
 - **A Worker woken only by a Cron Trigger skips the pending-migration check**:
   the middleware registers the bundled names, and no request has run it.
   `createWorkerEntry` would need the names passed in.
