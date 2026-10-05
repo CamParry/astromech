@@ -373,3 +373,72 @@ describe('the block list on pages', () => {
         expect(response.status).toBe(200);
     });
 });
+
+describe('headers on admin pages', () => {
+    beforeEach(() => {
+        setEnvSource({ NODE_ENV: 'production', BETTER_AUTH_SECRET: SECRET });
+    });
+
+    it("sets frame-ancestors 'self' on an admin page", async () => {
+        const response = await responseOf(
+            onRequest(context({ path: '/cms/entries/post' }), page)
+        );
+
+        expect(response.headers.get('Content-Security-Policy')).toBe(
+            "frame-ancestors 'self'"
+        );
+    });
+
+    it('keeps a policy the page already sent, so both apply', async () => {
+        const next = (): Promise<Response> =>
+            Promise.resolve(
+                new Response('page', {
+                    headers: { 'Content-Security-Policy': "default-src 'self'" },
+                })
+            );
+
+        const response = await responseOf(onRequest(context({ path: '/cms' }), next));
+
+        expect(response.headers.get('Content-Security-Policy')).toBe(
+            "default-src 'self', frame-ancestors 'self'"
+        );
+    });
+
+    it('sets the policy on a response whose headers are immutable', async () => {
+        const next = (): Promise<Response> =>
+            Promise.resolve(Response.redirect('http://localhost/cms/login', 302));
+
+        const response = await responseOf(onRequest(context({ path: '/cms' }), next));
+
+        expect(response.headers.get('Content-Security-Policy')).toBe(
+            "frame-ancestors 'self'"
+        );
+    });
+
+    it("leaves a site page's frame policy to the site", async () => {
+        const response = await responseOf(onRequest(context({ path: '/blog' }), page));
+
+        expect(response.headers.get('Content-Security-Policy')).toBeNull();
+        expect(response.headers.get('Strict-Transport-Security')).toBeNull();
+    });
+
+    it('sends no Strict-Transport-Security on an admin page by default', async () => {
+        const response = await responseOf(onRequest(context({ path: '/cms' }), page));
+
+        expect(response.headers.get('Strict-Transport-Security')).toBeNull();
+    });
+
+    it('adds HSTS to an admin page when configured', async () => {
+        site.config = {
+            ...makeBootConfig(),
+            scheduler: noScheduler,
+            security: { hsts: { maxAge: 600, includeSubDomains: true } },
+        };
+
+        const response = await responseOf(onRequest(context({ path: '/cms' }), page));
+
+        expect(response.headers.get('Strict-Transport-Security')).toBe(
+            'max-age=600; includeSubDomains'
+        );
+    });
+});

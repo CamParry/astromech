@@ -26,6 +26,7 @@ import { getRequestScope, runInRequestScope } from '@/request-scope/request-scop
 import { parseOutput } from '@/services/parse-method-output';
 import { PRIVATE_NO_STORE } from '@/transport/http/cache-control';
 import { getClientAddress } from '@/transport/http/client-address';
+import { strictTransportSecurity } from '@/transport/http/strict-transport-security';
 import { requireAuth } from './middleware/auth';
 import { refuseBlockedAddresses } from './middleware/block-list';
 import { forbidden, fromZodError, onError, onNotFound } from './middleware/errors';
@@ -80,6 +81,8 @@ export function createHttpApp(config: ResolvedConfig): OpenAPIHono<AppEnv> {
         xContentTypeOptions: headers?.xContentTypeOptions ?? 'nosniff',
         xFrameOptions: headers?.xFrameOptions ?? 'DENY',
         referrerPolicy: headers?.referrerPolicy ?? 'strict-origin-when-cross-origin',
+        // Hono sends it by default; here only when `security.hsts` asks.
+        strictTransportSecurity: strictTransportSecurity(config.security?.hsts) ?? false,
     };
     const apiSecureHeaders = secureHeaders(secureHeaderOptions);
     const mediaSecureHeaders = secureHeaders({

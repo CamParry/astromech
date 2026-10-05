@@ -604,7 +604,16 @@ export type AstromechConfig = {
          * Too high yields no address rather than a less trusted one.
          */
         trustProxy?: TrustProxy;
+        /** Send `Strict-Transport-Security` on API and admin responses. Off by default; `true` is one year. */
+        hsts?: boolean | HstsConfig;
     };
+};
+
+/** `max-age` in seconds (default 31536000), and the two optional flags. */
+export type HstsConfig = {
+    maxAge?: number;
+    includeSubDomains?: boolean;
+    preload?: boolean;
 };
 
 /** `false` to never read `x-forwarded-for`, `true` for one proxy, or a hop count. */
