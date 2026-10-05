@@ -280,6 +280,91 @@ describe('git stash', () => {
     });
 });
 
+describe('Worktrunk', () => {
+    it('refuses wt merge and the history-rewriting steps, pointing at pnpm run land', () => {
+        for (const command of [
+            'wt merge',
+            'wt merge --no-squash --no-ff main',
+            `wt -C "${worktree}" merge`,
+            'wt step commit',
+            'wt step squash',
+            'wt step push',
+            'wt step rebase',
+            'wt step promote feature',
+            'wt step relocate',
+            'wt step prune --yes',
+            `cd "${worktree}" && wt step squash`,
+            'bash -c "wt merge"',
+        ]) {
+            const result = runHook(command);
+            assert.equal(result.decision, 'deny', command);
+            assert.match(result.reason, /pnpm run land/, command);
+        }
+    });
+
+    it('asks before deleting unmerged branches with wt remove -D', () => {
+        for (const command of [
+            'wt remove -D feature',
+            'wt remove --force-delete feature',
+            `cd "${worktree}" && wt remove -D --yes`,
+        ]) {
+            const result = runHook(command);
+            assert.equal(result.decision, 'ask', command);
+            assert.match(result.reason, /deletes branches/, command);
+        }
+    });
+
+    it('judges wt remove --force by the worktree it removes', () => {
+        for (const command of [
+            'wt remove --force feature',
+            `cd "${worktree}" && wt remove -f`,
+            `wt -C "${worktree}" remove --force --yes`,
+            `wt remove --force "${worktrees}/backup-restore"`,
+        ]) {
+            assert.equal(runHook(command).decision, null, command);
+        }
+        for (const command of [
+            'wt remove --force',
+            `wt -C "${site}" remove -f`,
+            'wt remove --force "$BRANCH"',
+            'wt remove -f ../elsewhere',
+        ]) {
+            assert.equal(runHook(command).decision, 'ask', command);
+        }
+    });
+
+    it('asks before wt switch --clobber and wt config state clear', () => {
+        for (const command of [
+            'wt switch --create topic --clobber',
+            'wt config state clear',
+        ]) {
+            assert.equal(runHook(command).decision, 'ask', command);
+            assert.equal(
+                runHook(`cd "${worktree}" && ${command}`).decision,
+                'ask',
+                command
+            );
+        }
+    });
+
+    it('lets the setup, listing and plain removal commands run', () => {
+        for (const command of [
+            'wt list',
+            'git fetch -q origin && wt switch --create topic --base origin/main --no-cd --yes',
+            `wt -C "${worktree}" hook pre-start --yes`,
+            'wt step copy-ignored --require-include',
+            `wt -C "${worktree}" step eval '{{ branch | hash_port }}'`,
+            'wt step diff',
+            'wt remove feature --yes',
+            `wt -C "${site}" remove feature --no-delete-branch --foreground --yes`,
+            'wt config state get',
+            'echo "never wt merge" && git commit -m "wt step squash is refused"',
+        ]) {
+            assert.equal(runHook(command).decision, null, command);
+        }
+    });
+});
+
 describe('commands it cannot parse', () => {
     it('asks rather than guess', () => {
         for (const command of [

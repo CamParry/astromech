@@ -1,14 +1,16 @@
 #!/usr/bin/env node
 /**
- * PreToolUse hook for Bash. It guards git calls that can destroy uncommitted work, and process
- * and stash commands that reach into other sessions' work.
+ * PreToolUse hook for Bash. It guards git and Worktrunk (`wt`) calls that can destroy
+ * uncommitted work or rewrite history, and process and stash commands that reach into other
+ * sessions' work.
  * Why: several sessions and agents share this machine and repository, so `git reset --hard` can
  * wipe another session's work, a broad `pkill` can stop its server, and `git stash` (repo-wide)
- * empties a worktree other agents are writing in.
+ * empties a worktree other agents are writing in. Branches land with `pnpm run land`, so `wt
+ * merge` and the `wt step` commands that commit, squash, rebase or push are refused.
  *
  * It splits the command into simple commands (honouring quotes, dropping heredoc bodies and
- * comments), follows `cd` and `git -C`, and decides each call by the directory it runs in. The
- * worktree directory is the main checkout's sibling `<name>-worktrees`.
+ * comments), follows `cd`, `git -C` and `wt -C`, and decides each call by the directory it runs
+ * in. The worktree directory is the main checkout's sibling `<name>-worktrees`.
  *
  * | Command                                                     | Inside worktree dir | Elsewhere |
  * | ----------------------------------------------------------- | ------------------- | --------- |
@@ -22,6 +24,11 @@
  * | `stash drop`, `stash clear` (the stash is repo-wide)        | ask                 | ask       |
  * | `stash`, `stash push`, `stash save`                         | deny                | ask       |
  * | `pkill`, `killall`                                          | deny                | deny      |
+ * | `wt merge`; `wt step commit`, `squash`, `push`, `rebase`,   | deny                | deny      |
+ * | `promote`, `relocate`, `prune`                              |                     |           |
+ * | `wt remove --force` (judged by the worktree it removes)     | silent              | ask       |
+ * | `wt remove -D` (deletes unmerged branches)                  | ask                 | ask       |
+ * | `wt switch --clobber`, `wt config state clear`              | ask                 | ask       |
  * | a command it cannot parse                                   | ask                 | ask       |
  *
  * Silent means no output, so the normal permission flow decides; the hook never answers `allow`,
@@ -33,7 +40,7 @@ import { homedir } from 'node:os';
 import { basename, dirname, isAbsolute, join, resolve, sep } from 'node:path';
 
 // Commands that mention none of these words cannot match a rule, so they skip the parse.
-const TRIGGER = /git|pkill|killall/;
+const TRIGGER = /git|pkill|killall|\bwt\b/;
 
 function main() {
     const input = readInput();
@@ -129,6 +136,8 @@ function judge(finding, worktrees) {
         }
         case 'always':
             return { decision: 'ask', reason: `${quoted} ${finding.why}.` };
+        case 'refused':
+            return { decision: 'deny', reason: `${quoted} is refused: ${finding.why}.` };
     }
 }
 
@@ -319,6 +328,8 @@ function inspectCommand(words, directory, findings) {
         findings.push({ kind: 'process-kill', label: name });
     } else if (name === 'git') {
         inspectGit(rest, directory, findings);
+    } else if (name === 'wt') {
+        inspectWorktrunk(rest, directory, findings);
     } else if (SHELLS.has(name)) {
         const script = shellScript(rest);
         if (script !== undefined)
@@ -551,6 +562,129 @@ function inspectGit(args, startDirectory, findings) {
             return;
         }
     }
+}
+
+// Options of `wt` and its subcommands that take their value as the next word.
+const WT_VALUE_OPTIONS = new Set([
+    '-C',
+    '--config',
+    '--config-set',
+    '--format',
+    '-x',
+    '--execute',
+    '-b',
+    '--base',
+]);
+
+// `wt step` commands that commit, rewrite or push history, or delete worktrees and branches.
+const WT_REFUSED_STEPS = new Set([
+    'commit',
+    'squash',
+    'push',
+    'rebase',
+    'promote',
+    'relocate',
+    'prune',
+]);
+
+/** Appends a finding for a Worktrunk call that rewrites history or can destroy work. */
+function inspectWorktrunk(args, startDirectory, findings) {
+    let directory = startDirectory;
+    const operands = [];
+    const flags = new Set();
+    for (let index = 0; index < args.length; index += 1) {
+        const word = args[index];
+        if (word.text === '--') break;
+        if (WT_VALUE_OPTIONS.has(word.text)) {
+            if (word.text === '-C') {
+                const target = args[index + 1];
+                directory = target === undefined ? null : resolvePath(target, directory);
+            }
+            index += 1;
+        } else if (word.text.startsWith('--')) {
+            flags.add(word.text.split('=')[0]);
+        } else if (/^-[a-zA-Z]+$/.test(word.text)) {
+            for (const letter of word.text.slice(1)) flags.add(`-${letter}`);
+        } else {
+            operands.push(word);
+        }
+    }
+    const [subcommand, ...rest] = operands.map((word) => word.text);
+    const label = truncate(['wt', ...args.map((word) => word.text)].join(' '));
+
+    if (subcommand === 'merge') {
+        findings.push({
+            kind: 'refused',
+            label,
+            why: 'branches land with `pnpm run land`, which merges onto the fetched origin/main and pushes (AGENTS.md, "Branches and worktrees")',
+        });
+    } else if (subcommand === 'step' && WT_REFUSED_STEPS.has(rest[0])) {
+        findings.push({
+            kind: 'refused',
+            label,
+            why: 'it commits, rewrites or pushes history, or deletes worktrees and branches. Commit with git, and land with `pnpm run land`',
+        });
+    } else if (subcommand === 'remove') {
+        if (flags.has('-D') || flags.has('--force-delete')) {
+            findings.push({
+                kind: 'always',
+                label,
+                why: 'deletes branches even when no other branch contains their commits',
+            });
+        }
+        if (flags.has('-f') || flags.has('--force')) {
+            const targets = operands.slice(1);
+            if (targets.length === 0) {
+                findings.push({ kind: 'worktree-remove', label, target: directory });
+            }
+            for (const target of targets) {
+                findings.push({
+                    kind: 'worktree-remove',
+                    label,
+                    target: worktreeOf(target, directory),
+                });
+            }
+        }
+    } else if (subcommand === 'switch' && flags.has('--clobber')) {
+        findings.push({
+            kind: 'always',
+            label,
+            why: 'deletes whatever directory is at the new worktree path',
+        });
+    } else if (subcommand === 'config' && rest[0] === 'state' && rest[1] === 'clear') {
+        findings.push({
+            kind: 'always',
+            label,
+            why: "clears Worktrunk's stored state for the repository, which every worktree shares",
+        });
+    }
+}
+
+/**
+ * The path of the worktree a `wt remove` operand names: the worktree of that branch, else the
+ * operand read as a path. `null` when the hook cannot tell.
+ */
+function worktreeOf(word, directory) {
+    if (word.expanded || directory === null) return null;
+    let listing;
+    try {
+        listing = execFileSync(
+            'git',
+            ['-C', directory, 'worktree', 'list', '--porcelain'],
+            {
+                encoding: 'utf8',
+                stdio: ['ignore', 'pipe', 'ignore'],
+            }
+        );
+    } catch {
+        return null;
+    }
+    for (const entry of listing.split('\n\n')) {
+        const path = /^worktree (.+)$/m.exec(entry)?.[1];
+        const branch = /^branch refs\/heads\/(.+)$/m.exec(entry)?.[1];
+        if (path !== undefined && branch === word.text) return path;
+    }
+    return resolvePath(word, directory);
 }
 
 /** The stash subcommand: the first operand, skipping `-m <message>`; a bare stash is `push`. */
