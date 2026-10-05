@@ -233,6 +233,14 @@ function buildAuth(): Auth<BetterAuthOptions> {
     }) as unknown as Auth<BetterAuthOptions>;
 }
 
+/**
+ * The routes Better Auth serves that Astromech always refuses: sign-up answers
+ * 403 from the `user.create.before` hook above, and change-email is off
+ * (Better Auth's `user.changeEmail` is not enabled). The API's OpenAPI document
+ * leaves them out (`transport/http/routes/auth-document.ts`).
+ */
+export const REFUSED_AUTH_PATHS = ['/sign-up/email', '/change-email'] as const;
+
 /** The routes the `openAPI` plugin adds, which the API does not serve. */
 const OPEN_API_PATHS = ['/open-api/generate-schema', '/reference'] as const;
 

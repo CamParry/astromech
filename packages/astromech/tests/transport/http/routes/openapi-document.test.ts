@@ -24,6 +24,7 @@ import { HTTP_ROUTES } from '@/transport/http/routes/http-routes';
 import { mediaRouter } from '@/transport/http/routes/media';
 import { notificationsRouter } from '@/transport/http/routes/notifications';
 import { usersRouter } from '@/transport/http/routes/users';
+import { version } from '../../../../package.json';
 
 type Schema = OpenApiSchema;
 type Operation = OpenApiOperation;
@@ -694,6 +695,11 @@ describe('the served document', () => {
         expect(doc.paths['/plugins/probe/echo']?.['post']?.security).toBeUndefined();
     });
 
+    it('declares core’s package version as the API version', async () => {
+        const { document: doc } = await servedDocument([]);
+        expect(doc.info.version).toBe(version);
+    });
+
     it('names every operation by a unique id, its method id where it has one route', async () => {
         const { document: doc } = await servedDocument([probe]);
         const ids = Object.values(doc.paths).flatMap((operations) =>
@@ -906,6 +912,16 @@ describe('the document’s coverage', () => {
         // The plugin's own routes are not served, so they are not documented.
         expect(doc.paths['/auth/open-api/generate-schema']).toBeUndefined();
         expect(doc.paths['/auth/reference']).toBeUndefined();
+    });
+
+    it('leaves out the Better Auth routes Astromech always refuses', async () => {
+        const { document: doc } = await servedDocument([]);
+
+        // Sign-up always answers 403 and change-email is off, so neither is an
+        // operation a client could call.
+        expect(doc.paths['/auth/sign-up/email']).toBeUndefined();
+        expect(doc.paths['/auth/change-email']).toBeUndefined();
+        expect(doc.paths['/auth/sign-in/email']).toBeDefined();
     });
 
     it('names Better Auth’s components apart from core’s', async () => {

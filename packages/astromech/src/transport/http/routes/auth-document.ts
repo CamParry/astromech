@@ -1,7 +1,8 @@
 /**
  * Better Auth's routes for the API's OpenAPI document, from the schema its
  * `openAPI` plugin generates: each path under `/auth`, each component named
- * apart from core's, and each operation's security the session it needs.
+ * apart from core's, and each operation's security the session it needs. A
+ * route Astromech always refuses (`REFUSED_AUTH_PATHS`) is left out.
  */
 
 import type { Auth, BetterAuthOptions } from 'better-auth';
@@ -11,7 +12,7 @@ import {
     sensitiveSessionMiddleware,
     sessionMiddleware,
 } from 'better-auth/api';
-import { getAuth } from '@/auth/better-auth';
+import { getAuth, REFUSED_AUTH_PATHS } from '@/auth/better-auth';
 
 /** The paths and components Better Auth adds to the document. */
 export type AuthDocument = {
@@ -52,6 +53,7 @@ export async function authDocument(
 
     const paths: AuthDocument['paths'] = {};
     for (const [path, operations] of Object.entries(renamed.paths)) {
+        if ((REFUSED_AUTH_PATHS as readonly string[]).includes(path)) continue;
         const needsSession = sessionPaths.has(path);
         paths[`${prefix}${path}`] = Object.fromEntries(
             Object.entries(operations).map(([verb, operation]) => [

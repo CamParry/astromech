@@ -121,19 +121,19 @@ item 8 proposed, would protect libsql only.
       `check:boot:cloudflare` cannot make it, having no session. Also confirm
       the `better-auth/plugins` import adds only `openAPI` to the Worker
       bundle.
-- [ ] **Refused auth routes in the document.** Better Auth's generator lists
-      every endpoint, so the document shows `/auth/sign-up/email`, which
-      always answers 403, and `/auth/change-email`, which is off. Decide
-      whether `transport/http/routes/auth-document.ts` leaves them out.
+- [x] **Refused auth routes in the document.** `auth-document.ts` leaves out
+      `/auth/sign-up/email`, which always answers 403, and `/auth/change-email`,
+      which is off. `REFUSED_AUTH_PATHS` in `auth/better-auth.ts` names them
+      beside the refusals.
 - [x] **Plugin versions.** Each `packages/plugins/*/src/index.ts` reads its
       version from its `package.json` with a JSON import, which tsup inlines,
       and the plugin contract
       (`packages/astromech/tests/_support/plugin-contract.ts`) checks the
       declared package and version against `package.json`.
-- [ ] **Core's API version.** The OpenAPI document's `info.version`
-      (`transport/http/routes/openapi-document.ts`) is a hard-coded `1.0.0`
-      while `astromech` is `0.1.0`. Decide whether it tracks the package
-      version, as the plugins now do, or names the API's own version.
+- [x] **Core's API version.** The OpenAPI document's `info.version`
+      (`transport/http/routes/openapi-document.ts`) is core's package version,
+      read from `package.json` with a JSON import as the plugins do; tsup
+      inlines it.
 - [x] **CLI statuses.** Build the list from `statusSchema.options` in
       `transport/cli/commands/entries-create.ts`, `entries-update.ts` and
       `entries-list.ts` (`statusArgs` in `transport/cli/common-args.ts`), drop
