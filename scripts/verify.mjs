@@ -37,6 +37,11 @@
  * priority, the tests run fewer workers, and typecheck and lint check fewer
  * packages at once (`scripts/cpu-limits.mjs`). CI runs at full speed, and so
  * does a local run with `ASTROMECH_FULL_SPEED=1` set.
+ *
+ * Every mode first takes the lock in `scripts/run-lock.mjs`, so
+ * a second gate, build, test run or boot check started meanwhile, in any
+ * worktree, waits for this one to finish rather than run beside it. The checks
+ * this starts go ahead under its lock.
  */
 
 import { execFileSync, spawn } from 'node:child_process';
@@ -53,9 +58,14 @@ import {
     WORKSPACE_CONCURRENCY,
 } from './cpu-limits.mjs';
 import { stopProcessGroup } from './process-group.mjs';
+import { waitForRunLock } from './run-lock.mjs';
 
 // First, before anything prints: every check inherits the priority.
 relaunchAtLowerPriority();
+
+// Before any check starts, and before the environment below is copied, since
+// the lock sets the variable that lets the checks skip it.
+await waitForRunLock('verify');
 
 const repoRoot = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 

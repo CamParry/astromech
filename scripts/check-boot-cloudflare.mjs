@@ -41,10 +41,15 @@ import {
 import { relaunchAtLowerPriority } from './cpu-limits.mjs';
 import { stopProcessGroup } from './process-group.mjs';
 import { requireFreshDist } from './require-fresh-dist.mjs';
+import { waitForRunLock } from './run-lock.mjs';
 
 // First, before anything prints: the build and the server inherit the priority
 // (`scripts/cpu-limits.mjs`).
 relaunchAtLowerPriority();
+
+// One heavy run at a time on this machine (`scripts/run-lock.mjs`). Under
+// `verify`, the gate holds the lock and this goes ahead.
+await waitForRunLock('check:boot:cloudflare');
 
 const repoRoot = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const demoDir = join(repoRoot, 'apps', 'demo-cloudflare');

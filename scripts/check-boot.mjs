@@ -39,7 +39,7 @@
 // turned off stops being evidence.
 import { spawn } from 'node:child_process';
 import { mkdtemp, rm } from 'node:fs/promises';
-import { tmpdir } from 'node:os';
+import { constants, tmpdir } from 'node:os';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { closeAdminBrowser, expectAdminWorks } from './admin-browser-check.mjs';
@@ -54,10 +54,15 @@ import {
 } from './check-helpers.mjs';
 import { relaunchAtLowerPriority } from './cpu-limits.mjs';
 import { requireFreshDist } from './require-fresh-dist.mjs';
+import { waitForRunLock } from './run-lock.mjs';
 
 // First, before anything prints: the build, server and browser inherit the
 // priority (`scripts/cpu-limits.mjs`).
 relaunchAtLowerPriority();
+
+// One heavy run at a time on this machine (`scripts/run-lock.mjs`). Under
+// `verify`, the gate holds the lock and this goes ahead.
+await waitForRunLock('check:boot');
 
 const repoRoot = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const demoDir = join(repoRoot, 'apps', 'demo');
@@ -175,6 +180,14 @@ async function cleanUp() {
     if (scratchDir) {
         await rm(scratchDir, { recursive: true, force: true });
     }
+}
+
+// A Ctrl-C or `verify` stopping this check still closes the browser, stops
+// the server, removes the scratch database and releases the lock.
+for (const signal of ['SIGINT', 'SIGTERM']) {
+    process.once(signal, () => {
+        void cleanUp().finally(() => process.exit(128 + constants.signals[signal]));
+    });
 }
 
 try {
