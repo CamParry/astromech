@@ -80,6 +80,7 @@ function makeEntry(id: string, title: string, locales: string[]): Entry {
 afterEach(() => {
     for (const fn of Object.values(entries)) fn.mockReset();
     adminConfig.entryTypes = {};
+    adminConfig.defaultLocale = 'en';
 });
 
 /** `POST` with statuses on, for the status a new locale is saved with. */
@@ -148,6 +149,26 @@ describe('the create-in-locale modal', () => {
             locale: 'en',
             limit: 'all',
         });
+    });
+
+    // `defaultLocale` is the admin's display locale; the content default is the
+    // configured locale it falls back to, and the repository matches a locale exactly.
+    it('offers the default content locale’s entries when the display locale is a region of it', async () => {
+        adminConfig.defaultLocale = 'en-GB';
+        const sources = [makeEntry('e1', 'Hello', ['en'])];
+        entries.query.mockImplementation((params) =>
+            Promise.resolve({
+                data: (params as { locale: string }).locale === 'en' ? sources : [],
+                pagination: { page: 1, pages: 1, total: 1, limit: 0 },
+            })
+        );
+        adminConfig.entryTypes = { post: POST };
+        const page = renderAdmin(<EntryNewPage type="post" requestedLocale="fr" />, {
+            url: '/entries/post/new?locale=fr',
+        });
+        const modal = await screen.findByRole('dialog', { name: TITLE });
+
+        expect(await pickerOptions(page, modal)).toEqual(['Hello']);
     });
 
     // Choosing an entry that already has the locale would send `update` over

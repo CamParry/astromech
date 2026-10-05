@@ -42,9 +42,10 @@ const storage: StorageDriver = {
 };
 
 /**
- * The harness config with the seo section on `post` (url `postUrl`) and on
- * `note` (no url template). `bookmark` gets a url template but no seo field,
- * so it sits outside the plugin's footprint.
+ * The harness config with the seo section on `post` (url `postUrl`), on
+ * `note` (no url template) and on `page` (statuses off, url `/{slug}`).
+ * `bookmark` gets a url template but no seo field, so it sits outside the
+ * plugin's footprint.
  */
 function configWithSeo(postUrl = '/blog/{slug}'): AstromechConfig {
     const base = makeTestConfig();
@@ -67,6 +68,13 @@ function configWithSeo(postUrl = '/blog/{slug}'): AstromechConfig {
             },
             note: { ...note, fields: [...note.fields, seo.section()] },
             bookmark: { ...bookmark, url: '/bookmarks/{slug}' },
+            page: {
+                single: 'Page',
+                plural: 'Pages',
+                statuses: false,
+                url: '/{slug}',
+                fields: [seo.section()],
+            },
         },
         plugins: [seo()],
     };
@@ -100,6 +108,17 @@ describe('seo sitemap', () => {
 
         expect((await sitemap()).urls).toEqual([
             { loc: '/blog/hello', lastmod: new Date(entry.updatedAt).toISOString() },
+        ]);
+    });
+
+    it('lists an entry of a type without statuses, whose rows are always live', async () => {
+        const entry = await app.entries.create({
+            type: 'page',
+            data: { title: 'About' },
+        });
+
+        expect((await sitemap()).urls).toEqual([
+            { loc: '/about', lastmod: new Date(entry.updatedAt).toISOString() },
         ]);
     });
 
@@ -171,6 +190,17 @@ describe('seo meta', () => {
         expect(await meta('post', 'hello')).toMatchObject({
             title: 'Hello',
             description: null,
+        });
+    });
+
+    it('resolves an entry of a type without statuses', async () => {
+        await app.entries.create({ type: 'page', data: { title: 'About' } });
+
+        expect(await meta('page', 'about')).toEqual({
+            title: 'About',
+            description: null,
+            ogImage: null,
+            path: '/about',
         });
     });
 

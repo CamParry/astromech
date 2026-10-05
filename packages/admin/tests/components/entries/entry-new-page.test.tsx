@@ -152,6 +152,7 @@ describe('EntryNewPage', () => {
         expect(
             await screen.findByText('Publish date is required when scheduled')
         ).not.toBeNull();
+        expect(await screen.findByText('Please fix Publish date.')).not.toBeNull();
         expect(entries.create).not.toHaveBeenCalled();
 
         await page.user.click(screen.getByRole('button', { name: 'Publish' }));

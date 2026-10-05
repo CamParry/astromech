@@ -122,6 +122,12 @@ describe('resolveEntryLocaleUrl', () => {
             'fr',
             'https://example.com/fr/blog/hello?ref=feed',
         ],
+        [
+            "keeps a protocol-relative template's host",
+            '//cdn.example.com/{slug}',
+            'fr',
+            '//cdn.example.com/fr/hello',
+        ],
     ])('%s', (_, template, locale, expected) => {
         expect(
             resolveEntryLocaleUrl(template, { ...entry('hello'), locale }, config)

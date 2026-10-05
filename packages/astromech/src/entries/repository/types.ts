@@ -51,10 +51,13 @@ export type ListParams = {
     search?: string | undefined;
     where?: WhereFilters | undefined;
     /**
-     * Only rows whose `publishedAt` is null or not after this time. `entries.query`
-     * sets it for a public read, with the same time it gives `applyVisibility`.
+     * Only the rows a public read returns (`isPubliclyVisible` in
+     * `content/visibility.ts`): every row of a type in `typesWithoutStatuses`,
+     * and any other row that is published with a `publishedAt` that is null or
+     * not after `asOf`. `entries.query` and `entries.count` set it for a public
+     * read, with the time they give `applyVisibility`.
      */
-    publishedAsOf?: Date | undefined;
+    publiclyVisible?: { asOf: Date; typesWithoutStatuses: readonly string[] } | undefined;
     sort?: SortOption | SortOption[] | undefined;
     /** Rows to return; absent means every match. `count` ignores it. */
     limit?: number | undefined;

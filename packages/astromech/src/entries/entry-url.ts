@@ -62,8 +62,8 @@ export function resolveEntryLocalePath(
 
 /**
  * The URL of one locale of an entry: `resolveEntryUrl`, with `/{locale}` put
- * before the path as `resolveEntryLocalePath` does, keeping an absolute
- * template's origin. Null as for `resolveEntryUrl`.
+ * before the path as `resolveEntryLocalePath` does, keeping an absolute or
+ * protocol-relative template's origin. Null as for `resolveEntryUrl`.
  */
 export function resolveEntryLocaleUrl(
     template: string,
@@ -72,7 +72,8 @@ export function resolveEntryLocaleUrl(
 ): string | null {
     const url = resolveEntryUrl(template, entry);
     if (url === null || entry.locale === defaultContentLocale(config)) return url;
-    const origin = /^[a-z][a-z\d+.-]*:\/\/[^/?#]*/i.exec(url)?.[0] ?? '';
+    // `scheme://host` or a protocol-relative `//host`.
+    const origin = /^(?:[a-z][a-z\d+.-]*:)?\/\/[^/?#]*/i.exec(url)?.[0] ?? '';
     const rest = url.slice(origin.length);
     return `${origin}/${entry.locale}${rest.startsWith('/') ? rest : `/${rest}`}`;
 }

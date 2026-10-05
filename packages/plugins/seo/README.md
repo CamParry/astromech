@@ -90,7 +90,8 @@ export default defineConfig({
 ## Sitemap (recipe)
 
 The plugin exposes **data**; your app owns the route. The `getSitemap` method is
-`public` and returns the published entries across the footprint:
+`public` and returns the live entries across the footprint (published ones,
+and every entry of a type without statuses):
 
 ```ts
 // src/pages/sitemap.xml.ts
@@ -120,7 +121,7 @@ export const GET: APIRoute = async () => {
 
 ## Meta tags (recipe)
 
-`getMeta` resolves one published entry's metadata with fallbacks: the entry title
+`getMeta` resolves one live entry's metadata with fallbacks: the entry title
 when no meta title is set, and the default OG image setting:
 
 ```astro

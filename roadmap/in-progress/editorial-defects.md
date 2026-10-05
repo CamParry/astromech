@@ -48,7 +48,22 @@ Found on 2026-10-03 while planning `roadmap/planned/drafts.md`.
   under `/{locale}` (`DECISIONS.md`, "A locale's public path"). They give the
   wrong path when Astro's `i18n.defaultLocale` differs from Astromech's default
   content locale, with `prefixDefaultLocale: true`, with `routing: 'manual'`,
-  and with `domains`.
+  and with `domains`. The Astro integration already reads Astro's config in
+  `astro:config:done` (`packages/astromech/src/integrations/astro/integration.ts`,
+  the `security.allowedDomains` warning); a warning there when Astro's
+  `i18n.defaultLocale` differs from Astromech's default content locale, or
+  `prefixDefaultLocale` is true, would catch the setups this rule gets wrong.
+- **Turning `statuses` off on an existing type makes its unpublished rows
+  public.** A type without statuses stores `unpublished` on every row and
+  treats every row as live (`isPubliclyVisible` in
+  `packages/astromech/src/content/visibility.ts`), so rows that were
+  unpublished or scheduled before the change appear in public reads. Not
+  decided: a boot warning cannot tell those rows from rows written after the
+  change, since both store `unpublished`, and a config change runs no data
+  migration. One way is to store `published` on a statuses-off type's rows, so
+  a remaining `unpublished` or `scheduled` row marks one written with statuses
+  on, and warn at boot or in a site-health check
+  (`roadmap/planned/site-health.md`) when one exists.
 - **Two consumers still build locale URLs without the prefix.** The menus
   plugin resolves an entry link with `resolveEntryUrl`
   (`packages/plugins/menus/src/service/menus.ts`), and the seo plugin's

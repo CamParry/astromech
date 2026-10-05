@@ -18,6 +18,7 @@ export type CreateLocaleModalProps = {
     open: boolean;
     type: string;
     locale: string;
+    /** The default content locale, whose entries the modal offers as sources. */
     defaultLocale: string;
     onCancel: () => void;
     onChooseStandalone: () => void;

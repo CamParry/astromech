@@ -143,6 +143,8 @@
     --am-input-font-size: 0.875rem;
     --am-input-icon-color: var(--am-color-text-muted);
     --am-input-placeholder-color: var(--am-color-text-placeholder);
+    --am-input-readonly-background-color: var(--am-color-bg-muted);
+    --am-input-readonly-border-color: var(--am-color-border);
     --am-input-padding-x: calc(var(--am-space) * 3);
     --am-input-transition:
         border-color var(--am-duration-base) var(--am-easing),

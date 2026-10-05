@@ -20,8 +20,8 @@
 
     &[data-readonly] {
         cursor: default;
-        background-color: var(--am-color-bg-muted);
-        border-color: var(--am-color-border);
+        background-color: var(--am-input-readonly-background-color);
+        border-color: var(--am-input-readonly-border-color);
 
         & .am-select-icon {
             color: var(--am-color-text-placeholder);

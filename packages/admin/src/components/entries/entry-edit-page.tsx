@@ -130,10 +130,11 @@ function EntryEditBody({
         config.url !== null && entry !== null
             ? resolveEntryLocaleUrl(config.url, entry, adminConfig)
             : null;
-    // One surface control: a published entry links to its live page; anything
-    // else opens a tokenised preview of the last saved state.
-    const showViewLive =
-        !isStaged && previewUrl !== null && entry?.status === 'published';
+    // One surface control: a live entry links to its live page; anything else
+    // opens a tokenised preview of the last saved state. Every row of a type
+    // without statuses is live, whatever its status column reads.
+    const isLive = !capabilities.statuses || entry?.status === 'published';
+    const showViewLive = !isStaged && previewUrl !== null && isLive;
     const showPreview = capabilities.staging && previewUrl !== null && !showViewLive;
     const previewLabel = isStaged ? t('staging.previewStaged') : t('staging.preview');
 

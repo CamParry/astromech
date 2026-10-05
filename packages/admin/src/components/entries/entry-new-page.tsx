@@ -146,7 +146,7 @@ function EntryNewBody({
                         open={modalOpen}
                         type={type}
                         locale={requestedLocale}
-                        defaultLocale={adminConfig.defaultLocale}
+                        defaultLocale={defaultContentLocale(adminConfig)}
                         onCancel={() => void navigate({ to: basePath })}
                         onChooseStandalone={() => {
                             setChosenEntryId(null);

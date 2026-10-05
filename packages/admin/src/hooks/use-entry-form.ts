@@ -11,6 +11,8 @@ import { useStore } from '@tanstack/react-form';
 import { entryValidationMode } from 'astromech/shared';
 import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
+import { validationSummaryMessage } from '../components/fields/field-error-summary';
+import { useToast } from '../components/ui/toast';
 import { useFieldsForm } from './use-fields-form';
 
 /** The entry's own keys, held beside the declared fields' `fields`. */
@@ -85,6 +87,7 @@ export function useEntryForm<TSaved = Entry>({
     readOnly = false,
 }: UseEntryFormOptions<TSaved>) {
     const { t } = useTranslation();
+    const { toast } = useToast();
     /** The publish date's error from the last submit, cleared by a status or date change. */
     const [publishedAtError, setPublishedAtError] = useState<string | undefined>();
 
@@ -154,6 +157,13 @@ export function useEntryForm<TSaved = Entry>({
         beforeSubmit: (values, meta) => {
             const refused = schedulesWithoutDate(values, meta?.publish === true);
             setPublishedAtError(refused ? t('entries.publishedAtRequired') : undefined);
+            // Toasted as a failed field check is, since the inline error may be scrolled away.
+            if (refused) {
+                toast({
+                    message: validationSummaryMessage([t('entries.publishedAtField')], t),
+                    variant: 'error',
+                });
+            }
             return !refused;
         },
         // An update that sends no status is validated against the row's own,

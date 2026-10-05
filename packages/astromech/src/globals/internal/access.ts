@@ -5,12 +5,15 @@ import { needsPublish } from '@/content/publish-access';
 import { globalPermission } from '@/permissions/global-permission';
 import { resolveGlobal } from '../resolve-global';
 
+/** A globals access rule: always a function of the call's input. */
+type GlobalRule = Extract<PermissionRule, (input: never) => unknown>;
+
 /**
  * The permissions a globals method needs, on the global the call's `key`
  * addresses: `action`, plus `publish` when an update's `data` sets a status or
  * date (`needsPublish`).
  */
-export function globalAccess(action: GlobalAction): PermissionRule {
+export function globalAccess(action: GlobalAction): GlobalRule {
     return (input) => {
         const key = keyOf(input);
         const permission = globalPermission(key, action);
@@ -23,7 +26,7 @@ export function globalAccess(action: GlobalAction): PermissionRule {
  * `get`'s rule. A `public` global's plain read needs no permission; the `full`
  * and `staged` shapes always need `read`.
  */
-export const globalGetAccess: PermissionRule = (input) => {
+export const globalGetAccess: GlobalRule = (input) => {
     const key = keyOf(input);
     // The one config read left under `globals/`: an access rule is a function of
     // the input alone, called before a method's handler and so before there is a

@@ -3,7 +3,8 @@
  *
  * The entry edit page's "View live page" link carries the locale prefix of a
  * locale other than the default content locale, which the admin resolves from
- * its display locale down the fallback chain, as core does.
+ * its display locale down the fallback chain, as core does. A type without
+ * statuses links to its live page whatever its rows store.
  */
 
 import type { AdminEntryType, EntriesService, Entry, EntryStatus } from '@/types/index';
@@ -64,14 +65,19 @@ const ENTRY_TYPE_CONFIG: AdminEntryType = {
     titleField: 'title',
 };
 
-function mountPage(locale: string, slug: string): void {
+function mountPage(
+    locale: string,
+    slug: string,
+    { statuses = true }: { statuses?: boolean } = {}
+): void {
     const entry = {
         id: ID,
         type: TYPE,
         locale,
         slug,
         title: 'A post',
-        status: 'published' as EntryStatus,
+        // A type without statuses stores `unpublished` on every row.
+        status: (statuses ? 'published' : 'unpublished') as EntryStatus,
         locales: ['fr', 'en'],
         fields: {},
         createdAt: new Date('2026-01-01T00:00:00Z'),
@@ -82,7 +88,10 @@ function mountPage(locale: string, slug: string): void {
         update: vi.fn(),
     } as unknown as EntriesService;
     queryUsers.mockResolvedValue({ data: [] });
-    adminConfig.entryTypes[TYPE] = ENTRY_TYPE_CONFIG;
+    adminConfig.entryTypes[TYPE] = {
+        ...ENTRY_TYPE_CONFIG,
+        capabilities: { ...ENTRY_TYPE_CONFIG.capabilities, statuses },
+    };
 
     renderAdmin(<EntryEditPage type={TYPE} id={ID} locale={locale} />, {
         url: `/entries/${TYPE}/${ID}?locale=${locale}`,
@@ -99,5 +108,13 @@ describe('the entry edit page View link', () => {
         const link = await screen.findByRole('link', { name: 'View live page' });
 
         expect(link.getAttribute('href')).toBe(href);
+    });
+
+    it('links to the live page of a type without statuses, whose rows are always live', async () => {
+        mountPage('en', 'hello', { statuses: false });
+
+        const link = await screen.findByRole('link', { name: 'View live page' });
+
+        expect(link.getAttribute('href')).toBe('/blog/hello');
     });
 });
