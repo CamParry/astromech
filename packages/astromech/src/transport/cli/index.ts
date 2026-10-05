@@ -1,7 +1,15 @@
 import { defineCommand, runMain } from 'citty';
+import { disposeBindings } from '@/integrations/cloudflare/bindings';
 
 const main = defineCommand({
     meta: { name: 'astromech', description: 'Astromech CMS CLI' },
+    // Runs after any command, finished or failed. A command that resolved a
+    // Cloudflare binding left wrangler's platform proxy open, which keeps the
+    // process alive. `mcp` returns once its server is connected, and the server
+    // is long-lived, so it disposes the bindings on shutdown instead.
+    async cleanup({ rawArgs }) {
+        if (rawArgs[0] !== 'mcp') await disposeBindings();
+    },
     subCommands: {
         'db:init': () => import('./commands/db-init').then((m) => m.default),
         'db:status': () => import('./commands/db-status').then((m) => m.default),

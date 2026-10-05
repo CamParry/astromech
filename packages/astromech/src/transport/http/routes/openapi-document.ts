@@ -13,16 +13,20 @@ import {
     getPluginServiceMethods,
 } from '@/plugins/runtime/plugin-runtime';
 import { log } from '@/utilities/log';
+import { version } from '../../../../package.json';
 import { authDocument } from './auth-document';
 import { accessRefusals, declaresArguments, errorResponses } from './error-responses';
 import { nullableAsUnion } from './rest-route';
 
-/** The OpenAPI version and title the API's document declares. */
+/**
+ * The OpenAPI version and title the API's document declares. The API's version
+ * is core's package version.
+ */
 const DOCUMENT_CONFIG = {
     openapi: '3.1.0',
     info: {
         title: 'Astromech CMS API',
-        version: '1.0.0',
+        version,
         description: 'Astromech CMS REST API',
     },
 } as const;
