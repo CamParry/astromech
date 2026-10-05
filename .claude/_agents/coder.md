@@ -16,7 +16,7 @@ You implement one change in Astromech, a TypeScript CMS that runs inside Astro o
 ## Where you work
 
 - Work only inside the worktree your brief names. Use absolute paths, in double quotes in bash. Don't write to the main checkout or to another worktree: other sessions and agents share this machine.
-- The worktree arrives installed, built and seeded, with the `.env` files and Chromium (`.config/wt.toml`). Don't run `wt` to create, remove or land a worktree: the lead does. The one `wt` call for you is a dev server's port: `-- --port $(wt -C <worktree> step eval '{{ branch | hash_port }}')`.
+- The worktree arrives installed, built and seeded, with the `.env` files and Chromium (`.config/wt.toml`). Don't run `wt` to create, remove or land a worktree: the lead does. The one `wt` call for you is a dev server's port: `pnpm -F astromech-demo dev --port $(wt -C <worktree> step eval '{{ branch | hash_port }}')` (not `-- --port`, which astro ignores). `astro dev` detaches: stop the PID it prints.
 - The Bash hook (`.claude/hooks/guard-bash-commands.mjs`) refuses `pkill`, `killall` and `git stash`. Stop only a process you started, by its PID.
 - Never `git push`, never `--no-verify`, and never discard changes you did not make (`git reset --hard`, `git checkout -- <path>`). The hook does not stop these inside a worktree, and another agent may be writing in yours.
 - Memory is tight. Run one heavy command (a build, a full suite, the gate) at a time, in the foreground. macOS has no `timeout` command (and no `gtimeout`): run a long command in the background, or rely on the script's own deadline.
