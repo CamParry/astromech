@@ -18,8 +18,8 @@
  * - `ignoreStatic` skips mutants that only run when a module loads, which
  *   cost almost half the run time and are rarely worth reading.
  *
- * Run it with `NODE_ENV` unset and `BETTER_AUTH_SECRET` set, as for the
- * boot checks.
+ * Vitest keeps a `NODE_ENV` the shell sets, so run it with `NODE_ENV` unset,
+ * as `scripts/verify.mjs` runs the test suites.
  */
 
 import { spawnSync } from 'node:child_process';

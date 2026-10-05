@@ -30,6 +30,10 @@
 // `pages/_protected` are not loaded here. The browser steps are `scripts/admin-browser-check.mjs`,
 // which `check:install` runs too.
 //
+// The server runs as it does when deployed: with `NODE_ENV` unset, and with
+// `BETTER_AUTH_SECRET` from the environment or a throwaway value
+// (`scripts/check-helpers.mjs`), so the check needs nothing set by hand.
+//
 // Slow (a full Astro build plus a browser), so it is run on demand and in CI,
 // never from the pre-commit hook. It is not skippable: a check that can be
 // turned off stops being evidence.
@@ -39,7 +43,15 @@ import { tmpdir } from 'node:os';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { closeAdminBrowser, expectAdminWorks } from './admin-browser-check.mjs';
-import { expectStatus, freePort, run, step, waitForServer } from './check-helpers.mjs';
+import {
+    betterAuthSecret,
+    environmentWithoutNodeEnv,
+    expectStatus,
+    freePort,
+    run,
+    step,
+    waitForServer,
+} from './check-helpers.mjs';
 import { requireFreshDist } from './require-fresh-dist.mjs';
 
 const repoRoot = resolve(dirname(fileURLToPath(import.meta.url)), '..');
@@ -63,7 +75,7 @@ async function main() {
     // roadmap/completed/runtime-boot-and-live-config.md is the config being
     // evaluated more than once per serving process, so the lines are counted.
     const env = {
-        ...process.env,
+        ...environmentWithoutNodeEnv('check:boot'),
         DATABASE_URL: databaseUrl,
         // `run` spawns with stdio: 'inherit', so any prompt a child package
         // manager raises reads a stdin that may not be a terminal and hangs.
@@ -89,6 +101,7 @@ async function main() {
         HOST: '127.0.0.1',
         PORT: String(port),
         BETTER_AUTH_URL: base,
+        BETTER_AUTH_SECRET: betterAuthSecret(),
     });
     await waitForServer(base, server);
 

@@ -20,15 +20,18 @@
 // Better Auth's secret reaches the Worker as a secret binding, the way a real
 // one gets it: a deployment sets it with `wrangler secret put`, and `wrangler
 // dev` reads it from `.dev.vars`. The check takes `BETTER_AUTH_SECRET` from its
-// own environment, as `check:boot` does, and hands it over in a scratch env file
+// own environment, or a throwaway value when that sets none, as `check:boot`
+// does (`scripts/check-helpers.mjs`), and hands it over in a scratch env file
 // passed with `--env-file`, so no value is written into the app or committed.
-// Without it the Worker refuses every request and `/` answers 500.
+// Without one the Worker refuses every request and `/` answers 500.
 import { spawn } from 'node:child_process';
 import { mkdtemp, rm, writeFile } from 'node:fs/promises';
 import { constants, tmpdir } from 'node:os';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import {
+    betterAuthSecret,
+    environmentWithoutNodeEnv,
     expectStatus,
     freePort,
     request,
@@ -65,7 +68,7 @@ async function main() {
     await requireFreshDist();
 
     const env = {
-        ...process.env,
+        ...environmentWithoutNodeEnv('check:boot:cloudflare'),
         // `run` spawns with stdio: 'inherit', so any prompt a child package
         // manager raises reads a stdin that may not be a terminal and hangs.
         CI: 'true',
@@ -82,8 +85,7 @@ async function main() {
 
     scratchDir = await mkdtemp(join(tmpdir(), 'astromech-check-boot-cloudflare-'));
     const envFile = join(scratchDir, 'secrets.env');
-    const secret = process.env.BETTER_AUTH_SECRET;
-    await writeFile(envFile, secret ? `BETTER_AUTH_SECRET=${secret}\n` : '');
+    await writeFile(envFile, `BETTER_AUTH_SECRET=${betterAuthSecret()}\n`);
 
     const port = await freePort();
     step(`serving the built Worker on workerd, port ${port}`);

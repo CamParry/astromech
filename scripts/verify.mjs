@@ -29,9 +29,13 @@ import { constants } from 'node:os';
 import { dirname, resolve } from 'node:path';
 import process from 'node:process';
 import { fileURLToPath } from 'node:url';
+import { environmentWithoutNodeEnv } from './check-helpers.mjs';
 import { stopProcessGroup } from './process-group.mjs';
 
 const repoRoot = resolve(dirname(fileURLToPath(import.meta.url)), '..');
+
+// Each check runs with the tool's own `NODE_ENV`, whatever the shell sets.
+const environment = environmentWithoutNodeEnv('verify');
 
 // The slowest healthy check, `test:run`, takes about eight minutes on a CI
 // runner, so this trips only on a hang. It sits inside the CI jobs'
@@ -115,6 +119,7 @@ const run = (name, command) =>
         const started = Date.now();
         const child = spawn(command, {
             cwd: repoRoot,
+            env: environment,
             shell: true,
             detached: true,
             stdio: ['ignore', 'pipe', 'pipe'],
