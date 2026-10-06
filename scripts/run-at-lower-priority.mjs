@@ -7,7 +7,9 @@
  *
  * The root `package.json` scripts that test, build, typecheck and lint start
  * through it, so a standalone `pnpm run build` leaves the machine usable as the
- * gate does. Under the gate, or in CI, it runs the command as it is.
+ * gate does. A script that chains commands passes the whole chain as
+ * `sh -c '…'`, so every command in it runs at the lower priority. Under the
+ * gate, or in CI, it runs the command as it is.
  *
  * With `--lock`, the command first waits for the lock in
  * `scripts/run-lock.mjs`, so it never runs beside a gate, build, test run or
