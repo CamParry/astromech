@@ -49,7 +49,7 @@ forms/
   src/fields/compile.ts              stored blocks -> core Field[]
   src/service/forms.ts               the public `get` and `submit` methods, and their output schemas
   src/service/submissions.ts         listSubmissions, getSubmission, deleteSubmission, and their output schemas
-  src/service/rate-limit.ts          the submission rate limit, counted per address and form
+  src/service/rate-limit.ts          the submission rate limit, counted per rate-limit key and form
   src/hooks/events.ts                forms:beforeSubmit / forms:afterSubmit payloads
   src/notifications/                 one provider per notification kind (see below)
   src/spam/                          the spam gate: core's captcha, or a `spam` provider (see below)
