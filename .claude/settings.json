@@ -1,4 +1,7 @@
 {
+    "permissions": {
+        "allow": ["Bash(pnpm run land *)", "Bash(pnpm run prior-art *)"]
+    },
     "hooks": {
         "PreToolUse": [
             {
