@@ -12,24 +12,39 @@
  * comments), follows `cd`, `git -C` and `wt -C`, and decides each call by the directory it runs
  * in. The worktree directory is the main checkout's sibling `<name>-worktrees`.
  *
- * | Command                                                     | Inside worktree dir | Elsewhere |
- * | ----------------------------------------------------------- | ------------------- | --------- |
- * | `reset --hard/--merge/--keep`, `clean -f`, `checkout -f`,   | silent              | ask       |
- * | `checkout .`, `checkout [<ref>] -- <paths>`, `restore`      |                     |           |
- * | (working tree)                                              |                     |           |
- * | `worktree remove --force <path>` (judged by `<path>`)       | silent              | ask       |
- * | `branch -D <names>`: every name in `origin/main` or `main`  | silent              | silent    |
- * | `branch -D <names>`: any other name                         | ask                 | ask       |
- * | `push --force`, `-f`, `--force-with-lease`, `+<ref>`        | ask                 | ask       |
- * | `stash drop`, `stash clear` (the stash is repo-wide)        | ask                 | ask       |
- * | `stash`, `stash push`, `stash save`                         | deny                | ask       |
- * | `pkill`, `killall`                                          | deny                | deny      |
- * | `wt merge`; `wt step commit`, `squash`, `push`, `rebase`,   | deny                | deny      |
- * | `promote`, `relocate`, `prune`                              |                     |           |
- * | `wt remove --force` (judged by the worktree it removes)     | silent              | ask       |
- * | `wt remove -D` (deletes unmerged branches)                  | ask                 | ask       |
- * | `wt switch --clobber`, `wt config state clear`              | ask                 | ask       |
- * | a command it cannot parse                                   | ask                 | ask       |
+ * The scratchpad is any session's scratchpad directory, which Claude Code creates at
+ * `<tmp>/claude-<uid>/<project>/<session>/scratchpad`, where `<tmp>` is `$CLAUDE_CODE_TMPDIR`,
+ * else `/tmp` (`/private/tmp` on macOS). The hook compares real paths and needs the `scratchpad`
+ * segment, so `<tmp>/claude-<uid>` itself and a session's other directories (its `tasks` output)
+ * do not count. Agents build throwaway repositories there (bare remotes and clones to test
+ * `land.mjs` and Worktrunk), so destroying their work loses nothing. A force push still asks,
+ * since a scratch clone's remote can be a real one.
+ *
+ * A function body (`name() { …; }`, `function name { …; }`) is judged where it is defined, in a
+ * directory the hook treats as unknown, since the function can run anywhere. A function whose body
+ * changes directory leaves the directory unknown for the rest of the command.
+ *
+ * | Command                                                     | Worktree dir | Scratchpad | Elsewhere |
+ * | ----------------------------------------------------------- | ------------ | ---------- | --------- |
+ * | `reset --hard/--merge/--keep`, `clean -f`, `checkout -f`,   | silent       | silent     | ask       |
+ * | `checkout .`, `checkout [<ref>] -- <paths>`, `restore`      |              |            |           |
+ * | (working tree)                                              |              |            |           |
+ * | `worktree remove --force <path>` (judged by `<path>`)       | silent       | silent     | ask       |
+ * | `branch -D <names>`: every name in `origin/main` or `main`  | silent       | silent     | silent    |
+ * | `branch -D <names>`: any other name                         | ask          | silent     | ask       |
+ * | `push --force`, `-f`, `--force-with-lease`, `+<ref>`        | ask          | ask        | ask       |
+ * | `stash drop`, `stash clear` (the stash is repo-wide)        | ask          | silent     | ask       |
+ * | `stash`, `stash push`, `stash save`                         | deny         | silent     | ask       |
+ * | `pkill`, `killall`                                          | deny         | deny       | deny      |
+ * | `wt merge`; `wt step commit`, `squash`, `push`, `rebase`,   | deny         | deny       | deny      |
+ * | `promote`, `relocate`, `prune`                              |              |            |           |
+ * | `wt remove --force` (judged by the worktree it removes)     | silent       | silent     | ask       |
+ * | `wt remove -D` (deletes unmerged branches)                  | ask          | silent     | ask       |
+ * | `wt switch --clobber`, `wt config state clear`              | ask          | silent     | ask       |
+ * | a command it cannot parse                                   | ask          | ask        | ask       |
+ *
+ * A call counts as in the scratchpad when it runs there. A forced worktree removal counts when the
+ * worktree it removes is there, or when the hook cannot tell which worktree and the call runs there.
  *
  * Silent means no output, so the normal permission flow decides; the hook never answers `allow`,
  * which would also approve everything else in a compound command.
@@ -60,10 +75,12 @@ function main() {
     }
 
     const worktrees = lazy(() => findWorktreesDirectory(input));
+    const claudeRoot = lazy(findClaudeTemporaryRoot);
+    const inScratchpad = (path) => isInScratchpad(path, claudeRoot());
     const denials = [];
     const questions = [];
     for (const finding of findings) {
-        const verdict = judge(finding, worktrees);
+        const verdict = judge(finding, worktrees, inScratchpad);
         if (verdict?.decision === 'deny') denials.push(verdict.reason);
         if (verdict?.decision === 'ask') questions.push(verdict.reason);
     }
@@ -95,7 +112,7 @@ function respond(decision, reasons) {
 }
 
 /** Turns one finding into `{ decision, reason }`, or `undefined` when it needs no prompt. */
-function judge(finding, worktrees) {
+function judge(finding, worktrees, inScratchpad) {
     const quoted = `\`${finding.label}\``;
     switch (finding.kind) {
         case 'process-kill':
@@ -103,6 +120,24 @@ function judge(finding, worktrees) {
                 decision: 'deny',
                 reason: `${quoted} is refused: it matches processes by name, so it can stop another session's server or test run. Stop the process you started by its PID with \`kill <pid>\`.`,
             };
+        case 'force-push':
+            return {
+                decision: 'ask',
+                reason: `${quoted} rewrites history on the remote.`,
+            };
+        case 'refused':
+            return { decision: 'deny', reason: `${quoted} is refused: ${finding.why}.` };
+    }
+
+    // Every other finding destroys work only in the repository it runs in.
+    if (finding.kind === 'worktree-remove') {
+        if (isInside(finding.target, worktrees())) return undefined;
+        if (inScratchpad(finding.target ?? finding.directory)) return undefined;
+    } else if (inScratchpad(finding.directory)) {
+        return undefined;
+    }
+
+    switch (finding.kind) {
         case 'stash':
             if (isInside(finding.directory, worktrees())) {
                 return {
@@ -121,7 +156,6 @@ function judge(finding, worktrees) {
                 reason: `${quoted} can destroy uncommitted work, and it runs ${where(finding.directory, worktrees())}.`,
             };
         case 'worktree-remove':
-            if (isInside(finding.target, worktrees())) return undefined;
             return {
                 decision: 'ask',
                 reason: `${quoted} deletes a worktree and its uncommitted work outside the worktree directory.`,
@@ -134,10 +168,8 @@ function judge(finding, worktrees) {
                 reason: `${quoted} deletes ${unmerged.join(', ')}, which neither origin/main nor main contains.`,
             };
         }
-        case 'always':
+        case 'ask':
             return { decision: 'ask', reason: `${quoted} ${finding.why}.` };
-        case 'refused':
-            return { decision: 'deny', reason: `${quoted} is refused: ${finding.why}.` };
     }
 }
 
@@ -186,6 +218,24 @@ function findWorktreesDirectory(input) {
     } catch {
         return null;
     }
+}
+
+/**
+ * Claude Code's per-user temporary directory, `<tmp>/claude-<uid>`, as a real path; `null` where
+ * there is no uid (Windows).
+ */
+function findClaudeTemporaryRoot() {
+    if (typeof process.getuid !== 'function') return null;
+    const base = process.env.CLAUDE_CODE_TMPDIR || '/tmp';
+    return canonical(join(base, `claude-${process.getuid()}`));
+}
+
+/** Whether a path is a session's scratchpad, `<root>/<project>/<session>/scratchpad`, or below it. */
+function isInScratchpad(path, claudeRoot) {
+    if (path === null || claudeRoot === null) return false;
+    const real = canonical(path);
+    if (!real.startsWith(claudeRoot + sep)) return false;
+    return real.slice(claudeRoot.length + 1).split(sep)[2] === 'scratchpad';
 }
 
 function isInside(path, directory) {
@@ -240,12 +290,20 @@ function collectFindings(items, startDirectory, findings) {
     const stack = [];
     for (const item of items) {
         if (item.kind === 'open') {
-            stack.push(directory);
+            stack.push({
+                directory,
+                isFunction: item.isFunction,
+                changesDirectory: false,
+            });
+            // A function body runs wherever the function is called.
+            if (item.isFunction) directory = null;
             previousSeparator = ';';
             continue;
         }
         if (item.kind === 'close') {
-            directory = stack.pop();
+            const scope = stack.pop();
+            const unknown = scope.isFunction && scope.changesDirectory;
+            directory = unknown ? null : scope.directory;
             continue;
         }
         for (const substitution of item.substitutions) {
@@ -258,6 +316,7 @@ function collectFindings(items, startDirectory, findings) {
             const certain =
                 previousSeparator !== '|' && !['|', '||', '&'].includes(item.separator);
             directory = certain ? next : null;
+            for (const scope of stack) scope.changesDirectory = true;
         }
         previousSeparator = item.separator;
     }
@@ -506,8 +565,9 @@ function inspectGit(args, startDirectory, findings) {
             const action = stashAction(texts);
             if (action === 'drop' || action === 'clear') {
                 findings.push({
-                    kind: 'always',
+                    kind: 'ask',
                     label,
+                    directory,
                     why: 'deletes stash entries, which every worktree of the repository shares',
                 });
             } else if (action === 'push' || action === 'save') {
@@ -537,13 +597,7 @@ function inspectGit(args, startDirectory, findings) {
                         text.startsWith('--force-with-lease') ||
                         text.startsWith('+')
                 );
-            if (forced) {
-                findings.push({
-                    kind: 'always',
-                    label,
-                    why: 'rewrites history on the remote',
-                });
-            }
+            if (forced) findings.push({ kind: 'force-push', label });
             return;
         }
         case 'worktree': {
@@ -557,6 +611,7 @@ function inspectGit(args, startDirectory, findings) {
             findings.push({
                 kind: 'worktree-remove',
                 label,
+                directory,
                 target: target === undefined ? null : resolvePath(target, directory),
             });
             return;
@@ -627,34 +682,43 @@ function inspectWorktrunk(args, startDirectory, findings) {
     } else if (subcommand === 'remove') {
         if (flags.has('-D') || flags.has('--force-delete')) {
             findings.push({
-                kind: 'always',
+                kind: 'ask',
                 label,
+                directory,
                 why: 'deletes branches even when no other branch contains their commits',
             });
         }
         if (flags.has('-f') || flags.has('--force')) {
             const targets = operands.slice(1);
             if (targets.length === 0) {
-                findings.push({ kind: 'worktree-remove', label, target: directory });
+                findings.push({
+                    kind: 'worktree-remove',
+                    label,
+                    directory,
+                    target: directory,
+                });
             }
             for (const target of targets) {
                 findings.push({
                     kind: 'worktree-remove',
                     label,
+                    directory,
                     target: worktreeOf(target, directory),
                 });
             }
         }
     } else if (subcommand === 'switch' && flags.has('--clobber')) {
         findings.push({
-            kind: 'always',
+            kind: 'ask',
             label,
+            directory,
             why: 'deletes whatever directory is at the new worktree path',
         });
     } else if (subcommand === 'config' && rest[0] === 'state' && rest[1] === 'clear') {
         findings.push({
-            kind: 'always',
+            kind: 'ask',
             label,
+            directory,
             why: "clears Worktrunk's stored state for the repository, which every worktree shares",
         });
     }
@@ -708,9 +772,11 @@ function truncate(text) {
 class ParseError extends Error {}
 
 /**
- * Parses shell source into items: `{ kind: 'command', words, substitutions, separator }` and the
- * `open` and `close` of a subshell. A word is `{ text, expanded }`, where `text` has its quotes
- * removed and `expanded` says it holds a `$` or backtick expansion the hook cannot evaluate.
+ * Parses shell source into items: `{ kind: 'command', words, substitutions, separator }`, and an
+ * `open` and `close` around a subshell or a function body (`open` has `isFunction`). A `{ }`
+ * group is not a scope: its commands stay in the list, with `{` and `}` as words. A word is
+ * `{ text, expanded }`, where `text` has its quotes removed and `expanded` says it holds a `$` or
+ * backtick expansion the hook cannot evaluate.
  */
 function parseScript(source) {
     return new Parser(source).parseList(false);
@@ -738,6 +804,15 @@ class Parser {
         let substitutions = [];
         let lastWordEnd = -1;
         let depth = 0;
+        // One entry per open `{`: 'function' for a function body, else 'group'.
+        const braces = [];
+        // Set after a function's name and `()`, until its body opens.
+        let functionPending = false;
+        const checkClosed = () => {
+            if (braces.includes('function'))
+                throw new ParseError('unclosed function body');
+            if (functionPending) throw new ParseError('function without a body');
+        };
         const finish = (separator) => {
             if (words.length > 0 || substitutions.length > 0) {
                 items.push({ kind: 'command', words, substitutions, separator });
@@ -775,15 +850,31 @@ class Parser {
                 this.index += this.startsWith('|&') ? 2 : 1;
                 finish('|');
             } else if (char === '(') {
-                if (words.length > 0) throw new ParseError('unexpected "("');
+                if (words.length > 0) {
+                    // `name()` starts a function definition; nothing else puts a word before `(`.
+                    const [name] = words;
+                    const definesFunction =
+                        words.length === 1 &&
+                        !name.expanded &&
+                        !name.text.includes('=') &&
+                        this.skipEmptyParentheses();
+                    if (!definesFunction) throw new ParseError('unexpected "("');
+                    words = [];
+                    functionPending = true;
+                    continue;
+                }
                 this.index += 1;
-                items.push({ kind: 'open' });
+                items.push({ kind: 'open', isFunction: functionPending });
+                functionPending = false;
                 depth += 1;
             } else if (char === ')') {
                 this.index += 1;
                 finish(')');
                 if (depth === 0) {
-                    if (inSubstitution) return items;
+                    if (inSubstitution) {
+                        checkClosed();
+                        return items;
+                    }
                     throw new ParseError('unmatched ")"');
                 }
                 depth -= 1;
@@ -800,14 +891,56 @@ class Parser {
                 }
                 this.readRedirection();
             } else {
-                words.push(this.readWord(substitutions));
+                const word = this.readWord(substitutions);
                 lastWordEnd = this.index;
+                // `{` and `}` are reserved words only where a command can start.
+                const commandStart = words.every((each) => KEYWORDS.has(each.text));
+                if (functionPending && !(commandStart && word.text === '{')) {
+                    throw new ParseError(
+                        'function body is not a { } group or ( ) subshell'
+                    );
+                }
+                if (commandStart && word.text === '{') {
+                    braces.push(functionPending ? 'function' : 'group');
+                    if (functionPending) {
+                        items.push({ kind: 'open', isFunction: true });
+                        functionPending = false;
+                        continue;
+                    }
+                } else if (
+                    commandStart &&
+                    word.text === '}' &&
+                    braces.at(-1) === 'function'
+                ) {
+                    braces.pop();
+                    finish(';');
+                    items.push({ kind: 'close' });
+                    continue;
+                } else if (commandStart && word.text === '}') {
+                    braces.pop();
+                } else if (words.length === 1 && words[0].text === 'function') {
+                    // `function name`, with or without `()`.
+                    this.skipEmptyParentheses();
+                    words = [];
+                    functionPending = true;
+                    continue;
+                }
+                words.push(word);
             }
         }
         if (inSubstitution) throw new ParseError('unclosed "$("');
         if (depth !== 0) throw new ParseError('unclosed "("');
+        checkClosed();
         finish('end');
         return items;
+    }
+
+    /** Skips a `()` at the cursor, with any blanks before or inside it; says whether there was one. */
+    skipEmptyParentheses() {
+        const match = /^[ \t]*\([ \t]*\)/.exec(this.source.slice(this.index));
+        if (match === null) return false;
+        this.index += match[0].length;
+        return true;
     }
 
     readRedirection() {

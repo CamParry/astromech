@@ -1,10 +1,12 @@
 /**
  * Runs the Bash hook as Claude Code does, with the input JSON on stdin, against a throwaway
- * repository laid out like this one: a main checkout and a sibling `-worktrees` directory.
+ * repository laid out like this one: a main checkout and a sibling `-worktrees` directory. A
+ * second repository sits in a Claude Code scratchpad, under a temporary directory the tests point
+ * `CLAUDE_CODE_TMPDIR` at.
  */
 import assert from 'node:assert/strict';
 import { execFileSync, spawnSync } from 'node:child_process';
-import { mkdtempSync, realpathSync, rmSync } from 'node:fs';
+import { mkdirSync, mkdtempSync, realpathSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
 import { after, before, describe, it } from 'node:test';
@@ -30,6 +32,9 @@ let root;
 let site;
 let worktrees;
 let worktree;
+let claudeTemporary;
+let scratchpad;
+let scratchRepository;
 
 before(() => {
     root = realpathSync(mkdtempSync(join(tmpdir(), 'bash-hook-')));
@@ -42,6 +47,22 @@ before(() => {
     git(site, 'branch', 'merged');
     git(site, 'worktree', 'add', '-q', '-b', 'feature', worktree);
     git(worktree, 'commit', '-q', '--allow-empty', '-m', 'unmerged work');
+
+    claudeTemporary = join(root, 'tmp');
+    scratchpad = join(
+        claudeTemporary,
+        `claude-${process.getuid()}`,
+        '-Users-someone-site',
+        'session-id',
+        'scratchpad'
+    );
+    scratchRepository = join(scratchpad, 'clone');
+    mkdirSync(scratchpad, { recursive: true });
+    git(scratchpad, 'init', '-q', '-b', 'main', scratchRepository);
+    git(scratchRepository, 'commit', '-q', '--allow-empty', '-m', 'first');
+    git(scratchRepository, 'switch', '-q', '-c', 'race');
+    git(scratchRepository, 'commit', '-q', '--allow-empty', '-m', 'unmerged work');
+    git(scratchRepository, 'switch', '-q', 'main');
 });
 
 after(() => {
@@ -365,6 +386,114 @@ describe('Worktrunk', () => {
     });
 });
 
+describe('Claude Code scratchpad', () => {
+    it('lets destructive git and Worktrunk calls run in a scratchpad repository', () => {
+        for (const command of [
+            `cd "${scratchRepository}" && git reset --hard`,
+            `git -C "${scratchRepository}" clean -fd`,
+            `cd "${scratchRepository}" && git checkout -- a.txt`,
+            `cd "${scratchRepository}" && git branch -D race`,
+            `cd "${scratchRepository}" && git stash && git stash drop`,
+            `git worktree remove --force "${scratchpad}/clone-feature"`,
+            `cd "${scratchRepository}" && b=race && wt remove $b --force -D --foreground --yes --no-hooks`,
+            `wt -C "${scratchRepository}" switch --create topic --clobber`,
+        ]) {
+            assert.equal(runHook(command).decision, null, command);
+        }
+        assert.equal(runHook('git branch -D race', scratchRepository).decision, null);
+    });
+
+    it('still refuses process kills and asks for force pushes there', () => {
+        const kill = runHook(`cd "${scratchRepository}" && pkill -f astro`);
+        assert.equal(kill.decision, 'deny');
+        assert.equal(
+            runHook(`cd "${scratchRepository}" && git push --force origin main`).decision,
+            'ask'
+        );
+        assert.equal(
+            runHook('git push -f origin race', scratchRepository).decision,
+            'ask'
+        );
+    });
+
+    it('matches only the scratchpad directory of a session', () => {
+        const claudeRoot = join(claudeTemporary, `claude-${process.getuid()}`);
+        for (const directory of [
+            claudeRoot,
+            join(claudeRoot, '-Users-someone-site', 'session-id', 'tasks'),
+            join(claudeTemporary, 'claude-0', 'project', 'session-id', 'scratchpad'),
+        ]) {
+            const command = `cd "${directory}" && git reset --hard`;
+            assert.equal(runHook(command).decision, 'ask', command);
+        }
+    });
+
+    it('finds the scratchpad under /tmp when CLAUDE_CODE_TMPDIR is unset', () => {
+        const path = `/tmp/claude-${process.getuid()}/-Users-cam-Documents-Projects-Astromech/e8741f51-4178-461e-a55b-e529bc8e755c/scratchpad/land-test/clone`;
+        const unset = { CLAUDE_CODE_TMPDIR: undefined };
+        assert.equal(
+            runHook(`cd "${path}" && git reset --hard`, site, unset).decision,
+            null
+        );
+        if (process.platform === 'darwin') {
+            const command = `cd "/private${path}" && git branch -D race`;
+            assert.equal(runHook(command, site, unset).decision, null);
+        }
+        assert.equal(
+            runHook(`cd "${scratchRepository}" && git reset --hard`, site, unset)
+                .decision,
+            'ask'
+        );
+    });
+});
+
+describe('shell functions', () => {
+    it('judges the commands in a function body', () => {
+        for (const command of [
+            'f() { git reset --hard; }; f',
+            'function f { git clean -fd; }',
+            'function f() { git checkout -- a.txt; }',
+            'f() {\n    git restore a.txt\n}\nf',
+            'f()\n{\n    git restore a.txt\n}',
+            'f() ( git reset --hard )',
+            `cd "${worktree}" && f() { git reset --hard; }; f`,
+        ]) {
+            assert.equal(runHook(command).decision, 'ask', command);
+        }
+        assert.equal(runHook('f() { pkill node; }').decision, 'deny');
+    });
+
+    it('lets a function of safe commands run', () => {
+        for (const command of [
+            `H=.claude/hooks/guard-bash-commands.mjs; t() { local s=$(perl -MTime::HiRes=time -e 'print time'); printf '%s' "$1" | node "$H"; }; t 'git status'; t 'git reset --hard'`,
+            'function f { git status; }; f',
+            'g() { if git diff --quiet; then { git log -1; }; fi; }; g',
+            `f() { git -C "${worktree}" reset --hard; }; f`,
+        ]) {
+            assert.equal(runHook(command).decision, null, command);
+        }
+    });
+
+    it('stops tracking the directory once a function that changes it is defined', () => {
+        assert.equal(
+            runHook(`cd "${worktree}"; f() { cd "${site}"; }; f; git reset --hard`)
+                .decision,
+            'ask'
+        );
+        assert.equal(
+            runHook(`cd "${worktree}"; f() { git status; }; f; git reset --hard`)
+                .decision,
+            null
+        );
+    });
+
+    it('asks when a function body is not closed', () => {
+        const result = runHook('f() { git status');
+        assert.equal(result.decision, 'ask');
+        assert.match(result.reason, /could not parse/);
+    });
+});
+
 describe('commands it cannot parse', () => {
     it('asks rather than guess', () => {
         for (const command of [
@@ -392,8 +521,11 @@ describe('commands that touch nothing it guards', () => {
     });
 });
 
-/** Runs the hook on one command and returns its decision (`null` when it prints nothing). */
-function runHook(command, cwd = site) {
+/**
+ * Runs the hook on one command and returns its decision (`null` when it prints nothing).
+ * `environment` overrides variables; `undefined` unsets one.
+ */
+function runHook(command, cwd = site, environment = {}) {
     const input = {
         hook_event_name: 'PreToolUse',
         tool_name: 'Bash',
@@ -403,7 +535,12 @@ function runHook(command, cwd = site) {
     const result = spawnSync(process.execPath, [hook], {
         input: JSON.stringify(input),
         encoding: 'utf8',
-        env: { ...gitEnvironment, CLAUDE_PROJECT_DIR: site },
+        env: {
+            ...gitEnvironment,
+            CLAUDE_PROJECT_DIR: site,
+            CLAUDE_CODE_TMPDIR: claudeTemporary,
+            ...environment,
+        },
     });
     assert.equal(result.status, 0, result.stderr);
     assert.equal(result.stderr, '');
