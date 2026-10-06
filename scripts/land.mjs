@@ -2,31 +2,36 @@
 /**
  * Lands the current worktree's branch on main: a `--no-ff` merge onto the remote's main, pushed,
  * then the worktree and branch removed and CI watched. Run it from inside the worktree, after
- * the gate (`pnpm run verify`) has passed on the branch's HEAD: it does not run the gate.
+ * the gate (`pnpm run verify`) has passed on the branch's HEAD. It does not run the gate: it
+ * reads the stamp a passing run leaves (`scripts/verify-stamp.mjs`) and refuses without one.
  *
- *   pnpm run land [--message-file <path>] [--no-ci] [--dry-run]
+ *   pnpm run land [--message-file <path>] [--no-ci] [--dry-run] [--no-gate-check]
  *
  * Steps, each stopping the script when it fails:
  *  1. Refuse when the worktree has uncommitted changes.
  *  2. Fetch, and refuse unless the branch contains the remote's main.
- *  3. Make the merge commit with `git commit-tree`, without touching the worktree: its parents are
+ *  3. Refuse unless the worktree's stamp records a full gate run that passed on this content
+ *     (`pnpm run verify:status --full`). Step 1 leaves no uncommitted changes, so that content is
+ *     HEAD's tree, which is the tree the merge commit gets. `--no-gate-check` skips this step,
+ *     and is only for the throwaway repositories the script is tested on, which have no gate.
+ *  4. Make the merge commit with `git commit-tree`, without touching the worktree: its parents are
  *     the remote's main and HEAD, and its tree is HEAD's, which is exactly what a `--no-ff` merge
  *     gives once step 2 holds. The message is "Merge branch '<branch>'" with the body from
  *     `--message-file` (the drift decisions, AGENTS.md "Workflow").
- *  4. Push the merge commit to main. Nothing needs undoing when the push fails: the merge commit
+ *  5. Push the merge commit to main. Nothing needs undoing when the push fails: the merge commit
  *     is on no branch. The script fetches again to say why: main moved since the first fetch, or
  *     something else, when it prints git's error output.
- *  5. Remove the worktree with `wt remove`. Every later step runs in the main checkout.
- *  6. Delete the branch once main contains it.
- *  7. Fast-forward the main checkout when it is on main with no uncommitted changes to tracked
+ *  6. Remove the worktree with `wt remove`. Every later step runs in the main checkout.
+ *  7. Delete the branch once main contains it.
+ *  8. Fast-forward the main checkout when it is on main with no uncommitted changes to tracked
  *     files. Untracked files don't block it: git refuses a fast-forward that would overwrite one.
- *  8. Wait for CI on the merge commit, and print the failed jobs' logs when it fails.
+ *  9. Wait for CI on the merge commit, and print the failed jobs' logs when it fails.
  *     `--no-ci` skips this, for a repository with no CI.
  *
- * The merge is on main once step 4 succeeds, so a failure in steps 5 to 7 does not stop the
+ * The merge is on main once step 5 succeeds, so a failure in steps 6 to 8 does not stop the
  * script: it prints the steps left to do by hand, still waits for CI, and exits 1.
  *
- * `--dry-run` runs the checks in steps 1 and 2 (the fetch updates only remote-tracking refs) and
+ * `--dry-run` runs the checks in steps 1 to 3 (the fetch updates only remote-tracking refs) and
  * prints the commands of the other steps without running them.
  *
  * The repository, its main checkout and the remote all come from the current directory, so the
@@ -38,6 +43,7 @@ import { mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { dirname, join, resolve } from 'node:path';
 import { run, sleep, step } from './check-helpers.mjs';
+import { stampStatus } from './verify-stamp.mjs';
 
 const MAIN = 'main';
 /** How long to wait for the CI run on a pushed commit to appear before giving up. */
@@ -74,12 +80,21 @@ if (!gitSucceeds(['merge-base', '--is-ancestor', remoteMain, 'HEAD'])) {
     );
 }
 
+if (options.gateCheck) {
+    step('Checking the full gate passed on this content');
+    const gate = stampStatus(worktree, 'full');
+    if (!gate.matches) {
+        refuse(`run \`pnpm run verify\` in this worktree first: ${gate.message}.`);
+    }
+    console.log(gate.message);
+} else {
+    console.log('Skipping the gate check (--no-gate-check).');
+}
+
 const base = git(['rev-parse', '--verify', `${remoteMain}^{commit}`]);
 const tip = git(['rev-parse', '--verify', 'HEAD^{commit}']);
 const head = git(['log', '-1', '--format=%h %s', tip]);
-console.log(
-    `Landing ${branch} at ${head}. The gate is not run here: it must have passed on this commit.`
-);
+console.log(`Landing ${branch} at ${head}.`);
 
 step(`Making the merge commit of ${branch} onto ${remoteMain}`);
 const landed = mergeCommit();
@@ -362,18 +377,19 @@ function gh(args) {
 }
 
 function parseArguments(args) {
-    const parsed = { dryRun: false, ci: true, messageFile: undefined };
+    const parsed = { dryRun: false, ci: true, gateCheck: true, messageFile: undefined };
     for (let index = 0; index < args.length; index += 1) {
         const arg = args[index];
         if (arg === '--') continue;
         if (arg === '--dry-run') parsed.dryRun = true;
         else if (arg === '--no-ci') parsed.ci = false;
+        else if (arg === '--no-gate-check') parsed.gateCheck = false;
         else if (arg === '--message-file' && args[index + 1] !== undefined) {
             parsed.messageFile = args[index + 1];
             index += 1;
         } else {
             console.error(
-                `Unknown argument: ${arg}\nUsage: land [--message-file <path>] [--no-ci] [--dry-run]`
+                `Unknown argument: ${arg}\nUsage: land [--message-file <path>] [--no-ci] [--dry-run] [--no-gate-check]`
             );
             process.exit(2);
         }
