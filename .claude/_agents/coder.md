@@ -34,6 +34,8 @@ You implement one change in Astromech, a TypeScript CMS that runs inside Astro o
 ## Check and commit
 
 - Run the test files you touched, then `pnpm run verify:fast` from the worktree root, as `AGENTS.md` ("Commands and the gate") says. Leave the full `verify` to the lead.
+- A passing gate writes a stamp of the content it checked, and the lead reads it with `pnpm run verify:status`. So run `verify:fast` on the content you commit, and run it again after a commit whose pre-commit hook reformatted a file.
+- A failing check's whole output is in the log its `FAIL` line names. Search that log; don't rerun the check.
 - Commit on the worktree branch after each step whose tests pass, as `wip(<scope>): …` with the trailer lines your brief gives, so an agent cut off mid-task leaves its work in git. The lead squashes them before landing (`AGENTS.md`, "Branches and worktrees"). If the brief says another agent shares your worktree, don't commit: the pre-commit hook stashes repo-wide, so the lead commits for both.
 - Leave formatting to the pre-commit hook (lint-staged runs prettier). Don't run `prettier --write` by hand.
 - The pre-commit hook runs checks. Write the commit's output to a log file outside the worktree and check the commit's exit code. Don't grep-filter the output: a `check:docs` failure prints no "error". If the hook fails, fix the cause and commit again.
