@@ -13,14 +13,18 @@
  *     the remote's main and HEAD, and its tree is HEAD's, which is exactly what a `--no-ff` merge
  *     gives once step 2 holds. The message is "Merge branch '<branch>'" with the body from
  *     `--message-file` (the drift decisions, AGENTS.md "Workflow").
- *  4. Push the merge commit to main. When main has moved since the fetch the push is refused, and
- *     nothing needs undoing: the merge commit is on no branch.
+ *  4. Push the merge commit to main. Nothing needs undoing when the push fails: the merge commit
+ *     is on no branch. The script fetches again to say why: main moved since the first fetch, or
+ *     something else, when it prints git's error output.
  *  5. Remove the worktree with `wt remove`. Every later step runs in the main checkout.
  *  6. Delete the branch once main contains it.
  *  7. Fast-forward the main checkout when it is on main with no uncommitted changes to tracked
  *     files. Untracked files don't block it: git refuses a fast-forward that would overwrite one.
  *  8. Wait for CI on the merge commit, and print the failed jobs' logs when it fails.
  *     `--no-ci` skips this, for a repository with no CI.
+ *
+ * The merge is on main once step 4 succeeds, so a failure in steps 5 to 7 does not stop the
+ * script: it prints the steps left to do by hand, still waits for CI, and exits 1.
  *
  * `--dry-run` runs the checks in steps 1 and 2 (the fetch updates only remote-tracking refs) and
  * prints the commands of the other steps without running them.
@@ -29,7 +33,7 @@
  * script works on a throwaway repository as well as this one. The remote is the one main tracks,
  * else `origin`.
  */
-import { execFileSync } from 'node:child_process';
+import { execFileSync, spawnSync } from 'node:child_process';
 import { mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { dirname, join, resolve } from 'node:path';
@@ -82,61 +86,44 @@ const landed = mergeCommit();
 console.log(`Made ${landed}.`);
 
 step(`Pushing to ${remoteMain}`);
-try {
-    await change('git', ['push', '--quiet', remote, `${landed}:${MAIN}`]);
-} catch {
-    refuse(`${MAIN} moved: fetch, rebase, rerun the gate if code changed.`);
-}
+pushMergeCommit();
 
-step(`Removing the worktree ${worktree}`);
 // The worktree directory is about to go, and a command can't start in a deleted directory.
 process.chdir(mainCheckout);
-// The branch is kept here and deleted below, only once main is known to contain it.
-await change('wt', [
-    '-C',
-    mainCheckout,
-    'remove',
-    branch,
-    '--no-delete-branch',
-    '--foreground',
-    '--yes',
-]);
-
-step(`Deleting the branch ${branch}`);
-if (
-    options.dryRun ||
-    gitSucceeds(['-C', mainCheckout, 'merge-base', '--is-ancestor', branch, remoteMain])
-) {
-    await change('git', ['-C', mainCheckout, 'branch', '--quiet', '-D', branch]);
-} else {
-    console.log(`Kept ${branch}: ${remoteMain} does not contain it.`);
+// Each step with the command that finishes it by hand when it, or a step before it, fails.
+const cleanupSteps = [
+    {
+        name: 'removing the worktree',
+        run: removeWorktree,
+        byHand: `wt -C ${mainCheckout} remove ${branch} --no-delete-branch --foreground --yes`,
+    },
+    {
+        name: 'deleting the branch',
+        run: deleteBranch,
+        byHand: `git -C ${mainCheckout} branch -D ${branch}`,
+    },
+    {
+        name: 'fast-forwarding the main checkout',
+        run: fastForwardMainCheckout,
+        byHand: `git -C ${mainCheckout} merge --ff-only ${remoteMain}`,
+    },
+];
+let cleanupFailed = false;
+for (const [index, cleanupStep] of cleanupSteps.entries()) {
+    try {
+        await cleanupStep.run();
+    } catch (error) {
+        cleanupFailed = true;
+        console.error(
+            `\nLanded ${landed} on ${MAIN}; cleanup failed at ${cleanupStep.name}: ${error.message}`
+        );
+        console.error('Fix the cause, then finish by hand:');
+        for (const { byHand } of cleanupSteps.slice(index)) console.error(`  ${byHand}`);
+        break;
+    }
 }
 
-step(`Fast-forwarding the main checkout ${mainCheckout}`);
-const mainBranch = gitOrNull(['-C', mainCheckout, 'symbolic-ref', '--short', 'HEAD']);
-const mainChanges = git([
-    '-C',
-    mainCheckout,
-    'status',
-    '--porcelain',
-    '--untracked-files=no',
-]);
-if (mainBranch !== MAIN) {
-    console.log(`Left it: it is on ${mainBranch ?? 'a detached HEAD'}, not ${MAIN}.`);
-} else if (mainChanges !== '') {
-    console.log(`Left it: it has uncommitted changes:\n${mainChanges}`);
-} else {
-    await change('git', [
-        '-C',
-        mainCheckout,
-        'merge',
-        '--quiet',
-        '--ff-only',
-        remoteMain,
-    ]);
-}
-
-console.log(`\nLanded ${branch} as ${landed}.`);
+if (!cleanupFailed) console.log(`\nLanded ${branch} as ${landed}.`);
 
 if (options.ci) {
     step(`Waiting for CI on ${landed}`);
@@ -145,6 +132,97 @@ if (options.ci) {
         console.log(
             `  $ gh run list --commit ${landed}, then gh run watch --exit-status <id>`
         );
+}
+if (cleanupFailed) process.exit(1);
+
+/**
+ * Pushes the merge commit to main. When the push fails it fetches again to say why, and exits:
+ * either way the merge commit is on no branch, so nothing needs undoing.
+ */
+function pushMergeCommit() {
+    const args = ['push', '--quiet', remote, `${landed}:${MAIN}`];
+    if (options.dryRun) {
+        console.log(`  $ git ${args.join(' ')}`);
+        return;
+    }
+    // git's error output is held back until the script knows whether main moved.
+    const result = spawnSync('git', args, {
+        encoding: 'utf8',
+        stdio: ['ignore', 'inherit', 'pipe'],
+    });
+    if (result.status === 0) {
+        process.stderr.write(result.stderr);
+        return;
+    }
+    const fetched = gitSucceeds(['fetch', '--quiet', remote]);
+    if (fetched && gitOrNull(['rev-parse', '--verify', remoteMain]) !== base) {
+        refuse(`${MAIN} moved: fetch, rebase, rerun the gate if code changed.`);
+    }
+    process.stderr.write(result.stderr || (result.error?.message ?? ''));
+    refuse(
+        fetched
+            ? `the push to ${remoteMain} failed, though ${MAIN} has not moved. See git's output above.`
+            : `the push to ${remoteMain} failed, and fetching ${remote} to see whether ${MAIN} moved failed too. See git's output above.`
+    );
+}
+
+function removeWorktree() {
+    step(`Removing the worktree ${worktree}`);
+    // The branch is kept here and deleted in the next step, only once main is known to contain it.
+    return change('wt', [
+        '-C',
+        mainCheckout,
+        'remove',
+        branch,
+        '--no-delete-branch',
+        '--foreground',
+        '--yes',
+    ]);
+}
+
+async function deleteBranch() {
+    step(`Deleting the branch ${branch}`);
+    if (
+        options.dryRun ||
+        gitSucceeds([
+            '-C',
+            mainCheckout,
+            'merge-base',
+            '--is-ancestor',
+            branch,
+            remoteMain,
+        ])
+    ) {
+        await change('git', ['-C', mainCheckout, 'branch', '--quiet', '-D', branch]);
+    } else {
+        console.log(`Kept ${branch}: ${remoteMain} does not contain it.`);
+    }
+}
+
+async function fastForwardMainCheckout() {
+    step(`Fast-forwarding the main checkout ${mainCheckout}`);
+    const mainBranch = gitOrNull(['-C', mainCheckout, 'symbolic-ref', '--short', 'HEAD']);
+    const mainChanges = git([
+        '-C',
+        mainCheckout,
+        'status',
+        '--porcelain',
+        '--untracked-files=no',
+    ]);
+    if (mainBranch !== MAIN) {
+        console.log(`Left it: it is on ${mainBranch ?? 'a detached HEAD'}, not ${MAIN}.`);
+    } else if (mainChanges !== '') {
+        console.log(`Left it: it has uncommitted changes:\n${mainChanges}`);
+    } else {
+        await change('git', [
+            '-C',
+            mainCheckout,
+            'merge',
+            '--quiet',
+            '--ff-only',
+            remoteMain,
+        ]);
+    }
 }
 
 /**
