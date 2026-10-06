@@ -22,23 +22,26 @@ it. These gaps are left.
       The startup warning is gone, and the runtime warning for a forwarding
       header without `trustProxy` fires whether or not an address is known.
       `DECISIONS.md` records the rule.
-- [ ] **A client that adds `x-forwarded-for` has no address.** On a Node site
+- [x] **A client that adds `x-forwarded-for` has no address.** On a Node site
       with `allowedDomains` and no `trustProxy`, such a request shares the
-      address-less sign-in count, but the forms plugin's rate limit skips it
-      (`packages/plugins/forms/src/service/forms.ts`) and no block applies to
-      it. Consider counting no-address requests in one shared forms bucket, as
-      Better Auth's limiter does with its `no-trusted-ip` key.
+      address-less sign-in count, and the forms plugin's rate limit counts it
+      too: every HTTP API request with no trusted address carries the shared
+      `ctx.rateLimitKey` `no-trusted-ip`, as Better Auth's limiter does, and
+      the forms plugin counts by that key
+      (`packages/plugins/forms/src/service/forms.ts`). A block still cannot
+      apply to such a request: the block list matches an address, and the
+      request has none. `DECISIONS.md` records the rule.
 - [ ] **The install guide job turns main red on an upstream release.** The
       `install` job in `.github/workflows/ci.yml` runs the guide's unpinned
       install on every push, so a new Astro release can fail a push that changed
       nothing related (Astro 7.3.6 did). Pin the push run to known versions,
       and keep a scheduled run against the newest releases to catch the next
       change.
-- [ ] **Code that reads `url.origin` trusts whatever Astro built.** The media
+- [x] **Code that reads `url.origin` trusts whatever Astro built.** The media
       route passes `url.origin` to `handleMediaRequest`
       (`packages/astromech/src/transport/http/app.ts`), which builds the
-      `originUrl` an image driver fetches. Behind a proxy that passes neither
-      `Host` nor `X-Forwarded-Host`, or on a Node site without
-      `allowedDomains`, that origin is `http://localhost:<port>`. Only the
-      Cloudflare Images driver reads it today, and Workers are not affected.
-      Decide whether such code should read a configured origin instead.
+      `originUrl` an image driver fetches. Decided with no change: its only
+      reader is the Cloudflare Images driver, whose `cf: { image }` fetch works
+      only on Workers, where Cloudflare routes by `Host`, so `url.origin` is
+      the site's own host. Revisit if a driver that fetches `originUrl` runs on
+      Node.
