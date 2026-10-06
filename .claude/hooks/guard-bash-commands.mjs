@@ -9,16 +9,17 @@
  * merge` and the `wt step` commands that commit, squash, rebase or push are refused.
  *
  * It splits the command into simple commands (honouring quotes, dropping heredoc bodies and
- * comments), follows `cd`, `git -C` and `wt -C`, and decides each call by the directory it runs
- * in. The worktree directory is the main checkout's sibling `<name>-worktrees`.
+ * comments), follows `cd`, `git -C`, `wt -C`, `env -C` and `sudo -D`, and decides each call by
+ * the directory it runs in. The worktree directory is the main checkout's sibling
+ * `<name>-worktrees`.
  *
  * The scratchpad is any session's scratchpad directory, which Claude Code creates at
  * `<tmp>/claude-<uid>/<project>/<session>/scratchpad`, where `<tmp>` is `$CLAUDE_CODE_TMPDIR`,
  * else `/tmp` (`/private/tmp` on macOS). The hook compares real paths and needs the `scratchpad`
  * segment, so `<tmp>/claude-<uid>` itself and a session's other directories (its `tasks` output)
  * do not count. Agents build throwaway repositories there (bare remotes and clones to test
- * `land.mjs` and Worktrunk), so destroying their work loses nothing. A force push still asks,
- * since a scratch clone's remote can be a real one.
+ * `land.mjs` and Worktrunk), so destroying their work loses nothing. A push that rewrites or
+ * deletes remote refs still asks, since a scratch clone's remote can be a real one.
  *
  * A function body (`name() { …; }`, `function name { …; }`) is judged where it is defined, in a
  * directory the hook treats as unknown, since the function can run anywhere. A function whose body
@@ -28,20 +29,35 @@
  * | ----------------------------------------------------------- | ------------ | ---------- | --------- |
  * | `reset --hard/--merge/--keep`, `clean -f`, `checkout -f`,   | silent       | silent     | ask       |
  * | `checkout .`, `checkout [<ref>] -- <paths>`, `restore`      |              |            |           |
- * | (working tree)                                              |              |            |           |
+ * | (working tree), `switch -f/--force/--discard-changes`       |              |            |           |
+ * | `checkout` without `--` and with paths: two or more         | silent       | silent     | ask       |
+ * | operands, or one that `rev-parse` does not resolve to a     |              |            |           |
+ * | commit (or cannot check)                                    |              |            |           |
  * | `worktree remove --force <path>` (judged by `<path>`)       | silent       | silent     | ask       |
  * | `branch -D <names>`: every name in `origin/main` or `main`  | silent       | silent     | silent    |
  * | `branch -D <names>`: any other name                         | ask          | silent     | ask       |
- * | `push --force`, `-f`, `--force-with-lease`, `+<ref>`        | ask          | ask        | ask       |
+ * | `push --force`, `-f`, `--force-with-lease`, `+<ref>`;       | ask          | ask        | ask       |
+ * | `push --delete`, `-d`, `:<ref>`, `--prune`, `--mirror`      |              |            |           |
  * | `stash drop`, `stash clear` (the stash is repo-wide)        | ask          | silent     | ask       |
  * | `stash`, `stash push`, `stash save`                         | deny         | silent     | ask       |
  * | `pkill`, `killall`                                          | deny         | deny       | deny      |
+ * | a shell reading its script from stdin (`bash <<'EOF'`,      | silent       | silent     | ask       |
+ * | `… \| sh`, `sh -s`: no `-c` and no script file)            |              |            |           |
+ * | `wt switch -x/--execute <program>`                          | silent       | silent     | ask       |
+ * | `wt step for-each` (runs in every worktree, main included)  | ask          | silent     | ask       |
  * | `wt merge`; `wt step commit`, `squash`, `push`, `rebase`,   | deny         | deny       | deny      |
  * | `promote`, `relocate`, `prune`                              |              |            |           |
  * | `wt remove --force` (judged by the worktree it removes)     | silent       | silent     | ask       |
  * | `wt remove -D` (deletes unmerged branches)                  | ask          | silent     | ask       |
  * | `wt switch --clobber`, `wt config state clear`              | ask          | silent     | ask       |
  * | a command it cannot parse                                   | ask          | ask        | ask       |
+ *
+ * `bash -c '<script>'`, `eval`, `find -exec` and `wt step tether -- <command>` are judged by the
+ * command they run; `bash <file>` runs a file the hook does not read, and passes silently.
+ *
+ * Known gaps: a `cd` after `&&` counts as done though the test before it can fail
+ * (`test -d x && cd x; git reset --hard`), and `GIT_DIR` and `GIT_WORK_TREE` set as variables are
+ * not followed.
  *
  * A call counts as in the scratchpad when it runs there. A forced worktree removal counts when the
  * worktree it removes is there, or when the hook cannot tell which worktree and the call runs there.
@@ -56,17 +72,24 @@ import { basename, dirname, isAbsolute, join, resolve, sep } from 'node:path';
 
 // Commands that mention none of these words cannot match a rule, so they skip the parse.
 const TRIGGER = /git|pkill|killall|\bwt\b/;
+// A shell can read a script the hook never sees. A command that mentions a shell but none of the
+// words above is still parsed, but one the parser rejects passes silently: the parser misses some
+// shell syntax (`case`), and asking for every such command would prompt often.
+const SHELL_TRIGGER = /\b(?:ba|z|da)?sh\b/;
 
 function main() {
     const input = readInput();
     const command = input?.tool_input?.command;
-    if (typeof command !== 'string' || !TRIGGER.test(command)) return;
+    if (typeof command !== 'string') return;
+    const guarded = TRIGGER.test(command);
+    if (!guarded && !SHELL_TRIGGER.test(command)) return;
 
     let findings;
     try {
         findings = [];
         collectFindings(parseScript(command), input.cwd ?? process.cwd(), findings);
     } catch (error) {
+        if (!guarded) return;
         const detail = error instanceof ParseError ? error.message : String(error);
         respond('ask', [
             `The Bash hook could not parse this command (${detail}), so it asks before running it.`,
@@ -120,11 +143,8 @@ function judge(finding, worktrees, inScratchpad) {
                 decision: 'deny',
                 reason: `${quoted} is refused: it matches processes by name, so it can stop another session's server or test run. Stop the process you started by its PID with \`kill <pid>\`.`,
             };
-        case 'force-push':
-            return {
-                decision: 'ask',
-                reason: `${quoted} rewrites history on the remote.`,
-            };
+        case 'remote-change':
+            return { decision: 'ask', reason: `${quoted} ${finding.why}.` };
         case 'refused':
             return { decision: 'deny', reason: `${quoted} is refused: ${finding.why}.` };
     }
@@ -154,6 +174,18 @@ function judge(finding, worktrees, inScratchpad) {
             return {
                 decision: 'ask',
                 reason: `${quoted} can destroy uncommitted work, and it runs ${where(finding.directory, worktrees())}.`,
+            };
+        case 'hidden-command':
+            if (finding.everyWorktree) {
+                return {
+                    decision: 'ask',
+                    reason: `${quoted} runs a command the hook cannot judge in every worktree of the repository, including the main checkout.`,
+                };
+            }
+            if (isInside(finding.directory, worktrees())) return undefined;
+            return {
+                decision: 'ask',
+                reason: `${quoted} ${finding.why}, and it runs ${where(finding.directory, worktrees())}.`,
             };
         case 'worktree-remove':
             return {
@@ -340,7 +372,7 @@ const ASSIGNMENT = /^[A-Za-z_][A-Za-z0-9_]*=/;
 
 // Commands that run the command after them, with the options of each that take a value.
 const WRAPPERS = new Map([
-    ['env', new Set(['-u', '--unset', '-S', '--split-string'])],
+    ['env', new Set(['-u', '--unset', '-S', '--split-string', '-C', '--chdir'])],
     ['command', new Set()],
     ['builtin', new Set()],
     ['exec', new Set(['-a'])],
@@ -348,7 +380,7 @@ const WRAPPERS = new Map([
     ['time', new Set(['-f', '-o'])],
     ['nice', new Set(['-n', '--adjustment'])],
     ['timeout', new Set(['-s', '--signal', '-k', '--kill-after'])],
-    ['sudo', new Set(['-u', '-g', '-h', '-p', '-C', '-D', '-r', '-t', '-U'])],
+    ['sudo', new Set(['-u', '-g', '-h', '-p', '-C', '-D', '--chdir', '-r', '-t', '-U'])],
     [
         'xargs',
         new Set([
@@ -368,16 +400,22 @@ const WRAPPERS = new Map([
     ],
 ]);
 
+// The wrapper options that run the command in another directory.
+const CHANGE_DIRECTORY_OPTIONS = new Map([
+    ['env', ['-C', '--chdir']],
+    ['sudo', ['-D', '--chdir']],
+]);
+
 const SHELLS = new Set(['sh', 'bash', 'zsh', 'dash']);
 
 // Stands for the arguments `xargs` appends, which the hook cannot know.
 const INPUT_ARGUMENTS = { text: '<input>', expanded: true };
 
 /** Inspects one simple command. Returns the new directory after `cd`, else `undefined`. */
-function inspectCommand(words, directory, findings) {
-    const args = unwrap(words);
-    if (args === null || args.length === 0) return undefined;
-    if (args.appendsArguments) args.push(INPUT_ARGUMENTS);
+function inspectCommand(words, shellDirectory, findings) {
+    const unwrapped = unwrap(words, shellDirectory);
+    if (unwrapped === null || unwrapped.args.length === 0) return undefined;
+    const { args, directory } = unwrapped;
     const name = basename(args[0].text);
     const rest = args.slice(1);
 
@@ -391,8 +429,16 @@ function inspectCommand(words, directory, findings) {
         inspectWorktrunk(rest, directory, findings);
     } else if (SHELLS.has(name)) {
         const script = shellScript(rest);
-        if (script !== undefined)
+        if (script === STANDARD_INPUT) {
+            findings.push({
+                kind: 'hidden-command',
+                label: truncate([name, ...rest.map((word) => word.text)].join(' ')),
+                directory,
+                why: 'runs a script from standard input, which the hook cannot read',
+            });
+        } else if (script !== undefined) {
             collectFindings(parseScript(script), directory, findings);
+        }
     } else if (name === 'eval') {
         const script = rest.map((word) => word.text).join(' ');
         collectFindings(parseScript(script), directory, findings);
@@ -404,10 +450,13 @@ function inspectCommand(words, directory, findings) {
 
 /**
  * Drops keywords, assignments and wrapper commands (`env`, `sudo`, `xargs`…) from the front of a
- * command. Returns `null` for a command that runs nothing, such as `command -v`.
+ * command, following `env -C` and `sudo -D`. Returns the command's words, with the input
+ * arguments `xargs` appends, and the directory it runs in; `null` for a command that runs
+ * nothing, such as `command -v`.
  */
-function unwrap(words) {
+function unwrap(words, startDirectory) {
     let rest = words;
+    let directory = startDirectory;
     let appendsArguments = false;
     for (;;) {
         while (
@@ -416,7 +465,7 @@ function unwrap(words) {
         ) {
             rest = rest.slice(1);
         }
-        if (rest.length === 0) return rest;
+        if (rest.length === 0) return { args: rest, directory };
         const name = basename(rest[0].text);
         if (['for', 'case', 'select', 'function', 'esac'].includes(name)) return null;
         const valueOptions = WRAPPERS.get(name);
@@ -429,6 +478,8 @@ function unwrap(words) {
         ) {
             const option = rest[index].text;
             if (name === 'command' && (option === '-v' || option === '-V')) return null;
+            const target = changedDirectory(name, rest[index], rest[index + 1]);
+            if (target !== undefined) directory = resolvePath(target, directory);
             index += option === '--' ? 1 : valueOptions.has(option) ? 2 : 1;
             if (option === '--') break;
         }
@@ -436,22 +487,59 @@ function unwrap(words) {
         if (name === 'xargs') appendsArguments = true;
         rest = rest.slice(index);
     }
-    const result = [...rest];
-    result.appendsArguments = appendsArguments;
-    return result;
+    const args = appendsArguments ? [...rest, INPUT_ARGUMENTS] : [...rest];
+    return { args, directory };
 }
 
-/** The script of `sh -c '<script>'`, or `undefined` when the shell runs a file or stdin. */
-function shellScript(args) {
-    let runsString = false;
-    for (const word of args) {
-        if (word.text.startsWith('-') || word.text.startsWith('+')) {
-            if (/^-[a-zA-Z]*c/.test(word.text)) runsString = true;
-            continue;
+/**
+ * The directory word a wrapper's option moves the command to (`env -C <dir>`, `--chdir=<dir>`),
+ * or `undefined` for any other option. A missing directory is read as an unknown one.
+ */
+function changedDirectory(wrapper, option, next) {
+    for (const name of CHANGE_DIRECTORY_OPTIONS.get(wrapper) ?? []) {
+        if (option.text === name) return next ?? INPUT_ARGUMENTS;
+        const attached = name.startsWith('--') ? `${name}=` : name;
+        if (option.text.startsWith(attached)) {
+            return { ...option, text: option.text.slice(attached.length) };
         }
-        return runsString ? word.text : undefined;
     }
     return undefined;
+}
+
+// Stands for a shell that reads its script from standard input.
+const STANDARD_INPUT = Symbol('standard input');
+
+// Shell options that take their value as the next word.
+const SHELL_VALUE_OPTIONS = new Set(['--rcfile', '--init-file']);
+
+/**
+ * What a shell runs: the script of `sh -c '<script>'`, `STANDARD_INPUT` when it reads its
+ * script from stdin (no `-c` and no script file, or `-s`), or `undefined` when it runs a file.
+ */
+function shellScript(args) {
+    let runsString = false;
+    let readsInput = false;
+    for (let index = 0; index < args.length; index += 1) {
+        const text = args[index].text;
+        if (text === '-' || text === '--') {
+            const operand = args[index + 1];
+            if (runsString) return operand?.text;
+            return readsInput || operand === undefined ? STANDARD_INPUT : undefined;
+        }
+        if (SHELL_VALUE_OPTIONS.has(text)) {
+            index += 1;
+        } else if (/^[-+][a-zA-Z]+$/.test(text)) {
+            const letters = text.slice(1);
+            if (text.startsWith('-') && letters.includes('c')) runsString = true;
+            if (text.startsWith('-') && letters.includes('s')) readsInput = true;
+            // `-o <option>` and `-O <shopt option>` take the next word.
+            index += [...letters].filter((letter) => 'oO'.includes(letter)).length;
+        } else if (!text.startsWith('--')) {
+            if (runsString) return text;
+            return readsInput ? STANDARD_INPUT : undefined;
+        }
+    }
+    return runsString ? undefined : STANDARD_INPUT;
 }
 
 function inspectFindExec(args, directory, findings) {
@@ -551,10 +639,29 @@ function inspectGit(args, startDirectory, findings) {
             const beforeSeparator = separator === -1 ? texts : texts.slice(0, separator);
             const paths = separator === -1 ? [] : texts.slice(separator + 1);
             const forced = shortFlags.has('f') || texts.includes('--force');
-            if (forced || beforeSeparator.includes('.') || paths.length > 0)
+            const fromFile = texts.some((text) =>
+                text.startsWith('--pathspec-from-file')
+            );
+            if (
+                forced ||
+                fromFile ||
+                beforeSeparator.includes('.') ||
+                paths.length > 0 ||
+                checkoutHasPaths(rest.slice(0, beforeSeparator.length), directory)
+            ) {
                 workingTree();
+            }
             return;
         }
+        case 'switch':
+            if (
+                shortFlags.has('f') ||
+                texts.includes('--force') ||
+                texts.includes('--discard-changes')
+            ) {
+                workingTree();
+            }
+            return;
         case 'restore': {
             const staged = shortFlags.has('S') || texts.includes('--staged');
             const worktree = shortFlags.has('W') || texts.includes('--worktree');
@@ -589,6 +696,8 @@ function inspectGit(args, startDirectory, findings) {
             return;
         }
         case 'push': {
+            const remoteChange = (why) =>
+                findings.push({ kind: 'remote-change', label, why });
             const forced =
                 shortFlags.has('f') ||
                 texts.some(
@@ -597,7 +706,20 @@ function inspectGit(args, startDirectory, findings) {
                         text.startsWith('--force-with-lease') ||
                         text.startsWith('+')
                 );
-            if (forced) findings.push({ kind: 'force-push', label });
+            if (forced) remoteChange('rewrites history on the remote');
+            // `:<ref>` deletes the ref; a bare `:` pushes the matching branches.
+            const deletes =
+                shortFlags.has('d') ||
+                texts.some(
+                    (text) =>
+                        text === '--delete' || text === '--prune' || /^:./.test(text)
+                );
+            if (deletes) remoteChange('deletes branches or tags on the remote');
+            if (texts.includes('--mirror')) {
+                remoteChange(
+                    "makes every ref on the remote match the local repository, overwriting the remote's history and deleting its other refs"
+                );
+            }
             return;
         }
         case 'worktree': {
@@ -617,6 +739,38 @@ function inspectGit(args, startDirectory, findings) {
             return;
         }
     }
+}
+
+// Options of `git checkout` that take their value as the next word.
+const CHECKOUT_VALUE_OPTIONS = new Set(['-b', '-B', '--orphan', '--conflict']);
+
+/**
+ * Whether a `git checkout` without `--` names paths: with two or more operands the ones after
+ * the first are paths, and a single operand is a path unless it names a commit. It counts as a
+ * path when git cannot say (an unknown directory, a variable, an error).
+ */
+function checkoutHasPaths(args, directory) {
+    const operands = [];
+    for (let index = 0; index < args.length; index += 1) {
+        const text = args[index].text;
+        if (text === '-') operands.push(args[index]);
+        else if (CHECKOUT_VALUE_OPTIONS.has(text) || /^-[a-zA-Z]+[bB]$/.test(text))
+            index += 1;
+        else if (!text.startsWith('-')) operands.push(args[index]);
+    }
+    if (operands.length >= 2) return true;
+    if (operands.length === 0) return false;
+    const [operand] = operands;
+    if (operand.text === '-') return false;
+    if (operand.expanded || directory === null) return true;
+    return !succeeds([
+        '-C',
+        directory,
+        'rev-parse',
+        '--verify',
+        '--quiet',
+        `${operand.text}^{commit}`,
+    ]);
 }
 
 // Options of `wt` and its subcommands that take their value as the next word.
@@ -647,10 +801,15 @@ function inspectWorktrunk(args, startDirectory, findings) {
     let directory = startDirectory;
     const operands = [];
     const flags = new Set();
+    let trailing = [];
     for (let index = 0; index < args.length; index += 1) {
         const word = args[index];
-        if (word.text === '--') break;
+        if (word.text === '--') {
+            trailing = args.slice(index + 1);
+            break;
+        }
         if (WT_VALUE_OPTIONS.has(word.text)) {
+            flags.add(word.text);
             if (word.text === '-C') {
                 const target = args[index + 1];
                 directory = target === undefined ? null : resolvePath(target, directory);
@@ -679,7 +838,19 @@ function inspectWorktrunk(args, startDirectory, findings) {
             label,
             why: 'it commits, rewrites or pushes history, or deletes worktrees and branches. Commit with git, and land with `pnpm run land`',
         });
-    } else if (subcommand === 'remove') {
+    } else if (subcommand === 'step' && rest[0] === 'for-each') {
+        findings.push({ kind: 'hidden-command', label, directory, everyWorktree: true });
+    } else if (subcommand === 'step' && rest[0] === 'tether') {
+        inspectCommand(trailing, directory, findings);
+    } else if (subcommand === 'switch' && (flags.has('-x') || flags.has('--execute'))) {
+        findings.push({
+            kind: 'hidden-command',
+            label,
+            directory,
+            why: 'runs a program in the worktree it switches to, which the hook does not judge',
+        });
+    }
+    if (subcommand === 'remove') {
         if (flags.has('-D') || flags.has('--force-delete')) {
             findings.push({
                 kind: 'ask',
