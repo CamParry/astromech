@@ -9,7 +9,9 @@
  * - `<check>.log` holds a check's whole output from the latest run, stdout and
  *   stderr as the check printed them. Each run removes the previous run's logs.
  * - `stamp.json` is written when a run passes: the mode, the git tree id of
- *   the working tree, HEAD, the time and the result. A failed run removes it.
+ *   the working tree, HEAD, the time and the result. A passing run keeps a
+ *   stamp of the same tree whose mode already covers its own, so a fast run
+ *   after a full one leaves the full stamp. A failed run removes it.
  *
  * The tree id is the one a commit of the working tree would point at: tracked
  * files as they are on disk, plus untracked files git does not ignore. So the
@@ -98,8 +100,20 @@ export function treeState(repoRoot) {
     }
 }
 
-/** Records a passing run of `mode` over `state`. */
+/**
+ * Records a passing run of `mode` over `state`, unless the stamp already
+ * records a run of the same tree in a wider mode that covers `mode`. Returns
+ * the stamp left in place.
+ */
 export function writeStamp(directory, mode, state) {
+    const existing = readStamp(directory);
+    if (
+        existing?.tree === state.tree &&
+        existing.mode !== mode &&
+        COVERED_MODES[existing.mode]?.includes(mode)
+    ) {
+        return existing;
+    }
     const stamp = {
         mode,
         tree: state.tree,
@@ -108,6 +122,7 @@ export function writeStamp(directory, mode, state) {
         result: 'passed',
     };
     writeFileSync(stampPath(directory), `${JSON.stringify(stamp, null, 4)}\n`);
+    return stamp;
 }
 
 /** Removes the stamp, if there is one. */

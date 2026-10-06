@@ -382,9 +382,11 @@ if (interrupted) {
     console.log(passed[mode]);
     const endingTree = treeState(repoRoot);
     if (endingTree.tree === startingTree.tree) {
-        writeStamp(verifyDirectory, mode, startingTree);
+        const stamp = writeStamp(verifyDirectory, mode, startingTree);
+        const kept =
+            stamp.mode === mode ? '' : `; kept its ${stamp.mode} run on the same tree`;
         console.log(
-            `Recorded in ${stampPath(verifyDirectory)} (pnpm run verify:status).`
+            `Recorded in ${stampPath(verifyDirectory)}${kept} (pnpm run verify:status).`
         );
     } else {
         console.log(
