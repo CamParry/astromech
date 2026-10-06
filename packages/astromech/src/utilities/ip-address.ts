@@ -6,6 +6,13 @@
 import { isIP } from 'node:net';
 
 /**
+ * The rate-limit key every HTTP API request with no trusted address shares, so
+ * a caller cannot escape a limit by hiding its address. Better Auth's sign-in
+ * limiter uses the same value.
+ */
+export const NO_TRUSTED_IP_KEY = 'no-trusted-ip';
+
+/**
  * The key a per-client rate limit counts `address` under, grouped as Better
  * Auth groups sign-in attempts: an IPv6 address by its /64 network
  * (`2001:db8:1:2::/64`), since one client is often given a whole /64, and an

@@ -6,7 +6,7 @@ import type { FormsAfterSubmitPayload, FormsBeforeSubmitPayload } from '../hooks
 import type { SpamProvider } from '../spam/types';
 import type { FormsOptions, SubmissionMeta } from '../types';
 import type { DataField } from 'astromech';
-import { CAPTCHA_ACTIONS, defineServiceMethod, rateLimitKey, z } from 'astromech';
+import { CAPTCHA_ACTIONS, defineServiceMethod, z } from 'astromech';
 import { safeParseFields } from 'astromech/fields';
 import { compileFormFields } from '../fields/compile';
 import { AFTER_SUBMIT, BEFORE_SUBMIT } from '../hooks/events';
@@ -144,11 +144,13 @@ export function createFormsService(
 
                 const form = await loadForm(ctx, slug);
                 if (form === null) return formError(NOT_ACCEPTING);
-                // Counted per form found, so an unknown slug writes no count. A
-                // caller with no connecting address (CLI, MCP, in-process) goes
-                // unmetered, and `meta.ip` is never the key: a client sets it.
-                if (rateLimit !== false && clientAddress !== undefined) {
-                    const key = { address: rateLimitKey(clientAddress), formId: form.id };
+                // Counted per form found, so an unknown slug writes no count.
+                // An HTTP request with no trusted address counts under the key
+                // all such requests share; a trusted caller (CLI, MCP, in-process
+                // code) has no key and goes unmetered. `meta.ip` is never the
+                // key: a client sets it.
+                if (rateLimit !== false && ctx.rateLimitKey !== undefined) {
+                    const key = { address: ctx.rateLimitKey, formId: form.id };
                     const allowed = await consumeRateLimit(ctx.db, key, rateLimit);
                     if (!allowed) return formError(TOO_MANY);
                 }

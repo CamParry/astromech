@@ -1418,7 +1418,10 @@ left undescribed and the server logs a warning.
 plugin's own layer over it:
 
 - **The app context.** `db` (the query handle), `user` and `role` (who is
-  calling, both `null` outside a request), `clientAddress`, `noStore()` (call
+  calling, both `null` outside a request), `clientAddress`, `rateLimitKey`
+  (the key to count this caller under: an address's key over HTTP, the shared
+  `NO_TRUSTED_IP_KEY` for an HTTP request with no trusted address, and absent
+  for a trusted caller such as the CLI, MCP or in-process code), `noStore()` (call
   it from a read whose answer belongs to this caller alone, so no cache stores
   the page that made it; see
   [../deployment/caching.md](../deployment/caching.md)), `config`

@@ -52,6 +52,7 @@ const APP_CONTEXT_KEYS = [
     'noStore',
     'notifications',
     'notify',
+    'rateLimitKey',
     'role',
     'runHook',
     'security',
@@ -93,6 +94,33 @@ describe('currentAppContext', () => {
         ]);
 
         expect(first).toBe(second);
+    });
+
+    it('carries the rate-limit key the request scope holds', async () => {
+        const app = await runInRequestScope(
+            {
+                request: new Request('http://localhost/'),
+                user: null,
+                clientAddress: '203.0.113.4',
+                rateLimitKey: '203.0.113.4',
+            },
+            currentAppContext
+        );
+
+        expect(app.rateLimitKey).toBe('203.0.113.4');
+    });
+
+    it('has no rate-limit key for a request scope that read no address, as an Astro page’s', async () => {
+        const app = await runInRequestScope(
+            { request: new Request('http://localhost/'), user: null },
+            currentAppContext
+        );
+
+        expect(app.rateLimitKey).toBeUndefined();
+    });
+
+    it('has no rate-limit key outside a request', async () => {
+        expect((await currentAppContext()).rateLimitKey).toBeUndefined();
     });
 });
 
@@ -203,6 +231,12 @@ describe('createPluginContext', () => {
 });
 
 describe('createAppContext', () => {
+    it('has no rate-limit key for a trusted caller', () => {
+        expect(
+            createAppContext({ user: null, role: editor }).rateLimitKey
+        ).toBeUndefined();
+    });
+
     it('answers the user and role it was built for', () => {
         const user = makeUser({ id: 'user-1' });
         const app: AppContext = createAppContext({ user, role: editor });

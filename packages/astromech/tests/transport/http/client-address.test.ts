@@ -1,16 +1,28 @@
 /**
  * The connecting address the HTTP transport puts on a plugin context: trusted
- * infrastructure sources only, and absent rather than spoofable.
+ * infrastructure sources only, and absent rather than spoofable. And the
+ * rate-limit key built from it, which is shared when the address is absent.
  */
 
+import type { RequestScope } from '@/request-scope/request-scope';
 import type { ServerBindings } from '@/transport/http/client-address';
-import type { TrustProxy } from '@/types/index';
+import type { AstromechConfig, TrustProxy } from '@/types/index';
 import { expectConsole } from '@tests/console';
-import { resetRuntime, resolveTestConfig } from '@tests/harness';
+import {
+    createTestDb,
+    makeTestConfig,
+    resetRuntime,
+    resolveTestConfig,
+    setupTestConfig,
+} from '@tests/harness';
 import { Hono } from 'hono';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { currentAppContext } from '@/app-context/app-context';
 import { setConfig } from '@/config/registry';
+import { runInRequestScope } from '@/request-scope/request-scope';
+import { createHttpApp } from '@/transport/http/app';
 import { getClientAddress } from '@/transport/http/client-address';
+import { NO_TRUSTED_IP_KEY } from '@/utilities/ip-address';
 
 const PROXY_WARNING = 'set `security.trustProxy`';
 
@@ -235,5 +247,69 @@ describe('getClientAddress', () => {
         await addressFor({ 'x-forwarded-for': 'garbage' });
 
         expect(error).toHaveBeenCalledTimes(1);
+    });
+});
+
+describe('the rate-limit key on an API request’s context', () => {
+    beforeEach(async () => {
+        await createTestDb();
+    });
+
+    /**
+     * The `ctx.rateLimitKey` the composed HTTP app hands a handler for a request
+     * with `headers`, from a peer at `remoteAddress`, under `security`.
+     */
+    async function keyFor(
+        headers: Record<string, string>,
+        remoteAddress?: string,
+        security: AstromechConfig['security'] = {}
+    ): Promise<string> {
+        const app = createHttpApp(setupTestConfig({ ...makeTestConfig(), security }));
+        app.get('/probe', async (c) =>
+            c.text((await currentAppContext()).rateLimitKey ?? 'absent')
+        );
+        const bindings: ServerBindings =
+            remoteAddress === undefined ? {} : { remoteAddress };
+        const response = await app.request('/probe', { headers }, bindings);
+        return response.text();
+    }
+
+    it('is the trusted address', async () => {
+        expect(await keyFor({}, '203.0.113.4')).toBe('203.0.113.4');
+    });
+
+    it('groups an IPv6 address by its /64', async () => {
+        expect(await keyFor({}, '2001:db8:1:2::7')).toBe('2001:db8:1:2::/64');
+    });
+
+    it('is the shared key when the request has no trusted address', async () => {
+        expect(await keyFor({})).toBe(NO_TRUSTED_IP_KEY);
+        expect(NO_TRUSTED_IP_KEY).toBe('no-trusted-ip');
+    });
+
+    it('is the shared key when the client sends x-forwarded-for and no proxy is trusted', async () => {
+        expectConsole('error', PROXY_WARNING);
+
+        expect(await keyFor({ 'x-forwarded-for': '198.51.100.9' })).toBe(
+            NO_TRUSTED_IP_KEY
+        );
+    });
+
+    it('is the shared key when trustProxy is set and the header is missing', async () => {
+        expect(await keyFor({}, '10.0.0.1', { trustProxy: true })).toBe(
+            NO_TRUSTED_IP_KEY
+        );
+    });
+
+    it('goes on the request scope the Astro middleware opened', async () => {
+        const app = createHttpApp(setupTestConfig());
+        app.get('/probe', (c) => c.text('ok'));
+        const request = new Request('http://localhost/probe');
+        const scope: RequestScope = { request };
+        const bindings: ServerBindings = { remoteAddress: '2001:db8:1:2::7' };
+
+        await runInRequestScope(scope, () => app.request(request, undefined, bindings));
+
+        expect(scope.rateLimitKey).toBe('2001:db8:1:2::/64');
     });
 });

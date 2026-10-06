@@ -19,8 +19,9 @@ export type FormsOptions = {
     storeMeta?: boolean;
     /**
      * Submissions allowed per connecting address and form per window, counted
-     * in the database. Default 20 a minute; `false` turns it off. A caller with
-     * no connecting address (CLI, MCP, in-process) is not limited.
+     * in the database. Default 20 a minute; `false` turns it off. Over HTTP,
+     * every request with no trusted address shares one count per form. A
+     * trusted caller (CLI, MCP, in-process code) is not limited.
      */
     rateLimit?: { limit: number; windowMs: number } | false;
 };

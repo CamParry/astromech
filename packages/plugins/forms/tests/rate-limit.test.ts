@@ -1,13 +1,15 @@
 /**
  * `forms.submit` rate limiting, driven over HTTP with the connecting address in
  * `x-forwarded-for` (the site trusts one proxy). The count is kept in the
- * plugin's own table, per address and form, so every app instance shares it.
+ * plugin's own table, per rate-limit key and form, so every app instance
+ * shares it. Requests with no trusted address share one key.
  */
 
 import type { FormsOptions, SubmitResult } from '../src/index';
 import type { PluginTestApp } from '@tests/plugin-app';
 import { makeTestConfig, resetRuntime, setupTestConfig } from '@tests/harness';
 import { createPluginTestApp } from '@tests/plugin-app';
+import { NO_TRUSTED_IP_KEY } from 'astromech';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { getDatabaseDriverOrThrow } from '@/database/driver-registry';
 import { createHttpApp } from '@/transport/http/app';
@@ -67,7 +69,7 @@ async function submissionCount(): Promise<number> {
     return createSubmissionsRepository(app.db).count();
 }
 
-/** The addresses the rate limit table holds a row for. */
+/** The rate-limit keys the rate limit table holds a row for. */
 async function countedAddresses(): Promise<string[]> {
     const rows = await app.db
         .selectFrom('pluginFormsRateLimits')
@@ -77,7 +79,7 @@ async function countedAddresses(): Promise<string[]> {
     return rows.map((row) => row.address);
 }
 
-/** Each stored count, with the address it is kept under. */
+/** Each stored count, with the rate-limit key it is kept under. */
 async function storedCounts(): Promise<{ address: string; count: number }[]> {
     return app.db
         .selectFrom('pluginFormsRateLimits')
@@ -207,10 +209,41 @@ describe('forms.submit rate limit', () => {
         expect(await countedAddresses()).toEqual(['1.1.1.1']);
     });
 
-    it('never limits a caller with no connecting address', async () => {
+    it('counts every HTTP submission with no trusted address in one shared count', async () => {
+        await setup({ rateLimit: { limit: 2, windowMs: 60_000 } });
+
+        // The site trusts one proxy, so a request without `x-forwarded-for`
+        // has no trusted address.
+        expect((await submit()).ok).toBe(true);
+        expect((await submit()).ok).toBe(true);
+        expect(await submit()).toEqual({ ok: false, errors: { _form: [TOO_MANY] } });
+        expect(await storedCounts()).toEqual([{ address: NO_TRUSTED_IP_KEY, count: 2 }]);
+    });
+
+    it('counts addressed callers apart from the shared count', async () => {
         await setup({ rateLimit: { limit: 1, windowMs: 60_000 } });
 
-        for (let i = 0; i < 5; i += 1) expect((await submit()).ok).toBe(true);
+        expect((await submit()).ok).toBe(true);
+        expect((await submit()).ok).toBe(false);
+        expect((await submit('1.1.1.1')).ok).toBe(true);
+        expect((await submit('2.2.2.2')).ok).toBe(true);
+        expect(await countedAddresses()).toEqual([
+            '1.1.1.1',
+            '2.2.2.2',
+            NO_TRUSTED_IP_KEY,
+        ]);
+    });
+
+    it('never limits a trusted caller submitting in process', async () => {
+        await setup({ rateLimit: { limit: 1, windowMs: 60_000 } });
+
+        for (let i = 0; i < 5; i += 1) {
+            const result = await app.service.submit({
+                slug: 'contact',
+                data: { name: 'Ada' },
+            });
+            expect(result.ok).toBe(true);
+        }
         expect(await submissionCount()).toBe(5);
         expect(await countedAddresses()).toEqual([]);
     });

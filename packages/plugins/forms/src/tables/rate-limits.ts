@@ -1,6 +1,9 @@
 /**
- * The submission rate limit's counts, one row per connecting address and form.
- * Times are epoch milliseconds, so the window arithmetic stays in SQL.
+ * The submission rate limit's counts, one row per rate-limit key and form.
+ * `address` holds the caller's `ctx.rateLimitKey`: an address's key
+ * (`rateLimitKey`), or `NO_TRUSTED_IP_KEY`, which every HTTP request with no
+ * trusted address shares. Times are epoch milliseconds, so the window
+ * arithmetic stays in SQL.
  */
 
 import { definePluginTable } from 'astromech';

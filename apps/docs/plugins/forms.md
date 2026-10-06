@@ -41,14 +41,16 @@ sign-in limits group them: every IPv6 address in one `/64` network shares a
 count, and an IPv4-mapped IPv6 address (`::ffff:203.0.113.7`) counts as its IPv4
 address.
 
-A caller with no connecting address is not limited at all. That covers the CLI,
-MCP and your own server-side code calling `submit` in process, and it also
+Over HTTP, every request with no trusted address shares one count per form,
+kept under the key `no-trusted-ip` (`NO_TRUSTED_IP_KEY` from `astromech`). That
 covers a request carrying `x-forwarded-for` to a Node site where Astro's
-`security.allowedDomains` is set and `trustProxy` is not. There is no shared
-bucket for such callers: a counter exists only for an address. Behind a proxy
-without `trustProxy`, every visitor shares the proxy's address and its one
-count, or, when `allowedDomains` is set and the proxy sends `x-forwarded-for`,
-has no address and no limit.
+`security.allowedDomains` is set and `trustProxy` is not, and a request without
+the `x-forwarded-for` entry `trustProxy` expects. A client that hides its address
+joins that shared count rather than escaping the limit. Trusted server-side
+callers are not limited: the CLI, MCP and your own code calling `submit` in
+process, including from an Astro page. Behind a proxy without `trustProxy`,
+visitors share one count either way: the proxy's address, or the shared key when
+`allowedDomains` is set and the proxy sends `x-forwarded-for`.
 
 The count is kept in the database, in the plugin's `plugin_forms_rate_limits`
 table, so several instances (several Workers, or several Node processes behind a

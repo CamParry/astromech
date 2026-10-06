@@ -90,7 +90,8 @@ function filter(params: SubmissionFilter): Where<typeof submissionsTable> {
 
 /**
  * The submission rate limit's counts over `rateLimitsTable`, one row per
- * connecting address and form.
+ * rate-limit key and form. The `address` column holds the key: an address's
+ * key, or the key every HTTP request with no trusted address shares.
  */
 export function createRateLimitsRepository(db: PluginContext['db']) {
     const repository = createRepository(rateLimitsTable, db);
