@@ -20,7 +20,9 @@
  * HEAD is kept only to name the commit in messages.
  *
  * The stamp is what a lead reads instead of rerunning a gate a sub-agent ran:
- * the script writes it, so it does not rest on the agent's report.
+ * the script writes it, so it does not rest on the agent's report. It guards
+ * against a mistaken report, not a forged one: nothing stops a hand-written
+ * file.
  * `pnpm run verify:status` (`scripts/verify-status.mjs`) compares it with the
  * worktree. A full run covers the fast and runtime modes, since it runs every
  * check they run; neither of those covers another mode.
