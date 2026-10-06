@@ -70,9 +70,10 @@ add that hostname too. Astro's
 [`allowedDomains` reference](https://docs.astro.build/en/reference/configuration-reference/#securityalloweddomains)
 covers wildcards, ports and protocols.
 
-With `allowedDomains` set, Astro may take a request's address from a
-client-sent `x-forwarded-for` header, so Astromech does not use that address
-and warns at startup.
+With `allowedDomains` set, Astro takes a request's address from its
+`x-forwarded-for` header when it has one, which a client can make up. Astromech
+counts the connection's address for a request without the header, and no
+address for a request with it.
 [configuration/trust-proxy.md](configuration/trust-proxy.md) explains what this
 means for rate limits, and how a site behind a proxy fixes it.
 

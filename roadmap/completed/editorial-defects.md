@@ -70,7 +70,7 @@ became live.
   content locale, with `prefixDefaultLocale: true`, with `routing: 'manual'`,
   and with `domains`. The Astro integration already reads Astro's config in
   `astro:config:done` (`packages/astromech/src/integrations/astro/integration.ts`,
-  the `security.allowedDomains` warning); a warning there when Astro's
+  where it reads `security.allowedDomains`); a warning there when Astro's
   `i18n.defaultLocale` differs from Astromech's default content locale, or
   `prefixDefaultLocale` is true, would catch the setups this rule gets wrong.
 - **Turning `statuses` off on an existing type makes its unpublished rows

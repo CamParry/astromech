@@ -43,11 +43,12 @@ address.
 
 A caller with no connecting address is not limited at all. That covers the CLI,
 MCP and your own server-side code calling `submit` in process, and it also
-covers a Node site where Astro's `security.allowedDomains` is set and
-`trustProxy` is not, which Astromech warns about at startup. There is no shared
+covers a request carrying `x-forwarded-for` to a Node site where Astro's
+`security.allowedDomains` is set and `trustProxy` is not. There is no shared
 bucket for such callers: a counter exists only for an address. Behind a proxy
 without `trustProxy`, every visitor shares the proxy's address and its one
-count.
+count, or, when `allowedDomains` is set and the proxy sends `x-forwarded-for`,
+has no address and no limit.
 
 The count is kept in the database, in the plugin's `plugin_forms_rate_limits`
 table, so several instances (several Workers, or several Node processes behind a
