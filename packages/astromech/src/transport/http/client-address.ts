@@ -46,8 +46,9 @@ export function resolveClientAddress(
 
     const trustProxy: TrustProxy = getConfig().security?.trustProxy ?? false;
     if (trustProxy === false) {
-        if (workerd || remoteAddress === undefined) return undefined;
+        if (workerd) return undefined;
         warnOnForwardedHeader(request.headers);
+        if (remoteAddress === undefined) return undefined;
         return parseAddress(remoteAddress);
     }
 
@@ -58,9 +59,9 @@ export function resolveClientAddress(
 }
 
 /**
- * Log, once per process, that a request carrying a forwarding header was
- * counted by its connection: behind a proxy that is the proxy's address, so
- * every client would share one count.
+ * Log, once per process, that a request carried a forwarding header which
+ * Astromech does not read: behind a proxy, every client shares one count,
+ * keyed on the proxy's address or on no address.
  */
 function warnOnForwardedHeader(headers: Headers): void {
     const forwarded = FORWARDING_HEADERS.find((name) => headers.has(name));
@@ -70,7 +71,7 @@ function warnOnForwardedHeader(headers: Headers): void {
     if (state.forwardedHeaderLogged === true) return;
     state.forwardedHeaderLogged = true;
     log.warn(
-        `A request carried \`${forwarded}\`, but \`security.trustProxy\` is not set, so Astromech counts the address of the connection. Behind a proxy that is the proxy's address, and every client shares one count. If a proxy serves this site, set \`security.trustProxy\` in \`astromech.config.ts\` to the number of proxies in front of the server. This is logged once.`
+        `A request carried \`${forwarded}\`, but \`security.trustProxy\` is not set, so Astromech does not read the client's address from it. Behind a proxy, every client then shares one count. If a proxy serves this site, set \`security.trustProxy\` in \`astromech.config.ts\` to the number of proxies in front of the server. This is logged once.`
     );
 }
 

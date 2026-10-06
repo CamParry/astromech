@@ -70,15 +70,20 @@ describe('getClientAddress', () => {
     });
 
     it('ignores cf-connecting-ip off Workers', async () => {
+        expectConsole('error', PROXY_WARNING);
+
         expect(await addressFor({ 'cf-connecting-ip': '203.0.113.4' })).toBe('absent');
     });
 
     it('ignores x-forwarded-for by default', async () => {
+        expectConsole('error', PROXY_WARNING);
+
         expect(await addressFor({ 'x-forwarded-for': '203.0.113.4' })).toBe('absent');
     });
 
     it('ignores a spoofed x-forwarded-for when trustProxy is false', async () => {
         trustProxy(false);
+        expectConsole('error', PROXY_WARNING);
 
         expect(await addressFor({ 'x-forwarded-for': '203.0.113.4, 10.0.0.1' })).toBe(
             'absent'
@@ -171,6 +176,16 @@ describe('getClientAddress', () => {
             expect(error.mock.calls[0]?.[0]).toContain(PROXY_WARNING);
         }
     );
+
+    it('tells the site to set trustProxy when a request carrying x-forwarded-for has no remote address', async () => {
+        const error = vi.spyOn(console, 'error').mockImplementation(() => undefined);
+
+        expect(await addressFor({ 'x-forwarded-for': '198.51.100.9' })).toBe('absent');
+        expect(await addressFor({ 'x-forwarded-for': '198.51.100.9' })).toBe('absent');
+
+        expect(error).toHaveBeenCalledTimes(1);
+        expect(error.mock.calls[0]?.[0]).toContain(PROXY_WARNING);
+    });
 
     it('says nothing of a proxy when a request carries no forwarding header', async () => {
         expect(await addressFor({}, '203.0.113.4')).toBe('203.0.113.4');

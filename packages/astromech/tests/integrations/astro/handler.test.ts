@@ -1,7 +1,8 @@
 /**
  * The Astro route handler passes the connection's address to the app, so a
  * Node site without `security.trustProxy` counts sign-in attempts per client,
- * unless Astro's `security.allowedDomains` lets that address come from a header.
+ * unless Astro's `security.allowedDomains` is set and the request carries
+ * `x-forwarded-for`, which Astro may have read the address from.
  */
 
 import type { DB } from '@/database/types';
@@ -43,15 +44,18 @@ beforeEach(async () => {
 /**
  * Sign in through the handler as Astro calls it, from a connection at
  * `clientAddress` (a getter that throws when undefined, as Astro's does when
- * the adapter has no address) sending `forwardedFor`.
+ * the adapter has no address) sending `forwardedFor`, or no `x-forwarded-for`
+ * when it is null.
  */
 async function signIn(
     clientAddress: string | undefined,
-    forwardedFor = '198.51.100.99'
+    forwardedFor: string | null = '198.51.100.99'
 ): Promise<number> {
+    const headers = new Headers({ 'Content-Type': 'application/json' });
+    if (forwardedFor !== null) headers.set('x-forwarded-for', forwardedFor);
     const request = new Request('http://localhost/cms/api/auth/sign-in/email', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'x-forwarded-for': forwardedFor },
+        headers,
         body: JSON.stringify({ email: EMAIL, password: TEST_PASSWORD }),
     });
     const context = {
@@ -84,6 +88,7 @@ describe('the Astro route handler', () => {
 
     it('shares one count when Astro may have read the address from x-forwarded-for', async () => {
         site.astroReadsForwardedFor = true;
+        expectConsole('error', 'set `security.trustProxy`');
         for (let attempt = 0; attempt < 3; attempt++) {
             expect(await signIn('203.0.113.1')).toBe(200);
         }
@@ -91,7 +96,17 @@ describe('the Astro route handler', () => {
         expect(await signIn('203.0.113.2')).toBe(429);
     });
 
+    it('counts each connection apart under allowedDomains when no request carries x-forwarded-for', async () => {
+        site.astroReadsForwardedFor = true;
+        for (let attempt = 0; attempt < 3; attempt++) {
+            expect(await signIn('203.0.113.1', null)).toBe(200);
+        }
+
+        expect(await signIn('203.0.113.1', null)).toBe(429);
+        expect(await signIn('203.0.113.2', null)).toBe(200);
+    });
+
     it('serves a request when the adapter gives no address', async () => {
-        expect(await signIn(undefined)).toBe(200);
+        expect(await signIn(undefined, null)).toBe(200);
     });
 });

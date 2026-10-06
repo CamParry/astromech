@@ -110,22 +110,15 @@ const ALLOWED_BUILDS = [
     'esbuild',
 ];
 
-// Astromech's warning when Astro's `security.allowedDomains` is set and
-// `security.trustProxy` is not, which every site that follows the guide prints
-// in `astro dev` and `astro build`. Section 2 of the guide documents it, and
-// `roadmap/proposed/astro-allowed-domains-follow-ups.md` records the fix.
-const ALLOWED_DOMAINS_WARNING = "Astro's `security.allowedDomains` is set";
-
 // Lines `astro dev` may print that read as a warning or an error.
 const ALLOWED_DEV_WARNINGS = [
     // Better Auth takes the origin from each request when `BETTER_AUTH_URL` is
     // unset, and logs this. Section 4 of the guide documents it.
     'Base URL is not set',
-    ALLOWED_DOMAINS_WARNING,
 ];
 
 // Lines `astro build` may print that read as a warning or an error.
-const ALLOWED_BUILD_WARNINGS = [ALLOWED_DOMAINS_WARNING];
+const ALLOWED_BUILD_WARNINGS = [];
 
 // A warning or an error as Astro, Vite, Node and Better Auth print one, and the
 // `(!)` Rollup puts before its chunk size warning.

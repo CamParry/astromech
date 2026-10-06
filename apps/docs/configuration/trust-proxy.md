@@ -17,9 +17,9 @@ Astromech only reads sources a client cannot set for itself:
 
 The connection's address is the client's only when nothing sits in between.
 Behind nginx, Caddy or a load balancer it is the proxy's address, so every
-client shares it until you set `trustProxy`. When Astromech counts the
-connection's address for a request that carries `x-forwarded-for`, `forwarded`
-or `cf-connecting-ip`, it logs once that you may need to set `trustProxy`.
+client shares it until you set `trustProxy`. When a request on Node carries
+`x-forwarded-for`, `forwarded` or `cf-connecting-ip` and `trustProxy` is not
+set, Astromech logs once that you may need to set `trustProxy`.
 
 On a server of your own that calls `Astromech.fetch` rather than serving through
 Astro, pass the socket peer's address as `remoteAddress`, never a header value:
@@ -35,14 +35,18 @@ const response = await app.fetch(request, { remoteAddress: req.socket.remoteAddr
 Without it, and without `trustProxy`, Astromech knows no client address, so
 every client shares one count in each rate limit.
 
-Astro reads `x-forwarded-for` itself when its own `security.allowedDomains`
-option is set, so its `clientAddress` may then be a value the client made up.
-Astromech does not use it in that case: with `allowedDomains` set and no
-`trustProxy`, a Node site has no client address, and Astromech warns at
-startup. A Node site on Astro 7.3.6 or later needs `allowedDomains`, as
+Astro reads `x-forwarded-for` itself when the request carries the header and
+its `Host` matches Astro's own `security.allowedDomains` option, so its
+`clientAddress` may then be a value the client made up. A Node site on Astro 7.3.6 or later needs
+`allowedDomains`, as
 [the installation guide](../installation.md#2-add-the-integration-to-astro)
-explains, so a site served directly, with no proxy in front, is in this case
-and has no `trustProxy` value that fixes it.
+explains. With `allowedDomains` set and no `trustProxy`, Astromech uses
+`clientAddress` only for a request without `x-forwarded-for`, where it is the
+connection's address. A request with the header has no client address: it
+shares one sign-in count with every other such request, no block applies to
+it, and the forms plugin does not limit it. A request without the header keeps
+its own count. Behind a proxy, which adds the header to every request, set
+`trustProxy`.
 
 `x-forwarded-for` is the header proxies do use, but it is not trustworthy on its
 own: a server exposed directly will happily receive one a client made up. Only

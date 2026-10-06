@@ -13,24 +13,21 @@ it. These gaps are left.
 
 ## Gaps
 
-- [ ] **A Node site served without a proxy has no client address.** With
+- [x] **A Node site served without a proxy has no client address.** With
       `allowedDomains` set and no `trustProxy`, `readRemoteAddress` in
       `packages/astromech/src/integrations/astro/remote-address.ts` drops
-      Astro's `clientAddress`, because Astro may have taken it from a
-      client-sent `x-forwarded-for`. Every site that follows the guide is in
-      this case, so every client shares one sign-in count, no address is ever
-      blocked, and the forms plugin limits no one. `astro dev` and
-      `astro build` print the startup warning for it, which
-      `scripts/check-install.mjs` allows. `DECISIONS.md` rejected discarding
-      the address only when the request carries `x-forwarded-for`, because a
-      client could add the header to escape into the shared count. With
-      `allowedDomains` the normal case, that rule is better than the current
-      one: Astro sets `clientAddress` from `x-forwarded-for` only when the
-      header is present (`FetchState`, `createRequestFromNodeRequest`), so
-      without it `clientAddress` is the connection's address, and a client that
-      adds the header lands in the count every client shares today. Revisit
-      the decision, then the warning text and
-      `apps/docs/configuration/trust-proxy.md`.
+      Astro's `clientAddress` only when the request carries
+      `x-forwarded-for`, the one case where Astro may have read the address
+      from it. A request without the header keeps the connection's address.
+      The startup warning is gone, and the runtime warning for a forwarding
+      header without `trustProxy` fires whether or not an address is known.
+      `DECISIONS.md` records the rule.
+- [ ] **A client that adds `x-forwarded-for` has no address.** On a Node site
+      with `allowedDomains` and no `trustProxy`, such a request shares the
+      address-less sign-in count, but the forms plugin's rate limit skips it
+      (`packages/plugins/forms/src/service/forms.ts`) and no block applies to
+      it. Consider counting no-address requests in one shared forms bucket, as
+      Better Auth's limiter does with its `no-trusted-ip` key.
 - [ ] **The install guide job turns main red on an upstream release.** The
       `install` job in `.github/workflows/ci.yml` runs the guide's unpinned
       install on every push, so a new Astro release can fail a push that changed
