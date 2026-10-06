@@ -183,6 +183,23 @@ export default defineConfig({
                 ...assistant.permissions('use'),
             ],
         },
+        // The built-in editor without `publish`: its `entry:*` grant is
+        // replaced by every action but `publish` on the six demo entry types
+        // listed below. A new entry type in this config, or one a plugin adds
+        // (the forms plugin's `forms/form`), gets no grant until it is added
+        // to the list. The seed signs one in as `contributor@astromech.dev`.
+        contributor: {
+            name: 'Contributor',
+            permissions: [
+                ...permissionsForBuiltInRole('editor').filter(
+                    (grant) => grant !== 'entry:*'
+                ),
+                'entry:read:full',
+                ...['page', 'post', 'author', 'caseStudy', 'category', 'tag'].flatMap(
+                    (type) => entryPermissions(type, 'read', 'create', 'update', 'delete')
+                ),
+            ],
+        },
     },
 
     globals: [

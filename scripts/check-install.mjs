@@ -44,7 +44,15 @@ import { basename, dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { parseArgs, stripVTControlCharacters } from 'node:util';
 import { closeAdminBrowser, expectAdminWorks } from './admin-browser-check.mjs';
-import { expectStatus, freePort, run, step, waitForServer } from './check-helpers.mjs';
+import {
+    betterAuthSecret,
+    environmentWithoutNodeEnv,
+    expectStatus,
+    freePort,
+    run,
+    step,
+    waitForServer,
+} from './check-helpers.mjs';
 import { stopProcessGroup } from './process-group.mjs';
 import { requireFreshDist } from './require-fresh-dist.mjs';
 
@@ -116,10 +124,6 @@ const WARNING_LINE = /\b(warn|warning|error)\b|\(!\)|Some chunks are larger than
 
 /** How long a stopped server's process group gets to exit before SIGKILL. */
 const STOP_GRACE_MS = 5000;
-
-// The built server refuses every request without a secret. The site lives for
-// one run, so this one signs nothing worth protecting.
-const BETTER_AUTH_SECRET = 'check-install-secret-0123456789abcdef';
 
 // The page an Astro project has before Astromech is added. The guide starts
 // from an existing project, so the check makes the smallest one.
@@ -298,10 +302,11 @@ function guideError(expected) {
  * The environment the site's commands run in. `pnpm run` gives its scripts
  * `npm_*` and `pnpm_config_*` variables that a child npm or pnpm would read as
  * its own config, and the guide's development steps set no Better Auth
- * variables, so neither kind is passed on.
+ * variables, so neither kind is passed on. Nor is `NODE_ENV`: see
+ * `environmentWithoutNodeEnv`.
  */
 function siteEnvironment() {
-    const inherited = Object.entries(process.env).filter(
+    const inherited = Object.entries(environmentWithoutNodeEnv('check:install')).filter(
         ([key]) =>
             !key.startsWith('npm_') &&
             !key.startsWith('pnpm_config_') &&
@@ -422,7 +427,8 @@ async function checkBuiltServer(inSite, port) {
             PORT: String(port),
             // Better Auth refuses a sign-up whose `Origin` is not its base URL.
             BETTER_AUTH_URL: base,
-            BETTER_AUTH_SECRET,
+            // The built server refuses every request without a secret.
+            BETTER_AUTH_SECRET: betterAuthSecret(),
         },
     });
     await waitForServer(base, server);

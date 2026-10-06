@@ -2,6 +2,8 @@
 name: api
 description: API route and middleware patterns for Astromech. Use when writing or editing Hono route handlers or middleware.
 user-invocable: false
+paths:
+    - 'packages/astromech/src/transport/http/**/*.ts'
 ---
 
 ## Rules

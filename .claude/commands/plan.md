@@ -18,8 +18,10 @@ Per `AGENTS.md`, this is a conversation first: for architecture decisions, talk 
 ## 2. Research & prior art
 
 - Investigate how established systems solve this — Payload, Strapi, Sanity, Directus, Keystone, AdonisJS, etc. — and pull only what fits Astromech's context (lightweight, type-first, edge-runtime). Don't cargo-cult; note _why_ a borrowed idea fits or doesn't.
+- Read their source from the local checkouts, not the web. `pnpm run prior-art <name>` clones or updates one and prints its path (the list of names is in `scripts/prior-art.mjs`); then search it with `grep -rn` or `rg`. Fetch from the web only for documentation and for projects the checkouts don't hold.
 - For library/framework/API specifics, use **context7** (current docs) over memory. For broader investigation, web search; for a deep multi-source pass, the `deep-research` skill.
 - Bring back the trade-offs, not just one answer.
+- Back each recommendation with prior art and say where each claim about platform behaviour comes from, as `AGENTS.md` ("Workflow") asks: a link per recommendation or "none found", and docs or a test for each platform claim.
 
 ## 3. Terminology, structure & best practices
 

@@ -1,6 +1,6 @@
 /**
- * Helpers `check:boot` and `check:install` share: step lines, child processes,
- * a free port, and requests with a deadline.
+ * Helpers the check scripts share: step lines, child processes, the environment
+ * they run in, a free port, and requests with a deadline.
  */
 import { spawn } from 'node:child_process';
 import { createServer } from 'node:net';
@@ -17,6 +17,35 @@ const READY_INTERVAL_MS = 500;
 // render by logging it and leaving the socket open, so a boot defect presents
 // as a hang rather than as the failure a check exists to report.
 export const REQUEST_TIMEOUT_MS = 10_000;
+
+// A built site refuses every request while `BETTER_AUTH_SECRET` is unset. A
+// check's site lives for one run and signs nothing worth protecting, so this
+// value stands in when the environment sets none.
+const THROWAWAY_AUTH_SECRET = 'check-secret-0123456789abcdef0123456789abcdef';
+
+/** The `BETTER_AUTH_SECRET` a check's server runs with: the environment's, or a throwaway. */
+export function betterAuthSecret() {
+    return process.env.BETTER_AUTH_SECRET || THROWAWAY_AUTH_SECRET;
+}
+
+/**
+ * `process.env` without `NODE_ENV`, for a check's child processes. Each tool
+ * sets its own when none is inherited: vitest uses `test`, `astro build` uses
+ * `production`, and a built server treats unset as production, as it is
+ * deployed. An inherited value overrides all three. Under `production` the
+ * admin's tests fail to load, and under `development` or `test` the built
+ * server skips its production-only refusals. `name` labels the one line printed
+ * when a value is dropped.
+ */
+export function environmentWithoutNodeEnv(name) {
+    const { NODE_ENV: nodeEnv, ...environment } = process.env;
+    if (nodeEnv !== undefined) {
+        console.log(
+            `${name}: ignoring NODE_ENV=${nodeEnv} from the shell; each tool sets its own`
+        );
+    }
+    return environment;
+}
 
 /** Print the line that opens a step of a check. */
 export function step(message) {

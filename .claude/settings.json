@@ -1,4 +1,7 @@
 {
+    "permissions": {
+        "allow": ["Bash(pnpm run land *)", "Bash(pnpm run prior-art *)"]
+    },
     "hooks": {
         "PreToolUse": [
             {
@@ -6,7 +9,7 @@
                 "hooks": [
                     {
                         "type": "command",
-                        "command": "bash \"$CLAUDE_PROJECT_DIR/.claude/hooks/block-destructive-git.sh\""
+                        "command": "node \"$CLAUDE_PROJECT_DIR/.claude/hooks/guard-bash-commands.mjs\""
                     }
                 ]
             }

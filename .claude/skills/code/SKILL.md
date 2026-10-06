@@ -1,7 +1,9 @@
 ---
 name: code
-description: TypeScript coding standards and style rules for Astromech. Use when writing, editing, or reviewing any TypeScript or React code. For CSS, use the css skill instead.
+description: TypeScript coding standards and style rules for Astromech. Use when writing, editing, or reviewing any TypeScript or React code. It does not cover CSS (the parked css skill is in .claude/_skills/css).
 user-invocable: false
+paths:
+    - '**/*.{ts,tsx}'
 ---
 
 ## Naming

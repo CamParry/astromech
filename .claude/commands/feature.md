@@ -18,15 +18,14 @@ Follow this process. Don't skip phases. Stop and ask before acting whenever a re
 
 ## 2. Set up git
 
-- **Commit or stash all in-progress changes in the main tree before any worktree work** — worktrees fork from the last commit and copying their output back silently overwrites uncommitted work.
-- Create a feature branch (`feat/<kebab-name>`). Confirm with me before branching off `main` if unsure.
-- If using a worktree: **don't trust `isolation: "worktree"`** — it forks from an unpredictable base here. Create it yourself from a verified base: `git worktree add -b <name> .claude/worktrees/<name> <verified-commit>`, confirm the base contains your latest commits, then run a non-isolated `coder` agent scoped to that absolute path.
+- **Commit all in-progress changes in the main tree before any worktree work.** A new worktree forks from `origin/main`, so an unpushed commit is missing from it, and copying its output back silently overwrites uncommitted work.
+- Create the branch and its worktree with `git fetch -q origin && wt switch --create <kebab-name> --base origin/main --no-cd --yes`, in the background (`AGENTS.md`, "Branches and worktrees"). The branch has no prefix, because the worktree's directory name must match it. Confirm with me before branching if unsure. **Don't use `isolation: "worktree"`**, which forks from an unpredictable base here: run a non-isolated agent scoped to the worktree's absolute path, briefed from `.claude/_agents/coder.md`.
 - Move the roadmap file `planned/ → in-progress/` now that work has started.
 
 ## 3. Implement
 
-- Delegate slices to `coder` sub-agents with complete plans (file paths, exact code, expected outcome) so they don't re-research.
-- Code follows the `code`, `ui`, `api`, and `css` skills. Mind the known gotchas (reserved instance keys, content visibility shapes, globalThis singletons, locale display-vs-content, lazy seeding) — recall the relevant project memory before touching those areas.
+- Delegate slices to sub-agents briefed from `.claude/_agents/coder.md`, with complete plans (file paths, exact code, expected outcome) so they don't re-research.
+- Code follows the `code` and `api` skills. The `css` and `ui` skills are parked under `.claude/_skills/`: read them as intent, not as rules. Mind the known gotchas (reserved instance keys, content visibility shapes, globalThis singletons, locale display-vs-content, lazy seeding) — recall the relevant project memory before touching those areas.
 
 ## 4. Test & verify — all of these, not a subset
 
@@ -45,4 +44,4 @@ This is part of the feature, not optional cleanup:
 - **Specs:** delete the spec if the feature shipped, and de-link every reference to it (keep the prose, drop the link/citation). Stale specs breed drift.
 - **Durable docs:** put lasting knowledge where it belongs — type definitions, `ARCHITECTURE.md`, the docs. Not in specs.
 - **Reflect:** anything non-obvious worth a memory file or a skill update? A focus shift is the moment to capture lessons.
-- Commit with conventional-commit messages (`feat:`/`fix:`/`refactor:`). **Confirm with me before committing or pushing to `main`.** Watch for sub-agents committing with `--no-verify` against instructions — check and fix.
+- Commit with conventional-commit messages (`feat:`/`fix:`/`refactor:`). Landing on `main` needs no approval in this repo: the lead lands the branch with `pnpm run land` from its worktree, after squashing any `wip` commits (`AGENTS.md`, "Branches and worktrees"). Sub-agents never land. Watch for sub-agents committing with `--no-verify` against instructions — check and fix.

@@ -2,6 +2,10 @@
 name: testing
 description: How Astromech's tests are written, run and reviewed. Use when writing, changing or reviewing a test, a helper under a package's tests/_support, or a vitest.config.ts.
 user-invocable: false
+paths:
+    - 'packages/**/tests/**'
+    - '**/*.test.{ts,tsx}'
+    - '**/vitest.config.ts'
 ---
 
 This skill says what a good test is here and how to run tests while you work. Where test files live and the module-isolation list are in each package's `AGENTS.md`; the gate commands are in the root `AGENTS.md`.
@@ -26,11 +30,14 @@ If following it would make the code or the test worse, or would need a workaroun
 - **A bug fix starts with a test that fails for the bug's reason.**
 - **A defect you find but don't fix is recorded in a test, not skipped.** Write the test for the right behaviour as `it.fails`, with a comment saying what happens today, and add a `roadmap/planned/` file for the fix. Beside it, put a passing test that proves the setup reaches the step that goes wrong: inside `it.fails` any failure passes, so a broken setup would pass as the expected failure. When the defect is fixed the `it.fails` test fails, which is the signal to make it a plain `it`. Keep the pair together, the passing setup test first, so a reader sees both.
 - **Use a property test where the input space is wide and the rule is short**: identifiers, escaping, parsers, schema diffs, slugs. They use fast-check, in a `*.property.test.ts` file beside the example tests (`packages/schema-engine/tests/diff.property.test.ts`, `packages/astromech/tests/entries/slug.property.test.ts`). Assert a round trip, an invariant or agreement with an independent oracle, never the code's own logic written again. Keep the example tests: a property says what always holds, an example shows what one input gives. When fast-check finds a counterexample, add it as an example case too.
+- **Code that parses untrusted bytes gets crafted-input tests in its first commit**: anything that walks an upload, an import or a request body itself. Build an input sized to stress each loop and nested structure (thousands of entries, many items sharing or overlapping one block, a large decompressed size), and assert it finishes under a time limit that a naive implementation misses: well above the normal run, so a loaded machine does not trip it, and well below the slow one. A crafted file that ties up the CPU is a denial of service, and each one found in review costs a fix and another full gate: the image metadata parsers went through four review rounds, each finding a new slow file. A time limit proves nothing until you have seen it fail, and one written after a fix once passed on the slow code too, so run it against a deliberately slow version or before the fix. `packages/astromech/tests/media/internal/gps.test.ts` is the example (its tests named "quickly").
 - **Every runtime test asserts something; a type-only test lives in a `*.test-d.ts` file.** Vitest fails a test that makes no `expect` call, and an `expectTypeOf` check does nothing at runtime. A `*.test-d.ts` file next to the runtime one (`packages/astromech/tests/database/plugin-tables.test-d.ts`) is compiled by the package's `typecheck` and never run by vitest, so its checks fail where they can.
 
 ## Writing a test with the code
 
 Write one failing test, see it fail for the reason you expect, then write the code that makes it pass, one small step at a time. Take the expected values from the requirement, not from the implementation: a test copied from the code agrees with every defect in it. A test you never saw fail may pass whatever the code does, so if the code came first, break it briefly and watch the test catch it.
+
+Before handing work back, check each new test once more: break the line it covers (or revert the fix), run it, see it fail, then restore the line. Reviewers keep finding tests that pass whatever the code does, such as an `it.fails` that passes on any error, and this check catches them first.
 
 ## Real dependencies, and the few you replace
 
@@ -75,16 +82,17 @@ The house setup is `packages/astromech/tests/_support/harness.ts`; read its doc 
 Run the cheapest check that can catch your mistake after every edit, and the expensive ones before the change lands.
 
 - **After each edit**: the test files for what you touched, with `pnpm -F <package> exec vitest run <path>`. `pnpm -F <package> test:run <path>` also works, but not with a `--` before the path: pnpm passes the `--` through, vitest ignores what follows it, and the config stops the run rather than test the whole suite (`packages/astromech/tests/_support/vitest-base-config.ts`). Not `vitest related` either: the harness imports most of `src`, so it selects most of the suite and runs slower than all of it.
-- **Before handing work back**: `pnpm -F <package> typecheck` and `pnpm -F <package> test:run`. The admin and the plugins compile core from source, so a change to core's `src` also needs their suites, or `pnpm run verify:fast`, which runs every package suite without coverage thresholds.
-- **Before a change lands**: `pnpm run verify`. Coverage thresholds are checked only by a whole-suite coverage run (`pnpm run test:run`, inside `verify`), so after a failure rerun the whole suite, not the failed files.
-- **Run one full suite at a time.** Parallel runs have been killed for low memory, and other sessions may share the checkout.
+- **Before handing work back**: `pnpm -F <package> typecheck` and `pnpm -F <package> test:run`. The admin and the plugins compile core from source, so a change to core's `src` also needs their suites, or `pnpm run verify:fast`, which runs every package suite and checks coverage thresholds for the packages the branch changes.
+- **Before a change lands**: `pnpm run verify`. Coverage thresholds are checked only by a whole-suite coverage run (`pnpm run test:run`, inside `verify`, or a changed package's suite in `verify:fast`), so after a failure rerun the whole suite, not the failed files.
+- **Read a failure from its log.** The gate writes each check's whole output to the log its `FAIL` line names (`verify/<check>.log` in the worktree's git directory). Search that log with `grep` or `sed -n`; don't rerun a check to see more of its output.
+- **Run one full suite at a time.** Parallel runs have been killed for low memory, and other sessions may share the checkout. The root `test:run` and the gate wait for each other by themselves (`scripts/run-lock.mjs`); a package's own `test:run` or `test:coverage` does not, so check that no gate is running before starting one.
 - **Keep output small.** Under Claude Code, Vitest 4.1 uses its agent reporter, which prints only failures; setting `reporters` in a config turns it off. It also hides console output. An error or warning fails its test anyway; to read other output, run with `--reporter=default --silent=false` and count it with `grep -c` rather than reading the log. Judge a run by its summary lines, not the exit code of a pipe.
 
 ## Coverage
 
 Thresholds are set per directory in the `vitest.config.ts` of core, the admin and schema-engine, and in each plugin's `vitest.config.ts` through `pluginVitestConfig`'s `coverageThresholds`. A change that raises a directory's coverage raises its entry in the same commit. Coverage shows what is untested, not what is tested well, so don't write a test only to reach lines.
 
-Mutation testing shows the other half: whether a test fails when a line changes, where coverage only shows the line ran. Core has it as a manual check, run on demand one directory at a time, because a run is slow (minutes for `src/utilities`, hours for all of `src`): `env -u NODE_ENV BETTER_AUTH_SECRET=check-boot-secret-0123456789abcdef pnpm -F astromech test:mutation src/utilities`. Never make it a gate. Read the surviving mutants by hand: about a third are equivalent mutants (the change does not alter behaviour), and a survivor that is a real gap gets an assertion. The first run, on files at 97% line coverage, found missing assertions and a bug in `deepEqual`.
+Mutation testing shows the other half: whether a test fails when a line changes, where coverage only shows the line ran. Core has it as a manual check, run on demand one directory at a time, because a run is slow (minutes for `src/utilities`, hours for all of `src`): `pnpm -F astromech test:mutation src/utilities`. Never make it a gate. Read the surviving mutants by hand: about a third are equivalent mutants (the change does not alter behaviour), and a survivor that is a real gap gets an assertion. The first run, on files at 97% line coverage, found missing assertions and a bug in `deepEqual`.
 
 ## Reviewing a test change
 

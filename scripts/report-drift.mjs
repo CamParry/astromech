@@ -25,7 +25,9 @@ const STRUCTURAL_TYPES = 'group|accordion|tabs|tab|repeater|blocks|tree';
  * Each entry: `name`, `pattern` (tested per line), `files` (`'source'`, the default, or
  * `'tests'`), `lines` (`'added'`, the default, to list lines the branch adds, or `'removed'` to
  * list lines it removes), `only` / `except` (path prefixes from the repo root, or regular
- * expressions over that path) and `why` (printed under the name). Add a pattern by adding a line.
+ * expressions over that path), `body` (optional: a test on the text of the call the matched line
+ * opens, read by `testBody`; the line is listed only when it returns true) and `why` (printed
+ * under the name). Add a pattern by adding a line.
  */
 const PATTERNS = [
     {
@@ -94,7 +96,33 @@ const PATTERNS = [
         files: 'tests',
         why: 'Use the real module or a driver seam where one exists (the `testing` skill).',
     },
+    {
+        name: '`it.fails` that passes on any error',
+        pattern: /\b(it|test)(\.\w+)*\.fails\b/,
+        // A heuristic over the test's own added lines (`testBody`): it reads
+        // the call up to its closing parenthesis and lists it when every
+        // matcher there is a bare one.
+        body: passesOnAnyError,
+        files: 'tests',
+        why: 'Inside `it.fails` any error passes, a broken setup too, and a bare `toThrow()` or `rejects` accepts any error. Assert the specific error, and keep the passing setup test beside it (the `testing` skill).',
+    },
 ];
+
+// The start of another test or suite, where an `it.fails` body ends at the latest.
+const TEST_START = /^\s*(it|test|describe|suite)(\.\w+)*\(/;
+
+/**
+ * Whether a test body's only assertions accept any error: each matcher is a `toThrow()` or
+ * `toThrowError()` with no argument, or a `.rejects` with no matcher after it, and there is at
+ * least one of them.
+ */
+function passesOnAnyError(body) {
+    const matchers = [...body.matchAll(/\.(to[A-Z]\w*)\(\s*(\))?/g)];
+    const bareThrow = ([, name, closed]) =>
+        (name === 'toThrow' || name === 'toThrowError') && closed !== undefined;
+    const bareRejects = /\.rejects\b(?!\s*\.)/.test(body);
+    return (matchers.some(bareThrow) || bareRejects) && matchers.every(bareThrow);
+}
 
 // The four metrics a vitest coverage threshold entry sets.
 const THRESHOLD_METRIC = /\b(lines|functions|branches|statements)\s*:\s*(\d+(?:\.\d+)?)/g;
@@ -280,6 +308,32 @@ function inPath(path, scope) {
     return typeof scope === 'string' ? path.startsWith(scope) : scope.test(path);
 }
 
+/**
+ * The text of the call that opens on `side[index]`, from that line to the parenthesis that closes
+ * it, read only from consecutive lines on the same side of the diff. It also stops before the
+ * next test or suite, so a call whose end it cannot find (a string or regular expression with an
+ * unbalanced parenthesis, or a body the diff only partly holds) gives the lines it did read.
+ */
+function testBody(side, index) {
+    const parts = [];
+    let depth = 0;
+    for (let at = index; at < side.length; at += 1) {
+        const { line, text } = side[at];
+        if (at > index && (line !== side[at - 1].line + 1 || TEST_START.test(text)))
+            break;
+        parts.push(text);
+        // Quoted strings and template literals on one line, so a test title
+        // with a parenthesis in it does not move the count.
+        const code = text.replace(/(['"`])(?:\\.|(?!\1).)*\1/g, '');
+        for (const char of code) {
+            if (char === '(') depth += 1;
+            else if (char === ')') depth -= 1;
+        }
+        if (depth <= 0) break;
+    }
+    return parts.join('\n');
+}
+
 function reportPatterns(changed) {
     const out = [];
     for (const {
@@ -289,8 +343,14 @@ function reportPatterns(changed) {
         lines = 'added',
         only,
         except,
+        body,
         why,
     } of PATTERNS) {
+        const matchAt = (side, index) => {
+            const match = pattern.exec(side[index].text)?.[0];
+            if (match === undefined || body === undefined) return match;
+            return body(testBody(side, index)) ? match : undefined;
+        };
         const inScope = changed.filter(
             ({ path, kind }) =>
                 kind === files &&
@@ -309,15 +369,15 @@ function reportPatterns(changed) {
             // reworded), not a new instance, so it is counted but not listed.
             // A line moved unchanged pairs with its copy first.
             const others = file[otherSide]
-                .map(({ text }) => ({
+                .map(({ text }, index) => ({
                     text: text.trim(),
-                    match: pattern.exec(text)?.[0],
+                    match: matchAt(file[otherSide], index),
                 }))
                 .filter(({ match }) => match !== undefined);
             otherCount += others.length;
             const candidates = [];
-            for (const { line, text } of file[listedSide]) {
-                const match = pattern.exec(text)?.[0];
+            for (const [index, { line, text }] of file[listedSide].entries()) {
+                const match = matchAt(file[listedSide], index);
                 if (match === undefined) continue;
                 listedCount += 1;
                 const moved = others.findIndex((other) => other.text === text.trim());

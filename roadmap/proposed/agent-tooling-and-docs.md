@@ -32,9 +32,9 @@ this file to `planned/`.
 - [ ] **Turn repeated-mistake memories into hooks and checks.** Give
       `scripts/check-boot.mjs` and `scripts/check-boot-cloudflare.mjs` a
       throwaway `BETTER_AUTH_SECRET` and an unset `NODE_ENV`, as
-      `scripts/check-install.mjs:122` does. Make
-      `.claude/hooks/block-destructive-git.sh` ask on `stash`, `--no-verify`
-      and `npm install`. Deny `isolation: "worktree"` on the Agent tool. Add a
+      `scripts/check-install.mjs:122` does. The Bash hook
+      (`.claude/hooks/guard-bash-commands.mjs`) covers `stash`; make it
+      cover `--no-verify` and `npm install` too. Deny `isolation: "worktree"` on the Agent tool. Add a
       drift test over `apps/demo-cloudflare/migrations/snapshot.json`. Retire
       the matching memory notes.
 - [ ] **Cite decisions by title, and check the citation.** 22 code comments
