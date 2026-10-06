@@ -17,9 +17,6 @@
  *   run killed partway can leave a mutant in `src`, so check `git diff -- src`.
  * - `ignoreStatic` skips mutants that only run when a module loads, which
  *   cost almost half the run time and are rarely worth reading.
- *
- * Vitest keeps a `NODE_ENV` the shell sets, so run it with `NODE_ENV` unset,
- * as `scripts/verify.mjs` runs the test suites.
  */
 
 import { spawnSync } from 'node:child_process';
@@ -28,6 +25,7 @@ import { existsSync, statSync } from 'node:fs';
 import { dirname, join, relative, resolve } from 'node:path';
 import process from 'node:process';
 import { fileURLToPath } from 'node:url';
+import { environmentWithoutNodeEnv } from '../../../scripts/check-helpers.mjs';
 
 const packageDir = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const strykerBin = join(packageDir, 'node_modules/@stryker-mutator/core/bin/stryker.js');
@@ -65,6 +63,8 @@ const mutate = `${directory}/**/*.@(ts|tsx)`;
 
 const result = spawnSync(process.execPath, [strykerBin, 'run', '--mutate', mutate], {
     cwd: packageDir,
+    // Vitest keeps a `NODE_ENV` the shell sets, as the gate's suites do not.
+    env: environmentWithoutNodeEnv('test:mutation'),
     stdio: 'inherit',
 });
 
