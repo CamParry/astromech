@@ -46,12 +46,35 @@ export default defineConfig({
     output: 'server',
     adapter: node({ mode: 'standalone' }),
     integrations: [astromech(), react()],
+    security: {
+        allowedDomains: [{ hostname: 'example.com' }],
+    },
 });
 ```
 
 Keep `astromech()` before `react()`, because the step that splits the admin
 into one file per page has to run before React's transform, and Astro runs
 integrations in the order you list them.
+
+Replace `example.com` with your site's domain, and add an entry for each domain
+the site answers on. From Astro 7.3.6, the Node adapter ignores a request's
+`Host` header unless it matches `security.allowedDomains`, and uses
+`localhost` and the server's port instead. Without a match, the built server
+sees every request as `http://localhost:4321`. Astro then refuses a `POST`
+whose `Origin` header names your real domain unless the browser also sends
+`Sec-Fetch-Site`, and `Astro.url` and Better Auth (when `BETTER_AUTH_URL` is
+unset) use the wrong origin.
+`astro dev` reads the `Host` header either way. To open the built server on
+your own machine at an address other than `localhost`, such as `127.0.0.1`,
+add that hostname too. Astro's
+[`allowedDomains` reference](https://docs.astro.build/en/reference/configuration-reference/#securityalloweddomains)
+covers wildcards, ports and protocols.
+
+With `allowedDomains` set, Astro may take a request's address from a
+client-sent `x-forwarded-for` header, so Astromech does not use that address
+and warns at startup.
+[configuration/trust-proxy.md](configuration/trust-proxy.md) explains what this
+means for rate limits, and how a site behind a proxy fixes it.
 
 `astromech()` loads `astromech.config.ts` from your Astro project root. To keep
 the config somewhere else, pass its path, relative to the project root:

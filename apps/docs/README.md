@@ -8,7 +8,8 @@ This is a living reference; it grows as the project does.
 ## Contents
 
 - [installation.md](installation.md): add Astromech to an Astro site. The
-  packages to install, the integration and `{ configFile }`, a minimal config,
+  packages to install, the integration and `{ configFile }`, Astro's
+  `security.allowedDomains`, a minimal config,
   the environment a built site needs, creating the tables, first-run setup, and
   the optional packages each driver needs.
 - [configuration/database.md](configuration/database.md) — pick and configure a

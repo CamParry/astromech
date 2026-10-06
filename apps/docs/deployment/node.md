@@ -92,6 +92,9 @@ Behind a reverse proxy, set `BETTER_AUTH_URL` to the public origin, and set
 `security.trustProxy` so Astromech reads the client address from
 `x-forwarded-for`, as
 [../configuration/trust-proxy.md](../configuration/trust-proxy.md) describes.
+Have the proxy pass the public host name in `Host` or `X-Forwarded-Host`, since
+Astro matches it against the `security.allowedDomains` the
+[installation guide](../installation.md#2-add-the-integration-to-astro) sets.
 
 ## Uploads
 

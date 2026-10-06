@@ -39,7 +39,10 @@ Astro reads `x-forwarded-for` itself when its own `security.allowedDomains`
 option is set, so its `clientAddress` may then be a value the client made up.
 Astromech does not use it in that case: with `allowedDomains` set and no
 `trustProxy`, a Node site has no client address, and Astromech warns at
-startup.
+startup. A Node site on Astro 7.3.6 or later needs `allowedDomains`, as
+[the installation guide](../installation.md#2-add-the-integration-to-astro)
+explains, so a site served directly, with no proxy in front, is in this case
+and has no `trustProxy` value that fixes it.
 
 `x-forwarded-for` is the header proxies do use, but it is not trustworthy on its
 own: a server exposed directly will happily receive one a client made up. Only

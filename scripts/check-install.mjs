@@ -14,7 +14,9 @@
 //
 // The guide is the fixture. Its config files, its install command and its `npx
 // astromech` commands are read out of the page, so the check runs the page as
-// written, and an edit that breaks the check fails naming the page.
+// written, and an edit that breaks the check fails naming the page. Where the
+// guide's `security.allowedDomains` names the site's own domain, the check names
+// the address it serves the site on instead.
 //
 // A site adds plugins the same way, so the check installs `@astromech/backups`
 // from its tarball on top of the guide and registers it in the config. Its
@@ -108,15 +110,22 @@ const ALLOWED_BUILDS = [
     'esbuild',
 ];
 
+// Astromech's warning when Astro's `security.allowedDomains` is set and
+// `security.trustProxy` is not, which every site that follows the guide prints
+// in `astro dev` and `astro build`. Section 2 of the guide documents it, and
+// `roadmap/proposed/astro-allowed-domains-follow-ups.md` records the fix.
+const ALLOWED_DOMAINS_WARNING = "Astro's `security.allowedDomains` is set";
+
 // Lines `astro dev` may print that read as a warning or an error.
 const ALLOWED_DEV_WARNINGS = [
     // Better Auth takes the origin from each request when `BETTER_AUTH_URL` is
     // unset, and logs this. Section 4 of the guide documents it.
     'Base URL is not set',
+    ALLOWED_DOMAINS_WARNING,
 ];
 
 // Lines `astro build` may print that read as a warning or an error.
-const ALLOWED_BUILD_WARNINGS = [];
+const ALLOWED_BUILD_WARNINGS = [ALLOWED_DOMAINS_WARNING];
 
 // A warning or an error as Astro, Vite, Node and Better Auth print one, and the
 // `(!)` Rollup puts before its chunk size warning.
@@ -161,9 +170,14 @@ async function main() {
         () => packPackages(join(scratchDir, 'tarballs'))
     );
 
-    await stage('site', `writing the site ${GUIDE} starts from`, () =>
-        writeSite(siteDir, guide.files, packageManager, tarballs)
-    );
+    // Both ports are picked before the site is written, since the guide's
+    // `security.allowedDomains` names the addresses the site is served on.
+    const devPort = await freePort();
+    const servePort = await freePort();
+    await stage('site', `writing the site ${GUIDE} starts from`, async () => {
+        await writeSite(siteDir, guide.files, packageManager, tarballs);
+        await setAllowedDomains(siteDir, [devPort, servePort]);
+    });
 
     const packages = guide.installPackages.map((name) =>
         name === 'astromech' ? tarballs.astromech : name
@@ -189,7 +203,6 @@ async function main() {
         }
     });
 
-    const devPort = await freePort();
     await stage('dev', `serving the site with astro dev on port ${devPort}`, () =>
         checkDevServer(commands, inSite, devPort)
     );
@@ -205,7 +218,6 @@ async function main() {
         expectNoWarnings('astro build', output, ALLOWED_BUILD_WARNINGS);
     });
 
-    const servePort = await freePort();
     await stage('serve', `starting dist/server/entry.mjs on port ${servePort}`, () =>
         checkBuiltServer(inSite, servePort)
     );
@@ -461,6 +473,27 @@ async function addPluginToConfig(siteDir) {
     }
     const withPlugin = config.replace(opening, `${opening}    plugins: [backups()],\n`);
     await writeFile(file, `import { backups } from '${PLUGIN}';\n${withPlugin}`);
+}
+
+/**
+ * Point the guide's `security.allowedDomains` at the addresses the check serves
+ * the site on, as the guide tells a site to name its own domain. Astro's Node
+ * adapter trusts a `Host` header only when it matches, and the built server
+ * reads the list from the build.
+ */
+async function setAllowedDomains(siteDir, ports) {
+    const file = join(siteDir, 'astro.config.mjs');
+    const config = await readFile(file, 'utf8');
+    const lists = config.match(/allowedDomains: \[[^\]]*\]/g) ?? [];
+    if (lists.length !== 1) {
+        throw guideError(
+            'an `astro.config.mjs` block with one `allowedDomains: [...]` list'
+        );
+    }
+    const patterns = ports
+        .map((port) => `{ hostname: '127.0.0.1', port: '${port}' }`)
+        .join(', ');
+    await writeFile(file, config.replace(lists[0], `allowedDomains: [${patterns}]`));
 }
 
 /** Remove the SQLite file the guide's config names, and any journal beside it. */
