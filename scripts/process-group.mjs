@@ -1,6 +1,7 @@
 /**
  * Stops a child spawned with `detached: true` along with every process it
- * started, since they share its process group. POSIX only, like the checks.
+ * started, since they share its process group, and says whether a group is
+ * still running. POSIX only, like the checks.
  */
 
 /**
@@ -18,6 +19,11 @@ export async function stopProcessGroup(child, graceMs) {
         }
         await new Promise((fulfil) => setTimeout(fulfil, 100));
     }
+}
+
+/** Whether any live process is left in the process group `id`. */
+export function processGroupIsRunning(id) {
+    return signalGroup(id, 0);
 }
 
 /**

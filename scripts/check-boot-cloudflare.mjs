@@ -291,8 +291,9 @@ async function cleanUp() {
 }
 
 // The build and wrangler run in process groups of their own, so neither a
-// Ctrl-C nor `verify` stopping this check reaches them. Stop them here.
-for (const signal of ['SIGINT', 'SIGTERM']) {
+// Ctrl-C, a closed terminal nor `verify` stopping this check reaches them.
+// Stop them here.
+for (const signal of ['SIGINT', 'SIGTERM', 'SIGHUP']) {
     process.once(signal, () => {
         void cleanUp().finally(() => process.exit(128 + constants.signals[signal]));
     });

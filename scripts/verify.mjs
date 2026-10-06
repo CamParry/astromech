@@ -41,7 +41,8 @@
  * Every mode first takes the lock in `scripts/run-lock.mjs`, so
  * a second gate, build, test run or boot check started meanwhile, in any
  * worktree, waits for this one to finish rather than run beside it. The checks
- * this starts go ahead under its lock.
+ * this starts go ahead under its lock, and the lock file lists their process
+ * groups, so a gate killed outright still holds the lock until they end.
  *
  * Each check's whole output goes to a log file in the worktree's git
  * directory, `verify/<check>.log`, and a `FAIL` line names its path. To see
@@ -68,7 +69,7 @@ import {
     WORKSPACE_CONCURRENCY,
 } from './cpu-limits.mjs';
 import { stopProcessGroup } from './process-group.mjs';
-import { waitForRunLock } from './run-lock.mjs';
+import { recordProcessGroups, waitForRunLock } from './run-lock.mjs';
 import {
     logPath,
     prepareVerifyDirectory,
@@ -222,6 +223,13 @@ const stages = stagesByMode[mode];
 /** Checks still running, each the leader of its own process group. */
 const running = new Set();
 
+/**
+ * Keeps the lock file's list of running checks current, so a run that finds
+ * this gate killed outright waits for the checks it left behind.
+ */
+const recordRunning = () =>
+    recordProcessGroups([...running].map((child) => child.pid).filter(Boolean));
+
 const run = (name, command, env = environment) =>
     new Promise((done) => {
         const started = Date.now();
@@ -233,6 +241,7 @@ const run = (name, command, env = environment) =>
             stdio: ['ignore', 'pipe', 'pipe'],
         });
         running.add(child);
+        recordRunning();
         const log = logPath(verifyDirectory, name);
         const logStream = createWriteStream(log);
         let output = '';
@@ -263,6 +272,7 @@ const run = (name, command, env = environment) =>
             child.stderr.destroy();
             await new Promise((fulfil) => logStream.end(fulfil));
             running.delete(child);
+            recordRunning();
             const failed = timedOut || code !== 0;
             const seconds = ((Date.now() - started) / 1000).toFixed(1);
             const note = timedOut ? ', timed out' : '';
@@ -294,9 +304,10 @@ const run = (name, command, env = environment) =>
 
 let interrupted = false;
 
-// Each check leads its own process group, which a Ctrl-C at the terminal does
-// not reach, so the signal is passed on to every check still running.
-for (const signal of ['SIGINT', 'SIGTERM']) {
+// Each check leads its own process group, which a Ctrl-C at the terminal or a
+// closed terminal does not reach, so the signal is passed on to every check
+// still running.
+for (const signal of ['SIGINT', 'SIGTERM', 'SIGHUP']) {
     process.once(signal, () => {
         interrupted = true;
         console.error(`\n${signal}: stopping ${running.size} running check(s)`);

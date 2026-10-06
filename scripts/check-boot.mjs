@@ -182,9 +182,9 @@ async function cleanUp() {
     }
 }
 
-// A Ctrl-C or `verify` stopping this check still closes the browser, stops
-// the server, removes the scratch database and releases the lock.
-for (const signal of ['SIGINT', 'SIGTERM']) {
+// A Ctrl-C, a closed terminal or `verify` stopping this check still closes the
+// browser, stops the server, removes the scratch database and releases the lock.
+for (const signal of ['SIGINT', 'SIGTERM', 'SIGHUP']) {
     process.once(signal, () => {
         void cleanUp().finally(() => process.exit(128 + constants.signals[signal]));
     });
