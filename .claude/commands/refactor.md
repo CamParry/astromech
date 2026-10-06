@@ -47,4 +47,4 @@ Per `AGENTS.md`, clarify before acting; for structural decisions, discuss the di
 - **Architecture/docs:** update `ARCHITECTURE.md` if the structure or layer boundaries shifted; refresh the docs and type definitions as needed.
 - **Roadmap:** update or tick the relevant `roadmap/` file; add `backlog.md` follow-ups.
 - **Reflect:** capture any non-obvious lesson as a memory file or skill update.
-- Commit with conventional-commit messages (`refactor:`). **Confirm with me before committing or pushing to `main`.** Land the branch with `pnpm run land` from its worktree. Check that sub-agents didn't commit with `--no-verify`.
+- Commit with conventional-commit messages (`refactor:`). Landing on `main` needs no approval in this repo: the lead lands the branch with `pnpm run land` from its worktree, after squashing any `wip` commits (`AGENTS.md`, "Branches and worktrees"). Sub-agents never land. Check that sub-agents didn't commit with `--no-verify`.

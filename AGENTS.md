@@ -69,7 +69,8 @@ Each script's header has the detail.
 - **Land on main early.** Nothing is deployed, so merge partial work behind an unticked `roadmap/` checkbox rather than keep a long-lived branch.
 - **Keep `roadmap/` status on main.** A branch's roadmap file lives on main and moves directories as the branch progresses.
 - **At the end of a session**, commit loose work as `wip(scope): …` with a body saying what is unfinished, push every surviving branch, and remove merged or parked worktrees.
-- **Land with `pnpm run land`** from inside the worktree, once the gate has passed on its HEAD. It merges with `--no-ff` onto the fetched `origin/main`, pushes, removes the worktree and branch, fast-forwards the main checkout and waits for CI; `--message-file <path>` adds the merge body. Its header has the steps. Never `wt merge`: the Bash hook refuses it.
+- **Squash `wip` commits before landing** with `git reset --soft <base> && git commit -m '<message>'` inside the worktree, where `<base>` is the commit before the first `wip`: `rebase -i` needs a terminal and the Bash hook refuses `wt step squash`.
+- **The lead lands with `pnpm run land`** from inside the worktree, once the gate has passed on its HEAD; a sub-agent never runs it. It merges with `--no-ff` onto the fetched `origin/main`, pushes, removes the worktree and branch, fast-forwards the main checkout and waits for CI; `--message-file <path>` adds the merge body. Its header has the steps. Never `wt merge`: the Bash hook refuses it.
 - **Remove an abandoned worktree with `wt remove <branch> --yes`.** It keeps the branch. Delete a branch only after `git merge-base --is-ancestor <branch> <keeper>` confirms its commits are contained elsewhere.
 
 ## Naming

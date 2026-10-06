@@ -191,6 +191,11 @@ describe('destructive git calls', () => {
         }
     });
 
+    it("lets the lead squash a worktree's wip commits", () => {
+        const command = `cd "${worktree}" && git reset --soft "$(git merge-base HEAD origin/main)" && git commit -m 'feat: the feature'`;
+        assert.equal(runHook(command).decision, null);
+    });
+
     it('ignores destructive commands written inside messages, heredocs and comments', () => {
         const commands = [
             `cd "${worktree}" && git fetch -q && git checkout -q --detach origin/main && git merge --no-ff feature -m "Merge branch 'backup-restore': git restore and git reset --hard"`,

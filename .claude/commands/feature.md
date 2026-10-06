@@ -44,4 +44,4 @@ This is part of the feature, not optional cleanup:
 - **Specs:** delete the spec if the feature shipped, and de-link every reference to it (keep the prose, drop the link/citation). Stale specs breed drift.
 - **Durable docs:** put lasting knowledge where it belongs — type definitions, `ARCHITECTURE.md`, the docs. Not in specs.
 - **Reflect:** anything non-obvious worth a memory file or a skill update? A focus shift is the moment to capture lessons.
-- Commit with conventional-commit messages (`feat:`/`fix:`/`refactor:`). **Confirm with me before committing or pushing to `main`.** Land the branch with `pnpm run land` from its worktree. Watch for sub-agents committing with `--no-verify` against instructions — check and fix.
+- Commit with conventional-commit messages (`feat:`/`fix:`/`refactor:`). Landing on `main` needs no approval in this repo: the lead lands the branch with `pnpm run land` from its worktree, after squashing any `wip` commits (`AGENTS.md`, "Branches and worktrees"). Sub-agents never land. Watch for sub-agents committing with `--no-verify` against instructions — check and fix.
