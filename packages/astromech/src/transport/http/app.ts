@@ -28,6 +28,7 @@ import { parseOutput } from '@/services/parse-method-output';
 import { PRIVATE_NO_STORE } from '@/transport/http/cache-control';
 import { getClientAddress } from '@/transport/http/client-address';
 import { strictTransportSecurity } from '@/transport/http/strict-transport-security';
+import { NO_TRUSTED_IP_KEY, rateLimitKey } from '@/utilities/ip-address';
 import { requireAuth } from './middleware/auth';
 import { refuseBlockedAddresses } from './middleware/block-list';
 import { requireCaptcha } from './middleware/captcha';
@@ -61,18 +62,24 @@ export function createHttpApp(config: ResolvedConfig): OpenAPIHono<AppEnv> {
 
     // `app.fetch` is a public entry point, so the app opens a request scope when
     // none is open for this request, and joins the Astro middleware's when one
-    // is, so the session resolves once. The client address goes on the scope so
-    // every context built below carries it.
+    // is, so the session resolves once. The client address and the rate-limit
+    // key go on the scope so every context built below carries them. A request
+    // with no trusted address counts under the key all such requests share.
     app.use('*', (c, next) => {
+        const clientAddress = getClientAddress(c);
+        const caller = {
+            clientAddress,
+            rateLimitKey:
+                clientAddress === undefined
+                    ? NO_TRUSTED_IP_KEY
+                    : rateLimitKey(clientAddress),
+        };
         const open = getRequestScope();
         if (open?.request === c.req.raw) {
-            open.clientAddress = getClientAddress(c);
+            Object.assign(open, caller);
             return next();
         }
-        return runInRequestScope(
-            { request: c.req.raw, clientAddress: getClientAddress(c) },
-            () => next()
-        );
+        return runInRequestScope({ request: c.req.raw, ...caller }, () => next());
     });
 
     // Security headers, applied to all responses. A media response relaxes

@@ -25,6 +25,12 @@ export type RequestScope = {
      * Astro page requests and trusted callers.
      */
     clientAddress?: string | undefined;
+    /**
+     * The key to count this request under, set by the Hono app beside
+     * `clientAddress`: the address's key, or `NO_TRUSTED_IP_KEY` when an API
+     * request has no trusted address. Absent where no address was read.
+     */
+    rateLimitKey?: string | undefined;
     /** Set through `ctx.noStore()`, by a read no cache may store. */
     noStore?: boolean;
 };

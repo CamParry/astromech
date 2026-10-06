@@ -37,10 +37,11 @@ export {
     globalPermissions,
 } from '@/permissions/global-permission';
 /**
- * The key a plugin's per-client rate limit counts `ctx.clientAddress` under,
- * grouped the way core's sign-in limits group addresses.
+ * The key a per-client rate limit counts an address under, grouped the way
+ * core's sign-in limits group addresses, and the key HTTP requests with no
+ * trusted address share. A plugin counts by `ctx.rateLimitKey`, built from both.
  */
-export { rateLimitKey } from '@/utilities/ip-address';
+export { NO_TRUSTED_IP_KEY, rateLimitKey } from '@/utilities/ip-address';
 export { withDefaults } from '@/utilities/options';
 /**
  * The configured captcha check, so a plugin verifies a token without owning a

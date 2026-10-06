@@ -47,6 +47,8 @@ export type AppContextInput = {
     user: User | null;
     role: Role | null;
     clientAddress?: string | undefined;
+    /** The key to count the caller under; absent for a trusted caller. */
+    rateLimitKey?: string | undefined;
     /** Backs `ctx.noStore`; absent where there is no response to mark. */
     noStore?: () => void;
 };
@@ -56,7 +58,7 @@ export type AppContextInput = {
  * registry is a getter, so a context can be built before the drivers are wired.
  */
 export function createAppContext(input: AppContextInput): AppContext {
-    const { user, role, clientAddress, noStore } = input;
+    const { user, role, clientAddress, rateLimitKey, noStore } = input;
 
     const context: AppContext = {
         get db(): Kysely<DB> {
@@ -68,6 +70,7 @@ export function createAppContext(input: AppContextInput): AppContext {
         user,
         role,
         clientAddress,
+        rateLimitKey,
         noStore: noStore ?? (() => undefined),
         // Bound once per context, so a handler reaching a sibling acts as this user.
         get entries(): EntriesService {
@@ -169,6 +172,7 @@ export async function currentAppContext(): Promise<AppContext> {
         user,
         role,
         clientAddress: scope.clientAddress,
+        rateLimitKey: scope.rateLimitKey,
         noStore: () => {
             scope.noStore = true;
         },

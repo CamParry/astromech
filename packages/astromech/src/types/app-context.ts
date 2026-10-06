@@ -38,10 +38,18 @@ export type AppContext = {
     /**
      * The connecting address, set by the HTTP transport when the runtime exposes
      * one it can trust. Absent for a CLI, MCP or in-process caller, and absent
-     * over HTTP where no trustworthy source exists — so it is an identity to
+     * over HTTP where no trustworthy source exists, so it is an identity to
      * meter traffic by, never proof of who the caller is.
      */
     clientAddress?: string | undefined;
+    /**
+     * The key to count this caller's requests under. Over the HTTP API it is
+     * `rateLimitKey(clientAddress)`, or `NO_TRUSTED_IP_KEY`, which every
+     * request with no trusted address shares, so hiding the address does not
+     * escape a limit. Absent for a trusted caller: a CLI, MCP or in-process
+     * caller, and an Astro page request, which reads no address.
+     */
+    rateLimitKey?: string | undefined;
     /**
      * Mark the response to this context's request as one no cache may store,
      * because it answers this caller alone, as a preview read does. Does
