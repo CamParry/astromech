@@ -9,6 +9,7 @@
  */
 import type { TestUserConfig } from 'vitest/config';
 import { fileURLToPath } from 'node:url';
+import { cpuLimitsApply, TEST_WORKERS } from '../../../../scripts/cpu-limits.mjs';
 
 /**
  * Options each project spreads into its own `test`. An inline project does not
@@ -22,10 +23,13 @@ export const baseTestOptions = {
     expect: { requireAssertions: true },
     // Vitest allows `.only` outside CI, where it silently narrows a run.
     allowOnly: false,
-    // Vitest's defaults, set here so every package uses the same ones. A
-    // healthy test takes well under a second; one that nears 5 s is slow for
-    // a reason worth finding, not a limit to raise.
-    testTimeout: 5000,
+    // A healthy test takes well under a second alone, and several seconds
+    // under coverage on a loaded machine: an admin test that types into a form
+    // takes over 5 s, vitest's default, at a load average of 25. 15 s allows
+    // for that and still stops a hung test. A test that measures its own speed
+    // asserts its own time limit rather than leaning on this one.
+    testTimeout: 15_000,
+    // Vitest's default.
     hookTimeout: 10_000,
     // Undoes every `vi.spyOn` before the next test. Needed most where a worker
     // shares one module graph between files (`isolate: false`), where a spy
@@ -43,6 +47,9 @@ export const baseRootTestOptions = {
     // leftovers fails. Vitest prints the seed as the run starts;
     // `--sequence.seed=<n>` replays that order.
     sequence: { shuffle: true },
+    // Fewer workers on a laptop, so a run leaves it usable. A direct vitest
+    // run gets these but not the lower priority (`scripts/cpu-limits.mjs`).
+    ...(cpuLimitsApply ? { maxWorkers: TEST_WORKERS } : {}),
 } satisfies TestUserConfig;
 
 /**

@@ -14,14 +14,14 @@ Nested `AGENTS.md` files cover `packages/astromech`, `packages/admin`, `packages
 
 ## Commands and the gate
 
-While working, run the test file you touched (`pnpm -F <package> exec vitest run <path>`; the `testing` skill has the detail). Run `pnpm run verify:fast` before handing work back (typecheck, tests, lint, `check:unused`; no build, no coverage thresholds). Run `pnpm run verify` before a change lands. `pnpm run verify:runtime` is the version-sensitive subset CI runs on the floor Node version. **Never `--no-verify`**: if the pre-commit hook fails, fix the cause.
+While working, run the test file you touched (`pnpm -F <package> exec vitest run <path>`; the `testing` skill has the detail). Run `pnpm run verify:fast` before handing work back (typecheck, tests, lint, `check:unused`; no build, and coverage thresholds only for the packages the branch changes). Run `pnpm run verify` before a change lands. `pnpm run verify:runtime` is the version-sensitive subset CI runs on the floor Node version. Each check writes its whole output to a log, and a failing check's `FAIL` line names the file: search the log rather than rerun the check. A passing run writes a stamp that `pnpm run verify:status` compares with the worktree. **Never `--no-verify`**: if the pre-commit hook fails, fix the cause.
 
 `verify` runs every check below except five: `format:check` and `lint:css` (the hook runs them), `check:hooks` (the hook runs it when `.claude/hooks/` changes), `check:config` (run it when you edit the config path) and `check:install` (needs the npm registry, so CI runs it separately).
 
 | Command                          | Checks                                                                                                                                                 |
 | -------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------ |
 | `pnpm run typecheck`             | `tsc` over every package, then `astro sync && tsc --noEmit` in both demo apps                                                                          |
-| `pnpm run test:run`              | vitest over every package, with per-directory coverage thresholds                                                                                      |
+| `pnpm run test:run`              | vitest over every package, one at a time, with per-directory coverage thresholds; names every package that failed                                      |
 | `pnpm run build`                 | tsup (out of memory: see `packages/astromech/AGENTS.md`)                                                                                               |
 | `pnpm run lint`                  | eslint over packages and scripts, type-aware over package sources                                                                                      |
 | `pnpm run lint:css`              | stylelint over the admin's styles                                                                                                                      |
@@ -40,7 +40,9 @@ While working, run the test file you touched (`pnpm -F <package> exec vitest run
 
 Each script's header has the detail.
 
-- **Run the boot checks by hand.** Neither is in the pre-commit hook, and they are the only checks that see a defect in the serving process. Run `check:boot` after touching boot, the config path or the injected middleware, and `check:boot:cloudflare` after touching bindings, the environment or the Worker entry.
+- **Run the boot checks by hand.** Neither is in the pre-commit hook, and they are the only checks that see a defect in the serving process. Run `check:boot` after touching boot, the config path or the injected middleware, and `check:boot:cloudflare` after touching bindings, the environment or the Worker entry. Neither needs anything set in the shell: each uses a throwaway `BETTER_AUTH_SECRET` when none is set, and they and `verify` drop an inherited `NODE_ENV` (`scripts/check-helpers.mjs`).
+- **Local runs leave the machine usable.** On macOS outside CI, the gate, the boot checks and the root `test:run`, `build`, `build:js`, `typecheck` and `lint` scripts run at utility QoS, vitest runs four workers, and the gate's typecheck and lint check two packages at once (`scripts/cpu-limits.mjs`). A direct `pnpm -F <package> exec vitest run` gets the four workers but not the lower priority. Set `ASTROMECH_FULL_SPEED=1` for the fastest run on an idle machine.
+- **One heavy run at a time.** The gate, the boot checks and the root `build`, `build:js` and `test:run` scripts share a lock across every worktree and session (`scripts/run-lock.mjs`). One started while another holds it prints a `run-lock: waiting for …` line naming the holder and starts when that one ends. A direct `pnpm -F <package> exec vitest run`, `typecheck` and `lint` do not wait. When another run may hold the lock, start the gate, `test:run`, `build` or a boot check in the background: the wait can outlast a 2-minute tool timeout.
 - **A core table change needs a migration.** `packages/astromech/tests/database/drift.test.ts` diffs `apps/demo/migrations/snapshot.json` against `CORE_TABLES`. When it fails, run `pnpm run db:generate` and commit the result. It does not cover plugin tables.
 - **Use pnpm**, never `npm install`: a flat tree hides undeclared dependencies. Every package declares what it imports.
 - Other commands: `format`, `db:generate`, `db:init`, `roadmap`.
@@ -50,7 +52,7 @@ Each script's header has the detail.
 - **Clarify before acting.** If a task is ambiguous, or the approach depends on an unclear requirement, ask.
 - **Delegate implementation to a sub-agent.** The main thread plans, decides and reviews. Edit directly only for a trivial one-liner or to correct a sub-agent.
 - **Give the sub-agent the whole plan**: file paths, exact changes and expected outcomes, so it does not re-research the codebase. Start the brief by pointing it to `.claude/_agents/coder.md`, the rules every implementation agent follows.
-- **Verify what comes back.** Re-run the gate yourself. A sub-agent's report of a clean run is not evidence.
+- **Verify what comes back.** Run `pnpm run verify:status --fast` in the worktree (`--full` for the full gate). It exits 0 only when that gate passed on the worktree's current content, committed since or not; otherwise re-run the gate yourself. A sub-agent's report of a clean run is not evidence. The stamp is, since the gate script writes it: it guards against a mistaken report, not a forged one, as an agent could write the file by hand.
 - **Study a pattern before changing it.** Find where it already repeats. Change every copy, record the rest in a `roadmap/` file, or say why this one differs. A defect fix asks where else the same defect can occur.
 - **Back each recommendation with prior art.** Name a CMS or framework that does it, with a link, or say none was found. Say whether each claim about platform behaviour comes from docs or from a test.
 - **Run `pnpm run report:drift` before a branch merges**, and give each item a decision in the merge summary: share it now, add it to a `roadmap/` file, or leave it with a reason.

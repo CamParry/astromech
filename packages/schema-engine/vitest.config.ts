@@ -1,4 +1,5 @@
 import { defineConfig } from 'vitest/config';
+import { cpuLimitsApply, TEST_WORKERS } from '../../scripts/cpu-limits.mjs';
 
 // The schema engine sits below core and is published on its own, so its tests
 // do not reach into core's test support. This config copies what
@@ -24,10 +25,11 @@ export default defineConfig({
         include: ['tests/**/*.test.ts'],
         expect: { requireAssertions: true },
         allowOnly: false,
-        testTimeout: 5000,
+        testTimeout: 15_000,
         hookTimeout: 10_000,
         restoreMocks: true,
         sequence: { shuffle: true },
+        ...(cpuLimitsApply ? { maxWorkers: TEST_WORKERS } : {}),
         // Reports go to `coverage/`, which git ignores.
         coverage: {
             provider: 'v8',
