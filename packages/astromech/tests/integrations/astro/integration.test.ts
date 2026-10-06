@@ -189,21 +189,9 @@ describe('astromech()', () => {
             );
         });
 
-        it('warns when Astro may read x-forwarded-for and trustProxy is unset', async () => {
+        it('does not warn at startup when allowedDomains is set and trustProxy is unset', async () => {
             const { integration, recorded, done } = await runSetup(undefined, {
                 allowedDomains: [{ hostname: 'example.com' }],
-            });
-            await integration.hooks['astro:config:done']?.(done);
-
-            expect(recorded.warnings).toEqual([
-                expect.stringContaining('Set `security.trustProxy`'),
-            ]);
-        });
-
-        it('does not warn on the Cloudflare adapter, which reads cf-connecting-ip', async () => {
-            const { integration, recorded, done } = await runSetup(undefined, {
-                allowedDomains: [{ hostname: 'example.com' }],
-                adapter: '@astrojs/cloudflare',
             });
             await integration.hooks['astro:config:done']?.(done);
 
@@ -263,7 +251,7 @@ async function runSetup(integrations?: { name: string }[], site: Site = {}) {
 }
 
 /** The Astro config a fake site sets beyond its integrations. */
-type Site = { allowedDomains?: AllowedDomains; adapter?: string };
+type Site = { allowedDomains?: AllowedDomains };
 
 /** Recording fakes for both hooks, for a site whose integrations are `integrations`. */
 function createFakes(
@@ -287,7 +275,6 @@ function createFakes(
         root: pathToFileURL(`${root}/`),
         integrations,
         security: { allowedDomains: site.allowedDomains ?? [] },
-        adapter: site.adapter === undefined ? undefined : { name: site.adapter },
     };
 
     const setup = {

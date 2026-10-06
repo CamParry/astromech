@@ -54,6 +54,10 @@ describe('the sign-in rate limit', () => {
     it.each(['x-forwarded-for', 'x-astromech-client-address'])(
         'counts every attempt against one address when a client forges %s',
         async (header) => {
+            // Core tells the site to set `trustProxy` on a forwarding header it ignores.
+            if (header === 'x-forwarded-for') {
+                expectConsole('error', 'set `security.trustProxy`');
+            }
             const app = appWith();
             await signInTestUser(db, EMAIL);
 

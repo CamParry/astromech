@@ -11,6 +11,7 @@ import type { FormsOptions } from '../src/index';
 import type { SpamProvider } from '../src/spam/types';
 import type { PluginTestApp } from '@tests/plugin-app';
 import type { PluginContext } from 'astromech';
+import { expectConsole } from '@tests/console';
 import { makeTestConfig } from '@tests/harness';
 import { createPluginTestApp } from '@tests/plugin-app';
 import { afterEach, describe, expect, it, vi } from 'vitest';
@@ -178,8 +179,12 @@ describe("core's captcha as the spam provider", () => {
 
     const CAPTCHA = { provider: 'turnstile', siteKey: 'site-key' } as const;
 
+    /** Core's warning for an `x-forwarded-for` it does not read without `trustProxy`. */
+    const PROXY_WARNING = 'set `security.trustProxy`';
+
     it("uses core's captcha when the site configures one and passes no spam option", async () => {
         await setup({}, { trustProxy: false, captcha: CAPTCHA });
+        expectConsole('error', PROXY_WARNING);
 
         const result = await submit();
         const form = await app.service.get({ slug: 'contact' });
@@ -195,6 +200,7 @@ describe("core's captcha as the spam provider", () => {
 
     it("refuses a submission whose token core's captcha refuses", async () => {
         await setup({}, { trustProxy: false, captcha: CAPTCHA });
+        expectConsole('error', PROXY_WARNING);
         vi.stubGlobal('fetch', () =>
             Promise.resolve(
                 jsonResponse({ success: true, action: 'sign_in', hostname: 'localhost' })
@@ -217,6 +223,7 @@ describe("core's captcha as the spam provider", () => {
             { spam: { name: 'own', siteKey: 'own-key', verify } },
             { trustProxy: false, captcha: CAPTCHA }
         );
+        expectConsole('error', PROXY_WARNING);
 
         const result = await submit();
         const form = await app.service.get({ slug: 'contact' });
@@ -229,6 +236,7 @@ describe("core's captcha as the spam provider", () => {
 
     it('checks nothing when the site sets neither', async () => {
         await setup({}, { trustProxy: false });
+        expectConsole('error', PROXY_WARNING);
 
         const result = await submit();
         const form = await app.service.get({ slug: 'contact' });
@@ -249,6 +257,7 @@ describe("core's captcha as the spam provider", () => {
 
     it('sends no address when the transport has no trusted one', async () => {
         await setup({}, { trustProxy: false, captcha: CAPTCHA });
+        expectConsole('error', PROXY_WARNING);
 
         const result = await submit('198.51.100.1');
 

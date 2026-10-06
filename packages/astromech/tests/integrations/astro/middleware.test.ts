@@ -20,6 +20,7 @@ import { onRequest } from '@/integrations/astro/middleware';
 const site = vi.hoisted(() => ({
     config: undefined as AstromechConfig | undefined,
     migrationNames: null as readonly string[] | null,
+    astroReadsForwardedFor: false,
 }));
 
 vi.mock('virtual:astromech/config', () => ({
@@ -29,7 +30,9 @@ vi.mock('virtual:astromech/config', () => ({
     get migrationNames() {
         return site.migrationNames;
     },
-    astroReadsForwardedFor: false,
+    get astroReadsForwardedFor() {
+        return site.astroReadsForwardedFor;
+    },
 }));
 
 const SECRET = 'middleware-test-0123456789abcdef0123';
@@ -41,6 +44,7 @@ beforeEach(async () => {
     await createTestDb();
     site.config = { ...makeBootConfig(), scheduler: noScheduler };
     site.migrationNames = null;
+    site.astroReadsForwardedFor = false;
     clearEnvSource();
     // A secret in the shell running the suite would otherwise satisfy the check.
     vi.stubEnv('BETTER_AUTH_SECRET', undefined);
@@ -89,11 +93,12 @@ function context(
         isPrerendered?: boolean;
         cache?: RouteCache;
         clientAddress?: string;
+        headers?: Record<string, string>;
     } = {}
 ): APIContext {
     const url = new URL(options.path ?? '/', 'http://localhost');
     return {
-        request: new Request(url),
+        request: new Request(url, { headers: options.headers ?? {} }),
         url,
         isPrerendered: options.isPrerendered ?? false,
         cache: options.cache ?? routeCache(),
@@ -388,6 +393,34 @@ describe('the block list on pages', () => {
         const response = await responseOf(
             onRequest(
                 context({ path: '/cms/entries', clientAddress: '203.0.113.8' }),
+                page
+            )
+        );
+
+        expect(response.status).toBe(200);
+    });
+
+    it('refuses an admin page from a blocked address under allowedDomains when the request carries no x-forwarded-for', async () => {
+        site.astroReadsForwardedFor = true;
+
+        const response = await responseOf(
+            onRequest(context({ path: '/cms/entries', clientAddress: BLOCKED }), page)
+        );
+
+        expect(response.status).toBe(403);
+    });
+
+    it('knows no address under allowedDomains when the request carries x-forwarded-for', async () => {
+        site.astroReadsForwardedFor = true;
+        expectConsole('error', 'set `security.trustProxy`');
+
+        const response = await responseOf(
+            onRequest(
+                context({
+                    path: '/cms/entries',
+                    clientAddress: BLOCKED,
+                    headers: { 'x-forwarded-for': '198.51.100.9' },
+                }),
                 page
             )
         );

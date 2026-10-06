@@ -4,7 +4,8 @@ declare module 'virtual:astromech/config' {
     export const rawConfig: import('./types').AstromechConfig;
     /**
      * Whether Astro's `security.allowedDomains` is set, which lets Astro take
-     * `clientAddress` from `x-forwarded-for` rather than the connection.
+     * `clientAddress` from a request's `x-forwarded-for`, when it carries one,
+     * rather than the connection.
      */
     export const astroReadsForwardedFor: boolean;
     /** The app's migration names when the site was built, or null with no chain. */

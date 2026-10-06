@@ -5,7 +5,7 @@
  */
 
 import type { AstromechConfig, ResolvedConfig } from '@/types/index';
-import type { AstroConfig, AstroIntegration } from 'astro';
+import type { AstroIntegration } from 'astro';
 import { fileURLToPath } from 'node:url';
 import { createAdminViteConfig } from '@astromech/admin/vite';
 import { buildAdminConfig } from '@/config/admin-config';
@@ -111,8 +111,6 @@ export function astromech(options: AstromechIntegrationOptions = {}): AstroInteg
                 const plugins = config.plugins ?? [];
 
                 astroReadsForwardedFor = astroConfig.security.allowedDomains.length > 0;
-                const warning = clientAddressWarning(astroConfig, resolvedConfig);
-                if (warning !== undefined) logger.warn(warning);
 
                 const { generateClientTypes } = await import('@/codegen/type-generator');
                 injectTypes({
@@ -195,22 +193,6 @@ async function bundleMigrationNames(
         );
         return null;
     }
-}
-
-/**
- * The warning for a Node site where Astro's `security.allowedDomains` is set and
- * `security.trustProxy` is not: Astro's `clientAddress` may then come from a
- * client-sent header, so Astromech knows no client address.
- */
-function clientAddressWarning(
-    astroConfig: AstroConfig,
-    resolvedConfig: ResolvedConfig
-): string | undefined {
-    if (astroConfig.security.allowedDomains.length === 0) return undefined;
-    if ((resolvedConfig.security?.trustProxy ?? false) !== false) return undefined;
-    // Workers read `cf-connecting-ip`, which Cloudflare sets.
-    if (astroConfig.adapter?.name === '@astrojs/cloudflare') return undefined;
-    return "Astro's `security.allowedDomains` is set, so Astro may take a request's address from `x-forwarded-for`, which a client can send. Astromech does not use that address, so every client shares one count in each limit keyed on the client address. Set `security.trustProxy` in `astromech.config.ts` to the number of proxies in front of the server.";
 }
 
 /**
