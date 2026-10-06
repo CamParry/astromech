@@ -9,10 +9,12 @@
  * Steps, each stopping the script when it fails:
  *  1. Refuse when the worktree has uncommitted changes.
  *  2. Fetch, and refuse unless the branch contains the remote's main.
- *  3. Merge with `--no-ff` onto a detached copy of the remote's main, as "Merge branch '<branch>'"
- *     with the body from `--message-file` (the drift decisions, AGENTS.md "Workflow").
- *  4. Push the merge to main. When main has moved since the fetch the push is refused: the
- *     worktree goes back to the branch, and nothing else needs undoing.
+ *  3. Make the merge commit with `git commit-tree`, without touching the worktree: its parents are
+ *     the remote's main and HEAD, and its tree is HEAD's, which is exactly what a `--no-ff` merge
+ *     gives once step 2 holds. The message is "Merge branch '<branch>'" with the body from
+ *     `--message-file` (the drift decisions, AGENTS.md "Workflow").
+ *  4. Push the merge commit to main. When main has moved since the fetch the push is refused, and
+ *     nothing needs undoing: the merge commit is on no branch.
  *  5. Remove the worktree with `wt remove`. Every later step runs in the main checkout.
  *  6. Delete the branch once main contains it.
  *  7. Fast-forward the main checkout when it is on main with no uncommitted changes to tracked
@@ -68,45 +70,23 @@ if (!gitSucceeds(['merge-base', '--is-ancestor', remoteMain, 'HEAD'])) {
     );
 }
 
-const head = git(['log', '-1', '--format=%h %s', 'HEAD']);
+const base = git(['rev-parse', '--verify', `${remoteMain}^{commit}`]);
+const tip = git(['rev-parse', '--verify', 'HEAD^{commit}']);
+const head = git(['log', '-1', '--format=%h %s', tip]);
 console.log(
     `Landing ${branch} at ${head}. The gate is not run here: it must have passed on this commit.`
 );
 
-step(`Merging ${branch} onto ${remoteMain}`);
-const messageDirectory = mkdtempSync(join(tmpdir(), 'land-'));
-const messageFile = join(messageDirectory, 'message');
-writeFileSync(messageFile, message);
-try {
-    await change('git', ['switch', '--quiet', '--detach', remoteMain]);
-    try {
-        await change('git', [
-            'merge',
-            '--quiet',
-            '--no-ff',
-            '--file',
-            messageFile,
-            branch,
-        ]);
-    } catch (error) {
-        // Fails when the merge never started, which leaves nothing to abort.
-        await run('git', ['merge', '--abort']).catch(() => undefined);
-        await run('git', ['switch', '--quiet', branch]);
-        throw error;
-    }
-} finally {
-    rmSync(messageDirectory, { recursive: true, force: true });
-}
+step(`Making the merge commit of ${branch} onto ${remoteMain}`);
+const landed = mergeCommit();
+console.log(`Made ${landed}.`);
 
 step(`Pushing to ${remoteMain}`);
 try {
-    await change('git', ['push', '--quiet', remote, `HEAD:${MAIN}`]);
+    await change('git', ['push', '--quiet', remote, `${landed}:${MAIN}`]);
 } catch {
-    await run('git', ['switch', '--quiet', branch]);
     refuse(`${MAIN} moved: fetch, rebase, rerun the gate if code changed.`);
 }
-const landed = options.dryRun ? '<merge commit>' : git(['rev-parse', 'HEAD']);
-await change('git', ['switch', '--quiet', branch]);
 
 step(`Removing the worktree ${worktree}`);
 // The worktree directory is about to go, and a command can't start in a deleted directory.
@@ -165,6 +145,35 @@ if (options.ci) {
         console.log(
             `  $ gh run list --commit ${landed}, then gh run watch --exit-status <id>`
         );
+}
+
+/**
+ * Writes the merge commit and returns its hash. Under `--dry-run` it prints the command instead.
+ * The commit is on no branch until the push, so it changes nothing a reader can see.
+ */
+function mergeCommit() {
+    const directory = mkdtempSync(join(tmpdir(), 'land-'));
+    const messageFile = join(directory, 'message');
+    const args = [
+        'commit-tree',
+        `${tip}^{tree}`,
+        '-p',
+        base,
+        '-p',
+        tip,
+        '-F',
+        messageFile,
+    ];
+    try {
+        writeFileSync(messageFile, message);
+        if (options.dryRun) {
+            console.log(`  $ git ${args.join(' ')}`);
+            return '<merge commit>';
+        }
+        return git(args);
+    } finally {
+        rmSync(directory, { recursive: true, force: true });
+    }
 }
 
 /** The merge commit's message: git's own subject for the merge, then the body file if given. */
