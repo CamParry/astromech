@@ -5,7 +5,6 @@
  * list plus a dispatch map keyed by tool name. No I/O; unit-testable.
  */
 import type { ConfirmOptions } from '@/policies/confirmation';
-import type { DispatchResult } from '@/transport/tools/dispatch';
 import type {
     JsonSchemaObject,
     ManifestMethod,
@@ -125,17 +124,7 @@ export function buildTools(
     const confirmOptions = confirm ?? NEVER_CONFIRM;
 
     for (const method of manifest.methods) {
-        let result: DispatchResult;
-        try {
-            result = buildDispatch(method);
-        } catch (err) {
-            skipped.push({
-                id: method.id,
-                reason: err instanceof Error ? err.message : String(err),
-            });
-            continue;
-        }
-
+        const result = buildDispatch(method);
         if (!result.ok) {
             skipped.push({ id: method.id, reason: result.reason });
             continue;

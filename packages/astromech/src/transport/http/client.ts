@@ -151,11 +151,7 @@ function routeFor(id: string, args: Args): MountedRoute {
  * the same separator. Hono decodes it back on the server, and a bare id encodes
  * to itself.
  */
-function fillPath(
-    route: MountedRoute,
-    args: Args,
-    base: string
-): { path: string; rest: Args } {
+function fillPath(route: MountedRoute, args: Args): { path: string; rest: Args } {
     const taken = new Set<string>();
     const filled = route.path.replace(/:([A-Za-z0-9_]+)/g, (_match, name: string) => {
         taken.add(name);
@@ -168,7 +164,7 @@ function fillPath(
         rest[key] = value;
     }
 
-    return { path: filled === '/' ? base : `${base}${filled}`, rest };
+    return { path: filled === '/' ? route.base : `${route.base}${filled}`, rest };
 }
 
 /** Split what the path did not take into the route's query params and its body. */
@@ -198,13 +194,10 @@ function unwrap(envelope: ResponseEnvelope | undefined, payload: unknown): unkno
     }
 }
 
-/**
- * Call the route the table names for `id`. `base` overrides the row's mount
- * path, which is what lets an entries handle be built against another prefix.
- */
-async function callRoute(id: string, args: Args = {}, base?: string): Promise<unknown> {
+/** Call the route the table names for `id`. */
+async function callRoute(id: string, args: Args = {}): Promise<unknown> {
     const route = routeFor(id, args);
-    const { path, rest } = fillPath(route, args, base ?? route.base);
+    const { path, rest } = fillPath(route, args);
 
     const options: FetchOptions = { method: route.verb.toUpperCase() };
     if (route.verb === 'post' || route.verb === 'put') {
@@ -247,44 +240,21 @@ function restService<T extends object>(
 }
 
 /**
- * Create an EntriesService backed by HTTP fetch.
- *
- * `defaultShape` controls what happens when the caller omits the `full` flag on
- * read calls (`query` / `get`):
- *  - `'public'` (default): no `full` param sent → server returns public shape.
- *  - `'full'`: injects `full: true` into reads that don't specify `full`, so the
- *    admin client gets full data without annotating every call.
- *
- * An explicit per-call `full` value always wins over the client default.
+ * A read that does not name `full` asks for the full shape, so the admin gets
+ * full data without annotating every call. An explicit `full` (even `false`)
+ * is sent as given.
  */
-export function createEntriesService(
-    basePath: string,
-    defaultShape: 'public' | 'full' = 'public'
-): EntriesService {
-    const call: Call = (id, params) => callRoute(id, params ?? {}, basePath);
-
-    /**
-     * Resolve the effective `full` flag for a read call.
-     * If the param object has an explicit `full` key (even `false`), use it.
-     * Otherwise fall back to the client-level default.
-     */
-    function withFull(params: Args = {}): Args {
-        const fallback = defaultShape === 'full' ? true : undefined;
-        const full = 'full' in params ? params['full'] : fallback;
-        return { ...params, ...(full !== undefined ? { full } : {}) };
-    }
-
-    // Only the reads are overridden, and only for the shape default: the
-    // route each takes still comes from the table.
-    return restService<EntriesService>('entries', call, {
-        query: (params) => call('entries.query', withFull(params)),
-        count: (params) => call('entries.count', withFull(params)),
-        get: (params) => call('entries.get', withFull(params)),
-    });
+function withFull(params: Args = {}): Args {
+    return 'full' in params ? params : { ...params, full: true };
 }
 
-/** Root entries API — admin fetch client defaults to full shape (authenticated admin). */
-const entriesService: EntriesService = createEntriesService('/entries', 'full');
+// Only the reads are overridden, and only for the shape default: the route each
+// takes still comes from the table.
+const entriesService = restService<EntriesService>('entries', callRoute, {
+    query: (params) => callRoute('entries.query', withFull(params)),
+    count: (params) => callRoute('entries.count', withFull(params)),
+    get: (params) => callRoute('entries.get', withFull(params)),
+});
 
 /**
  * A multipart upload — the two media routes with no row in the table, because a

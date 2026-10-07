@@ -108,12 +108,8 @@ export function forbidden(
     return apiError(c, 403, code, message);
 }
 
-export function badRequest(
-    c: Context,
-    message: string,
-    details?: ApiErrorDetails
-): Response {
-    return apiError(c, 400, 'BAD_REQUEST', message, details);
+export function badRequest(c: Context, message: string): Response {
+    return apiError(c, 400, 'BAD_REQUEST', message);
 }
 
 /**

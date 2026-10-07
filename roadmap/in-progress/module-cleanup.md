@@ -152,12 +152,22 @@ the repository copies.
       override and a client override, all to answer `{ data: { count } }`.
 - [ ] `globals.get({ staged })`, which only a test uses; the admin calls
       `getStaged`.
-- [ ] `CELL_KINDS`, `badRequest`'s `details`, the
+- [x] `CELL_KINDS`, `badRequest`'s `details`, the
       unreachable try/catch in `transport/mcp/tools.ts`, and
       `createEntriesService`'s two parameters that only ever take one value.
+      `createEntriesService` went too: no docs named it, so the entries
+      handle is built like the other services, and `callRoute` lost its
+      `base` override.
 - [ ] Two unrelated `pluginNamespace` exports; rename the Proxy builder.
 - [ ] `SlugConfig`'s `source` and `prefix` (`types/config.ts`): nothing reads
-      them, since a slug always derives from the title.
+      them, since a slug always derives from the title. **Needs a decision
+      first:** the `slug` object's presence is what shows the slug input in
+      the admin (`config/admin-config.ts` sends `slug: null` without it, and
+      the admin's `resolve.ts` sets `hasSlug` from it), so a type with the
+      slug capability on but no `slug` object generates slugs the form cannot
+      edit. Either show the input whenever `capabilities.slug` is on and drop
+      `SlugConfig`, or make `slug` a boolean. The `entry-types` route's
+      response schema lists both fields too.
 
 ## Public API
 
