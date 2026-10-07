@@ -52,6 +52,7 @@
  * | `wt remove --force` (judged by the worktree it removes)     | silent       | silent     | ask       |
  * | `wt remove -D` (deletes unmerged branches)                  | ask          | silent     | ask       |
  * | `wt switch --clobber`, `wt config state clear`              | ask          | silent     | ask       |
+ * | `pnpm run land --no-gate-check`, however the script is run  | deny         | deny       | deny      |
  * | an unquoted glob in a pattern option (`--include=*.ts`,     | deny         | deny       | deny      |
  * | `--exclude *.log`, `rg -g *.md`, `find -name *.ts`)         |              |            |           |
  * | a command it cannot parse                                   | ask          | ask        | ask       |
@@ -75,7 +76,7 @@ import { homedir } from 'node:os';
 import { basename, dirname, isAbsolute, join, resolve, sep } from 'node:path';
 
 // Commands that mention none of these words cannot match a rule, so they skip the parse.
-const TRIGGER = /git|pkill|killall|\bwt\b/;
+const TRIGGER = /git|pkill|killall|\bwt\b|no-gate-check/;
 // A shell can read a script the hook never sees. A command that mentions a shell but none of the
 // words above is still parsed, but one the parser rejects passes silently: the parser misses some
 // shell syntax (`case`), and asking for every such command would prompt often.
@@ -451,8 +452,46 @@ function inspectCommand(words, shellDirectory, findings) {
         collectFindings(parseScript(script), directory, findings);
     } else if (name === 'find') {
         inspectFindExec(rest, directory, findings);
+    } else if (
+        runsLandScript(name, rest) &&
+        rest.some((word) => word.text === '--no-gate-check')
+    ) {
+        findings.push({
+            kind: 'refused',
+            label: truncate(args.map((word) => word.text).join(' ')),
+            why: '`--no-gate-check` skips the check that the gate passed on the tree being landed, and is only for the throwaway repositories `scripts/land.mjs` is tested on. Run `pnpm run verify`, then `pnpm run land` without the flag',
+        });
     }
     return undefined;
+}
+
+// Options of `pnpm` and `npm` that take their value as the next word.
+const PACKAGE_MANAGER_VALUE_OPTIONS = new Set([
+    '-C',
+    '--dir',
+    '-F',
+    '--filter',
+    '--prefix',
+]);
+
+/**
+ * Whether a command runs `scripts/land.mjs`: `pnpm run land`, `pnpm land`, `npm run land`,
+ * `node <path>/land.mjs` or the script itself.
+ */
+function runsLandScript(name, args) {
+    if (name === 'land.mjs') return true;
+    if (name === 'node') return args.some((word) => basename(word.text) === 'land.mjs');
+    if (name !== 'pnpm' && name !== 'npm') return false;
+    const operands = [];
+    for (let index = 0; index < args.length; index += 1) {
+        const text = args[index].text;
+        if (PACKAGE_MANAGER_VALUE_OPTIONS.has(text)) index += 1;
+        else if (!text.startsWith('-')) operands.push(text);
+    }
+    const script = ['run', 'run-script'].includes(operands[0])
+        ? operands[1]
+        : operands[0];
+    return script === 'land';
 }
 
 // Options that take a file pattern as the next word.

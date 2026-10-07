@@ -14,6 +14,8 @@
  *     (`pnpm run verify:status --full`). Step 1 leaves no uncommitted changes, so that content is
  *     HEAD's tree, which is the tree the merge commit gets. `--no-gate-check` skips this step,
  *     and is only for the throwaway repositories the script is tested on, which have no gate.
+ *     The Bash hook (`.claude/hooks/guard-bash-commands.mjs`) refuses the flag for agents; run
+ *     from a terminal, it works as written.
  *  4. Make the merge commit with `git commit-tree`, without touching the worktree: its parents are
  *     the remote's main and HEAD, and its tree is HEAD's, which is exactly what a `--no-ff` merge
  *     gives once step 2 holds. The message is "Merge branch '<branch>'" with the body from
