@@ -108,8 +108,7 @@ the repository copies.
       `entries/methods/duplicate.ts` writes its copy without either (no field
       parse, no create hooks). Share one derivation.
 - [x] **The admin derives a media extension on its own.** `packages/admin/src/components/media/media-thumb.tsx` keeps a copy of core's `extOf` (`packages/astromech/src/media/internal/keys.ts`), which now lower-cases the extension. Serving reads the extension from the row, so the copy is harmless today; export one from `astromech/shared` and use it. Now `fileExtension` in `media/file-extension.ts`, outside `internal/` so the shared entry may import it.
-- [ ] Smaller: the two no-op cron drivers; `quoteName`/`quoteLiteral` in
-      `packages/schema-engine`.
+- [ ] Smaller: the two no-op cron drivers.
 
 ## Code in the wrong place
 

@@ -29,13 +29,9 @@ function assertRenderable(value: string | number, subject: string): void {
     }
 }
 
-function quoteLiteral(value: string, subject: string): string {
-    assertRenderable(value, subject);
-    return `'${value.replace(/'/g, "''")}'`;
-}
-
 /**
- * Render a SQL-literal `DEFAULT`/`COALESCE` value (string/number/boolean).
+ * Render a value as a SQL literal: a `DEFAULT`, `COALESCE` or enum `CHECK`
+ * value, or a name in the oracle's `sqlite_master` filter.
  * Throws for NaN, an infinity or a string containing NUL; `subject` names the
  * value in that error, such as "the default of `posts`.`ratio`".
  */
@@ -43,9 +39,9 @@ export function renderLiteral(
     value: string | number | boolean,
     subject = 'a literal'
 ): string {
-    if (typeof value === 'string') return quoteLiteral(value, subject);
     if (typeof value === 'boolean') return value ? '1' : '0';
     assertRenderable(value, subject);
+    if (typeof value === 'string') return `'${value.replace(/'/g, "''")}'`;
     return String(value);
 }
 
@@ -71,7 +67,7 @@ export function renderColumnClause(
     if (col.notNull) parts.push('NOT NULL');
     if (col.enumValues !== undefined) {
         const values = col.enumValues
-            .map((value) => quoteLiteral(value, `an enum value of ${column}`))
+            .map((value) => renderLiteral(value, `an enum value of ${column}`))
             .join(', ');
         parts.push(`CHECK (\`${col.name}\` IN (${values}))`);
     }
