@@ -117,3 +117,29 @@ cover the gate's timeouts, environment, memory and reporting.
       the `src/tables/index.ts!` entry in `knip.json`. Confirm and remove it.
 - **Doc-wide rewrites while branches are open** made every open branch
   rebase. Land a rewrite of the root docs when no branch is open.
+
+## Gaps in the fixes
+
+Found on 2026-10-06 by the review of the branch that shipped the hook, the
+land script and the run lock. None has caused a failure yet; each is a gap in
+a guard.
+
+- [ ] **The Bash hook does not parse some shell syntax**: arrays
+      (`a=(…)`), process substitution (`<(…)`), `case` and `[[ a < b ]]`.
+      Find whether each makes the hook miss a command inside it or ask when
+      it need not, and handle both.
+- [ ] **The Bash hook lets `pnpm run land --no-gate-check` through.** The
+      flag skips the check that the gate passed on the tree being landed, so
+      an agent can land a tree no gate has seen. Refuse it with the reason.
+- [ ] **A boot check run on its own records no process groups.** The gate
+      records each check's process group in the lock file
+      (`recordProcessGroups` in `scripts/run-lock.mjs`), so a gate killed
+      outright holds the lock until its checks end. `check:boot:cloudflare`
+      run alone starts the build and wrangler in groups of their own and
+      records neither, so if it is killed, wrangler keeps running and the
+      next heavy run starts beside it. A run killed while taking over a stale
+      lock also leaves an `astromech-run.lock.<pid>.stale` or `.tmp` file in
+      the temp directory.
+- [ ] **`scripts/prior-art.mjs` hard-codes `Astromech-worktrees`.** The Bash
+      hook works out `<checkout name>-worktrees`, so the two disagree for a
+      checkout under another name.
