@@ -107,7 +107,7 @@ not be re-derived.
 
 ### AI context follow-ups (P6, 2026-08-03)
 
-- [ ] Entry **creation** routes (`new.tsx`) and **version-history** routes (`versions.tsx`) declare no AI context. A `{ kind: 'entries', type }` with no `id` renders as "Entry list for type X" via `describeReference`, which would describe a creation screen as a list — actively misleading, so they were left undeclared. Needs either a new `AIContextKind` or an extra wording branch in `utilities/ai-context.ts` before they can be wired
+- [ ] Entry **creation** routes (`new.tsx`) and **version-history** routes (`versions.tsx`) declare no AI context. A `{ kind: 'entries', type }` with no `id` renders as "Entry list for type X" via `describeReference`, which would describe a creation screen as a list — actively misleading, so they were left undeclared. Needs either a new `AIContextKind` or an extra wording branch in `ai/context-message.ts` before they can be wired
 - [ ] **Modal-driven detail views declare nothing** — opening a media item from the library (`MediaDetailModal` on the media index) still reports only the library at depth 0. The reference should be declared by whatever is actually in view, not by the route alone; a modal is the first case where those differ
 - [ ] No **field-level** reference yet. Depth 1 is the deepest anything declares, so "this field" has nothing to resolve against. The ordered-list design already accommodates it (a focused field editor at depth 2); the open question is what withdraws the reference on blur without thrashing the store
 

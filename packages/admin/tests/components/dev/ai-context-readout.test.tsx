@@ -11,7 +11,7 @@ import { act, render } from '@testing-library/react';
 import { beforeEach, describe, expect, it } from 'vitest';
 import { AiContextReadout } from '@/admin/components/dev/ai-context-readout';
 import { AiContextProvider, useAiContext } from '@/admin/context/ai-context';
-import { formatAiContextMessage } from '@/utilities/ai-context';
+import { formatAiContextMessage } from '@/ai/context-message';
 
 const postsList: AiContextReference = { kind: 'entries', type: 'posts', label: 'Posts' };
 

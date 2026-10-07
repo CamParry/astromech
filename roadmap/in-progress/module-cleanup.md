@@ -72,10 +72,11 @@ the repository copies.
       repeats `createContentRelationships` (`content/relationships.ts`) plus three
       repository reads only it uses. Add a type filter and bind entries through
       the factory.
-- [ ] **The staging merge exists twice, with two merge rules.**
+- [x] **The staging merge exists twice, with two merge rules.**
       `entries/methods/staging/merge.ts` takes the staged fields as they are;
       `globals/methods/staging/merge.ts` patches them over the canonical. One
-      helper in `content/staging.ts`, one rule.
+      helper in `content/staging.ts`, one rule. Superseded:
+      `roadmap/planned/drafts.md` removes staging and its merge step.
 - [x] **The entry catalogue restates every method.** `entries/catalogue.ts` repeats
       each summary in a switch and each input in a per-type builder. Build each
       from the method's own `input` with `safeExtend` and its `summary`.
@@ -133,8 +134,11 @@ the repository copies.
       time: `content/schema.ts` builds `usageSchema` from it, and
       `content/resources.ts` imports the resource schemas, which import
       `content/schema.ts`. Break that cycle first.
-- [ ] `utilities/` is a mixed bag: `ai-context.ts` to `ai/`, `locale.ts` to its
-      one consumer. `permission-match.ts` is in `planned/permissions.md`.
+- [x] `utilities/` is a mixed bag: `ai-context.ts` to `ai/`, `locale.ts` to its
+      one consumer. `permission-match.ts` is in `planned/permissions.md`. The
+      AI context message is `ai/context-message.ts`. `locale.ts` stays: ten
+      files across six modules import it, and the admin and the demo reach it
+      through `astromech/shared`, so it is a pure leaf with no single owner.
 - [ ] The plugin runtime keeps its own config copy with its own defaults
       (`plugins/runtime/plugin-runtime.ts`); read `app.config`.
 - [ ] `MediaQueryParams` and `UserQueryParams` are hand-written copies of their
@@ -150,15 +154,16 @@ the repository copies.
       `backlog.md`).
 - [ ] The `notifications.count` special cases: a bespoke route, a documented
       override and a client override, all to answer `{ data: { count } }`.
-- [ ] `globals.get({ staged })`, which only a test uses; the admin calls
-      `getStaged`.
+- [x] `globals.get({ staged })`, which only a test uses; the admin calls
+      `getStaged`. Superseded: `roadmap/planned/drafts.md` removes staging.
 - [x] `CELL_KINDS`, `badRequest`'s `details`, the
       unreachable try/catch in `transport/mcp/tools.ts`, and
       `createEntriesService`'s two parameters that only ever take one value.
       `createEntriesService` went too: no docs named it, so the entries
       handle is built like the other services, and `callRoute` lost its
       `base` override.
-- [ ] Two unrelated `pluginNamespace` exports; rename the Proxy builder.
+- [x] Two unrelated `pluginNamespace` exports; rename the Proxy builder. It is
+      `createPluginServices`, after `createServices` and `createPluginContext`.
 - [ ] `SlugConfig`'s `source` and `prefix` (`types/config.ts`): nothing reads
       them, since a slug always derives from the title. **Needs a decision
       first:** the `slug` object's presence is what shows the slug input in

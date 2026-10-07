@@ -21,6 +21,7 @@ const allowlist = [
     /^src\/errors\//,
     /^src\/registry\.ts$/,
     /^src\/types\//,
+    /^src\/ai\/context-message\.ts$/,
     /^src\/entries\/entry-types\.ts$/,
     /^src\/entries\/entry-url\.ts$/,
     /^src\/content\/validation-mode\.ts$/,

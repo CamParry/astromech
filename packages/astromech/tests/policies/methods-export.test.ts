@@ -16,6 +16,7 @@ import type {
     ToolDefinition,
 } from '@/exports/methods';
 import { describe, expect, it } from 'vitest';
+import { formatAiContextMessage } from '@/ai/context-message';
 import { createServices } from '@/app-context/services';
 import { getMethodManifest } from '@/codegen/manifest-registry';
 import * as methods from '@/exports/methods';
@@ -28,7 +29,6 @@ import {
 import { filterMethods } from '@/policies/method-filter';
 import { buildDispatch, buildScopedDispatch } from '@/transport/tools/dispatch';
 import { buildScopedTools } from '@/transport/tools/scoped-tools';
-import { formatAiContextMessage } from '@/utilities/ai-context';
 
 export type Exported = [
     ConfirmDecision,

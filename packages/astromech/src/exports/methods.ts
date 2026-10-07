@@ -6,7 +6,7 @@
 
 export { getMethodManifest } from '@/codegen/manifest-registry';
 
-export { formatAiContextMessage } from '@/utilities/ai-context';
+export { formatAiContextMessage } from '@/ai/context-message';
 export type { AiContextItem } from '@/types/ai-context';
 
 export { buildDispatch, buildScopedDispatch } from '@/transport/tools/dispatch';

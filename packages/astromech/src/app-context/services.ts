@@ -11,7 +11,10 @@ import { globalsDefinition } from '@/globals/service';
 import { mediaDefinition } from '@/media/service';
 import { notificationsDefinition } from '@/notifications/service';
 import { permissionsFor } from '@/permissions/permissions-for';
-import { pluginNamespace, pluginServicesFor } from '@/plugins/runtime/plugin-services';
+import {
+    createPluginServices,
+    pluginServicesFor,
+} from '@/plugins/runtime/plugin-services';
 import { scopeMethods, scopePlugins } from '@/policies/scoped-services';
 import { securityDefinition } from '@/security/service';
 import { usersDefinition } from '@/users/service';
@@ -123,7 +126,7 @@ export const currentServices: Services = {
     users: forwardToCurrent('users'),
     notifications: forwardToCurrent('notifications'),
     security: forwardToCurrent('security'),
-    plugins: pluginNamespace(
+    plugins: createPluginServices(
         (resolved, _method, name) => async (input) =>
             createServices(await currentAppContext()).plugins[resolved.serviceKey]?.[
                 name
