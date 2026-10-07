@@ -80,10 +80,15 @@ the repository copies.
 - [x] **The entry catalogue restates every method.** `entries/catalogue.ts` repeats
       each summary in a switch and each input in a per-type builder. Build each
       from the method's own `input` with `safeExtend` and its `summary`.
-- [ ] **The five services are listed by hand four times** in
+- [x] **The five services are listed by hand four times** in
       `app-context/services.ts` and `app-context/app-context.ts`. Loop over
       `DEFINITIONS`. Moving `currentServices` into `app-context.ts` also breaks
-      the import cycle between the two files.
+      the import cycle between the two files. Done for all six services: each
+      list now loops over the keys of `DEFINITIONS`. `currentServices`
+      stayed put: the move would not break the cycle, since `services.ts` still
+      reaches `app-context.ts` through `plugins/runtime/plugin-services.ts` and
+      `plugin-runtime.ts`, and `app-context.ts` reaches `services.ts` through
+      `transport/tools/scoped-tools.ts` and `policies/call-method.ts`.
 - [ ] **Find-a-method-and-call-it exists three times**: `callOn`
       (`policies/call-method.ts`), `invoke` (`transport/http/routes/rest-route.ts`)
       and `forwardToCurrent` (`app-context/services.ts`).

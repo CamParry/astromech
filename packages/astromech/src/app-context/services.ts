@@ -4,7 +4,7 @@
  * or checked against the role) are decided here and nowhere else.
  */
 
-import type { AppContext, Services } from '@/types/index';
+import type { AppContext, ServiceDefinition, Services } from '@/types/index';
 import { currentAppContext } from '@/app-context/app-context';
 import { entriesDefinition } from '@/entries/service';
 import { globalsDefinition } from '@/globals/service';
@@ -30,17 +30,26 @@ export type CreateServicesOptions = {
 };
 
 /** The `Services` members that hold a core content service. */
-type ContentKey = Exclude<keyof Services, 'plugins'>;
+export type ContentKey = Exclude<keyof Services, 'plugins'>;
 
-/** Each content service's definition, under the `Services` member that binds it. */
-const DEFINITIONS = {
+/** The core content services alone, without the plugin namespace. */
+type ContentServices = Pick<Services, ContentKey>;
+
+/**
+ * Each content service's definition, under the `Services` member that binds it.
+ * Typed per key, so `DEFINITIONS[key].bind(ctx)` is `Services[K]` for a generic key.
+ */
+const DEFINITIONS: { [K in ContentKey]: ServiceDefinition<Services[K]> } = {
     entries: entriesDefinition,
     globals: globalsDefinition,
     media: mediaDefinition,
     users: usersDefinition,
     notifications: notificationsDefinition,
     security: securityDefinition,
-} satisfies Record<ContentKey, { catalogue: object }>;
+};
+
+/** The content service keys. `Object.keys` is typed `string[]`, hence the cast. */
+const CONTENT_KEYS = Object.keys(DEFINITIONS) as ContentKey[];
 
 const TRUSTED = new WeakMap<AppContext, Services>();
 const SCOPED = new WeakMap<AppContext, Services>();
@@ -66,12 +75,7 @@ export function createServices(
 /** Each definition bound to `ctx`, and the plugin namespace running as it. */
 function bindServices(ctx: AppContext): Services {
     return {
-        entries: entriesDefinition.bind(ctx),
-        globals: globalsDefinition.bind(ctx),
-        media: mediaDefinition.bind(ctx),
-        users: usersDefinition.bind(ctx),
-        notifications: notificationsDefinition.bind(ctx),
-        security: securityDefinition.bind(ctx),
+        ...mapContentServices((key) => DEFINITIONS[key].bind(ctx)),
         plugins: pluginServicesFor(ctx),
     };
 }
@@ -84,31 +88,8 @@ function scopeServices(ctx: AppContext): Services {
     // `key`, and each contract states that in the function form, the `full`
     // and publish gates included.
     return {
-        entries: scopeMethods(
-            trusted.entries,
-            entriesDefinition.catalogue,
-            caller,
-            'entries'
-        ),
-        globals: scopeMethods(
-            trusted.globals,
-            globalsDefinition.catalogue,
-            caller,
-            'globals'
-        ),
-        media: scopeMethods(trusted.media, mediaDefinition.catalogue, caller, 'media'),
-        users: scopeMethods(trusted.users, usersDefinition.catalogue, caller, 'users'),
-        notifications: scopeMethods(
-            trusted.notifications,
-            notificationsDefinition.catalogue,
-            caller,
-            'notifications'
-        ),
-        security: scopeMethods(
-            trusted.security,
-            securityDefinition.catalogue,
-            caller,
-            'security'
+        ...mapContentServices((key) =>
+            scopeMethods(trusted[key], DEFINITIONS[key].catalogue, caller, key)
         ),
         plugins: scopePlugins(trusted.plugins, caller.permissions),
     };
@@ -120,12 +101,7 @@ function scopeServices(ctx: AppContext): Services {
  * method on `createServices` of it. For a caller that holds no context.
  */
 export const currentServices: Services = {
-    entries: forwardToCurrent('entries'),
-    globals: forwardToCurrent('globals'),
-    media: forwardToCurrent('media'),
-    users: forwardToCurrent('users'),
-    notifications: forwardToCurrent('notifications'),
-    security: forwardToCurrent('security'),
+    ...mapContentServices(forwardToCurrent),
     plugins: createPluginServices(
         (resolved, _method, name) => async (input) =>
             createServices(await currentAppContext()).plugins[resolved.serviceKey]?.[
@@ -146,4 +122,35 @@ function forwardToCurrent<K extends ContentKey>(key: K): Services[K] {
         };
     }
     return forwarded as Services[K];
+}
+
+/**
+ * `target` with a getter per content service, each returning `get(key)` on
+ * every read. The `AppContext` builds its members this way.
+ */
+export function addServiceGetters<T extends object>(
+    target: T,
+    get: <K extends ContentKey>(key: K) => Services[K]
+): T & ContentServices {
+    for (const key of CONTENT_KEYS) {
+        Object.defineProperty(target, key, {
+            get: () => get(key),
+            enumerable: true,
+            configurable: true,
+        });
+    }
+    // TypeScript cannot see that the loop defines every key.
+    return target as T & ContentServices;
+}
+
+/** One member per content service, each built once by `build`. */
+function mapContentServices(
+    build: <K extends ContentKey>(key: K) => Services[K]
+): ContentServices {
+    const services: Record<string, unknown> = {};
+    for (const key of CONTENT_KEYS) {
+        services[key] = build(key);
+    }
+    // TypeScript cannot see that the loop sets every key.
+    return services as ContentServices;
 }
