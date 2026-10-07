@@ -41,7 +41,7 @@ import {
 import { relaunchAtLowerPriority } from './cpu-limits.mjs';
 import { stopProcessGroup } from './process-group.mjs';
 import { requireFreshDist } from './require-fresh-dist.mjs';
-import { waitForRunLock } from './run-lock.mjs';
+import { recordProcessGroups, waitForRunLock } from './run-lock.mjs';
 
 // First, before anything prints: the build and the server inherit the priority
 // (`scripts/cpu-limits.mjs`).
@@ -100,6 +100,7 @@ async function main() {
     const port = await freePort();
     step(`serving the built Worker on workerd, port ${port}`);
     server = startWorker(port, env, envFile);
+    recordRunning();
 
     const base = `http://127.0.0.1:${port}`;
     await waitForServer(base);
@@ -193,6 +194,7 @@ function run(file, args, options) {
             detached: true,
             ...options,
         });
+        recordRunning();
         runningCommand.on('error', reject);
         runningCommand.on('exit', (code) => {
             if (code === 0) fulfil();
@@ -254,6 +256,24 @@ function startWorker(port, env, envFile) {
         handle.exited = code;
     });
     return handle;
+}
+
+/**
+ * Lists the build's and wrangler's process groups in the lock file when this
+ * check holds the lock, so a run that finds this check killed outright waits
+ * for them too. A group whose leader has exited stays listed: a process it
+ * started may still be running, and an empty group counts as not running.
+ * Under `verify` the lock file is the gate's and this does nothing
+ * (`recordProcessGroups`): the gate lists this check's own group, and while
+ * this check runs it stops the build and wrangler on every exit path but being
+ * killed outright.
+ */
+function recordRunning() {
+    recordProcessGroups(
+        [runningCommand, server?.child]
+            .map((child) => child?.pid)
+            .filter((pid) => pid !== undefined)
+    );
 }
 
 async function waitForServer(base) {
