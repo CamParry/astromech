@@ -6,7 +6,13 @@
 import type { AppContext, Role } from '@/types/index';
 import { migrateToLatest } from '@astromech/schema-engine';
 import { makeUser } from '@tests/fixtures';
-import { contextAs, createTestDb, createTestUser, setupTestConfig } from '@tests/harness';
+import {
+    contextAs,
+    createTestDb,
+    createTestUser,
+    resolveTestConfig,
+    setupTestConfig,
+} from '@tests/harness';
 import { testMigrationProvider } from '@tests/test-db';
 import { sql } from 'kysely';
 import { describe, expect, it, vi } from 'vitest';
@@ -16,6 +22,7 @@ import {
     systemAppContext,
 } from '@/app-context/app-context';
 import { createServices, currentServices } from '@/app-context/services';
+import { setConfig } from '@/config/registry';
 import { setMigrationProvider } from '@/database/migration-registry';
 import { createMergedProvider } from '@/database/migrations';
 import { PermissionDeniedError } from '@/errors/permission';
@@ -206,6 +213,7 @@ describe('createPluginContext', () => {
     });
 
     it('carries the plugin’s identity and its own config view', () => {
+        setConfig(resolveTestConfig());
         const ctx = createPluginContext(
             identity,
             createAppContext({ user: null, role: editor })
