@@ -1,5 +1,6 @@
 import type { Kysely } from 'kysely';
 import { sql } from 'kysely';
+import { renderLiteral } from './ddl';
 
 /**
  * Schema oracle — a normalized `sqlite_master` dump. The parity primitive: two
@@ -22,10 +23,6 @@ type MasterRow = {
     tblName: string;
     sql: string | null;
 };
-
-function quoteName(value: string): string {
-    return `'${value.replace(/'/g, "''")}'`;
-}
 
 /** A quoted name or string literal, each closing quote that is doubled inside
  *  it read as part of it. */
@@ -152,7 +149,7 @@ export async function dumpSchema<T>(
 ): Promise<SchemaRow[]> {
     const filter =
         opts?.tables !== undefined
-            ? ` AND tbl_name IN (${opts.tables.map(quoteName).join(',')})`
+            ? ` AND tbl_name IN (${opts.tables.map((name) => renderLiteral(name, 'a table name')).join(',')})`
             : '';
     const { rows } = await sql
         .raw<MasterRow>(
