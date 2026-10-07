@@ -140,8 +140,10 @@ the repository copies.
       one consumer. `permission-match.ts` is in `planned/permissions.md`.
 - [ ] The plugin runtime keeps its own config copy with its own defaults
       (`plugins/runtime/plugin-runtime.ts`); read `app.config`.
-- [ ] `MediaQueryParams` and `UserQueryParams` are hand-written copies of their
-      schemas (`types/query.ts`). Derive them.
+- [x] `MediaQueryParams` and `UserQueryParams` are hand-written copies of their
+      schemas (`types/query.ts`). Derive them. The query methods' inputs moved
+      to `queryMediaSchema` and `queryUsersSchema` in each module's
+      `schema.ts`, and both types are `z.input` of them.
 - [ ] Generic form code is named as entry code in the admin
       (`components/entries/entry-fields-renderer.tsx`, `EntryNamespaceProvider`).
 - [ ] `packages/schema-engine/src/generate.ts` mixes migration generation with a

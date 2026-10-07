@@ -1,7 +1,20 @@
 import { z } from '@hono/zod-openapi';
+import { listKeys } from '@/content/list';
 import { auditKeys, versionSchema } from '@/content/schema';
 import { withFallback } from '@/services/fallback';
 import { jsonObject, unparsedJsonObject } from '@/services/json';
+import { MEDIA_MIME_TYPE_FILTERS } from '@/types/query';
+
+/** What `media.query` takes: the public `MediaQueryParams`. */
+export const queryMediaSchema = z.strictObject({
+    /** The locale each item's content is read in. Default: the default locale. */
+    locale: z.string().optional(),
+    search: z.string().optional(),
+    where: z
+        .strictObject({ mimeType: z.enum(MEDIA_MIME_TYPE_FILTERS).optional() })
+        .optional(),
+    ...listKeys,
+});
 
 export const updateMediaSchema = z
     .strictObject({

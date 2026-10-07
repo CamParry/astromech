@@ -1,12 +1,10 @@
 import type { MediaResource } from '../repository';
 import type { QueryResult } from '@/types/index';
-import { z } from '@hono/zod-openapi';
-import { listKeys, queryPage, queryResultSchema } from '@/content/list';
+import { queryPage, queryResultSchema } from '@/content/list';
 import { resolveResourceLocale } from '@/content/locale';
 import { defineServiceMethod } from '@/services/define-service-method';
-import { MEDIA_MIME_TYPE_FILTERS } from '@/types/query';
 import { mediaRepository } from '../repository';
-import { mediaSchema } from '../schema';
+import { mediaSchema, queryMediaSchema } from '../schema';
 
 /**
  * Paginated unless `limit` is `'all'`. The same items are listed whatever the
@@ -14,14 +12,7 @@ import { mediaSchema } from '../schema';
  */
 export const queryMedia = defineServiceMethod({
     summary: 'List media items.',
-    input: z.strictObject({
-        locale: z.string().optional(),
-        search: z.string().optional(),
-        where: z
-            .strictObject({ mimeType: z.enum(MEDIA_MIME_TYPE_FILTERS).optional() })
-            .optional(),
-        ...listKeys,
-    }),
+    input: queryMediaSchema,
     output: queryResultSchema(mediaSchema),
     access: 'media:read',
     mutates: false,
