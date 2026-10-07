@@ -213,6 +213,9 @@ describe('astromech()', () => {
     });
     describe('astro:build:start', () => {
         it('applies the migrations before Astro prerenders a page', async () => {
+            // A CLI site takes the place of the empty root `beforeEach` made,
+            // which goes first so `afterEach` removes the site in its place.
+            await rm(root, { recursive: true, force: true });
             root = await createTempSite();
             const database = join(root, 'database.db');
             const configFile = await writeSiteConfig(root, {

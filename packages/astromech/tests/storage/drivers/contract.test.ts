@@ -3,7 +3,9 @@
  * `filesystem` in a temp dir, and `r2` against the bucket wrangler emulates
  * locally for the `MEDIA` binding. `s3` needs an S3 server, so its own tests
  * stub `fetch` instead. Each test writes under a key prefix of its own, because
- * the emulated bucket keeps its objects between runs.
+ * the emulated bucket keeps its objects between tests. Wrangler starts from a
+ * directory of this file's own (`@tests/wrangler`), so the bucket is this run's
+ * alone.
  *
  * What the R2 driver does beyond the contract (its own object metadata, public
  * URLs, no signing, lazy binding lookup) is tested at the end of this file, so
@@ -13,6 +15,7 @@
 import type { R2BucketLike } from '@/storage/drivers/r2';
 import type { StorageDriver } from '@/types/index';
 import { createTestStorage } from '@tests/harness';
+import { enterWranglerProject } from '@tests/wrangler';
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 import { clearEnvSource, setEnvSource } from '@/env';
 import {
@@ -27,11 +30,13 @@ import { deletePrefix } from '@/storage/prefix';
 const BOOT_TIMEOUT = 60_000;
 
 let bucket: R2BucketLike;
+let leaveWranglerProject: () => void;
 
 beforeAll(async () => {
     // No env source, so the binding comes from wrangler's local emulation.
     clearEnvSource();
     resetBindings();
+    leaveWranglerProject = enterWranglerProject();
     bucket = await resolveBinding<R2BucketLike>('MEDIA');
 }, BOOT_TIMEOUT);
 
@@ -39,6 +44,7 @@ afterAll(async () => {
     clearEnvSource();
     // The workerd process outlives the test run if the proxy is never disposed.
     await disposeBindings();
+    leaveWranglerProject();
 });
 
 /** One driver under test, and where it differs from the others. */

@@ -16,6 +16,15 @@ local `verify:fast` on 2026-10-06; the rerun passed.
 
 ## Work
 
-- [ ] Give one of the two files its own wrangler persist path, so neither sees
+- [x] Give one of the two files its own wrangler persist path, so neither sees
       the other's tables. Prefer that over running them one after the other,
       which hides the shared state rather than removing it.
+
+## Outcome
+
+Every core test file that starts wrangler (these two, and
+`tests/storage/drivers/contract.test.ts`, which raced the D1 file with
+`SQLITE_BUSY_RECOVERY`) runs it from a directory of its own under the run's
+temp dir, so no two share wrangler's state. `DECISIONS.md`, "Each test file
+that starts wrangler gets its own wrangler state", says how and what was
+rejected.

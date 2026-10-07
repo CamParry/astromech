@@ -2,18 +2,20 @@
  * Vitest `globalSetup` for every suite that loads `harness.ts`: core's and the
  * plugins' (through `plugin-vitest-config.ts`).
  *
- * It sets the environment every such suite shares, makes one temp directory per
- * run for the harness's test databases, and migrates one database file there,
- * the template that `createTestDb()` copies for each test. Copying a file is far cheaper than running the migration chain
- * per test. Both paths reach the workers through `provide`. The returned
- * teardown runs in the main process once every worker has finished, so the
- * directory goes even though a worker thread never sees `process.on('exit')`.
+ * It sets the environment every such suite shares, sweeps the directories of
+ * earlier runs that were killed, makes this run's temp directory
+ * (`run-temp-dir.ts`), and migrates one database file there, the template that
+ * `createTestDb()` copies for each test. Copying a file is far cheaper than
+ * running the migration chain per test. The paths reach the workers through
+ * `provide`. The returned teardown runs in the main process once every worker
+ * has finished, so the directory goes even though a worker thread never sees
+ * `process.on('exit')`, and fails the run if a test left files in it.
  */
 import type { TestProject } from 'vitest/node';
 import * as fs from 'node:fs';
-import * as os from 'node:os';
 import * as path from 'node:path';
 import { createClient } from '@libsql/client';
+import { createRunDir, removeRunDir, runTmpDir, sweepStaleRunDirs } from './run-temp-dir';
 import { migrateTestDb, openTestDb } from './test-db';
 
 // Declaration merging needs an `interface`.
@@ -24,6 +26,8 @@ declare module 'vitest' {
         testDbDir: string;
         /** The migrated database file `createTestDb()` copies for each test. */
         testDbTemplate: string;
+        /** What `os.tmpdir()` reports in the workers (`tmpdir-setup.ts`). */
+        testTmpDir: string;
     }
 }
 
@@ -52,7 +56,8 @@ export default async function setup(project: TestProject): Promise<() => void> {
     // Better Auth warns on every instance built without a base URL. Set here,
     // before the workers start, so they inherit it.
     process.env['BETTER_AUTH_URL'] ??= 'http://localhost:4321';
-    const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'astromech-test-'));
+    sweepStaleRunDirs();
+    const dir = createRunDir();
     const template = path.join(dir, 'template.db');
     try {
         await buildTemplate(template);
@@ -62,5 +67,14 @@ export default async function setup(project: TestProject): Promise<() => void> {
     }
     project.provide('testDbDir', dir);
     project.provide('testDbTemplate', template);
-    return () => fs.rmSync(dir, { recursive: true, force: true });
+    project.provide('testTmpDir', runTmpDir(dir));
+    return () => {
+        try {
+            removeRunDir(dir);
+        } catch (error) {
+            // Vitest prints an error a teardown throws but exits 0 all the same.
+            process.exitCode = 1;
+            throw error;
+        }
+    };
 }

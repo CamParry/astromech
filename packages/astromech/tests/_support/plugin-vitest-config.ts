@@ -79,8 +79,12 @@ export function pluginVitestConfig(options: PluginVitestOptions = {}): ViteUserC
         pool,
         include,
         // Makes the run's temp directory for `harness.ts`'s test databases
-        // and removes it at the end.
+        // and removes it at the end, and points `os.tmpdir()` inside it.
         globalSetup: [fileURLToPath(new URL('./global-setup.ts', import.meta.url))],
+        setupFiles: [
+            ...baseTestOptions.setupFiles,
+            fileURLToPath(new URL('./tmpdir-setup.ts', import.meta.url)),
+        ],
     };
     if (options.adminPages !== true) {
         return {

@@ -16,9 +16,22 @@ const include = ['tests/**/*.test.ts', 'tests/**/*.test.tsx'];
 // Makes the run's temp directory for test databases and removes it at the end.
 const globalSetup = ['tests/_support/global-setup.ts'];
 
+// Points `os.tmpdir()` inside that directory, so the teardown sees a temp file
+// a test left behind.
+const setupFiles = [...baseTestOptions.setupFiles, 'tests/_support/tmpdir-setup.ts'];
+
 // Worker threads start faster than child processes and share the transform
-// cache, and nothing here needs a process of its own.
+// cache. Only `wranglerTests` need a process of their own.
 const pool = 'threads';
+
+// The files that start wrangler's local emulation in process. Each makes a
+// wrangler project of its own its working directory (`tests/_support/wrangler.ts`),
+// so no two share wrangler's state, and a worker thread cannot change its
+// working directory.
+const wranglerTests = [
+    'tests/integrations/cloudflare/d1-local-emulation.test.ts',
+    'tests/storage/drivers/contract.test.ts',
+];
 
 const projects = [
     {
@@ -29,12 +42,13 @@ const projects = [
             environment: 'node',
             pool,
             globalSetup,
+            setupFiles,
             // One module graph per worker instead of one per file, which
             // is where the speed-up comes from. `isolatedTests` names the
             // files that cannot live with it.
             isolate: false,
             include,
-            exclude: [...defaultExclude, ...isolatedTests],
+            exclude: [...defaultExclude, ...isolatedTests, ...wranglerTests],
         },
     },
     {
@@ -45,7 +59,21 @@ const projects = [
             environment: 'node',
             pool,
             globalSetup,
+            setupFiles,
             include: isolatedTests,
+        },
+    },
+    {
+        resolve: { alias },
+        test: {
+            ...baseTestOptions,
+            name: 'core-wrangler',
+            environment: 'node',
+            // A child process per file, which `process.chdir()` can move.
+            pool: 'forks',
+            globalSetup,
+            setupFiles,
+            include: wranglerTests,
         },
     },
 ];
