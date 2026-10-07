@@ -145,8 +145,11 @@ the repository copies.
       schemas (`types/query.ts`). Derive them.
 - [ ] Generic form code is named as entry code in the admin
       (`components/entries/entry-fields-renderer.tsx`, `EntryNamespaceProvider`).
-- [ ] `packages/schema-engine/src/generate.ts` mixes migration generation with a
-      rebaseline parser. Split it.
+- [x] `packages/schema-engine/src/generate.ts` mixes migration generation with a
+      rebaseline parser. Split it. The parser and its checks are in
+      `packages/schema-engine/src/rebaseline.ts`, with no `node:fs`;
+      `rebaselineMigrations` stays in `generate.ts` beside the other reads and
+      writes of the migrations directory.
 
 ## Dead or near-dead
 

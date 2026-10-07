@@ -1,6 +1,7 @@
 /**
- * Tests for `rebaselineMigrations` (`src/generate.ts`) — re-emitting a
- * baseline migration from the current snapshot.
+ * Tests for `rebaselineMigrations` (`src/generate.ts`) and the parser it runs
+ * (`src/rebaseline.ts`): re-emitting a baseline migration from the current
+ * snapshot.
  *
  * Each test gets its own `mkdtemp` scratch directory holding a hand-written
  * baseline: one banner block for a table the snapshot describes, one for a

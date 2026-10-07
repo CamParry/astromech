@@ -51,8 +51,8 @@ export default defineConfig({
                 'src/generate.ts': {
                     lines: 95,
                     functions: 99,
-                    branches: 83,
-                    statements: 93,
+                    branches: 85,
+                    statements: 95,
                 },
                 'src/identifiers.ts': {
                     lines: 99,
@@ -77,6 +77,12 @@ export default defineConfig({
                     functions: 99,
                     branches: 99,
                     statements: 99,
+                },
+                'src/rebaseline.ts': {
+                    lines: 95,
+                    functions: 99,
+                    branches: 82,
+                    statements: 92,
                 },
                 'src/render.ts': {
                     lines: 99,
