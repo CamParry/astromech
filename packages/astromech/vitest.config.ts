@@ -16,6 +16,10 @@ const include = ['tests/**/*.test.ts', 'tests/**/*.test.tsx'];
 // Makes the run's temp directory for test databases and removes it at the end.
 const globalSetup = ['tests/_support/global-setup.ts'];
 
+// Points `os.tmpdir()` inside that directory, so the teardown sees a temp file
+// a test left behind.
+const setupFiles = [...baseTestOptions.setupFiles, 'tests/_support/tmpdir-setup.ts'];
+
 // Worker threads start faster than child processes and share the transform
 // cache. Only `wranglerTests` need a process of their own.
 const pool = 'threads';
@@ -38,6 +42,7 @@ const projects = [
             environment: 'node',
             pool,
             globalSetup,
+            setupFiles,
             // One module graph per worker instead of one per file, which
             // is where the speed-up comes from. `isolatedTests` names the
             // files that cannot live with it.
@@ -54,6 +59,7 @@ const projects = [
             environment: 'node',
             pool,
             globalSetup,
+            setupFiles,
             include: isolatedTests,
         },
     },
@@ -66,6 +72,7 @@ const projects = [
             // A child process per file, which `process.chdir()` can move.
             pool: 'forks',
             globalSetup,
+            setupFiles,
             include: wranglerTests,
         },
     },
