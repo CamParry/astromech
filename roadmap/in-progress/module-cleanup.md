@@ -119,8 +119,12 @@ the repository copies.
 
 ## Code in the wrong place
 
-- [ ] `transport/http/routes/rest-route.ts` serves routes and writes the OpenAPI
+- [x] `transport/http/routes/rest-route.ts` serves routes and writes the OpenAPI
       document. Split the documentation half out, and share one path-param regex.
+      The documentation half is now `rest-route-document.ts`. The input-schema
+      readers both halves use moved to `method-input.ts`, and the path-param
+      regex and method-id splitting to `http-routes.ts`, which the browser
+      client may also import.
 - [x] The relationship index rebuild and the stored-content validation report
       in `transport/cli/` are content logic. Move them to `content/`. Both
       moved whole, since neither held CLI code: `content/relationship-index.ts`

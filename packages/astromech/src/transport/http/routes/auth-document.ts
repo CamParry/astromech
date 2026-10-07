@@ -13,6 +13,7 @@ import {
     sessionMiddleware,
 } from 'better-auth/api';
 import { getAuth, REFUSED_AUTH_PATHS } from '@/auth/better-auth';
+import { documentPath } from './rest-route-document';
 
 /** The paths and components Better Auth adds to the document. */
 export type AuthDocument = {
@@ -135,7 +136,7 @@ function sessionRequiringPaths(auth: Auth<BetterAuthOptions>): Set<string> {
         if (path === undefined || !use.some((m) => SESSION_MIDDLEWARES.includes(m))) {
             continue;
         }
-        paths.add(path.replace(/:([A-Za-z0-9_]+)/g, '{$1}'));
+        paths.add(documentPath(path));
     }
     return paths;
 }

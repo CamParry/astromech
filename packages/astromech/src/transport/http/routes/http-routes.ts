@@ -66,6 +66,29 @@ export type HttpRouteSpec = {
 /** A route with the mount path of the router that serves it. */
 export type MountedRoute = HttpRouteSpec & { base: string };
 
+/** A path param as Hono matches it, `:id`, with its name captured. */
+const PATH_PARAM = /:([A-Za-z0-9_]+)/g;
+
+/** The names Hono matches as path params in `path`, in order. */
+export function pathParamNames(path: string): string[] {
+    return [...path.matchAll(PATH_PARAM)].map(([, name]) => name ?? '');
+}
+
+/** `path` with each path param replaced by what `fill` answers for its name. */
+export function fillPathParams(path: string, fill: (name: string) => string): string {
+    return path.replace(PATH_PARAM, (_match, name: string) => fill(name));
+}
+
+/** The domain half of a method id: `users.update` → `users`. */
+export function domainName(id: string): string {
+    return id.slice(0, id.indexOf('.'));
+}
+
+/** The method half of a method id: `users.update` → `update`. */
+export function methodName(id: string): string {
+    return id.slice(id.indexOf('.') + 1);
+}
+
 /**
  * Every entry type is served here, addressed by the type id the entries service
  * uses, URL-encoded into the `:type` segment.
