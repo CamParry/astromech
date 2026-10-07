@@ -52,10 +52,12 @@ cover the gate's timeouts, environment, memory and reporting.
       `prettier --write` by hand 114 times though lint-staged formats on
       commit. The brief says: open a file with Read before Edit, and leave
       formatting to the hook.
-- [ ] **Prettier runs only at commit.** Consider a PostToolUse hook that runs
-      prettier on the edited file, beside the stylelint one in
-      `.claude/settings.json`, so a reformat by the pre-commit hook no longer
-      changes the content the gate's stamp records.
+- [x] **Prettier runs only at commit.** A PostToolUse hook in
+      `.claude/settings.json` runs prettier on each file Write or Edit
+      changes, after stylelint for CSS (about 0.5 s an edit), so a reformat
+      by the pre-commit hook no longer changes the content the gate's stamp
+      records. A file changed through Bash is still formatted only at
+      commit.
 - [x] **Skills are read with `cat` instead of loading.** Sub-agents never
       invoked a skill. They read the `code` skill (20 KB) over 140 times and
       re-read `AGENTS.md`, which is already in their context: about a million
@@ -115,8 +117,13 @@ cover the gate's timeouts, environment, memory and reporting.
       run's directory, and the teardown fails the run when a test leaves
       anything there (`packages/astromech/tests/_support/run-temp-dir.ts`). It
       found one more leak, in the Astro integration tests.
-- [ ] **`check:unused` prints a redundant-entry warning on every run**, for
-      the `src/tables/index.ts!` entry in `knip.json`. Confirm and remove it.
+- [x] **`check:unused` prints a redundant-entry warning on every run**, for
+      the `src/tables/index.ts!` entry in `knip.json`. Confirmed and kept:
+      the hint fires for the plugins that export `./tables`, but forms has no
+      such export and `plugin:generate` loads its tables by path, which knip
+      cannot see, so without the entry knip reports the file unused. The run
+      prints 24 config hints in all, most "Refine entry pattern" from the
+      shared `packages/plugins/*` block.
 - **Doc-wide rewrites while branches are open** made every open branch
   rebase. Land a rewrite of the root docs when no branch is open.
 
@@ -133,7 +140,7 @@ a guard.
 - [ ] **The Bash hook lets `pnpm run land --no-gate-check` through.** The
       flag skips the check that the gate passed on the tree being landed, so
       an agent can land a tree no gate has seen. Refuse it with the reason.
-- [ ] **A boot check run on its own records no process groups.** The gate
+- [x] **A boot check run on its own records no process groups.** The gate
       records each check's process group in the lock file
       (`recordProcessGroups` in `scripts/run-lock.mjs`), so a gate killed
       outright holds the lock until its checks end. `check:boot:cloudflare`
@@ -142,6 +149,6 @@ a guard.
       next heavy run starts beside it. A run killed while taking over a stale
       lock also leaves an `astromech-run.lock.<pid>.stale` or `.tmp` file in
       the temp directory.
-- [ ] **`scripts/prior-art.mjs` hard-codes `Astromech-worktrees`.** The Bash
+- [x] **`scripts/prior-art.mjs` hard-codes `Astromech-worktrees`.** The Bash
       hook works out `<checkout name>-worktrees`, so the two disagree for a
       checkout under another name.

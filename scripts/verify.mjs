@@ -2,8 +2,9 @@
  * Runs the gate, in stages, with everything that can overlap overlapping.
  *
  * `--fast` runs only the stages that need no build: the published packages'
- * typechecks, their test suites, lint, `check:unused` and `check:hooks`. That
- * is the loop to run while working. The full run adds the build and everything downstream of it.
+ * typechecks, their test suites, lint, `check:unused`, `check:hooks` and
+ * `check:scripts`. That is the loop to run while working. The full run adds
+ * the build and everything downstream of it.
  * Fast mode checks coverage thresholds only for the packages the branch
  * changes since its merge base with `origin/main` (committed, staged, unstaged
  * or untracked), and prints which ones; the other suites run without coverage.
@@ -152,6 +153,7 @@ const stagesByMode = {
             { name: 'lint', command: 'pnpm run lint', env: besideTestsEnvironment },
             { name: 'check:unused', command: 'pnpm run check:unused' },
             { name: 'check:hooks', command: 'pnpm run check:hooks' },
+            { name: 'check:scripts', command: 'pnpm run check:scripts' },
         ],
     ],
     runtime: [
@@ -193,6 +195,7 @@ const stagesByMode = {
             { name: 'check:exports', command: 'pnpm run check:exports' },
             { name: 'check:docs', command: 'pnpm run check:docs' },
             { name: 'check:hooks', command: 'pnpm run check:hooks' },
+            { name: 'check:scripts', command: 'pnpm run check:scripts' },
         ],
         // The demo apps import the packages through `exports`, which points at
         // `dist`, so their typecheck reads the build's declarations.

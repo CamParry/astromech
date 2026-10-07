@@ -53,8 +53,9 @@ import {
     waitForServer,
 } from './check-helpers.mjs';
 import { relaunchAtLowerPriority } from './cpu-limits.mjs';
+import { stopProcessGroup } from './process-group.mjs';
 import { requireFreshDist } from './require-fresh-dist.mjs';
-import { waitForRunLock } from './run-lock.mjs';
+import { recordProcessGroups, waitForRunLock } from './run-lock.mjs';
 
 // First, before anything prints: the build, server and browser inherit the
 // priority (`scripts/cpu-limits.mjs`).
@@ -62,13 +63,42 @@ relaunchAtLowerPriority();
 
 // One heavy run at a time on this machine (`scripts/run-lock.mjs`). Under
 // `verify`, the gate holds the lock and this goes ahead.
-await waitForRunLock('check:boot');
+const ownsLock = await waitForRunLock('check:boot');
 
 const repoRoot = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const demoDir = join(repoRoot, 'apps', 'demo');
 
+/** How long a stopped process gets to exit before SIGKILL. */
+const STOP_GRACE_MS = 5000;
+
 let scratchDir = null;
 let server = null;
+
+/**
+ * The commands and the server this check started. When this check holds the
+ * lock, each leads a process group of its own, listed in the lock file, so a
+ * run that finds this check killed outright waits for them too. The group
+ * this check was started in could hold its caller as well, so it is not the
+ * one listed. Under `verify` they stay in this check's group, which the gate
+ * lists.
+ */
+const children = [];
+
+/**
+ * Spawn options that give a child a process group of its own when this check
+ * holds the lock. A process outside the terminal's foreground group that reads
+ * from it is stopped, so such a child gets no stdin.
+ */
+const groupOptions = ownsLock
+    ? { detached: true, stdio: ['ignore', 'inherit', 'inherit'] }
+    : {};
+
+function started(child) {
+    // A child that could not be spawned has no pid, and nothing to stop.
+    if (child.pid === undefined) return;
+    children.push(child);
+    if (ownsLock) recordProcessGroups(children.map((each) => each.pid));
+}
 
 async function main() {
     // This check builds only `apps/demo`, so a package `src` edit would
@@ -95,10 +125,15 @@ async function main() {
     };
 
     step('migrating a scratch database');
-    await run('pnpm', ['-F', 'astromech-demo', 'db:init'], { cwd: repoRoot, env });
+    await run(
+        'pnpm',
+        ['-F', 'astromech-demo', 'db:init'],
+        { cwd: repoRoot, env, ...groupOptions },
+        started
+    );
 
     step('building apps/demo');
-    await run('pnpm', ['build'], { cwd: demoDir, env });
+    await run('pnpm', ['build'], { cwd: demoDir, env, ...groupOptions }, started);
 
     const port = await freePort();
     const base = `http://127.0.0.1:${port}`;
@@ -152,7 +187,12 @@ async function main() {
  * fails.
  */
 function startServer(env) {
-    const child = spawn('node', ['./dist/server/entry.mjs'], { cwd: demoDir, env });
+    const child = spawn('node', ['./dist/server/entry.mjs'], {
+        cwd: demoDir,
+        env,
+        detached: ownsLock,
+    });
+    started(child);
     const handle = { child, output: '' };
     child.stdout.on('data', (chunk) => (handle.output += chunk));
     child.stderr.on('data', (chunk) => (handle.output += chunk));
@@ -163,27 +203,34 @@ function startServer(env) {
 }
 
 /**
- * Close the browser, kill the server and remove the scratch database on every
- * exit path. A live
- * child's pipes hold the event loop open, so the kill is waited on rather than
- * fired and forgotten, and escalated if the server ignores SIGTERM.
+ * Close the browser, stop the server and any command still running, and remove
+ * the scratch database on every exit path. A live child's pipes hold the event
+ * loop open, so the stop is waited on rather than fired and forgotten, and
+ * escalated if the child ignores SIGTERM.
  */
 async function cleanUp() {
     await closeAdminBrowser();
-    if (server && server.exited === undefined) {
-        const stopped = new Promise((fulfil) => server.child.once('exit', fulfil));
-        server.child.kill('SIGTERM');
-        const escalate = setTimeout(() => server.child.kill('SIGKILL'), 5000);
-        await stopped;
-        clearTimeout(escalate);
-    }
+    for (const child of children) await stop(child);
     if (scratchDir) {
         await rm(scratchDir, { recursive: true, force: true });
     }
 }
 
+/** Stop a child, with its process group when it leads one. */
+async function stop(child) {
+    if (ownsLock) return stopProcessGroup(child, STOP_GRACE_MS);
+    if (child.exitCode !== null || child.signalCode !== null) return;
+    const stopped = new Promise((fulfil) => child.once('exit', fulfil));
+    child.kill('SIGTERM');
+    const escalate = setTimeout(() => child.kill('SIGKILL'), STOP_GRACE_MS);
+    await stopped;
+    clearTimeout(escalate);
+}
+
 // A Ctrl-C, a closed terminal or `verify` stopping this check still closes the
-// browser, stops the server, removes the scratch database and releases the lock.
+// browser, stops the server and any command, removes the scratch database and
+// releases the lock. A child in a process group of its own gets neither the
+// terminal's signals nor the gate's, so this is the only way it stops.
 for (const signal of ['SIGINT', 'SIGTERM', 'SIGHUP']) {
     process.once(signal, () => {
         void cleanUp().finally(() => process.exit(128 + constants.signals[signal]));

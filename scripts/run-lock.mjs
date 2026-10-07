@@ -19,19 +19,26 @@
  * pid's start time is the one recorded, so a pid the system has since given to
  * another process does not hold the lock forever.
  *
- * The gate starts each check in a process group of its own and records those
- * groups in the lock file (`recordProcessGroups`). A gate killed outright
- * leaves its checks running, so a run that finds the owner gone waits until
- * none of its recorded groups is running either.
+ * An owner that starts its work in process groups of its own records those
+ * groups in the lock file (`recordProcessGroups`): the gate one per check, the
+ * boot checks their build and server, and `run-at-lower-priority.mjs --lock`
+ * its command. An owner killed outright leaves them running, so a run that
+ * finds the owner gone waits until none of its recorded groups is running
+ * either.
  *
  * Taking over is atomic too: a run moves the stale file aside under a name of
  * its own and reads it back. If it is not the stale file it read, another run
- * took the lock over in between, and the file goes back.
+ * took the lock over in between, and the file goes back. A run killed between
+ * moving the file aside, or writing its scratch file in `recordProcessGroups`,
+ * and removing it leaves an `astromech-run.lock.<pid>.stale` or `.tmp` file;
+ * the next run to take the lock removes those whose pid is not running.
  *
  * A run started by the owner, such as `pnpm run build` inside the gate, must
  * not wait for its parent. The owner sets `ASTROMECH_RUN_LOCK_PID` to its pid,
  * every process it starts inherits it, and a run that finds it naming a live
  * process, or the owner the lock file still names, goes ahead without the lock.
+ * Such a run records nothing: the lock file is its ancestor's, which lists the
+ * group the run is in.
  *
  * Used by `scripts/verify.mjs`, the boot checks and
  * `scripts/run-at-lower-priority.mjs` (its `--lock` flag).
@@ -40,6 +47,7 @@ import { execFileSync } from 'node:child_process';
 import console from 'node:console';
 import {
     linkSync,
+    readdirSync,
     readFileSync,
     renameSync,
     statSync,
@@ -53,6 +61,9 @@ import { fileURLToPath } from 'node:url';
 import { processGroupIsRunning } from './process-group.mjs';
 
 const LOCK_PATH = join(tmpdir(), 'astromech-run.lock');
+
+/** The names `takeOver` and `recordProcessGroups` give their files, with the pid. */
+const LEFTOVER_FILE = /^astromech-run\.lock\.(\d+)\.(?:stale|tmp)$/;
 
 /** Set, to the owner's pid, in the environment of every process the owner starts. */
 const HOLDER_VARIABLE = 'ASTROMECH_RUN_LOCK_PID';
@@ -72,13 +83,13 @@ const worktree = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 let ownRecord;
 
 /**
- * Waits until this process holds the lock, then returns. `name` is the run's
- * name in the lines other runs print while they wait; pnpm's script name
- * (`npm_lifecycle_event`) is used when it is set. Returns at once when an
+ * Waits until this process holds the lock, then returns true. `name` is the
+ * run's name in the lines other runs print while they wait; pnpm's script name
+ * (`npm_lifecycle_event`) is used when it is set. Returns false at once when an
  * ancestor holds the lock.
  */
 export async function waitForRunLock(name) {
-    if (ancestorHoldsLock()) return;
+    if (ancestorHoldsLock()) return false;
     const record = {
         pid: process.pid,
         processStart: processStart(process.pid),
@@ -135,6 +146,8 @@ export async function waitForRunLock(name) {
     ownRecord = record;
     process.env[HOLDER_VARIABLE] = String(process.pid);
     process.on('exit', releaseRunLock);
+    removeLeftoverFiles();
+    return true;
 }
 
 /**
@@ -247,6 +260,24 @@ function takeOver(stale) {
     }
     unlinkSync(aside);
     return false;
+}
+
+/**
+ * Removes the `.stale` and `.tmp` files of runs no longer running. A pid the
+ * system has since given to another process keeps its file until that process
+ * ends; the file is only clutter.
+ */
+function removeLeftoverFiles() {
+    const directory = dirname(LOCK_PATH);
+    for (const file of readdirSync(directory)) {
+        const pid = Number(LEFTOVER_FILE.exec(file)?.[1]);
+        if (!pid || isRunning(pid)) continue;
+        try {
+            unlinkSync(join(directory, file));
+        } catch (error) {
+            if (error.code !== 'ENOENT') throw error;
+        }
+    }
 }
 
 /**

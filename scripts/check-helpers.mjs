@@ -52,10 +52,14 @@ export function step(message) {
     console.log(`\n> ${message}`);
 }
 
-/** Run a command to completion, failing the check on a non-zero exit. */
-export function run(command, args, options) {
+/**
+ * Run a command to completion, failing the check on a non-zero exit.
+ * `onSpawn`, when given, receives the child process once it is spawned.
+ */
+export function run(command, args, options, onSpawn) {
     return new Promise((fulfil, reject) => {
         const child = spawn(command, args, { stdio: 'inherit', ...options });
+        onSpawn?.(child);
         child.on('error', reject);
         child.on('exit', (code) => {
             if (code === 0) fulfil();

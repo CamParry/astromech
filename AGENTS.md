@@ -14,7 +14,7 @@ Nested `AGENTS.md` files cover `packages/astromech`, `packages/admin`, `packages
 
 ## Commands and the gate
 
-While working, run the test file you touched (`pnpm -F <package> exec vitest run <path>`; the `testing` skill has the detail). Run `pnpm run verify:fast` before handing work back (typecheck, tests, lint, `check:unused`, `check:hooks`; no build, and coverage thresholds only for the packages the branch changes). Run `pnpm run verify` before a change lands. `pnpm run verify:runtime` is the version-sensitive subset CI runs on the floor Node version. Each check writes its whole output to a log, and a failing check's `FAIL` line names the file: search the log rather than rerun the check. A passing run writes a stamp that `pnpm run verify:status` compares with the worktree. **Never `--no-verify`**: if the pre-commit hook fails, fix the cause.
+While working, run the test file you touched (`pnpm -F <package> exec vitest run <path>`; the `testing` skill has the detail). Run `pnpm run verify:fast` before handing work back (typecheck, tests, lint, `check:unused`, `check:hooks`, `check:scripts`; no build, and coverage thresholds only for the packages the branch changes). Run `pnpm run verify` before a change lands. `pnpm run verify:runtime` is the version-sensitive subset CI runs on the floor Node version. Each check writes its whole output to a log, and a failing check's `FAIL` line names the file: search the log rather than rerun the check. A passing run writes a stamp that `pnpm run verify:status` compares with the worktree. **Never `--no-verify`**: if the pre-commit hook fails, fix the cause.
 
 `verify` runs every check below except four: `format:check` and `lint:css` (the hook runs them), `check:config` (run it when you edit the config path) and `check:install` (needs the npm registry, so CI runs it separately).
 
@@ -35,6 +35,7 @@ While working, run the test file you touched (`pnpm -F <package> exec vitest run
 | `pnpm run check:boot:cloudflare` | serves `apps/demo-cloudflare` on workerd (see its `AGENTS.md`)                                                                                         |
 | `pnpm run check:install`         | installs packed tarballs into a scratch site per `apps/docs/installation.md`, plus `@astromech/backups`                                                |
 | `pnpm run check:hooks`           | the Claude Code Bash hook in `.claude/hooks/`, through its `node:test` suite                                                                           |
+| `pnpm run check:scripts`         | the run lock in `scripts/`, through the `node:test` suites beside the scripts                                                                          |
 | `pnpm run report:drift`          | not a check: lists drift patterns, copies and test weakening a branch adds; always exits 0                                                             |
 | `pnpm run land`                  | not a check: lands the current worktree's branch on main (see "Branches and worktrees")                                                                |
 

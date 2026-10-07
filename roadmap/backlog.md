@@ -47,6 +47,8 @@ Finished items are deleted rather than ticked; the record of what shipped is in
 
 ### Tooling
 
+- [ ] Under the gate, `check:boot:cloudflare` starts the build and wrangler in process groups of their own, which no lock record lists (`scripts/run-lock.mjs` keeps one owner's record). If the gate and the check are both killed outright, wrangler keeps running. Fixing it needs the lock to accept groups from more than one process. `check:boot`'s Chromium is not recorded either, since playwright does not expose its pid.
+- [ ] `check:install` builds and installs a scratch site but does not take the run lock.
 - [ ] Re-evaluate a dependency lint (dependency-cruiser or similar) as a QA hardening layer once development shifts from building to hardening — dropped while building, `DECISIONS.md`
 
 ### Relationships follow-ups (from `completed/relationships-model.md`)

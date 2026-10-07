@@ -1,7 +1,7 @@
 /**
- * Stops a child spawned with `detached: true` along with every process it
- * started, since they share its process group, and says whether a group is
- * still running. POSIX only, like the checks.
+ * Stops or signals a child spawned with `detached: true` along with every
+ * process it started, since they share its process group, and says whether a
+ * group is still running. POSIX only, like the checks.
  */
 
 /**
@@ -27,12 +27,12 @@ export function processGroupIsRunning(id) {
 }
 
 /**
- * Signal a process group. False when no live process in it is left. macOS
+ * Signal the process group `pid` leads. False when no live process in it is left. macOS
  * answers EPERM, not ESRCH, when the group holds only exited processes their
  * parents have not reaped yet, and every process here runs as this user, so
  * EPERM means the same as ESRCH.
  */
-function signalGroup(pid, signal) {
+export function signalGroup(pid, signal) {
     try {
         process.kill(-pid, signal);
         return true;
