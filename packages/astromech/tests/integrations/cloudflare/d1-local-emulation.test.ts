@@ -10,8 +10,10 @@
  * branch of `resolveBinding()`; `tests/integrations/cloudflare/bindings.test.ts` routes
  * every case through `setEnvSource` and says so at the top.
  *
- * Bindings come from `packages/astromech/wrangler.jsonc`, discovered from the
- * working directory the way a real Node host would find its own config.
+ * Bindings come from a copy of `packages/astromech/wrangler.jsonc` in a
+ * directory of this file's own (`@tests/wrangler`), discovered from the working
+ * directory the way a real Node host would find its own config. Wrangler keeps
+ * its local state beside that copy, so no other file's proxy shares it.
  */
 
 import type { D1DatabaseLike } from '@/database/drivers/d1-dialect';
@@ -23,6 +25,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { migrateToLatest } from '@astromech/schema-engine';
 import { makeTestConfig, setupTestConfig } from '@tests/harness';
+import { enterWranglerProject } from '@tests/wrangler';
 import { sql } from 'kysely';
 import {
     afterAll,
@@ -50,10 +53,9 @@ type TestSchema = {
     migrated: { id: string; label: string };
 };
 
-// Local D1 state persists under `.wrangler/state` between runs and tests, so
-// every table this file owns — Kysely's migration bookkeeping included — is
-// dropped before each test, and each test creates the tables it reads. Without
-// that the migration case silently no-ops on the second run.
+// Local D1 state persists between the tests of this file, so every table this
+// file owns (Kysely's migration bookkeeping included) is dropped before each
+// test, and each test creates the tables it reads.
 const OWNED_TABLES = [
     'round_trip',
     'migrated',
@@ -68,12 +70,14 @@ const OWNED_TABLES = [
 const BOOT_TIMEOUT = 60_000;
 
 let db: Kysely<TestSchema>;
+let leaveWranglerProject: () => void;
 
 beforeAll(async () => {
     // No `setEnvSource`: the lookup must fall through to wrangler, which is the
     // whole point of this file.
     clearEnvSource();
     resetBindings();
+    leaveWranglerProject = enterWranglerProject();
     db = d1({ binding: 'DB' }).getInstance() as unknown as Kysely<TestSchema>;
     // The first query boots workerd.
     await sql`SELECT 1`.execute(db);
@@ -96,6 +100,7 @@ afterAll(async () => {
     await db.destroy();
     // The workerd process outlives the test run if the proxy is never disposed.
     await disposeBindings();
+    leaveWranglerProject();
 });
 
 describe('d1() against local emulation', () => {

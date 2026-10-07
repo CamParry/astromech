@@ -17,8 +17,17 @@ const include = ['tests/**/*.test.ts', 'tests/**/*.test.tsx'];
 const globalSetup = ['tests/_support/global-setup.ts'];
 
 // Worker threads start faster than child processes and share the transform
-// cache, and nothing here needs a process of its own.
+// cache. Only `wranglerTests` need a process of their own.
 const pool = 'threads';
+
+// The files that start wrangler's local emulation in process. Each makes a
+// wrangler project of its own its working directory (`tests/_support/wrangler.ts`),
+// so no two share wrangler's state, and a worker thread cannot change its
+// working directory.
+const wranglerTests = [
+    'tests/integrations/cloudflare/d1-local-emulation.test.ts',
+    'tests/storage/drivers/contract.test.ts',
+];
 
 const projects = [
     {
@@ -34,7 +43,7 @@ const projects = [
             // files that cannot live with it.
             isolate: false,
             include,
-            exclude: [...defaultExclude, ...isolatedTests],
+            exclude: [...defaultExclude, ...isolatedTests, ...wranglerTests],
         },
     },
     {
@@ -46,6 +55,18 @@ const projects = [
             pool,
             globalSetup,
             include: isolatedTests,
+        },
+    },
+    {
+        resolve: { alias },
+        test: {
+            ...baseTestOptions,
+            name: 'core-wrangler',
+            environment: 'node',
+            // A child process per file, which `process.chdir()` can move.
+            pool: 'forks',
+            globalSetup,
+            include: wranglerTests,
         },
     },
 ];

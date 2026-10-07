@@ -14,7 +14,8 @@ import { join, resolve } from 'node:path';
 import { pathToFileURL } from 'node:url';
 import { promisify } from 'node:util';
 import { createTempSite, writeSiteConfig } from '@tests/cli';
-import { describe, expect, it } from 'vitest';
+import { createWranglerProject, removeWranglerProject } from '@tests/wrangler';
+import { describe, expect, it, onTestFinished } from 'vitest';
 
 const require = createRequire(import.meta.url);
 const packageRoot = resolve(import.meta.dirname, '../../../..');
@@ -28,14 +29,24 @@ const CHILD_TIMEOUT_MS = SPAWN_TIMEOUT_MS - 5_000;
 
 type Result = { code: number; stdout: string; stderr: string };
 
-/** Run `astromech <args>` from source and collect what it printed. */
-async function cli(args: string[]): Promise<Result> {
+/**
+ * Run `astromech <args>` from source in `cwd` and collect what it printed. tsx
+ * reads the package's tsconfig by path, so the `@/` paths resolve from any
+ * working directory.
+ */
+async function cli(args: string[], cwd = packageRoot): Promise<Result> {
     try {
         const { stdout, stderr } = await promisify(execFile)(
             process.execPath,
-            [require.resolve('tsx/cli'), entryPoint, ...args],
+            [
+                require.resolve('tsx/cli'),
+                '--tsconfig',
+                join(packageRoot, 'tsconfig.json'),
+                entryPoint,
+                ...args,
+            ],
             {
-                cwd: packageRoot,
+                cwd,
                 env: { ...process.env, NO_COLOR: '1' },
                 timeout: CHILD_TIMEOUT_MS,
                 killSignal: 'SIGKILL',
@@ -104,8 +115,11 @@ describe('astromech', () => {
         'exits once a command that resolved a Cloudflare binding finishes',
         async () => {
             // The wrangler platform proxy `resolveBinding` opens keeps the process
-            // alive until `disposeBindings()` runs. The child runs in the package
-            // root, whose `wrangler.jsonc` declares the `DB` binding.
+            // alive until `disposeBindings()` runs. The child runs in a wrangler
+            // project of its own, whose `wrangler.jsonc` declares the `DB`
+            // binding, so its local D1 state is not another file's.
+            const wranglerProject = createWranglerProject();
+            onTestFinished(() => removeWranglerProject(wranglerProject));
             const site = await createTempSite();
             await mkdir(join(site, 'migrations'));
             await writeFile(
@@ -127,7 +141,10 @@ export default {
 `
             );
 
-            const result = await cli(['db:init', '--config', configPath]);
+            const result = await cli(
+                ['db:init', '--config', configPath],
+                wranglerProject
+            );
 
             expect(result.stderr).toBe('');
             expect(result.stdout).toContain('Database migrations applied');

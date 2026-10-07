@@ -1,9 +1,12 @@
 {
     // Exists so wrangler's `getPlatformProxy()` has a config to discover when
     // tests resolve a Cloudflare binding in a plain Node process. It is not
-    // deployed and not published (`files` is ["dist", "src"]). Its consumers
-    // are `tests/integrations/cloudflare/d1-local-emulation.test.ts` (`DB`) and
-    // the storage driver tests under `tests/storage/drivers/` (`MEDIA`).
+    // deployed and not published (`files` is ["dist", "src"]). Tests use a
+    // copy in a directory of their own (`tests/_support/wrangler.ts`), so
+    // their wrangler state is not shared. Its consumers are
+    // `tests/integrations/cloudflare/d1-local-emulation.test.ts` and the CLI's
+    // `tests/transport/cli/commands/index.test.ts` (`DB`), and
+    // `tests/storage/drivers/contract.test.ts` (`MEDIA`).
     //
     // `database_id` is a placeholder: local emulation keys its SQLite file off
     // `database_name` and never contacts the API.
