@@ -5,7 +5,7 @@
  */
 
 import type { ServiceMethodContract } from '@/types/index';
-import { ValidationError } from '@/errors/validation';
+import { parseInput } from '@/errors/validation';
 
 /**
  * Parse `input` against `method.input`, throwing the framework's 422 on
@@ -16,7 +16,5 @@ export function parseMethodInput(
     method: Pick<ServiceMethodContract, 'input'>,
     input: unknown
 ): unknown {
-    const parsed = method.input.safeParse(input ?? {});
-    if (!parsed.success) throw new ValidationError(parsed.error.issues);
-    return parsed.data;
+    return parseInput(method.input, input ?? {});
 }

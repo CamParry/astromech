@@ -138,24 +138,21 @@ describe('POST /entries/:type/bulk-update', () => {
     });
 
     it('409s when an id is trashed between the read and the write, naming it', async () => {
-        const resolved = setupTestConfig(makeTestConfig());
+        setupTestConfig(makeTestConfig());
         const second = ids[1] ?? '';
         let trashed = false;
-        registerTestPlugins(
-            [
-                {
-                    package: '@test/probe',
-                    hooks: [
-                        defineHook('entry:beforeUpdate', async () => {
-                            if (trashed) return;
-                            trashed = true;
-                            await api.trash({ type: 'post', id: second });
-                        }),
-                    ],
-                },
-            ],
-            resolved
-        );
+        registerTestPlugins([
+            {
+                package: '@test/probe',
+                hooks: [
+                    defineHook('entry:beforeUpdate', async () => {
+                        if (trashed) return;
+                        trashed = true;
+                        await api.trash({ type: 'post', id: second });
+                    }),
+                ],
+            },
+        ]);
 
         const res = await post('/post/bulk-update', { ids, data: { title: 'Renamed' } });
 

@@ -6,7 +6,7 @@
  */
 
 import type { Db } from '@/database/types';
-import type { PluginHooks, ResolvedConfig, ResourceType } from '@/types/index';
+import type { PluginHooks, ResourceType } from '@/types/index';
 import {
     createTestDb,
     createTestUser,
@@ -65,15 +65,12 @@ type Adapter = {
     interleave(id: string, value: string): void;
 };
 
-/** The resolved config of the current test, for registering a probe plugin. */
-let resolved: ResolvedConfig;
-
 /** The current test's database, for creating an acting user. */
 let db: Db;
 
 /** Register a probe plugin whose hooks run once each. */
 function probe(hooks: PluginHooks): void {
-    registerTestPlugins([{ package: '@test/probe', hooks }], resolved);
+    registerTestPlugins([{ package: '@test/probe', hooks }]);
 }
 
 /** Runs `act` on the first call only, so a write it makes does not run it again. */
@@ -259,7 +256,7 @@ const ADAPTERS: Record<ResourceType, Adapter> = {
 
 beforeEach(async () => {
     db = await createTestDb();
-    resolved = setupTestConfig({
+    setupTestConfig({
         ...makeTestConfig(),
         globals: [
             {

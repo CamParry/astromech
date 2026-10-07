@@ -13,7 +13,7 @@
  * through the EntriesService-typed local transport.
  */
 
-import type { JsonObject, ResolvedConfig } from '@/types/index';
+import type { JsonObject } from '@/types/index';
 import {
     createTestDb,
     createTestUser,
@@ -33,9 +33,6 @@ import { defineHook } from '@/plugins/define-hook';
 
 const api = currentServices.entries;
 
-/** The resolved config of the current test, for registering a probe plugin. */
-let resolved: ResolvedConfig;
-
 beforeEach(async () => {
     await createTestDb();
 
@@ -43,7 +40,7 @@ beforeEach(async () => {
     // post: versioning on + relationship field; note: versioning off.
     if (cfg.entries.post) cfg.entries.post.staging = true;
     if (cfg.entries.note) cfg.entries.note.staging = true;
-    resolved = setupTestConfig(cfg);
+    setupTestConfig(cfg);
 });
 
 afterEach(() => {
@@ -670,21 +667,18 @@ describe('a staged write', () => {
         const entry = await api.create({ type: 'note', data: { title: 'Live' } });
         await api.createStaged({ type: 'note', id: entry.id });
         let done = false;
-        registerTestPlugins(
-            [
-                {
-                    package: '@test/probe',
-                    hooks: [
-                        defineHook('entry:beforeUpdate', async (ctx) => {
-                            if (done) return;
-                            done = true;
-                            await api.trash({ type: 'note', id: ctx.entry.id });
-                        }),
-                    ],
-                },
-            ],
-            resolved
-        );
+        registerTestPlugins([
+            {
+                package: '@test/probe',
+                hooks: [
+                    defineHook('entry:beforeUpdate', async (ctx) => {
+                        if (done) return;
+                        done = true;
+                        await api.trash({ type: 'note', id: ctx.entry.id });
+                    }),
+                ],
+            },
+        ]);
 
         const refused = api.update({
             type: 'note',

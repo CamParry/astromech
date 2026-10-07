@@ -24,8 +24,8 @@ beforeEach(async () => {
 
 /** Register a probe plugin's hooks against the live runtime. */
 function probe(hooks: PluginHooks): void {
-    const resolved = setupTestConfig(makeGlobalsConfig());
-    registerTestPlugins([{ package: '@test/probe', hooks }], resolved);
+    setupTestConfig(makeGlobalsConfig());
+    registerTestPlugins([{ package: '@test/probe', hooks }]);
 }
 
 describe('global:beforeUpdate', () => {

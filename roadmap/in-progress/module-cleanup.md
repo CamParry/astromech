@@ -95,8 +95,10 @@ the repository copies.
 - [ ] **JSON body reading and the plain-object check** repeat across
       `rest-route.ts`, `transport/http/routes/entries.ts`, the RPC transport, the
       query-string parser and the CLI `call` command.
-- [ ] **`parseInput` and `parseMethodInput`** both parse and throw a 422
+- [x] **`parseInput` and `parseMethodInput`** both parse and throw a 422
       (`errors/validation.ts`, `services/parse-method-input.ts`).
+      `parseMethodInput` now calls `parseInput`, keeping only its own rule
+      that no argument is the empty object.
 - [ ] **Admin: the media page bypasses `<DataList>`**, hand-rolling URL state,
       selection, bulk actions and the table. Entry create and entry/global update
       bypass the mutation table. The list-to-query mapping is written four times;
@@ -146,8 +148,10 @@ the repository copies.
       AI context message is `ai/context-message.ts`. `locale.ts` stays: ten
       files across six modules import it, and the admin and the demo reach it
       through `astromech/shared`, so it is a pure leaf with no single owner.
-- [ ] The plugin runtime keeps its own config copy with its own defaults
-      (`plugins/runtime/plugin-runtime.ts`); read `app.config`.
+- [x] The plugin runtime keeps its own config copy with its own defaults
+      (`plugins/runtime/plugin-runtime.ts`); read `app.config`. `ctx.config`
+      is now a getter over `app.config`, so `registerPlugins` no longer takes
+      the config.
 - [x] `MediaQueryParams` and `UserQueryParams` are hand-written copies of their
       schemas (`types/query.ts`). Derive them. The query methods' inputs moved
       to `queryMediaSchema` and `queryUsersSchema` in each module's
