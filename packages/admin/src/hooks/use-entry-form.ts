@@ -8,7 +8,7 @@ import type { UseFieldsFormResult } from './use-fields-form';
 import type { Entry, EntryStatus, Field, JsonObject } from 'astromech';
 import { useStore } from '@tanstack/react-form';
 // The function the server uses, so the browser picks the same stage it will.
-import { entryValidationMode } from 'astromech/shared';
+import { resolveValidationMode } from 'astromech/shared';
 import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { validationSummaryMessage } from '../components/fields/field-error-summary';
@@ -169,7 +169,7 @@ export function useEntryForm<TSaved = Entry>({
         // An update that sends no status is validated against the row's own,
         // which is the form's, so the browser and the server pick one stage.
         validationMode: (values, meta) =>
-            entryValidationMode({
+            resolveValidationMode({
                 status: statusAfter(values, meta?.publish === true),
                 hasStatuses,
             }),

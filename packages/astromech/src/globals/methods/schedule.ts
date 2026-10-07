@@ -1,8 +1,9 @@
 import type { GlobalResource } from '../repository';
+import { scheduleSchema } from '@/content/schema';
 import { defineServiceMethod } from '@/services/define-service-method';
 import { globalAccess } from '../internal/access';
 import { changeGlobalStatus } from '../internal/update-global';
-import { globalSchema, localised, scheduleGlobalSchema } from '../schema';
+import { globalSchema, localised } from '../schema';
 
 /**
  * An update that sets `scheduled` and `publishedAt`, so the update hooks fire and
@@ -11,7 +12,7 @@ import { globalSchema, localised, scheduleGlobalSchema } from '../schema';
  */
 export const scheduleGlobal = defineServiceMethod({
     summary: 'Schedule a global to publish at a future time.',
-    input: localised.extend(scheduleGlobalSchema.shape),
+    input: localised.extend(scheduleSchema.shape),
     output: globalSchema,
     access: globalAccess('publish'),
     requires: 'statuses',

@@ -1,6 +1,11 @@
 import { z } from '@hono/zod-openapi';
-import { auditKeys, publishedAtKey, versionSchema } from '@/content/schema';
-import { optionalDate, scheduleEntrySchema, statusSchema } from '@/entries/schema';
+import {
+    auditKeys,
+    optionalDate,
+    publishedAtKey,
+    statusSchema,
+    versionSchema,
+} from '@/content/schema';
 import { jsonObject, unparsedJsonObject } from '@/services/json';
 
 /**
@@ -15,12 +20,6 @@ export const updateGlobalSchema = z
         publishedAt: optionalDate,
     })
     .openapi('UpdateGlobal');
-
-/**
- * `publishedAt` for `globals.schedule`. The entries schema, imported rather than
- * copied: the date coercion an ISO caller relies on is the same coercion here.
- */
-export const scheduleGlobalSchema = scheduleEntrySchema;
 
 /** The global a call addresses. */
 const key = z.string();

@@ -1,11 +1,30 @@
 /**
- * The output schemas the content modules share: the timestamp and author keys
- * a resource carries, the shape of a saved version, and a `usedBy` row.
+ * The schemas the content modules share: the status and date inputs an entry
+ * and a global write take, the timestamp and author keys a resource carries,
+ * the shape of a saved version, and a `usedBy` row.
  */
 
 import { z } from '@hono/zod-openapi';
 import { withFallback } from '@/services/fallback';
-import { RESOURCE_TYPES } from '@/types/domain';
+import { ENTRY_STATUSES, RESOURCE_TYPES } from '@/types/domain';
+
+/** An entry's or a global's publication status, one of `ENTRY_STATUSES`. */
+export const statusSchema = z.enum(ENTRY_STATUSES);
+
+/** A `Date`, or an offset ISO string coerced to one. */
+const dateInput = z.union([
+    z.date(),
+    z
+        .string()
+        .datetime({ offset: true })
+        .transform((v) => new Date(v)),
+]);
+
+/** A `Date`, or an offset ISO string coerced to one: nullable and optional. */
+export const optionalDate = dateInput.nullable().optional();
+
+/** The payload `schedule` takes on an entry and on a global: the publish date. */
+export const scheduleSchema = z.strictObject({ publishedAt: dateInput });
 
 /**
  * When an entry, a global or a media item was created and last changed, and by

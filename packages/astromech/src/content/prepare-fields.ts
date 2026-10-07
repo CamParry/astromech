@@ -13,13 +13,13 @@ import type {
     User,
 } from '@/types/index';
 import { resourceExistenceRepository } from '@/content/repository/resource-existence';
-import { entryValidationMode } from '@/entries/validation-mode';
 import { flattenFieldNodes } from '@/fields/flatten';
 import { parseFields } from '@/fields/parse-fields';
 import { mergePatch, projectToSchema } from '@/fields/values';
 import { parseOutput } from '@/services/parse-method-output';
 import { pruneDanglingRelations } from './dangling-relations';
 import { RESOURCE_CONFIG } from './resources';
+import { resolveValidationMode } from './validation-mode';
 
 /** What the field parse needs to know about the write, beyond the values. */
 export type FieldWrite = {
@@ -125,7 +125,7 @@ export function fieldParseContext(
     const validate = resourceConfig.validate(config, target);
     return {
         operation: write.operation,
-        validation: entryValidationMode({
+        validation: resolveValidationMode({
             status: write.status,
             hasStatuses: resourceConfig.hasStatuses(config, target),
         }),

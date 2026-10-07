@@ -16,7 +16,7 @@ export {
     resolveEntryLocaleUrl,
     resolveEntryUrl,
 } from '@/entries/entry-url';
-export { entryValidationMode } from '@/entries/validation-mode';
+export { resolveValidationMode } from '@/content/validation-mode';
 export { buildVariantUrl } from '@/media/serving/image/url';
 export { entryPermission } from '@/permissions/entry-permission';
 export { globalPermission } from '@/permissions/global-permission';

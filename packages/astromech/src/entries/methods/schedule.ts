@@ -1,10 +1,11 @@
 import type { EntryResource } from '../repository/types';
 import { z } from '@hono/zod-openapi';
+import { scheduleSchema } from '@/content/schema';
 import { defineServiceMethod } from '@/services/define-service-method';
 import { entryAccess } from '../internal/access';
 import { batchAddress, fromBatch, oneOrMany } from '../internal/from-batch';
 import { updateEntryBatch } from '../internal/update-batch';
-import { entrySchema, scheduleEntrySchema } from '../schema';
+import { entrySchema } from '../schema';
 
 /**
  * An update that sets `scheduled` and `publishedAt`, written atomically across
@@ -18,7 +19,7 @@ export const scheduleEntries = defineServiceMethod({
             type: z.string(),
             ...batchAddress,
             locale: z.string().optional(),
-            ...scheduleEntrySchema.shape,
+            ...scheduleSchema.shape,
         })
     ),
     output: z.union([entrySchema, z.array(entrySchema)]),
