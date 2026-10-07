@@ -160,7 +160,14 @@ the repository copies.
       `base` override.
 - [ ] Two unrelated `pluginNamespace` exports; rename the Proxy builder.
 - [ ] `SlugConfig`'s `source` and `prefix` (`types/config.ts`): nothing reads
-      them, since a slug always derives from the title.
+      them, since a slug always derives from the title. **Needs a decision
+      first:** the `slug` object's presence is what shows the slug input in
+      the admin (`config/admin-config.ts` sends `slug: null` without it, and
+      the admin's `resolve.ts` sets `hasSlug` from it), so a type with the
+      slug capability on but no `slug` object generates slugs the form cannot
+      edit. Either show the input whenever `capabilities.slug` is on and drop
+      `SlugConfig`, or make `slug` a boolean. The `entry-types` route's
+      response schema lists both fields too.
 
 ## Public API
 
