@@ -4,11 +4,12 @@
  * The Save button read `form.state.isDirty` — a plain getter that never
  * re-renders — so it stayed disabled and no media edit could ever be saved.
  * Closing the modal or switching its locale with unsaved edits asks first.
+ * The versions list restores through the client for the row that was read.
  */
 
 import type { RenderAdminResult } from '../../_support/render-admin';
 import type { MediaDetailModalProps } from '@/admin/components/media/media-detail-modal';
-import type { Media } from '@/types/index';
+import type { Media, VersionMetadata } from '@/types/index';
 import type { UserEvent } from '@testing-library/user-event';
 import { useNavigate, useSearch } from '@tanstack/react-router';
 import { screen, waitFor, within } from '@testing-library/react';
@@ -21,6 +22,7 @@ const { media, adminConfig } = vi.hoisted(() => ({
         get: vi.fn(),
         usedBy: vi.fn(),
         versions: vi.fn(),
+        restoreVersion: vi.fn(),
         update: vi.fn(),
         delete: vi.fn(),
     },
@@ -91,28 +93,33 @@ function Library(
     );
 }
 
+type OpenOptions = {
+    canUpdate?: boolean;
+    canDelete?: boolean;
+    /** The item's saved versions, as the client lists them. */
+    versions?: VersionMetadata[];
+};
+
 /**
  * Open the modal on the fixed item with the permission flags under test, once
  * the item has loaded.
  */
-async function openModal(permissions?: {
-    canUpdate?: boolean;
-    canDelete?: boolean;
-}): Promise<UserEvent> {
-    return (await openLibrary(permissions)).user;
+async function openModal(options?: OpenOptions): Promise<UserEvent> {
+    return (await openLibrary(options)).user;
 }
 
 /** `openModal`, returning the page so a test can read where the router went. */
-async function openLibrary(
-    permissions: { canUpdate?: boolean; canDelete?: boolean } = {}
-): Promise<RenderAdminResult> {
+async function openLibrary({
+    versions = [],
+    ...permissions
+}: OpenOptions = {}): Promise<RenderAdminResult> {
     media.get.mockImplementation(async (params: { locale?: string }) => {
         requestedLocale.current = params.locale;
         // The item has an `en` row alone, so every read falls back to it.
         return ITEM;
     });
     media.usedBy.mockResolvedValue([]);
-    media.versions.mockResolvedValue([]);
+    media.versions.mockResolvedValue(versions);
     media.update.mockResolvedValue(ITEM);
     const page = renderAdmin(<Library {...permissions} />, {
         url: `/media?item=${ITEM.id}`,
@@ -341,5 +348,35 @@ describe('MediaDetailModal unsaved changes', () => {
         expect((screen.getByLabelText('Alt text') as HTMLInputElement).value).toBe(
             'A cat'
         );
+    });
+});
+
+describe('MediaDetailModal versions', () => {
+    it('restores the clicked version of the row that was read, once confirmed', async () => {
+        media.restoreVersion.mockResolvedValue(ITEM);
+        const user = await openModal({
+            versions: [1, 2].map((version) => ({
+                locale: 'en',
+                version,
+                createdAt: new Date(`2026-01-0${version}T00:00:00Z`),
+                createdBy: null,
+            })),
+        });
+
+        const buttons = await screen.findAllByRole('button', {
+            name: 'Restore this version',
+        });
+        // The list is newest first, so the second row is version 1.
+        await user.click(buttons[1] as HTMLElement);
+        const dialog = await screen.findByRole('alertdialog');
+        await user.click(within(dialog).getByRole('button', { name: 'Restore' }));
+
+        await waitFor(() => {
+            expect(media.restoreVersion).toHaveBeenCalledWith({
+                id: 'm1',
+                locale: 'en',
+                version: 1,
+            });
+        });
     });
 });

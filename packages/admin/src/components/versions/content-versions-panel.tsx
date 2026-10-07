@@ -1,8 +1,8 @@
 /**
  * One locale's saved versions of a resource, newest first, each restorable.
- * Shared by media and users — the two differ only in which hooks feed the
- * props here. The full `VersionHistory` is a page with a diff pane; this is
- * a list alone, sized for a sidebar panel.
+ * The media modal and the user edit page pass in the version list and the
+ * restore, as the entry and global pages do for `VersionHistory`. That one is
+ * a page with a diff pane; this is a list alone, sized for a sidebar panel.
  */
 
 import type { VersionMetadata } from 'astromech';

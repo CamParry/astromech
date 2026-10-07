@@ -1,17 +1,10 @@
+import { fileExtension } from '../file-extension';
+
 /**
  * The storage key of an original: `<id>.<ext>`, or the bare id when the filename
  * has no extension. Derived from the row alone, never from a URL.
  */
 export function originalKey(id: string, filename: string): string {
-    const ext = extOf(filename);
+    const ext = fileExtension(filename);
     return ext ? `${id}.${ext}` : id;
-}
-
-/**
- * The file extension in lower case, without the dot, or '' when the filename has
- * none. Lower case because `a.JPG` and `b.jpg` are one file on a case-insensitive disk.
- */
-export function extOf(filename: string): string {
-    const i = filename.lastIndexOf('.');
-    return i >= 0 ? filename.slice(i + 1).toLowerCase() : '';
 }

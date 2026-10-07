@@ -6,7 +6,7 @@
 
 import type { ImageFormat } from './url';
 import { normaliseWidths } from '@/media/image-widths';
-import { extOf } from '../../internal/keys';
+import { fileExtension } from '../../file-extension';
 import { isOptimisableImage } from './dimensions';
 import { buildMediaUrl, buildVariantUrl } from './url';
 
@@ -67,7 +67,7 @@ export function buildImageAttrs(
     options: ImageAttrsOptions,
     ctx: ImageAttrsContext
 ): ImageAttrs {
-    const ext = extOf(input.filename);
+    const ext = fileExtension(input.filename);
     const sizes = options.sizes ?? '100vw';
     // The bare <img> src is the original, so it honours the access mode: use the
     // already-resolved `Media.url` when the caller passed one.

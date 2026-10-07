@@ -17,7 +17,7 @@ import { useAuth } from '../../context/auth';
 import { useAdminMutation } from '../../hooks/use-admin-mutation';
 import { useFieldsForm } from '../../hooks/use-fields-form';
 import { usePermissions } from '../../hooks/use-permissions';
-import { userMutations, useUser } from '../../hooks/users';
+import { userMutations, useUser, useUserVersions } from '../../hooks/users';
 import { EntryNamespaceProvider, labelNamespace } from '../../i18n/entry-namespace';
 import { localeOptions } from '../../utilities/content-locale';
 import { FieldColumn, FieldsForm } from '../forms/fields-form';
@@ -35,9 +35,9 @@ import {
 } from '../ui/page';
 import { Panel } from '../ui/panel';
 import { Select } from '../ui/select';
+import { ContentVersionsPanel } from '../versions/content-versions-panel';
 import { requiredValidator, UserRoleField, UserTextField } from './user-profile-fields';
 import { UserSummaryPanel } from './user-summary-panel';
-import { UserVersionsPanel } from './user-versions-panel';
 
 /** The account's own keys, held beside the declared fields' `fields`. */
 type UserFormExtras = { name: string; role: string };
@@ -128,6 +128,11 @@ function UserEditBody({
     const deleteMutation = useAdminMutation(userMutations().delete, {
         onSuccess: () => void navigate({ to: '/users', ignoreBlocker: true }),
     });
+
+    // `user.locale` is the row that was read: a locale with no row has no
+    // versions to list.
+    const versions = useUserVersions(id, user.locale);
+    const restoreVersionMutation = useAdminMutation(userMutations().restoreVersion);
 
     const userForm = useFieldsForm<UserFormExtras, User>({
         fieldDefinitions,
@@ -256,13 +261,18 @@ function UserEditBody({
                                     </Panel>
                                 )}
 
-                                {/* `user.locale` is the row that was read:
-                                            a locale with no row has no versions to
-                                            list. */}
-                                <UserVersionsPanel
-                                    userId={id}
-                                    locale={user.locale}
+                                <ContentVersionsPanel
+                                    versions={versions.data ?? []}
+                                    isLoading={versions.isLoading}
                                     canUpdate={canUpdateUsers()}
+                                    onRestore={(version) =>
+                                        restoreVersionMutation.mutate({
+                                            id,
+                                            locale: user.locale,
+                                            version,
+                                        })
+                                    }
+                                    isRestoring={restoreVersionMutation.isPending}
                                 />
                             </>
                         }

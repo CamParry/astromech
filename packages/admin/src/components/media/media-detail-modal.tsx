@@ -10,7 +10,12 @@ import { deepEqual, defaultContentLocale } from 'astromech/shared';
 import React, { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import adminConfig from 'virtual:astromech/admin-config';
-import { mediaMutations, useMediaItem, useMediaUsage } from '../../hooks/media';
+import {
+    mediaMutations,
+    useMediaItem,
+    useMediaUsage,
+    useMediaVersions,
+} from '../../hooks/media';
 import { useAdminMutation } from '../../hooks/use-admin-mutation';
 import { useUnsavedChangesGuard } from '../../hooks/use-unsaved-changes-guard';
 import { formatBytes } from '../../utilities/bytes';
@@ -25,8 +30,8 @@ import { Modal } from '../ui/modal';
 import { Select } from '../ui/select';
 import { Spinner } from '../ui/spinner';
 import { UploadButton } from '../ui/upload-button';
+import { ContentVersionsPanel } from '../versions/content-versions-panel';
 import { MediaUsagePanel } from './media-usage-panel';
-import { MediaVersionsPanel } from './media-versions-panel';
 
 export type MediaDetailModalProps = {
     mediaId: string | null;
@@ -147,6 +152,11 @@ function MediaDetailBody({
     });
 
     const replaceMutation = useAdminMutation(mediaMutations().replace);
+
+    // `item.locale` is the row that was read: a locale with no row has no
+    // versions to list.
+    const versions = useMediaVersions(item.id, item.locale);
+    const restoreVersionMutation = useAdminMutation(mediaMutations().restoreVersion);
 
     // Same query key as the usage panel below, so this reads that cache entry
     // rather than fetching again.
@@ -299,12 +309,18 @@ function MediaDetailBody({
                         )}
                     </form.Field>
 
-                    {/* `item.locale` is the row that was read: a locale with
-                        no row has no versions to list. */}
-                    <MediaVersionsPanel
-                        mediaId={item.id}
-                        locale={item.locale}
+                    <ContentVersionsPanel
+                        versions={versions.data ?? []}
+                        isLoading={versions.isLoading}
                         canUpdate={canUpdate}
+                        onRestore={(version) =>
+                            restoreVersionMutation.mutate({
+                                id: item.id,
+                                locale: item.locale,
+                                version,
+                            })
+                        }
+                        isRestoring={restoreVersionMutation.isPending}
                     />
                 </div>
             </div>
