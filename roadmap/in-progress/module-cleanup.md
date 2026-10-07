@@ -72,10 +72,11 @@ the repository copies.
       repeats `createContentRelationships` (`content/relationships.ts`) plus three
       repository reads only it uses. Add a type filter and bind entries through
       the factory.
-- [ ] **The staging merge exists twice, with two merge rules.**
+- [x] **The staging merge exists twice, with two merge rules.**
       `entries/methods/staging/merge.ts` takes the staged fields as they are;
       `globals/methods/staging/merge.ts` patches them over the canonical. One
-      helper in `content/staging.ts`, one rule.
+      helper in `content/staging.ts`, one rule. Superseded:
+      `roadmap/planned/drafts.md` removes staging and its merge step.
 - [x] **The entry catalogue restates every method.** `entries/catalogue.ts` repeats
       each summary in a switch and each input in a per-type builder. Build each
       from the method's own `input` with `safeExtend` and its `summary`.
@@ -153,8 +154,8 @@ the repository copies.
       `backlog.md`).
 - [ ] The `notifications.count` special cases: a bespoke route, a documented
       override and a client override, all to answer `{ data: { count } }`.
-- [ ] `globals.get({ staged })`, which only a test uses; the admin calls
-      `getStaged`.
+- [x] `globals.get({ staged })`, which only a test uses; the admin calls
+      `getStaged`. Superseded: `roadmap/planned/drafts.md` removes staging.
 - [x] `CELL_KINDS`, `badRequest`'s `details`, the
       unreachable try/catch in `transport/mcp/tools.ts`, and
       `createEntriesService`'s two parameters that only ever take one value.
