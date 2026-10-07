@@ -133,8 +133,11 @@ the repository copies.
       time: `content/schema.ts` builds `usageSchema` from it, and
       `content/resources.ts` imports the resource schemas, which import
       `content/schema.ts`. Break that cycle first.
-- [ ] `utilities/` is a mixed bag: `ai-context.ts` to `ai/`, `locale.ts` to its
-      one consumer. `permission-match.ts` is in `planned/permissions.md`.
+- [x] `utilities/` is a mixed bag: `ai-context.ts` to `ai/`, `locale.ts` to its
+      one consumer. `permission-match.ts` is in `planned/permissions.md`. The
+      AI context message is `ai/context-message.ts`. `locale.ts` stays: ten
+      files across six modules import it, and the admin and the demo reach it
+      through `astromech/shared`, so it is a pure leaf with no single owner.
 - [ ] The plugin runtime keeps its own config copy with its own defaults
       (`plugins/runtime/plugin-runtime.ts`); read `app.config`.
 - [ ] `MediaQueryParams` and `UserQueryParams` are hand-written copies of their

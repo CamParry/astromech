@@ -21,7 +21,7 @@ export { fileExtension } from '@/media/file-extension';
 export { buildVariantUrl } from '@/media/serving/image/url';
 export { entryPermission } from '@/permissions/entry-permission';
 export { globalPermission } from '@/permissions/global-permission';
-export { formatAiContextMessage } from '@/utilities/ai-context';
+export { formatAiContextMessage } from '@/ai/context-message';
 export { deepEqual } from '@/utilities/deep-equal';
 export { defaultContentLocale, resolveContentLocale } from '@/utilities/locale';
 export { hasPermission } from '@/utilities/permission-match';

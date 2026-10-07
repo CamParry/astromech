@@ -139,7 +139,7 @@ export type { FieldReference } from '@/fields/references';
  * as `astromech/methods`: a plugin building a chat request needs it, and
  * this is the only barrel it may import.
  */
-export { formatAiContextMessage } from '@/utilities/ai-context';
+export { formatAiContextMessage } from '@/ai/context-message';
 
 export { defineConfig } from '@/config/define-config';
 export { defineAdminPage } from '@/config/define-admin-page';
