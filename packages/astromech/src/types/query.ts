@@ -8,6 +8,9 @@
  */
 
 import type { Entry } from './domain';
+import type { queryMediaSchema } from '@/media/schema';
+import type { queryUsersSchema } from '@/users/schema';
+import type { z } from 'zod';
 
 /** Sentinel for query({ locale }) meaning "rows across all locales". */
 export type AllLocales = 'all';
@@ -67,14 +70,8 @@ export type QueryResult<T = Entry> = {
     } | null; // null when limit is 'all'
 };
 
-export type UserQueryParams = {
-    /** The locale each user's content is read in. Default: the default locale. */
-    locale?: string | undefined;
-    search?: string | undefined;
-    page?: number | undefined;
-    limit?: number | 'all' | undefined;
-    sort?: SortOption | SortOption[] | undefined;
-};
+/** What `users.query` takes. Documented key by key on `queryUsersSchema`. */
+export type UserQueryParams = z.input<typeof queryUsersSchema>;
 
 /** The classes of file a media list can be filtered to, by MIME type. */
 export const MEDIA_MIME_TYPE_FILTERS = [
@@ -90,16 +87,5 @@ export type MediaMimeTypeFilter = (typeof MEDIA_MIME_TYPE_FILTERS)[number];
 /** The columns a media list can be ordered by. */
 export const MEDIA_SORT_FIELDS = ['filename', 'mimeType', 'size', 'createdAt'] as const;
 
-export type MediaQueryParams = {
-    /** The locale each item's content is read in. Default: the default locale. */
-    locale?: string | undefined;
-    search?: string | undefined;
-    where?:
-        | {
-              mimeType?: MediaMimeTypeFilter | undefined;
-          }
-        | undefined;
-    page?: number | undefined;
-    limit?: number | 'all' | undefined;
-    sort?: SortOption | SortOption[] | undefined;
-};
+/** What `media.query` takes. Documented key by key on `queryMediaSchema`. */
+export type MediaQueryParams = z.input<typeof queryMediaSchema>;
