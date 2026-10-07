@@ -2,9 +2,11 @@
 /**
  * Keeps shallow clones of the projects Astromech compares itself against, so research can search
  * their source with `grep -rn` or `rg` instead of fetching it from the web one file at a time.
- * The clones live outside the repo in `Astromech-worktrees/.prior-art/<name>`, beside the main
- * checkout, which every worktree resolves to the same place, so they outlive a session and are
- * shared by all of them. They are for reading: an update discards any change made in one.
+ * The clones live outside the repo in `<main checkout>-worktrees/.prior-art/<name>`, the
+ * directory the worktrees sit in beside the main checkout (`Astromech-worktrees` for a checkout
+ * named `Astromech`), which every worktree resolves to the same place, so they outlive a session
+ * and are shared by all of them. The Bash hook (`.claude/hooks/guard-bash-commands.mjs`) works
+ * out the same directory. They are for reading: an update discards any change made in one.
  *
  * `pnpm run prior-art` clones each project that is missing and updates the rest to the tip of
  * its default branch. `pnpm run prior-art <name> [<name>…]` does only those. It prints each
@@ -12,7 +14,7 @@
  */
 import { execFileSync } from 'node:child_process';
 import { existsSync, mkdirSync } from 'node:fs';
-import { dirname, join } from 'node:path';
+import { basename, dirname, join } from 'node:path';
 import { run, step } from './check-helpers.mjs';
 
 // Name and repository, one project a line. Each URL was checked with
@@ -51,9 +53,10 @@ const commonDir = execFileSync(
     ['rev-parse', '--path-format=absolute', '--git-common-dir'],
     { encoding: 'utf8' }
 ).trim();
+const mainCheckout = dirname(commonDir);
 const priorArtDir = join(
-    dirname(dirname(commonDir)),
-    'Astromech-worktrees',
+    dirname(mainCheckout),
+    `${basename(mainCheckout)}-worktrees`,
     '.prior-art'
 );
 mkdirSync(priorArtDir, { recursive: true });
