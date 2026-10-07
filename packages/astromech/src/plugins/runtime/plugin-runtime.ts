@@ -15,7 +15,6 @@ import type {
     PluginLogger,
     PluginRawRoute,
     PluginServiceNamespace,
-    ResolvedConfig,
     ResolvedPluginIdentity,
     StoragePutOptions,
     TypedEntriesService,
@@ -44,13 +43,12 @@ import { pluralise } from '@/utilities/strings';
 type RegisteredRawRoute = { identity: ResolvedPluginIdentity; route: PluginRawRoute };
 
 type PluginRuntimeState = {
-    config: ResolvedConfig | null;
     identities: ResolvedPluginIdentity[];
     service: Map<string, Record<string, AnyServiceMethod>>;
     rawRoutes: RegisteredRawRoute[];
 };
 
-// One registry holding all four fields rather than four registries:
+// One registry holding all three fields rather than three registries:
 // `registerPlugins` rewrites them together in a single pass.
 const runtime = createRegistry<PluginRuntimeState>('pluginRuntime', {
     required: false,
@@ -61,7 +59,6 @@ function state(): PluginRuntimeState {
     const existing = runtime.get();
     if (existing) return existing;
     const created: PluginRuntimeState = {
-        config: null,
         identities: [],
         service: new Map(),
         rawRoutes: [],
@@ -75,9 +72,8 @@ function state(): PluginRuntimeState {
  * `build` in `astromech.ts`, which the injected middleware runs on the first request.
  * Identity collisions and dependencies are validated earlier in `resolveConfig`.
  */
-export function registerPlugins(defs: PluginDefinition[], config: ResolvedConfig): void {
+export function registerPlugins(defs: PluginDefinition[]): void {
     const s = state();
-    s.config = config;
     s.identities = [];
     s.service = new Map();
     s.rawRoutes = [];
@@ -282,13 +278,14 @@ export function createPluginContext(
     identity: ResolvedPluginIdentity,
     app: AppContext
 ): PluginContext {
-    const config = state().config;
-    const configView = config ? makeConfigView(config) : makeConfigView(emptyConfig());
     const PREFIX = `plugin/${identity.namespace}/`;
 
     const layer = {
         plugin: identity,
-        config: configView,
+        // Read on use, like `app.config`, so building a context needs no config.
+        get config(): PluginConfigView {
+            return makeConfigView(app.config);
+        },
         // The app's own services under their typed facades. Reads answer the
         // public shape unless the call passes `full: true`, as everywhere else.
         get entries(): TypedEntriesService {
@@ -327,18 +324,4 @@ export function createPluginContext(
         ...Object.getOwnPropertyDescriptors(app),
         ...Object.getOwnPropertyDescriptors(layer),
     });
-}
-
-function emptyConfig(): Omit<PluginConfigView, 'entryTypesWithField'> {
-    return {
-        basePath: '/cms',
-        entryTypes: {},
-        globals: {},
-        adminPages: [],
-        trash: { enabled: true, retentionDays: 30 },
-        timezone: 'UTC',
-        mediaRoute: '/_media',
-        media: { access: 'public', translatable: false },
-        users: { fields: [], translatable: false },
-    };
 }

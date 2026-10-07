@@ -19,6 +19,7 @@ import { createElement } from 'react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { z } from 'zod';
 import { createAppContext, systemAppContext } from '@/app-context/app-context';
+import { setConfig } from '@/config/registry';
 import { getCronJobs } from '@/cron/registry';
 import { runHook } from '@/hooks/hooks';
 import { defineHook } from '@/plugins/define-hook';
@@ -87,30 +88,27 @@ beforeEach(async () => {
 
 describe('registerPlugins indexing', () => {
     it('indexes service methods and raw routes by access key', () => {
-        registerPlugins(
-            [
-                def({
-                    package: '@astromech/redirects',
-                    service: {
-                        lookup: {
-                            access: 'public',
-                            input: z.object({ path: z.string() }),
-                            mutates: false,
-                            handler: async () => null,
-                        },
+        registerPlugins([
+            def({
+                package: '@astromech/redirects',
+                service: {
+                    lookup: {
+                        access: 'public',
+                        input: z.object({ path: z.string() }),
+                        mutates: false,
+                        handler: async () => null,
                     },
-                    rawRoutes: [
-                        {
-                            path: '/upload',
-                            method: 'POST',
-                            access: 'authenticated',
-                            handler: () => new Response(),
-                        },
-                    ],
-                }),
-            ],
-            config
-        );
+                },
+                rawRoutes: [
+                    {
+                        path: '/upload',
+                        method: 'POST',
+                        access: 'authenticated',
+                        handler: () => new Response(),
+                    },
+                ],
+            }),
+        ]);
 
         expect(getPluginServiceMethods().get('redirects')).toHaveProperty('lookup');
         expect(getPluginRawRoutes()).toHaveLength(1);
@@ -124,7 +122,7 @@ describe('getPluginIdentity', () => {
     // caller reach a plugin by a string the client can never produce, and would
     // hide the fact that the namespace → service key derivation has no inverse.
     it('resolves by service key and NOT by namespace', () => {
-        registerPlugins([def({ package: '@acme/seo-tools' })], config);
+        registerPlugins([def({ package: '@acme/seo-tools' })]);
 
         const identity = getPluginIdentity('acmeSeoTools');
         expect(identity?.package).toBe('@acme/seo-tools');
@@ -136,7 +134,8 @@ describe('getPluginIdentity', () => {
 
 describe('createPluginContext', () => {
     it('exposes the acting user, a scoped logger, and a footprint helper', () => {
-        registerPlugins([def({ package: '@astromech/seo' })], config);
+        setConfig(config);
+        registerPlugins([def({ package: '@astromech/seo' })]);
         const ctx = createPluginContext(
             resolvePluginIdentity(def({ package: '@astromech/seo' })),
             createAppContext({ user, role: null })
@@ -150,7 +149,7 @@ describe('createPluginContext', () => {
 
     // Stdout belongs to the MCP stdio server and `--json` output.
     it('writes every logger level to stderr, tagged with the plugin', () => {
-        registerPlugins([def({ package: '@astromech/seo' })], config);
+        registerPlugins([def({ package: '@astromech/seo' })]);
         const ctx = createPluginContext(
             resolvePluginIdentity(def({ package: '@astromech/seo' })),
             createAppContext({ user, role: null })
@@ -173,7 +172,7 @@ describe('createPluginContext', () => {
     });
 
     it('has a null role when the caller names none', () => {
-        registerPlugins([def({ package: '@astromech/seo' })], config);
+        registerPlugins([def({ package: '@astromech/seo' })]);
         const ctx = createPluginContext(
             resolvePluginIdentity(def({ package: '@astromech/seo' })),
             createAppContext({ user, role: null })
@@ -183,7 +182,7 @@ describe('createPluginContext', () => {
     });
 
     it('exposes the role it was built with', () => {
-        registerPlugins([def({ package: '@astromech/seo' })], config);
+        registerPlugins([def({ package: '@astromech/seo' })]);
         const ctx = createPluginContext(
             resolvePluginIdentity(def({ package: '@astromech/seo' })),
             createAppContext({ user, role: adminRole })
@@ -193,7 +192,7 @@ describe('createPluginContext', () => {
     });
 
     it("hands ctx.methods.tools the context's role and the given options", () => {
-        registerPlugins([def({ package: '@astromech/seo' })], config);
+        registerPlugins([def({ package: '@astromech/seo' })]);
         const tools = vi.mocked(buildScopedTools);
         tools.mockReturnValue([]);
         const ctx = createPluginContext(
@@ -239,7 +238,7 @@ describe('createPluginContext', () => {
     });
 
     it('throws when the site configures no email driver', async () => {
-        registerPlugins([def({ package: '@astromech/seo' })], config);
+        registerPlugins([def({ package: '@astromech/seo' })]);
         const ctx = createPluginContext(
             resolvePluginIdentity(def({ package: '@astromech/seo' })),
             createAppContext({ user, role: null })
@@ -254,22 +253,16 @@ describe('createPluginContext', () => {
 describe('registerPlugins hooks', () => {
     it('runs a registered handler with the payload, as the context that fired it', async () => {
         const seen: { event: unknown; user: User | null }[] = [];
-        registerPlugins(
-            [
-                def({
-                    package: '@astromech/x',
-                    hooks: [
-                        defineHook(
-                            'entry:beforeCreate',
-                            (eventCtx, ctx: PluginContext) => {
-                                seen.push({ event: eventCtx, user: ctx.user });
-                            }
-                        ),
-                    ],
-                }),
-            ],
-            config
-        );
+        registerPlugins([
+            def({
+                package: '@astromech/x',
+                hooks: [
+                    defineHook('entry:beforeCreate', (eventCtx, ctx: PluginContext) => {
+                        seen.push({ event: eventCtx, user: ctx.user });
+                    }),
+                ],
+            }),
+        ]);
 
         await runHook(
             'entry:beforeCreate',
@@ -280,19 +273,16 @@ describe('registerPlugins hooks', () => {
     });
 
     it('propagates a throw from a before* handler (aborts the operation)', async () => {
-        registerPlugins(
-            [
-                def({
-                    package: '@astromech/x',
-                    hooks: [
-                        defineHook('entry:beforeCreate', () => {
-                            throw new Error('blocked');
-                        }),
-                    ],
-                }),
-            ],
-            config
-        );
+        registerPlugins([
+            def({
+                package: '@astromech/x',
+                hooks: [
+                    defineHook('entry:beforeCreate', () => {
+                        throw new Error('blocked');
+                    }),
+                ],
+            }),
+        ]);
 
         await expect(
             runHook('entry:beforeCreate', {} as EntryCreateContext, systemAppContext())
@@ -302,27 +292,24 @@ describe('registerPlugins hooks', () => {
     it('propagates a throw from an after* handler too, and stops running further handlers', async () => {
         let secondRan = false;
 
-        registerPlugins(
-            [
-                def({
-                    package: '@astromech/boom',
-                    hooks: [
-                        defineHook('entry:afterUpdate', () => {
-                            throw new Error('after-fail');
-                        }),
-                    ],
-                }),
-                def({
-                    package: '@astromech/ok',
-                    hooks: [
-                        defineHook('entry:afterUpdate', () => {
-                            secondRan = true;
-                        }),
-                    ],
-                }),
-            ],
-            config
-        );
+        registerPlugins([
+            def({
+                package: '@astromech/boom',
+                hooks: [
+                    defineHook('entry:afterUpdate', () => {
+                        throw new Error('after-fail');
+                    }),
+                ],
+            }),
+            def({
+                package: '@astromech/ok',
+                hooks: [
+                    defineHook('entry:afterUpdate', () => {
+                        secondRan = true;
+                    }),
+                ],
+            }),
+        ]);
 
         await expect(
             runHook('entry:afterUpdate', {} as EntryUpdateContext, systemAppContext())
@@ -332,19 +319,16 @@ describe('registerPlugins hooks', () => {
 
     it('runs a custom, plugin-declared event', async () => {
         const payloads: unknown[] = [];
-        registerPlugins(
-            [
-                def({
-                    package: '@astromech/sub',
-                    hooks: [
-                        defineHook('forms:afterSubmit', (payload: unknown) => {
-                            payloads.push(payload);
-                        }),
-                    ],
-                }),
-            ],
-            config
-        );
+        registerPlugins([
+            def({
+                package: '@astromech/sub',
+                hooks: [
+                    defineHook('forms:afterSubmit', (payload: unknown) => {
+                        payloads.push(payload);
+                    }),
+                ],
+            }),
+        ]);
 
         await runHook('forms:afterSubmit', { id: 42 }, systemAppContext());
         expect(payloads).toEqual([{ id: 42 }]);
@@ -364,7 +348,7 @@ describe('bootPlugins', () => {
     });
 
     it('registers cron jobs under an auto-namespaced name with a PluginContext', async () => {
-        registerPlugins([def({ package: '@astromech/seo' })], config);
+        registerPlugins([def({ package: '@astromech/seo' })]);
         let seenUser: User | null | undefined;
         await bootPlugins([
             def({
@@ -390,7 +374,7 @@ describe('bootPlugins', () => {
     });
 
     it('runs setup() with a PluginContext and wraps a throw with the plugin name', async () => {
-        registerPlugins([def({ package: '@astromech/ok' })], config);
+        registerPlugins([def({ package: '@astromech/ok' })]);
         let ranWith: PluginContext | undefined;
         await bootPlugins([
             def({

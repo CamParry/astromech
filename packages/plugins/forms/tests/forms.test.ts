@@ -323,7 +323,8 @@ describe('forms.submit — the beforeSubmit gate', () => {
                 }),
             ],
         };
-        registerTestPlugins([forms(), probe], setupTestConfig(configWithForms()));
+        setupTestConfig(configWithForms());
+        registerTestPlugins([forms(), probe]);
 
         const result = await submit({
             slug: 'contact',
@@ -348,7 +349,8 @@ describe('forms.submit — the beforeSubmit gate', () => {
                 ),
             ],
         };
-        registerTestPlugins([forms(), probe], setupTestConfig(configWithForms()));
+        setupTestConfig(configWithForms());
+        registerTestPlugins([forms(), probe]);
 
         await submit({
             slug: 'contact',

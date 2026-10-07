@@ -142,7 +142,7 @@ async function build(config: AstromechConfig): Promise<Astromech> {
     registerBuiltInJobs();
 
     // Plugin runtime
-    registerPlugins(plugins, resolved);
+    registerPlugins(plugins);
     // The method manifest those plugins dispatch from, generated here because
     // this is the only site holding both the resolved config and the raw
     // `PluginDefinition[]`, which `ResolvedConfig` strips.

@@ -253,7 +253,7 @@ export function setupTestConfig(
         ...config,
         db: config.db === testDatabase ? openedDb() : config.db,
     });
-    registerPlugins(config.plugins ?? [], resolved);
+    registerPlugins(config.plugins ?? []);
     return resolved;
 }
 
@@ -328,15 +328,9 @@ export function contextAs(role: Role | null, user: User | null = null): AppConte
     return createAppContext({ user, role });
 }
 
-/**
- * Register a probe plugin's hooks against the live runtime. Pass the same
- * resolved config used by `setupTestConfig`.
- */
-export function registerTestPlugins(
-    plugins: PluginDefinition[],
-    resolved: ResolvedConfig
-): void {
-    registerPlugins(plugins, resolved);
+/** Register a probe plugin's hooks against the live runtime. */
+export function registerTestPlugins(plugins: PluginDefinition[]): void {
+    registerPlugins(plugins);
 }
 
 /**

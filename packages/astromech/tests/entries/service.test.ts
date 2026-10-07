@@ -876,11 +876,8 @@ describe('the trash is read-only', () => {
     });
 
     it('refuses an update when the entry is trashed between the read and the write', async () => {
-        const resolved = setupTestConfig();
-        registerTestPlugins(
-            [onceBeforeUpdate((id) => api.trash({ type: 'post', id }))],
-            resolved
-        );
+        setupTestConfig();
+        registerTestPlugins([onceBeforeUpdate((id) => api.trash({ type: 'post', id }))]);
         const entry = await api.create({ type: 'post', data: { title: 'A' } });
 
         const refused = api.update({ type: 'post', id: entry.id, data: { title: 'B' } });
@@ -891,24 +888,21 @@ describe('the trash is read-only', () => {
     });
 
     it('refuses a new locale when the entry is trashed between the read and the write', async () => {
-        const resolved = setupTestConfig();
+        setupTestConfig();
         const entry = await api.create({ type: 'post', data: { title: 'A' } });
         let done = false;
-        registerTestPlugins(
-            [
-                {
-                    package: '@test/probe',
-                    hooks: [
-                        defineHook('entry:beforeCreate', async () => {
-                            if (done) return;
-                            done = true;
-                            await api.trash({ type: 'post', id: entry.id });
-                        }),
-                    ],
-                },
-            ],
-            resolved
-        );
+        registerTestPlugins([
+            {
+                package: '@test/probe',
+                hooks: [
+                    defineHook('entry:beforeCreate', async () => {
+                        if (done) return;
+                        done = true;
+                        await api.trash({ type: 'post', id: entry.id });
+                    }),
+                ],
+            },
+        ]);
 
         const refused = api.update({
             type: 'post',
@@ -923,11 +917,8 @@ describe('the trash is read-only', () => {
     });
 
     it('names the trash when the entry is out of it again by the time the refusal is explained', async () => {
-        const resolved = setupTestConfig();
-        registerTestPlugins(
-            [onceBeforeUpdate((id) => api.trash({ type: 'post', id }))],
-            resolved
-        );
+        setupTestConfig();
+        registerTestPlugins([onceBeforeUpdate((id) => api.trash({ type: 'post', id }))]);
         const entry = await api.create({ type: 'post', data: { title: 'A' } });
         // A row restored between the refused write and the read that explains it.
         vi.spyOn(entryRepository, 'explainConflict').mockResolvedValueOnce(null);
@@ -943,11 +934,8 @@ describe('the trash is read-only', () => {
     it.each(['note', 'post'])(
         'answers 404 for a %s deleted between the read and the write',
         async (type) => {
-            const resolved = setupTestConfig();
-            registerTestPlugins(
-                [onceBeforeUpdate((id) => api.delete({ type, id }))],
-                resolved
-            );
+            setupTestConfig();
+            registerTestPlugins([onceBeforeUpdate((id) => api.delete({ type, id }))]);
             const entry = await api.create({ type, data: { title: 'A' } });
 
             const refused = api.update({ type, id: entry.id, data: { title: 'B' } });
@@ -959,14 +947,11 @@ describe('the trash is read-only', () => {
 
     it('refuses the same update on a driver with no transactions', async () => {
         const base = await createTestDb();
-        const resolved = setupTestConfig({
+        setupTestConfig({
             ...makeTestConfig(),
             db: { name: 'no-tx', getInstance: () => base, supportsTransactions: false },
         });
-        registerTestPlugins(
-            [onceBeforeUpdate((id) => api.trash({ type: 'post', id }))],
-            resolved
-        );
+        registerTestPlugins([onceBeforeUpdate((id) => api.trash({ type: 'post', id }))]);
         const entry = await api.create({ type: 'post', data: { title: 'A' } });
 
         const refused = api.update({ type: 'post', id: entry.id, data: { title: 'B' } });
@@ -994,16 +979,13 @@ describe('the trash is read-only', () => {
     });
 
     it('keeps the republish of a competing restore that ran inside the restore', async () => {
-        const resolved = setupTestConfig();
-        registerTestPlugins(
-            [
-                onceBeforeUpdate(async (id) => {
-                    await api.restore({ type: 'post', id });
-                    await api.publish({ type: 'post', id });
-                }),
-            ],
-            resolved
-        );
+        setupTestConfig();
+        registerTestPlugins([
+            onceBeforeUpdate(async (id) => {
+                await api.restore({ type: 'post', id });
+                await api.publish({ type: 'post', id });
+            }),
+        ]);
         const entry = await api.create({
             type: 'post',
             data: { title: 'A', status: 'published' },
@@ -1499,7 +1481,7 @@ describe('hooks', () => {
     // registry, exercising the real hook seam used in production.
     it('fires beforeCreate (observing data) and afterCreate (observing entry)', async () => {
         const seen: { before?: string; afterId?: string; afterTitle?: string } = {};
-        const resolved = setupTestConfig();
+        setupTestConfig();
         const probe: PluginDefinition = {
             package: '@test/probe',
             hooks: [
@@ -1512,7 +1494,7 @@ describe('hooks', () => {
                 }),
             ],
         };
-        registerTestPlugins([probe], resolved);
+        registerTestPlugins([probe]);
 
         const e = await api.create({ type: 'post', data: { title: 'Hooked' } });
         expect(seen.before).toBe('Hooked');
@@ -1522,7 +1504,7 @@ describe('hooks', () => {
 
     it('fires the update hooks when a restore unpublishes', async () => {
         const seen: unknown[] = [];
-        const resolved = setupTestConfig();
+        setupTestConfig();
         const probe: PluginDefinition = {
             package: '@test/probe',
             hooks: [
@@ -1531,7 +1513,7 @@ describe('hooks', () => {
                 }),
             ],
         };
-        registerTestPlugins([probe], resolved);
+        registerTestPlugins([probe]);
         const e = await api.create({
             type: 'post',
             data: { title: 'Hooked', status: 'published' },
@@ -1547,24 +1529,21 @@ describe('hooks', () => {
         const base = makeTestConfig();
         const post = base.entries['post'];
         if (!post) throw new Error('test harness missing `post` entry type');
-        const resolved = setupTestConfig({
+        setupTestConfig({
             ...base,
             entries: { ...base.entries, post: { ...post, staging: true } },
         });
         const seen: { slug: string | null; data: unknown }[] = [];
-        registerTestPlugins(
-            [
-                {
-                    package: '@test/probe',
-                    hooks: [
-                        defineHook('entry:afterUpdate', (ctx) => {
-                            seen.push({ slug: ctx.entry.slug, data: ctx.data });
-                        }),
-                    ],
-                },
-            ],
-            resolved
-        );
+        registerTestPlugins([
+            {
+                package: '@test/probe',
+                hooks: [
+                    defineHook('entry:afterUpdate', (ctx) => {
+                        seen.push({ slug: ctx.entry.slug, data: ctx.data });
+                    }),
+                ],
+            },
+        ]);
         const e = await api.create({ type: 'post', data: { title: 'A' } });
         await api.createStaged({ type: 'post', id: e.id });
         await api.update({
@@ -1602,30 +1581,27 @@ describe('hooks', () => {
         });
         const before: { locale: string; title: string }[] = [];
         const after: { id: string; locale: string; locales: string[] }[] = [];
-        const resolved = setupTestConfig();
-        registerTestPlugins(
-            [
-                {
-                    package: '@test/probe',
-                    hooks: [
-                        defineHook('entry:beforeCreate', (ctx) => {
-                            before.push({
-                                locale: ctx.data.locale,
-                                title: ctx.data.title,
-                            });
-                        }),
-                        defineHook('entry:afterCreate', (ctx) => {
-                            after.push({
-                                id: ctx.entry.id,
-                                locale: ctx.entry.locale,
-                                locales: ctx.entry.locales,
-                            });
-                        }),
-                    ],
-                },
-            ],
-            resolved
-        );
+        setupTestConfig();
+        registerTestPlugins([
+            {
+                package: '@test/probe',
+                hooks: [
+                    defineHook('entry:beforeCreate', (ctx) => {
+                        before.push({
+                            locale: ctx.data.locale,
+                            title: ctx.data.title,
+                        });
+                    }),
+                    defineHook('entry:afterCreate', (ctx) => {
+                        after.push({
+                            id: ctx.entry.id,
+                            locale: ctx.entry.locale,
+                            locales: ctx.entry.locales,
+                        });
+                    }),
+                ],
+            },
+        ]);
 
         const dup = await api.duplicate({ type: 'post', id: src.id });
 
@@ -1636,20 +1612,17 @@ describe('hooks', () => {
 
     it('a throwing beforeCreate aborts a duplicate before any row is written', async () => {
         const src = await api.create({ type: 'post', data: { title: 'Source' } });
-        const resolved = setupTestConfig();
-        registerTestPlugins(
-            [
-                {
-                    package: '@test/probe',
-                    hooks: [
-                        defineHook('entry:beforeCreate', () => {
-                            throw new Error('blocked');
-                        }),
-                    ],
-                },
-            ],
-            resolved
-        );
+        setupTestConfig();
+        registerTestPlugins([
+            {
+                package: '@test/probe',
+                hooks: [
+                    defineHook('entry:beforeCreate', () => {
+                        throw new Error('blocked');
+                    }),
+                ],
+            },
+        ]);
 
         await expect(api.duplicate({ type: 'post', id: src.id })).rejects.toThrow(
             'blocked'
@@ -1661,7 +1634,7 @@ describe('hooks', () => {
     it('hands the update hooks the public entry, without the content row id', async () => {
         const entry = await api.create({ type: 'post', data: { title: 'Before' } });
         const seen: Entry[] = [];
-        const resolved = setupTestConfig();
+        setupTestConfig();
         const probe: PluginDefinition = {
             package: '@test/probe',
             hooks: [
@@ -1676,7 +1649,7 @@ describe('hooks', () => {
                 }),
             ],
         };
-        registerTestPlugins([probe], resolved);
+        registerTestPlugins([probe]);
 
         await api.update({ type: 'post', id: entry.id, data: { title: 'After' } });
         await api.trash({ type: 'post', id: entry.id });
@@ -1691,20 +1664,17 @@ describe('hooks', () => {
     it('fails as the hook’s error when beforeUpdate leaves data its schema refuses', async () => {
         const entry = await api.create({ type: 'post', data: { title: 'Before' } });
         expectConsole('error', 'entry:beforeUpdate returned data that fails its schema');
-        const resolved = setupTestConfig();
-        registerTestPlugins(
-            [
-                {
-                    package: '@test/probe',
-                    hooks: [
-                        defineHook('entry:beforeUpdate', (ctx) => {
-                            (ctx.data as Record<string, unknown>)['extra'] = true;
-                        }),
-                    ],
-                },
-            ],
-            resolved
-        );
+        setupTestConfig();
+        registerTestPlugins([
+            {
+                package: '@test/probe',
+                hooks: [
+                    defineHook('entry:beforeUpdate', (ctx) => {
+                        (ctx.data as Record<string, unknown>)['extra'] = true;
+                    }),
+                ],
+            },
+        ]);
 
         const update = api.update({
             type: 'post',
@@ -1724,18 +1694,13 @@ describe('hooks', () => {
     it('answers the caller’s empty title on a titled type with a 422 before any hook runs', async () => {
         const entry = await api.create({ type: 'post', data: { title: 'Before' } });
         const seen: unknown[] = [];
-        const resolved = setupTestConfig();
-        registerTestPlugins(
-            [
-                {
-                    package: '@test/probe',
-                    hooks: [
-                        defineHook('entry:beforeUpdate', (ctx) => void seen.push(ctx)),
-                    ],
-                },
-            ],
-            resolved
-        );
+        setupTestConfig();
+        registerTestPlugins([
+            {
+                package: '@test/probe',
+                hooks: [defineHook('entry:beforeUpdate', (ctx) => void seen.push(ctx))],
+            },
+        ]);
 
         await expect(
             api.update({ type: 'post', id: entry.id, data: { title: '' } })
@@ -1744,7 +1709,7 @@ describe('hooks', () => {
     });
 
     it('a throwing beforeCreate aborts the create', async () => {
-        const resolved = setupTestConfig();
+        setupTestConfig();
         const probe: PluginDefinition = {
             package: '@test/probe',
             hooks: [
@@ -1753,7 +1718,7 @@ describe('hooks', () => {
                 }),
             ],
         };
-        registerTestPlugins([probe], resolved);
+        registerTestPlugins([probe]);
 
         await expect(
             api.create({ type: 'post', data: { title: 'Nope' } })
@@ -1766,7 +1731,7 @@ describe('hooks', () => {
     // the write it followed stays committed (see `DECISIONS.md`).
     it('a throwing afterDelete propagates, but the row is still gone', async () => {
         const entry = await api.create({ type: 'post', data: { title: 'Doomed' } });
-        const resolved = setupTestConfig();
+        setupTestConfig();
         const probe: PluginDefinition = {
             package: '@test/probe',
             hooks: [
@@ -1775,7 +1740,7 @@ describe('hooks', () => {
                 }),
             ],
         };
-        registerTestPlugins([probe], resolved);
+        registerTestPlugins([probe]);
 
         await expect(api.delete({ type: 'post', id: entry.id })).rejects.toThrow(
             'after-delete-fail'
@@ -1786,7 +1751,7 @@ describe('hooks', () => {
 
     it('a throwing beforeDelete aborts the delete, leaving the row in place', async () => {
         const entry = await api.create({ type: 'post', data: { title: 'Safe' } });
-        const resolved = setupTestConfig();
+        setupTestConfig();
         const probe: PluginDefinition = {
             package: '@test/probe',
             hooks: [
@@ -1795,7 +1760,7 @@ describe('hooks', () => {
                 }),
             ],
         };
-        registerTestPlugins([probe], resolved);
+        registerTestPlugins([probe]);
 
         await expect(api.delete({ type: 'post', id: entry.id })).rejects.toThrow(
             'before-delete-fail'

@@ -5,7 +5,7 @@
  * staged change that went away. Each resource's calls are a row in the adapter.
  */
 
-import type { PluginHooks, ResolvedConfig } from '@/types/index';
+import type { PluginHooks } from '@/types/index';
 import {
     createTestDb,
     makeTestConfig,
@@ -52,12 +52,9 @@ type Adapter = {
     beforeUpdate(act: () => Promise<unknown>): void;
 };
 
-/** The resolved config of the current test, for registering a probe plugin. */
-let resolved: ResolvedConfig;
-
 /** Register a probe plugin. */
 function probe(hooks: PluginHooks): void {
-    registerTestPlugins([{ package: '@test/probe', hooks }], resolved);
+    registerTestPlugins([{ package: '@test/probe', hooks }]);
 }
 
 /** Runs `act` on the first call only, so a write it makes does not run it again. */
@@ -183,7 +180,7 @@ beforeEach(async () => {
     await createTestDb();
     const config = makeTestConfig();
     if (config.entries.note) config.entries.note.staging = true;
-    resolved = setupTestConfig({
+    setupTestConfig({
         ...config,
         globals: [
             {
