@@ -660,6 +660,58 @@ describe('shells that read their script from standard input', () => {
     });
 });
 
+describe('unquoted globs in option values', () => {
+    it('refuses one, saying how to quote it', () => {
+        const result = runHook('grep -rn foo --include=*.ts .');
+        assert.equal(result.decision, 'deny');
+        assert.match(result.reason, /no matches found/);
+        assert.match(result.reason, /--include="\*\.ts"/);
+    });
+
+    it('refuses each form, wherever it runs', () => {
+        for (const command of [
+            'grep -rln foo --exclude=*.log src',
+            'grep -rn foo --include=*.{ts,mjs} .',
+            'rg foo --glob=*.md',
+            'rg foo -g *.md',
+            'grep -rn foo --include *.ts .',
+            'tar -czf out.tgz --exclude=dist/* .',
+            'find . -name *.ts',
+            'find src -type f -iname *.TS -o -path */dist/*',
+            `cd "${worktree}" && grep -rn foo --include=*.ts .`,
+            `cd "${scratchRepository}" && grep -rn foo --include=*.ts .`,
+            'echo "$(grep -rl foo --include=*.ts)"',
+            "bash -c 'grep -rn foo --include=*.ts .'",
+            'find . -type d -exec grep -l foo --include=*.ts {} +',
+        ]) {
+            const result = runHook(command);
+            assert.equal(result.decision, 'deny', command);
+            assert.match(result.reason, /quote/i, command);
+        }
+    });
+
+    it('lets quoted and escaped globs and plain file globs run', () => {
+        for (const command of [
+            "grep -rn foo '--include=*.ts' .",
+            'grep -rn foo "--include=*.ts" .',
+            "grep -rn foo --include='*.ts' .",
+            'grep -rn foo --include="*.ts" --exclude="*.log" .',
+            'grep -rn foo --include=\\*.ts .',
+            "rg foo -g '*.md'",
+            'find . -name "*.ts" -o -path "*/dist/*"',
+            'ls *.md',
+            'for f in scripts/*.mjs; do node --check "$f"; done',
+            'echo "--include=*.ts"',
+            'echo ${PATTERN:-*}',
+            '[ -f a.txt ] && echo yes',
+            'git log --format=%H -1',
+            'grep -rn foo --include="*.ts" . | head -5',
+        ]) {
+            assert.equal(runHook(command).decision, null, command);
+        }
+    });
+});
+
 describe('commands it cannot parse', () => {
     it('asks rather than guess', () => {
         for (const command of [

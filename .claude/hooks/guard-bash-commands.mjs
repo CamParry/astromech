@@ -2,7 +2,9 @@
 /**
  * PreToolUse hook for Bash. It guards git and Worktrunk (`wt`) calls that can destroy
  * uncommitted work or rewrite history, and process and stash commands that reach into other
- * sessions' work.
+ * sessions' work. It also refuses an unquoted glob in a pattern option such as
+ * `grep --include=*.ts`: zsh stops the command with `no matches found` before it runs, unless
+ * `NO_NOMATCH` is set, and a search that never ran reads as one that found nothing.
  * Why: several sessions and agents share this machine and repository, so `git reset --hard` can
  * wipe another session's work, a broad `pkill` can stop its server, and `git stash` (repo-wide)
  * empties a worktree other agents are writing in. Branches land with `pnpm run land`, so `wt
@@ -50,6 +52,8 @@
  * | `wt remove --force` (judged by the worktree it removes)     | silent       | silent     | ask       |
  * | `wt remove -D` (deletes unmerged branches)                  | ask          | silent     | ask       |
  * | `wt switch --clobber`, `wt config state clear`              | ask          | silent     | ask       |
+ * | an unquoted glob in a pattern option (`--include=*.ts`,     | deny         | deny       | deny      |
+ * | `--exclude *.log`, `rg -g *.md`, `find -name *.ts`)         |              |            |           |
  * | a command it cannot parse                                   | ask          | ask        | ask       |
  *
  * `bash -c '<script>'`, `eval`, `find -exec` and `wt step tether -- <command>` are judged by the
@@ -76,13 +80,15 @@ const TRIGGER = /git|pkill|killall|\bwt\b/;
 // words above is still parsed, but one the parser rejects passes silently: the parser misses some
 // shell syntax (`case`), and asking for every such command would prompt often.
 const SHELL_TRIGGER = /\b(?:ba|z|da)?sh\b/;
+// Likewise a command with a glob character, for the rule on unquoted globs in option values.
+const GLOB_TRIGGER = /[*?[]/;
 
 function main() {
     const input = readInput();
     const command = input?.tool_input?.command;
     if (typeof command !== 'string') return;
     const guarded = TRIGGER.test(command);
-    if (!guarded && !SHELL_TRIGGER.test(command)) return;
+    if (!guarded && !SHELL_TRIGGER.test(command) && !GLOB_TRIGGER.test(command)) return;
 
     let findings;
     try {
@@ -419,6 +425,7 @@ function inspectCommand(words, shellDirectory, findings) {
     const name = basename(args[0].text);
     const rest = args.slice(1);
 
+    inspectPatternGlobs(name, rest, findings);
     if (name === 'cd' || name === 'pushd') return changeDirectory(rest, directory);
     if (name === 'popd') return null;
     if (name === 'pkill' || name === 'killall') {
@@ -446,6 +453,60 @@ function inspectCommand(words, shellDirectory, findings) {
         inspectFindExec(rest, directory, findings);
     }
     return undefined;
+}
+
+// Options that take a file pattern as the next word.
+const PATTERN_OPTIONS = new Set([
+    '--include',
+    '--exclude',
+    '--exclude-dir',
+    '--glob',
+    '--iglob',
+]);
+
+// The `find` tests that take a pattern.
+const FIND_PATTERN_TESTS = new Set([
+    '-name',
+    '-iname',
+    '-path',
+    '-ipath',
+    '-wholename',
+    '-iwholename',
+    '-lname',
+    '-ilname',
+    '-regex',
+    '-iregex',
+]);
+
+/**
+ * Appends a refusal for each pattern a command takes as an option value with an unquoted glob in
+ * it: `--include=*.ts` (any `-<option>=<value>`), `--include *.ts`, `rg -g *.md` and
+ * `find -name *.ts`. zsh expands the glob as a file pattern before the command runs, and when no
+ * file matches it stops with `no matches found`, so a search reports nothing without running.
+ * A glob that is a whole operand, as in `ls *.md`, is meant to match files and is left alone.
+ */
+function inspectPatternGlobs(name, args, findings) {
+    const refuse = (label, quoted) =>
+        findings.push({
+            kind: 'refused',
+            label,
+            why: `zsh expands the unquoted glob in it to matching file names before the command runs, and stops the command with \`no matches found\` when no file matches. Quote the pattern: \`${quoted}\``,
+        });
+    for (let index = 0; index < args.length; index += 1) {
+        const { text, globIndex } = args[index];
+        const equals = text.indexOf('=');
+        if (text.startsWith('-') && equals !== -1 && globIndex > equals) {
+            refuse(text, `${text.slice(0, equals + 1)}"${text.slice(equals + 1)}"`);
+        }
+        const takesPattern =
+            PATTERN_OPTIONS.has(text) ||
+            (name === 'rg' && text === '-g') ||
+            (name === 'find' && FIND_PATTERN_TESTS.has(text));
+        const value = args[index + 1];
+        if (takesPattern && value?.globIndex >= 0) {
+            refuse(`${text} ${value.text}`, `${text} "${value.text}"`);
+        }
+    }
 }
 
 /**
@@ -946,8 +1007,9 @@ class ParseError extends Error {}
  * Parses shell source into items: `{ kind: 'command', words, substitutions, separator }`, and an
  * `open` and `close` around a subshell or a function body (`open` has `isFunction`). A `{ }`
  * group is not a scope: its commands stay in the list, with `{` and `}` as words. A word is
- * `{ text, expanded }`, where `text` has its quotes removed and `expanded` says it holds a `$` or
- * backtick expansion the hook cannot evaluate.
+ * `{ text, expanded, globIndex }`, where `text` has its quotes removed, `expanded` says it holds a
+ * `$` or backtick expansion the hook cannot evaluate, and `globIndex` is the position in `text` of
+ * its first unquoted `*`, `?` or `[` (-1 when it has none).
  */
 function parseScript(source) {
     return new Parser(source).parseList(false);
@@ -1158,6 +1220,7 @@ class Parser {
     readWord(substitutions) {
         let text = '';
         let expanded = false;
+        let globIndex = -1;
         while (this.index < this.source.length) {
             const char = this.peek();
             if (' \t\n;&|()<>'.includes(char)) break;
@@ -1183,11 +1246,12 @@ class Parser {
                 text += this.readBackticks(substitutions);
                 expanded = true;
             } else {
+                if (globIndex === -1 && '*?['.includes(char)) globIndex = text.length;
                 text += char;
                 this.index += 1;
             }
         }
-        return { text, expanded };
+        return { text, expanded, globIndex };
     }
 
     readDoubleQuoted(substitutions) {
