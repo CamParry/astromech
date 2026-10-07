@@ -3,24 +3,19 @@
  * other half of the composition root, beside `plugins/runtime/plugin-runtime.ts`.
  */
 
+import type { ContentKey } from '@/app-context/services';
 import type { DB } from '@/database/types';
 import type {
     AppContext,
-    EntriesService,
-    GlobalsService,
-    MediaService,
-    NotificationsService,
     PluginDatabase,
     PluginMethods,
     ResolvedConfig,
     Role,
-    SecurityService,
     User,
-    UsersService,
 } from '@/types/index';
 import type { Kysely } from 'kysely';
 import type { ReactElement } from 'react';
-import { createServices } from '@/app-context/services';
+import { addServiceGetters, createServices } from '@/app-context/services';
 import { sessionsTable, verificationsTable } from '@/auth/tables';
 import { getConfig } from '@/config/registry';
 import { getDatabaseDriver } from '@/database/driver-registry';
@@ -60,7 +55,7 @@ export type AppContextInput = {
 export function createAppContext(input: AppContextInput): AppContext {
     const { user, role, clientAddress, rateLimitKey, noStore } = input;
 
-    const context: AppContext = {
+    const members: Omit<AppContext, ContentKey> = {
         get db(): Kysely<DB> {
             return getDb();
         },
@@ -72,25 +67,6 @@ export function createAppContext(input: AppContextInput): AppContext {
         clientAddress,
         rateLimitKey,
         noStore: noStore ?? (() => undefined),
-        // Bound once per context, so a handler reaching a sibling acts as this user.
-        get entries(): EntriesService {
-            return createServices(context).entries;
-        },
-        get globals(): GlobalsService {
-            return createServices(context).globals;
-        },
-        get media(): MediaService {
-            return createServices(context).media;
-        },
-        get users(): UsersService {
-            return createServices(context).users;
-        },
-        get notifications(): NotificationsService {
-            return createServices(context).notifications;
-        },
-        get security(): SecurityService {
-            return createServices(context).security;
-        },
         email: { send: sendEmail },
         notify,
         logger: log,
@@ -125,7 +101,11 @@ export function createAppContext(input: AppContextInput): AppContext {
             };
         },
     };
-
+    // Bound once per context, so a handler reaching a sibling acts as this user.
+    const context: AppContext = addServiceGetters(
+        members,
+        (key) => createServices(context)[key]
+    );
     return context;
 }
 
