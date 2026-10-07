@@ -25,7 +25,8 @@
  *
  * A function body (`name() { …; }`, `function name { …; }`) is judged where it is defined, in a
  * directory the hook treats as unknown, since the function can run anywhere. A function whose body
- * changes directory leaves the directory unknown for the rest of the command.
+ * changes directory leaves the directory unknown for the rest of the command. So does a `case` arm
+ * that changes directory, since the arm may not run.
  *
  * | Command                                                     | Worktree dir | Scratchpad | Elsewhere |
  * | ----------------------------------------------------------- | ------------ | ---------- | --------- |
@@ -61,8 +62,8 @@
  * command they run; `bash <file>` runs a file the hook does not read, and passes silently.
  *
  * Known gaps: a `cd` after `&&` counts as done though the test before it can fail
- * (`test -d x && cd x; git reset --hard`), and `GIT_DIR` and `GIT_WORK_TREE` set as variables are
- * not followed.
+ * (`test -d x && cd x; git reset --hard`), and so does one in an `if`, `while` or `for` body;
+ * `GIT_DIR` and `GIT_WORK_TREE` set as variables are not followed.
  *
  * A call counts as in the scratchpad when it runs there. A forced worktree removal counts when the
  * worktree it removes is there, or when the hook cannot tell which worktree and the call runs there.
@@ -79,7 +80,8 @@ import { basename, dirname, isAbsolute, join, resolve, sep } from 'node:path';
 const TRIGGER = /git|pkill|killall|\bwt\b|no-gate-check/;
 // A shell can read a script the hook never sees. A command that mentions a shell but none of the
 // words above is still parsed, but one the parser rejects passes silently: the parser misses some
-// shell syntax (`case`), and asking for every such command would prompt often.
+// shell syntax (zsh glob qualifiers such as `*(.)`), and asking for every such command would
+// prompt often.
 const SHELL_TRIGGER = /\b(?:ba|z|da)?sh\b/;
 // Likewise a command with a glob character, for the rule on unquoted globs in option values.
 const GLOB_TRIGGER = /[*?[]/;
@@ -331,17 +333,19 @@ function collectFindings(items, startDirectory, findings) {
         if (item.kind === 'open') {
             stack.push({
                 directory,
-                isFunction: item.isFunction,
+                scope: item.scope,
                 changesDirectory: false,
             });
             // A function body runs wherever the function is called.
-            if (item.isFunction) directory = null;
+            if (item.scope === 'function') directory = null;
             previousSeparator = ';';
             continue;
         }
         if (item.kind === 'close') {
             const scope = stack.pop();
-            const unknown = scope.isFunction && scope.changesDirectory;
+            // A subshell's `cd` ends with it. A function body or a `case` arm may run or not, so
+            // a `cd` in one leaves the directory unknown.
+            const unknown = scope.scope !== 'subshell' && scope.changesDirectory;
             directory = unknown ? null : scope.directory;
             continue;
         }
@@ -1042,10 +1046,16 @@ function truncate(text) {
 
 class ParseError extends Error {}
 
+// The `name=`, `name+=` or `name[key]=` before an array's `(`.
+const ARRAY_ASSIGNMENT = /^[A-Za-z_][A-Za-z0-9_]*(\[[^\]]*\])?\+?=$/;
+
 /**
  * Parses shell source into items: `{ kind: 'command', words, substitutions, separator }`, and an
- * `open` and `close` around a subshell or a function body (`open` has `isFunction`). A `{ }`
- * group is not a scope: its commands stay in the list, with `{` and `}` as words. A word is
+ * `open` and `close` around a subshell, a function body or a `case` arm (`open` has `scope`:
+ * 'subshell', 'function' or 'case-arm'). A `{ }` group is not a scope: its commands stay in the
+ * list, with `{` and `}` as words. Process substitutions (`<(…)`, `>(…)`, zsh's `=(…)`) and
+ * the command substitutions in array elements, redirection targets, `case` words and patterns,
+ * and `[[ ]]` operands are parsed into `substitutions`. A word is
  * `{ text, expanded, globIndex }`, where `text` has its quotes removed, `expanded` says it holds a
  * `$` or backtick expansion the hook cannot evaluate, and `globIndex` is the position in `text` of
  * its first unquoted `*`, `?` or `[` (-1 when it has none).
@@ -1078,12 +1088,15 @@ class Parser {
         let depth = 0;
         // One entry per open `{`: 'function' for a function body, else 'group'.
         const braces = [];
+        // One entry per open `case`: the subshell depth it opened at.
+        const cases = [];
         // Set after a function's name and `()`, until its body opens.
         let functionPending = false;
         const checkClosed = () => {
             if (braces.includes('function'))
                 throw new ParseError('unclosed function body');
             if (functionPending) throw new ParseError('function without a body');
+            if (cases.length > 0) throw new ParseError('unclosed case');
         };
         const finish = (separator) => {
             if (words.length > 0 || substitutions.length > 0) {
@@ -1091,6 +1104,21 @@ class Parser {
             }
             words = [];
             substitutions = [];
+        };
+        // Reads the patterns of the next `case` arm and opens it, or closes the `case` at `esac`.
+        const startCaseArm = () => {
+            const patternSubstitutions = [];
+            const opened = this.readCasePatterns(patternSubstitutions);
+            if (patternSubstitutions.length > 0) {
+                items.push({
+                    kind: 'command',
+                    words: [],
+                    substitutions: patternSubstitutions,
+                    separator: ';',
+                });
+            }
+            if (opened) items.push({ kind: 'open', scope: 'case-arm' });
+            else cases.pop();
         };
 
         while (this.index < this.source.length) {
@@ -1107,6 +1135,15 @@ class Parser {
                 const end = this.source.indexOf('\n', this.index);
                 this.index = end === -1 ? this.source.length : end;
             } else if (char === ';') {
+                // `;;`, `;&` and `;;&` end a `case` arm.
+                const armEnd = /^;(;&?|&)/.exec(this.source.slice(this.index));
+                if (armEnd !== null && cases.at(-1) === depth) {
+                    this.index += armEnd[0].length;
+                    finish(';');
+                    items.push({ kind: 'close' });
+                    startCaseArm();
+                    continue;
+                }
                 this.index += this.startsWith(';;') ? 2 : 1;
                 finish(';');
             } else if (this.startsWith('&&') || this.startsWith('||')) {
@@ -1114,7 +1151,7 @@ class Parser {
                 this.index += 2;
             } else if (this.startsWith('&>')) {
                 this.index += this.startsWith('&>>') ? 3 : 2;
-                this.readRedirectionTarget();
+                this.readRedirectionTarget(substitutions);
             } else if (char === '&') {
                 this.index += 1;
                 finish('&');
@@ -1136,7 +1173,10 @@ class Parser {
                     continue;
                 }
                 this.index += 1;
-                items.push({ kind: 'open', isFunction: functionPending });
+                items.push({
+                    kind: 'open',
+                    scope: functionPending ? 'function' : 'subshell',
+                });
                 functionPending = false;
                 depth += 1;
             } else if (char === ')') {
@@ -1149,9 +1189,10 @@ class Parser {
                     }
                     throw new ParseError('unmatched ")"');
                 }
+                if (cases.at(-1) === depth) throw new ParseError('unclosed case');
                 depth -= 1;
                 items.push({ kind: 'close' });
-            } else if (char === '<' || char === '>') {
+            } else if ((char === '<' || char === '>') && this.peek(1) !== '(') {
                 // A file descriptor written against the operator, as in `2>&1`, is not a word.
                 const last = words.at(-1);
                 if (
@@ -1161,7 +1202,7 @@ class Parser {
                 ) {
                     words.pop();
                 }
-                this.readRedirection();
+                this.readRedirection(substitutions);
             } else {
                 const word = this.readWord(substitutions);
                 lastWordEnd = this.index;
@@ -1175,10 +1216,27 @@ class Parser {
                 if (commandStart && word.text === '{') {
                     braces.push(functionPending ? 'function' : 'group');
                     if (functionPending) {
-                        items.push({ kind: 'open', isFunction: true });
+                        items.push({ kind: 'open', scope: 'function' });
                         functionPending = false;
                         continue;
                     }
+                } else if (commandStart && word.text === 'case') {
+                    this.readCaseHead(substitutions);
+                    finish(';');
+                    cases.push(depth);
+                    startCaseArm();
+                    continue;
+                } else if (
+                    commandStart &&
+                    word.text === 'esac' &&
+                    cases.at(-1) === depth
+                ) {
+                    finish(';');
+                    items.push({ kind: 'close' });
+                    cases.pop();
+                    continue;
+                } else if (commandStart && word.text === '[[') {
+                    this.readConditional(substitutions);
                 } else if (
                     commandStart &&
                     word.text === '}' &&
@@ -1215,30 +1273,126 @@ class Parser {
         return true;
     }
 
-    readRedirection() {
+    /** Reads a redirection; a command substitution in its target is parsed into `substitutions`. */
+    readRedirection(substitutions) {
         if (this.startsWith('<<<')) {
             this.index += 3;
-            this.readRedirectionTarget();
+            this.readRedirectionTarget(substitutions);
         } else if (this.startsWith('<<')) {
             const stripTabs = this.startsWith('<<-');
             this.index += stripTabs ? 3 : 2;
-            const delimiter = this.readRedirectionTarget();
+            // A heredoc delimiter is not expanded.
+            const delimiter = this.readRedirectionTarget([]);
             this.heredocs.push({ delimiter: delimiter.text, stripTabs });
         } else {
             const operator = /^(>>|>\||>&|<&|<>|>|<)/.exec(
                 this.source.slice(this.index)
             )[0];
             this.index += operator.length;
-            this.readRedirectionTarget();
+            this.readRedirectionTarget(substitutions);
         }
     }
 
-    readRedirectionTarget() {
+    readRedirectionTarget(substitutions) {
         while (this.peek() === ' ' || this.peek() === '\t') this.index += 1;
         const start = this.index;
-        const word = this.readWord([]);
+        const word = this.readWord(substitutions);
         if (this.index === start) throw new ParseError('redirection without a target');
         return word;
+    }
+
+    /** Skips blanks, line breaks (with the heredoc bodies they end) and comments. */
+    skipLineBreaks() {
+        for (;;) {
+            const char = this.peek();
+            if (char === ' ' || char === '\t') {
+                this.index += 1;
+            } else if (char === '\\' && this.peek(1) === '\n') {
+                this.index += 2;
+            } else if (char === '\n') {
+                this.index += 1;
+                this.skipHeredocBodies();
+            } else if (char === '#') {
+                const end = this.source.indexOf('\n', this.index);
+                this.index = end === -1 ? this.source.length : end;
+            } else {
+                return;
+            }
+        }
+    }
+
+    /** Reads one word, or throws with `what` when there is none at the cursor. */
+    readRequiredWord(substitutions, what) {
+        const start = this.index;
+        const word = this.readWord(substitutions);
+        if (this.index === start) {
+            const found = this.peek() === undefined ? 'the end' : `"${this.peek()}"`;
+            throw new ParseError(`${what} expected, found ${found}`);
+        }
+        return word;
+    }
+
+    /** Reads the elements of an array assignment (`name=(…)`) from its `(`. */
+    readArray(substitutions) {
+        this.index += 1;
+        for (;;) {
+            this.skipLineBreaks();
+            if (this.peek() === ')') {
+                this.index += 1;
+                return;
+            }
+            this.readRequiredWord(substitutions, 'an array element or ")"');
+        }
+    }
+
+    /** Reads the word after `case` and the `in` that follows it. */
+    readCaseHead(substitutions) {
+        this.skipLineBreaks();
+        this.readRequiredWord(substitutions, 'a word after "case"');
+        this.skipLineBreaks();
+        if (this.readRequiredWord(substitutions, '"in"').text !== 'in') {
+            throw new ParseError('case without "in"');
+        }
+    }
+
+    /**
+     * Reads the patterns of a `case` arm up to its `)`, and says whether there was one: `false`
+     * when it reads the `esac` that ends the `case` instead.
+     */
+    readCasePatterns(substitutions) {
+        this.skipLineBreaks();
+        if (/^esac(?=$|[\s;&|()<>])/.test(this.source.slice(this.index))) {
+            this.index += 'esac'.length;
+            return false;
+        }
+        if (this.peek() === '(') this.index += 1;
+        for (;;) {
+            this.skipLineBreaks();
+            this.readRequiredWord(substitutions, 'a case pattern');
+            this.skipLineBreaks();
+            const char = this.peek();
+            this.index += 1;
+            if (char === ')') return true;
+            if (char !== '|') throw new ParseError('case pattern without ")"');
+        }
+    }
+
+    /**
+     * Reads the rest of a `[[ … ]]` test after `[[`. Inside it `<` and `>` compare strings and
+     * `(`, `)`, `&&`, `||` and the `|` of a regular expression are not command syntax.
+     */
+    readConditional(substitutions) {
+        for (;;) {
+            this.skipLineBreaks();
+            const char = this.peek();
+            if (char === undefined) throw new ParseError('unclosed "[["');
+            if (/^\]\](?=$|[\s;&|()<>])/.test(this.source.slice(this.index))) {
+                this.index += 2;
+                return;
+            }
+            if ('()<>|&'.includes(char)) this.index += 1;
+            else this.readRequiredWord(substitutions, 'a "[[ ]]" operand');
+        }
     }
 
     /** Skips the bodies of the heredocs opened on the line just ended. */
@@ -1262,6 +1416,20 @@ class Parser {
         let globIndex = -1;
         while (this.index < this.source.length) {
             const char = this.peek();
+            if (this.peek(1) === '(' && text === '' && '<>='.includes(char)) {
+                // A process substitution: `<(…)`, `>(…)`, or zsh's `=(…)`.
+                this.index += 2;
+                substitutions.push(this.parseList(true));
+                text = `${char}(...)`;
+                expanded = true;
+                continue;
+            }
+            if (char === '(' && ARRAY_ASSIGNMENT.test(text)) {
+                this.readArray(substitutions);
+                text += '(...)';
+                expanded = true;
+                continue;
+            }
             if (' \t\n;&|()<>'.includes(char)) break;
             if (char === '\\') {
                 const next = this.peek(1);
