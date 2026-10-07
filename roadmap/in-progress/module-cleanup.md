@@ -152,9 +152,12 @@ the repository copies.
       override and a client override, all to answer `{ data: { count } }`.
 - [ ] `globals.get({ staged })`, which only a test uses; the admin calls
       `getStaged`.
-- [ ] `CELL_KINDS`, `badRequest`'s `details`, the
+- [x] `CELL_KINDS`, `badRequest`'s `details`, the
       unreachable try/catch in `transport/mcp/tools.ts`, and
       `createEntriesService`'s two parameters that only ever take one value.
+      `createEntriesService` went too: no docs named it, so the entries
+      handle is built like the other services, and `callRoute` lost its
+      `base` override.
 - [ ] Two unrelated `pluginNamespace` exports; rename the Proxy builder.
 - [ ] `SlugConfig`'s `source` and `prefix` (`types/config.ts`): nothing reads
       them, since a slug always derives from the title.

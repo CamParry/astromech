@@ -7,21 +7,19 @@ import type { Entry } from './domain';
 import type { Field, Label } from './fields';
 import type * as React from 'react';
 
-export const CELL_KINDS = [
-    'text',
-    'title',
-    'badge',
-    'status',
-    'slug',
-    'date',
-    'boolean',
-    'number',
-    'relationship',
-    'locale',
-    'translations',
-    'author',
-] as const;
-export type CellKind = (typeof CELL_KINDS)[number];
+export type CellKind =
+    | 'text'
+    | 'title'
+    | 'badge'
+    | 'status'
+    | 'slug'
+    | 'date'
+    | 'boolean'
+    | 'number'
+    | 'relationship'
+    | 'locale'
+    | 'translations'
+    | 'author';
 
 export type TableColumn = {
     /** Stable key — field name for field columns, system key for system columns. */

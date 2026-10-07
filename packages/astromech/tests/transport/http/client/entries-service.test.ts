@@ -8,7 +8,7 @@
  */
 
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { createEntriesService } from '@/transport/http/client';
+import { astromechUntypedClient } from '@/transport/http/client';
 
 let calls: string[] = [];
 
@@ -29,8 +29,8 @@ afterEach(() => {
     vi.unstubAllGlobals();
 });
 
-describe('createEntriesService — type path segment', () => {
-    const api = () => createEntriesService('/entries', 'full');
+describe('the entries client — type path segment', () => {
+    const api = () => astromechUntypedClient.entries;
 
     it('leaves a bare type id as-is', async () => {
         await api().get({ type: 'post', id: 'abc' });
