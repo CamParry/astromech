@@ -109,10 +109,12 @@ cover the gate's timeouts, environment, memory and reporting.
 
 ## Once, but costly
 
-- [ ] **Test temp directories filled the disk.** 35 GB of leaked temp
+- [x] **Test temp directories filled the disk.** 35 GB of leaked temp
       directories left 157 MiB free. The leak is fixed; nothing would catch a
-      new one. A global teardown that fails when a run leaves directories
-      behind would.
+      new one. Core's and the plugins' runs point `os.tmpdir()` inside the
+      run's directory, and the teardown fails the run when a test leaves
+      anything there (`packages/astromech/tests/_support/run-temp-dir.ts`). It
+      found one more leak, in the Astro integration tests.
 - [ ] **`check:unused` prints a redundant-entry warning on every run**, for
       the `src/tables/index.ts!` entry in `knip.json`. Confirm and remove it.
 - **Doc-wide rewrites while branches are open** made every open branch

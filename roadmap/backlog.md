@@ -119,6 +119,9 @@ not be re-derived.
 
 ### Test harness follow-ups
 
+- [ ] Nothing stops a new in-process test from starting wrangler without `enterWranglerProject()` (`packages/astromech/tests/_support/wrangler.ts`), and its state would land in core's shared `.wrangler` directory again. The run's teardown could fail when that directory changed during the run.
+- [ ] The scripts' temp directories (`astromech-check-boot*`, `astromech-check-install-*`) and older test directories (`astromech-integration-*`, `astromech-migration-transaction-*`) are left in `os.tmpdir()` when a run is interrupted. The test sweep covers only `astromech-test-*`. Sweep the scripts' directories when each script starts, and clear the old ones once by hand.
+- [ ] The schema-engine tests make temp directories in `os.tmpdir()` without the leftover check core and the plugins have. They clean up in `finally` and `afterAll` today.
 - [ ] Local `typecheck` can miss an error a module augmentation causes in an unchanged file: core's `tsconfig.test.json` is `incremental`, and with a cached build info a new `declare module 'astromech'` in a test file did not re-report TS2322 in `packages/astromech/src/plugins/define-hook.ts` (seen 2026-10-02; `--incremental false` showed it). CI starts with no cache, so it catches these. Decide whether the local gate should drop `incremental` or clear the cache.
 - [ ] The backups plugin's tests still hold libsql driver tests (`dump`/`restore` round trip, rollback, foreign keys, `file:` and in-memory errors, `preserve`) that core's coverage cannot see. Move them to `packages/astromech/tests/database/drivers/libsql.test.ts`, as the restore checks were on 2026-10-03, and keep only the plugin's own route and admin cases.
 - [ ] Leftovers from the test suite review (`roadmap/completed/test-suite-review.md`):
