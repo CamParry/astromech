@@ -11,14 +11,15 @@ import type { AstromechConfig } from '@/types/index';
 import { createTestDb, makeTestConfig, setupTestConfig } from '@tests/harness';
 import { beforeEach, describe, expect, it } from 'vitest';
 import { currentServices } from '@/app-context/services';
+import { getConfig } from '@/config/registry';
+import {
+    checkRelationshipIndex,
+    rebuildRelationshipIndex,
+} from '@/content/relationship-index';
 import { relationshipRepository } from '@/content/repository/relationships';
 import { createRepository } from '@/database/repository/create-repository';
 import { relationshipsTable } from '@/database/tables';
 import { mediaRepository } from '@/media/repository';
-import {
-    checkRelationshipIndex,
-    rebuildRelationshipIndex,
-} from '@/transport/cli/relationship-index';
 
 const api = currentServices.entries;
 const mediaService = currentServices.media;
@@ -162,7 +163,7 @@ describe('checkRelationshipIndex', () => {
     it('reports no drift for content written through the service write paths', async () => {
         await seedContent();
 
-        const report = await checkRelationshipIndex();
+        const report = await checkRelationshipIndex(getConfig());
 
         expect(driftCount(report)).toBe(0);
         // Guard against a vacuous pass: every source kind must actually have
@@ -189,7 +190,7 @@ describe('checkRelationshipIndex', () => {
         const copied = await relationshipRepository.findBySource(article, 'entry');
         expect(copied.length).toBeGreaterThan(0);
         expect(copied.some((row) => row.sourceStaged)).toBe(false);
-        expect(driftCount(await checkRelationshipIndex())).toBe(0);
+        expect(driftCount(await checkRelationshipIndex(getConfig()))).toBe(0);
 
         // Point the staged change at a different author. The canonical row still
         // holds the original, so one reference is canonical and one is staged-only.
@@ -205,7 +206,7 @@ describe('checkRelationshipIndex', () => {
             { targetId: post, sourceStaged: false },
             { targetId: third.id, sourceStaged: true },
         ]);
-        expect(driftCount(await checkRelationshipIndex())).toBe(0);
+        expect(driftCount(await checkRelationshipIndex(getConfig()))).toBe(0);
 
         // The point of the flag: a reverse lookup for display skips the staged
         // reference, a delete check counts it.
@@ -233,7 +234,7 @@ describe('checkRelationshipIndex', () => {
         expect(await authorReferences(article)).toEqual([
             { targetId: post, sourceStaged: false },
         ]);
-        expect(driftCount(await checkRelationshipIndex())).toBe(0);
+        expect(driftCount(await checkRelationshipIndex(getConfig()))).toBe(0);
     });
 
     it('makes a merged staged-only reference canonical', async () => {
@@ -252,14 +253,14 @@ describe('checkRelationshipIndex', () => {
         expect(await authorReferences(article)).toEqual([
             { targetId: third.id, sourceStaged: false },
         ]);
-        expect(driftCount(await checkRelationshipIndex())).toBe(0);
+        expect(driftCount(await checkRelationshipIndex(getConfig()))).toBe(0);
     });
 
     it('reports an empty index as entirely missing', async () => {
         await seedContent();
         await relationshipRepository.deleteMany();
 
-        const report = await checkRelationshipIndex();
+        const report = await checkRelationshipIndex(getConfig());
 
         expect(report.missing.length).toBeGreaterThan(0);
         expect(report.unexpected).toEqual([]);
@@ -275,13 +276,13 @@ describe('rebuildRelationshipIndex', () => {
             targetId: post,
         });
 
-        const before = await checkRelationshipIndex();
+        const before = await checkRelationshipIndex(getConfig());
         expect(before.missing).toHaveLength(1);
         expect(before.missing[0]?.schemaPath).toBe('author');
 
-        await rebuildRelationshipIndex();
+        await rebuildRelationshipIndex(getConfig());
 
-        expect(driftCount(await checkRelationshipIndex())).toBe(0);
+        expect(driftCount(await checkRelationshipIndex(getConfig()))).toBe(0);
     });
 
     it('detects a row no field data holds as unexpected and removes it', async () => {
@@ -297,15 +298,34 @@ describe('rebuildRelationshipIndex', () => {
             sourceStaged: false,
         });
 
-        const before = await checkRelationshipIndex();
+        const before = await checkRelationshipIndex(getConfig());
         expect(before.unexpected).toHaveLength(1);
         expect(before.unexpected[0]?.targetId).toBe('ghost');
 
-        await rebuildRelationshipIndex();
+        await rebuildRelationshipIndex(getConfig());
 
-        expect(driftCount(await checkRelationshipIndex())).toBe(0);
+        expect(driftCount(await checkRelationshipIndex(getConfig()))).toBe(0);
         const rows = await relationshipRepository.findMany();
         expect(rows.some((row) => row.targetId === 'ghost')).toBe(false);
+    });
+
+    it('detects a row with a stale staged flag as mismatched and corrects it', async () => {
+        const { article, post } = await seedContent();
+        await createRepository(relationshipsTable).updateMany(
+            { sourceId: article, instancePath: 'author', targetId: post },
+            { sourceStaged: true }
+        );
+
+        const before = await checkRelationshipIndex(getConfig());
+        expect(before.missing).toEqual([]);
+        expect(before.unexpected).toEqual([]);
+        expect(before.mismatched).toHaveLength(1);
+        expect(before.mismatched[0]?.stored.sourceStaged).toBe(true);
+        expect(before.mismatched[0]?.computed.sourceStaged).toBe(false);
+
+        await rebuildRelationshipIndex(getConfig());
+
+        expect(driftCount(await checkRelationshipIndex(getConfig()))).toBe(0);
     });
 
     it('removes rows left behind by a source that no longer exists', async () => {
@@ -321,10 +341,10 @@ describe('rebuildRelationshipIndex', () => {
             sourceStaged: false,
         });
 
-        const report = await rebuildRelationshipIndex();
+        const report = await rebuildRelationshipIndex(getConfig());
 
         expect(report.orphanRowsRemoved).toBe(1);
-        expect(driftCount(await checkRelationshipIndex())).toBe(0);
+        expect(driftCount(await checkRelationshipIndex(getConfig()))).toBe(0);
     });
 
     // If the rebuild re-minted item ids, the nested instance paths would change
@@ -332,9 +352,9 @@ describe('rebuildRelationshipIndex', () => {
     it('is idempotent', async () => {
         await seedContent();
 
-        const first = await rebuildRelationshipIndex();
+        const first = await rebuildRelationshipIndex(getConfig());
         const afterFirst = await storedRows();
-        const second = await rebuildRelationshipIndex();
+        const second = await rebuildRelationshipIndex(getConfig());
 
         expect(await storedRows()).toEqual(afterFirst);
         expect(second.rowsWritten).toBe(first.rowsWritten);
@@ -342,7 +362,7 @@ describe('rebuildRelationshipIndex', () => {
     });
 });
 
-describe('rebuildRelationshipIndex({ type })', () => {
+describe('rebuildRelationshipIndex(getConfig(), { type })', () => {
     it('repairs the named type and leaves other types and user/media rows alone', async () => {
         const { article, post, media } = await seedContent();
         const repository = createRepository(relationshipsTable);
@@ -375,9 +395,11 @@ describe('rebuildRelationshipIndex({ type })', () => {
             sourceStaged: false,
         });
 
-        const report = await rebuildRelationshipIndex({ type: 'article' });
+        const report = await rebuildRelationshipIndex(getConfig(), { type: 'article' });
 
-        expect(driftCount(await checkRelationshipIndex({ type: 'article' }))).toBe(0);
+        expect(
+            driftCount(await checkRelationshipIndex(getConfig(), { type: 'article' }))
+        ).toBe(0);
         expect(report.orphanRowsRemoved).toBe(0);
 
         const rows = await relationshipRepository.findMany();

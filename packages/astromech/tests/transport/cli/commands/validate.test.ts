@@ -1,8 +1,9 @@
 /**
  * `astromech validate`: boots the site named by `--config`, prints one line per
  * stored row that fails the current field validation, and fails the process
- * only when there is one. `validate-stored-content.test.ts` covers which rows
- * are found; this file covers what the command prints and its exit code.
+ * only when there is one. `tests/content/validate-stored-content.test.ts`
+ * covers which rows are found; this file covers what the command prints and its
+ * exit code.
  *
  * A row is stored under a config with no rule, then the command runs under a
  * config file that adds one: the case the command exists for. The config file
