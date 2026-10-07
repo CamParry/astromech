@@ -9,10 +9,11 @@ import type { AstromechConfig } from '@/types/index';
 import { createTestDb, makeTestConfig, setupTestConfig } from '@tests/harness';
 import { beforeEach, describe, expect, it } from 'vitest';
 import { currentServices } from '@/app-context/services';
+import { getConfig } from '@/config/registry';
+import { rebuildRelationshipIndex } from '@/content/relationship-index';
 import { relationshipRepository } from '@/content/repository/relationships';
 import { assertRequiredCapability } from '@/globals/capabilities';
 import { mediaRepository } from '@/media/repository';
-import { rebuildRelationshipIndex } from '@/transport/cli/relationship-index';
 
 const entriesService = currentServices.entries;
 const globalsService = currentServices.globals;
@@ -137,7 +138,7 @@ describe('global relationships', () => {
         const written = await storedRows();
 
         await relationshipRepository.deleteMany();
-        await rebuildRelationshipIndex();
+        await rebuildRelationshipIndex(getConfig());
 
         expect(await storedRows()).toEqual(written);
     });

@@ -1,11 +1,10 @@
 import type { UserResource } from '../repository';
 import type { QueryResult } from '@/types/index';
-import { z } from '@hono/zod-openapi';
-import { listKeys, queryPage, queryResultSchema } from '@/content/list';
+import { queryPage, queryResultSchema } from '@/content/list';
 import { resolveResourceLocale } from '@/content/locale';
 import { defineServiceMethod } from '@/services/define-service-method';
 import { userRepository } from '../repository';
-import { userSchema } from '../schema';
+import { queryUsersSchema, userSchema } from '../schema';
 
 /**
  * Paginated unless `limit` is `'all'`. The same users are listed whatever the
@@ -13,11 +12,7 @@ import { userSchema } from '../schema';
  */
 export const queryUsers = defineServiceMethod({
     summary: 'List CMS users.',
-    input: z.strictObject({
-        locale: z.string().optional(),
-        search: z.string().optional(),
-        ...listKeys,
-    }),
+    input: queryUsersSchema,
     output: queryResultSchema(userSchema),
     access: 'users:read',
     mutates: false,

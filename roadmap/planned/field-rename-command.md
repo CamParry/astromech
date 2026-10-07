@@ -10,7 +10,7 @@ nothing moves them. Raised on 2026-10-03; decided 2026-10-04.
 ## What exists
 
 - `astromech validate`
-  (`packages/astromech/src/transport/cli/validate-stored-content.ts`) cannot
+  (`packages/astromech/src/content/validate-stored-content.ts`) cannot
   report a renamed field's old values: `safeParseFields` drops undeclared root
   keys before it checks anything
   (`packages/astromech/src/fields/parse-fields.ts`), and nested keys are never

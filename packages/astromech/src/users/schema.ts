@@ -1,8 +1,17 @@
 import { z } from '@hono/zod-openapi';
+import { listKeys } from '@/content/list';
 import { versionSchema } from '@/content/schema';
 import { DEFAULT_ROLE_SLUG, roleSlugSchema } from '@/permissions/roles';
 import { withFallback } from '@/services/fallback';
 import { jsonObject, unparsedJsonObject } from '@/services/json';
+
+/** What `users.query` takes: the public `UserQueryParams`. */
+export const queryUsersSchema = z.strictObject({
+    /** The locale each user's content is read in. Default: the default locale. */
+    locale: z.string().optional(),
+    search: z.string().optional(),
+    ...listKeys,
+});
 
 export const createUserSchema = z
     .strictObject({

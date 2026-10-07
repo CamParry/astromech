@@ -11,10 +11,10 @@ import { createTestDb, makeTestConfig, setupTestConfig } from '@tests/harness';
 import { beforeEach, describe, expect, it } from 'vitest';
 import { systemAppContext } from '@/app-context/app-context';
 import { currentServices } from '@/app-context/services';
+import { validateStoredContent } from '@/content/validate-stored-content';
 import { createRepository } from '@/database/repository/create-repository';
 import { entryContentTable } from '@/entries/tables';
 import { globalContentTable } from '@/globals/tables';
-import { validateStoredContent } from '@/transport/cli/validate-stored-content';
 import { userRepository } from '@/users/repository';
 
 const api = currentServices.entries;
@@ -199,6 +199,41 @@ describe('validateStoredContent', () => {
                 staged: false,
                 fieldPath: 'rating',
                 message: 'Must be at most 5',
+            },
+        ]);
+    });
+
+    it('reports a resource validator message as a form-level finding', async () => {
+        const report = await api.create({
+            type: 'report',
+            data: { title: 'Rated', fields: { rating: 4 } },
+        });
+        const config = makeValidateConfig();
+        setupTestConfig({
+            ...config,
+            entries: {
+                ...config.entries,
+                report: {
+                    ...config.entries.report!,
+                    validate: async ({ values }) =>
+                        Number(values.rating) > 3 ? 'Rating is too high to file' : null,
+                },
+            },
+        });
+
+        const result = await validateStoredContent(systemAppContext(), {
+            type: 'report',
+        });
+
+        expect(result.findings).toEqual([
+            {
+                kind: 'entry',
+                type: 'report',
+                id: report.id,
+                locale: 'en',
+                staged: false,
+                fieldPath: null,
+                message: 'Rating is too high to file',
             },
         ]);
     });

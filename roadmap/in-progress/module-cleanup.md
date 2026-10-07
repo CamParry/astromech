@@ -119,9 +119,12 @@ the repository copies.
 
 - [ ] `transport/http/routes/rest-route.ts` serves routes and writes the OpenAPI
       document. Split the documentation half out, and share one path-param regex.
-- [ ] `transport/cli/relationship-index.ts` and
-      `transport/cli/validate-stored-content.ts` are content logic. Move them to
-      `content/`.
+- [x] The relationship index rebuild and the stored-content validation report
+      in `transport/cli/` are content logic. Move them to `content/`. Both
+      moved whole, since neither held CLI code: `content/relationship-index.ts`
+      and `content/validate-stored-content.ts`. The rebuild and drift check now
+      take the config as their first argument, since a `content/` file may not
+      read the config registry.
 - [x] `globals/schema.ts` imports status and date schemas from `entries/schema.ts`,
       and `content/prepare-fields.ts` imports the validation mode from `entries/`. Move all
       four to `content/`. The schemas are in `content/schema.ts`, with
@@ -145,8 +148,10 @@ the repository copies.
       through `astromech/shared`, so it is a pure leaf with no single owner.
 - [ ] The plugin runtime keeps its own config copy with its own defaults
       (`plugins/runtime/plugin-runtime.ts`); read `app.config`.
-- [ ] `MediaQueryParams` and `UserQueryParams` are hand-written copies of their
-      schemas (`types/query.ts`). Derive them.
+- [x] `MediaQueryParams` and `UserQueryParams` are hand-written copies of their
+      schemas (`types/query.ts`). Derive them. The query methods' inputs moved
+      to `queryMediaSchema` and `queryUsersSchema` in each module's
+      `schema.ts`, and both types are `z.input` of them.
 - [ ] Generic form code is named as entry code in the admin
       (`components/entries/entry-fields-renderer.tsx`, `EntryNamespaceProvider`).
 - [x] `packages/schema-engine/src/generate.ts` mixes migration generation with a

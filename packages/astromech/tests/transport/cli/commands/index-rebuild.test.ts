@@ -2,8 +2,8 @@
  * `astromech index:rebuild`, run in process (`tests/_support/cli.ts`) through
  * the real boot: a real config file in a site in a temp directory opens a copy
  * of the harness's migrated template database. Rebuild and drift logic is
- * covered by `../relationship-index.test.ts`; this file covers what the
- * command does with it: what it writes, prints and exits with.
+ * covered by `tests/content/relationship-index.test.ts`; this file covers what
+ * the command does with it: what it writes, prints and exits with.
  */
 
 import { copyFile } from 'node:fs/promises';

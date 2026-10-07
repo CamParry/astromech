@@ -30,7 +30,7 @@ a failing test first.
   names needs bundling at build time.
 - **`validate` mixes staged and live rows** under one id and locale, and never
   checks staged globals
-  (`packages/astromech/src/transport/cli/validate-stored-content.ts`).
+  (`packages/astromech/src/content/validate-stored-content.ts`).
 - **Undeclared nested keys survive a save** while root keys are dropped
   (`projectToSchema` in `packages/astromech/src/fields/values.ts`).
   `roadmap/planned/field-rename-command.md` decides saves keep both.

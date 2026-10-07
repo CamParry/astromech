@@ -1,7 +1,6 @@
 import type { RelationshipIndexSource } from '@/content/repository/relationships';
 import type { RelationshipRow } from '@/database/tables';
-import type { ResourceType } from '@/types/domain';
-import { getConfig } from '@/config/registry';
+import type { ResolvedConfig, ResourceType } from '@/types/index';
 import { relationshipRepository } from '@/content/repository/relationships';
 import { allEntryRelationships } from '@/entries/relationships';
 import { allGlobalRelationships } from '@/globals/relationships';
@@ -38,9 +37,10 @@ export type DriftReport = {
 
 /** Recompute every scoped source's references and replace its rows. */
 export async function rebuildRelationshipIndex(
+    config: ResolvedConfig,
     opts?: RelationshipIndexScope
 ): Promise<RebuildReport> {
-    const sources = await collectSources(opts);
+    const sources = await collectSources(config, opts);
 
     let rowsWritten = 0;
     for (const { source, references } of sources) {
@@ -71,9 +71,10 @@ export async function rebuildRelationshipIndex(
 
 /** Diff the computed rows against the stored ones, writing nothing. */
 export async function checkRelationshipIndex(
+    config: ResolvedConfig,
     opts?: RelationshipIndexScope
 ): Promise<DriftReport> {
-    const sources = await collectSources(opts);
+    const sources = await collectSources(config, opts);
     const computed = new Map<string, RelationshipRow>();
     for (const { source, references } of sources) {
         for (const reference of references) {
@@ -125,9 +126,9 @@ export async function checkRelationshipIndex(
  * unexpected and a rebuild would wipe them.
  */
 async function collectSources(
+    config: ResolvedConfig,
     opts?: RelationshipIndexScope
 ): Promise<RelationshipIndexSource[]> {
-    const config = getConfig();
     if (opts?.type !== undefined) {
         return allEntryRelationships(config, { type: opts.type });
     }

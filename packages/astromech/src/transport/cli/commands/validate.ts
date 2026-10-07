@@ -1,10 +1,10 @@
 import type {
     ValidationFinding,
     ValidationReport,
-} from '@/transport/cli/validate-stored-content';
+} from '@/content/validate-stored-content';
 import { defineCommand } from 'citty';
 import { systemAppContext } from '@/app-context/app-context';
-import { validateStoredContent } from '@/transport/cli/validate-stored-content';
+import { validateStoredContent } from '@/content/validate-stored-content';
 import { pluralise } from '@/utilities/strings';
 import { configArgs } from '../common-args';
 import { withApplication } from '../config';
