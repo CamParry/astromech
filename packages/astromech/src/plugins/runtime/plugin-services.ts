@@ -28,7 +28,7 @@ type MethodMap = Record<string, (input?: unknown) => Promise<unknown>>;
  * declares one, parses the result.
  */
 export function pluginServicesFor(ctx: AppContext): PluginServiceNamespace {
-    return pluginNamespace((resolved, method, name) => async (input) => {
+    return createPluginServices((resolved, method, name) => async (input) => {
         const result: unknown = await (
             method.handler as (i: unknown, c: PluginContext) => unknown
         )(parseMethodInput(method, input), createPluginContext(resolved, ctx));
@@ -40,10 +40,11 @@ export function pluginServicesFor(ctx: AppContext): PluginServiceNamespace {
 }
 
 /**
- * A namespace whose methods `call` builds. An unknown plugin or method reads as
- * undefined, and `then` is never a method, so the namespace is not a thenable.
+ * The plugin services object, a Proxy whose methods `call` builds. An unknown
+ * plugin or method reads as undefined, and `then` is never a method, so the
+ * object is not a thenable.
  */
-export function pluginNamespace(
+export function createPluginServices(
     call: (
         resolved: ResolvedPluginIdentity,
         method: AnyServiceMethod,

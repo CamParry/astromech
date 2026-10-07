@@ -161,7 +161,8 @@ the repository copies.
       `createEntriesService` went too: no docs named it, so the entries
       handle is built like the other services, and `callRoute` lost its
       `base` override.
-- [ ] Two unrelated `pluginNamespace` exports; rename the Proxy builder.
+- [x] Two unrelated `pluginNamespace` exports; rename the Proxy builder. It is
+      `createPluginServices`, after `createServices` and `createPluginContext`.
 - [ ] `SlugConfig`'s `source` and `prefix` (`types/config.ts`): nothing reads
       them, since a slug always derives from the title. **Needs a decision
       first:** the `slug` object's presence is what shows the slug input in
