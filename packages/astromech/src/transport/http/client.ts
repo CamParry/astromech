@@ -16,7 +16,7 @@ import type {
     UsersService,
 } from '@/types/index';
 import { typedServices } from '@/services/typed-services';
-import { HTTP_ROUTES } from '@/transport/http/routes/http-routes';
+import { fillPathParams, HTTP_ROUTES } from '@/transport/http/routes/http-routes';
 import { toQueryParams } from '@/transport/http/routes/query-string';
 
 /** A non-2xx response, carrying the error envelope's id, code and status. */
@@ -153,7 +153,7 @@ function routeFor(id: string, args: Args): MountedRoute {
  */
 function fillPath(route: MountedRoute, args: Args): { path: string; rest: Args } {
     const taken = new Set<string>();
-    const filled = route.path.replace(/:([A-Za-z0-9_]+)/g, (_match, name: string) => {
+    const filled = fillPathParams(route.path, (name) => {
         taken.add(name);
         return encodeURIComponent(String(args[name] ?? ''));
     });

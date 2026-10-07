@@ -16,7 +16,7 @@ import { log } from '@/utilities/log';
 import { version } from '../../../../package.json';
 import { authDocument } from './auth-document';
 import { accessRefusals, declaresArguments, errorResponses } from './error-responses';
-import { nullableAsUnion } from './rest-route';
+import { nullableAsUnion } from './rest-route-document';
 
 /**
  * The OpenAPI version and title the API's document declares. The API's version
