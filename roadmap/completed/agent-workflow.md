@@ -19,9 +19,11 @@ cover the gate's timeouts, environment, memory and reporting.
       exited 0 because the next command in the chain succeeded. Agents then
       reported "no other uses" from searches that never ran. `~/.zshenv`, the
       profile the Bash tool sources, sets `NO_NOMATCH` on this machine.
-- [ ] **The Bash hook lets an unquoted glob through.** `NO_NOMATCH` is set on
-      one machine only. Have the Bash hook refuse an unquoted `--include=*`
-      with the reason.
+- [x] **The Bash hook lets an unquoted glob through.** `NO_NOMATCH` is set on
+      one machine only. The Bash hook refuses an unquoted glob in an option
+      value (`--include=*.ts`, `rg -g *.ts`) or a `find -name` pattern, and
+      names the quoted form. A glob that is a whole operand (`ls *.md`) still
+      passes: it works when it matches, and fails loudly when it does not.
 - [x] **macOS has no `timeout`.** 14 runs failed with
       `command not found: timeout`. The implementer brief says what to use
       instead.
@@ -133,11 +135,11 @@ Found on 2026-10-06 by the review of the branch that shipped the hook, the
 land script and the run lock. None has caused a failure yet; each is a gap in
 a guard.
 
-- [ ] **The Bash hook does not parse some shell syntax**: arrays
+- [x] **The Bash hook does not parse some shell syntax**: arrays
       (`a=(…)`), process substitution (`<(…)`), `case` and `[[ a < b ]]`.
       Find whether each makes the hook miss a command inside it or ask when
       it need not, and handle both.
-- [ ] **The Bash hook lets `pnpm run land --no-gate-check` through.** The
+- [x] **The Bash hook lets `pnpm run land --no-gate-check` through.** The
       flag skips the check that the gate passed on the tree being landed, so
       an agent can land a tree no gate has seen. Refuse it with the reason.
 - [x] **A boot check run on its own records no process groups.** The gate

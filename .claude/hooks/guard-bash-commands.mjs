@@ -2,7 +2,9 @@
 /**
  * PreToolUse hook for Bash. It guards git and Worktrunk (`wt`) calls that can destroy
  * uncommitted work or rewrite history, and process and stash commands that reach into other
- * sessions' work.
+ * sessions' work. It also refuses an unquoted glob in a pattern option such as
+ * `grep --include=*.ts`: zsh stops the command with `no matches found` before it runs, unless
+ * `NO_NOMATCH` is set, and a search that never ran reads as one that found nothing.
  * Why: several sessions and agents share this machine and repository, so `git reset --hard` can
  * wipe another session's work, a broad `pkill` can stop its server, and `git stash` (repo-wide)
  * empties a worktree other agents are writing in. Branches land with `pnpm run land`, so `wt
@@ -23,7 +25,8 @@
  *
  * A function body (`name() { …; }`, `function name { …; }`) is judged where it is defined, in a
  * directory the hook treats as unknown, since the function can run anywhere. A function whose body
- * changes directory leaves the directory unknown for the rest of the command.
+ * changes directory leaves the directory unknown for the rest of the command. So does a `case` arm
+ * that changes directory, since the arm may not run.
  *
  * | Command                                                     | Worktree dir | Scratchpad | Elsewhere |
  * | ----------------------------------------------------------- | ------------ | ---------- | --------- |
@@ -50,14 +53,17 @@
  * | `wt remove --force` (judged by the worktree it removes)     | silent       | silent     | ask       |
  * | `wt remove -D` (deletes unmerged branches)                  | ask          | silent     | ask       |
  * | `wt switch --clobber`, `wt config state clear`              | ask          | silent     | ask       |
+ * | `pnpm run land --no-gate-check`, however the script is run  | deny         | deny       | deny      |
+ * | an unquoted glob in a pattern option (`--include=*.ts`,     | deny         | deny       | deny      |
+ * | `--exclude *.log`, `rg -g *.md`, `find -name *.ts`)         |              |            |           |
  * | a command it cannot parse                                   | ask          | ask        | ask       |
  *
  * `bash -c '<script>'`, `eval`, `find -exec` and `wt step tether -- <command>` are judged by the
  * command they run; `bash <file>` runs a file the hook does not read, and passes silently.
  *
  * Known gaps: a `cd` after `&&` counts as done though the test before it can fail
- * (`test -d x && cd x; git reset --hard`), and `GIT_DIR` and `GIT_WORK_TREE` set as variables are
- * not followed.
+ * (`test -d x && cd x; git reset --hard`), and so does one in an `if`, `while` or `for` body;
+ * `GIT_DIR` and `GIT_WORK_TREE` set as variables are not followed.
  *
  * A call counts as in the scratchpad when it runs there. A forced worktree removal counts when the
  * worktree it removes is there, or when the hook cannot tell which worktree and the call runs there.
@@ -71,18 +77,21 @@ import { homedir } from 'node:os';
 import { basename, dirname, isAbsolute, join, resolve, sep } from 'node:path';
 
 // Commands that mention none of these words cannot match a rule, so they skip the parse.
-const TRIGGER = /git|pkill|killall|\bwt\b/;
+const TRIGGER = /git|pkill|killall|\bwt\b|no-gate-check/;
 // A shell can read a script the hook never sees. A command that mentions a shell but none of the
 // words above is still parsed, but one the parser rejects passes silently: the parser misses some
-// shell syntax (`case`), and asking for every such command would prompt often.
+// shell syntax (zsh glob qualifiers such as `*(.)`), and asking for every such command would
+// prompt often.
 const SHELL_TRIGGER = /\b(?:ba|z|da)?sh\b/;
+// Likewise a command with a glob character, for the rule on unquoted globs in option values.
+const GLOB_TRIGGER = /[*?[]/;
 
 function main() {
     const input = readInput();
     const command = input?.tool_input?.command;
     if (typeof command !== 'string') return;
     const guarded = TRIGGER.test(command);
-    if (!guarded && !SHELL_TRIGGER.test(command)) return;
+    if (!guarded && !SHELL_TRIGGER.test(command) && !GLOB_TRIGGER.test(command)) return;
 
     let findings;
     try {
@@ -324,17 +333,19 @@ function collectFindings(items, startDirectory, findings) {
         if (item.kind === 'open') {
             stack.push({
                 directory,
-                isFunction: item.isFunction,
+                scope: item.scope,
                 changesDirectory: false,
             });
             // A function body runs wherever the function is called.
-            if (item.isFunction) directory = null;
+            if (item.scope === 'function') directory = null;
             previousSeparator = ';';
             continue;
         }
         if (item.kind === 'close') {
             const scope = stack.pop();
-            const unknown = scope.isFunction && scope.changesDirectory;
+            // A subshell's `cd` ends with it. A function body or a `case` arm may run or not, so
+            // a `cd` in one leaves the directory unknown.
+            const unknown = scope.scope !== 'subshell' && scope.changesDirectory;
             directory = unknown ? null : scope.directory;
             continue;
         }
@@ -419,6 +430,7 @@ function inspectCommand(words, shellDirectory, findings) {
     const name = basename(args[0].text);
     const rest = args.slice(1);
 
+    inspectPatternGlobs(name, rest, findings);
     if (name === 'cd' || name === 'pushd') return changeDirectory(rest, directory);
     if (name === 'popd') return null;
     if (name === 'pkill' || name === 'killall') {
@@ -444,8 +456,100 @@ function inspectCommand(words, shellDirectory, findings) {
         collectFindings(parseScript(script), directory, findings);
     } else if (name === 'find') {
         inspectFindExec(rest, directory, findings);
+    } else if (
+        runsLandScript(name, rest) &&
+        rest.some((word) => word.text === '--no-gate-check')
+    ) {
+        findings.push({
+            kind: 'refused',
+            label: truncate(args.map((word) => word.text).join(' ')),
+            why: '`--no-gate-check` skips the check that the gate passed on the tree being landed, and is only for the throwaway repositories `scripts/land.mjs` is tested on. Run `pnpm run verify`, then `pnpm run land` without the flag',
+        });
     }
     return undefined;
+}
+
+// Options of `pnpm` and `npm` that take their value as the next word.
+const PACKAGE_MANAGER_VALUE_OPTIONS = new Set([
+    '-C',
+    '--dir',
+    '-F',
+    '--filter',
+    '--prefix',
+]);
+
+/**
+ * Whether a command runs `scripts/land.mjs`: `pnpm run land`, `pnpm land`, `npm run land`,
+ * `node <path>/land.mjs` or the script itself.
+ */
+function runsLandScript(name, args) {
+    if (name === 'land.mjs') return true;
+    if (name === 'node') return args.some((word) => basename(word.text) === 'land.mjs');
+    if (name !== 'pnpm' && name !== 'npm') return false;
+    const operands = [];
+    for (let index = 0; index < args.length; index += 1) {
+        const text = args[index].text;
+        if (PACKAGE_MANAGER_VALUE_OPTIONS.has(text)) index += 1;
+        else if (!text.startsWith('-')) operands.push(text);
+    }
+    const script = ['run', 'run-script'].includes(operands[0])
+        ? operands[1]
+        : operands[0];
+    return script === 'land';
+}
+
+// Options that take a file pattern as the next word.
+const PATTERN_OPTIONS = new Set([
+    '--include',
+    '--exclude',
+    '--exclude-dir',
+    '--glob',
+    '--iglob',
+]);
+
+// The `find` tests that take a pattern.
+const FIND_PATTERN_TESTS = new Set([
+    '-name',
+    '-iname',
+    '-path',
+    '-ipath',
+    '-wholename',
+    '-iwholename',
+    '-lname',
+    '-ilname',
+    '-regex',
+    '-iregex',
+]);
+
+/**
+ * Appends a refusal for each pattern a command takes as an option value with an unquoted glob in
+ * it: `--include=*.ts` (any `-<option>=<value>`), `--include *.ts`, `rg -g *.md` and
+ * `find -name *.ts`. zsh expands the glob as a file pattern before the command runs, and when no
+ * file matches it stops with `no matches found`, so a search reports nothing without running.
+ * A glob that is a whole operand, as in `ls *.md`, is meant to match files and is left alone.
+ */
+function inspectPatternGlobs(name, args, findings) {
+    const refuse = (label, quoted) =>
+        findings.push({
+            kind: 'refused',
+            label,
+            why: `zsh expands the unquoted glob in it to matching file names before the command runs, and stops the command with \`no matches found\` when no file matches. Quote the pattern: \`${quoted}\``,
+        });
+    for (let index = 0; index < args.length; index += 1) {
+        const { text, globIndex } = args[index];
+        const equals = text.indexOf('=');
+        if (text.startsWith('-') && equals !== -1 && globIndex > equals) {
+            refuse(text, `${text.slice(0, equals + 1)}"${text.slice(equals + 1)}"`);
+        }
+        const takesPattern =
+            PATTERN_OPTIONS.has(text) ||
+            (name === 'rg' && text === '-g') ||
+            (name === 'find' && FIND_PATTERN_TESTS.has(text));
+        const value = args[index + 1];
+        if (takesPattern && value?.globIndex >= 0) {
+            refuse(`${text} ${value.text}`, `${text} "${value.text}"`);
+        }
+    }
 }
 
 /**
@@ -942,12 +1046,19 @@ function truncate(text) {
 
 class ParseError extends Error {}
 
+// The `name=`, `name+=` or `name[key]=` before an array's `(`.
+const ARRAY_ASSIGNMENT = /^[A-Za-z_][A-Za-z0-9_]*(\[[^\]]*\])?\+?=$/;
+
 /**
  * Parses shell source into items: `{ kind: 'command', words, substitutions, separator }`, and an
- * `open` and `close` around a subshell or a function body (`open` has `isFunction`). A `{ }`
- * group is not a scope: its commands stay in the list, with `{` and `}` as words. A word is
- * `{ text, expanded }`, where `text` has its quotes removed and `expanded` says it holds a `$` or
- * backtick expansion the hook cannot evaluate.
+ * `open` and `close` around a subshell, a function body or a `case` arm (`open` has `scope`:
+ * 'subshell', 'function' or 'case-arm'). A `{ }` group is not a scope: its commands stay in the
+ * list, with `{` and `}` as words. Process substitutions (`<(…)`, `>(…)`, zsh's `=(…)`) and
+ * the command substitutions in array elements, redirection targets, `case` words and patterns,
+ * and `[[ ]]` operands are parsed into `substitutions`. A word is
+ * `{ text, expanded, globIndex }`, where `text` has its quotes removed, `expanded` says it holds a
+ * `$` or backtick expansion the hook cannot evaluate, and `globIndex` is the position in `text` of
+ * its first unquoted `*`, `?` or `[` (-1 when it has none).
  */
 function parseScript(source) {
     return new Parser(source).parseList(false);
@@ -977,12 +1088,15 @@ class Parser {
         let depth = 0;
         // One entry per open `{`: 'function' for a function body, else 'group'.
         const braces = [];
+        // One entry per open `case`: the subshell depth it opened at.
+        const cases = [];
         // Set after a function's name and `()`, until its body opens.
         let functionPending = false;
         const checkClosed = () => {
             if (braces.includes('function'))
                 throw new ParseError('unclosed function body');
             if (functionPending) throw new ParseError('function without a body');
+            if (cases.length > 0) throw new ParseError('unclosed case');
         };
         const finish = (separator) => {
             if (words.length > 0 || substitutions.length > 0) {
@@ -990,6 +1104,21 @@ class Parser {
             }
             words = [];
             substitutions = [];
+        };
+        // Reads the patterns of the next `case` arm and opens it, or closes the `case` at `esac`.
+        const startCaseArm = () => {
+            const patternSubstitutions = [];
+            const opened = this.readCasePatterns(patternSubstitutions);
+            if (patternSubstitutions.length > 0) {
+                items.push({
+                    kind: 'command',
+                    words: [],
+                    substitutions: patternSubstitutions,
+                    separator: ';',
+                });
+            }
+            if (opened) items.push({ kind: 'open', scope: 'case-arm' });
+            else cases.pop();
         };
 
         while (this.index < this.source.length) {
@@ -1006,6 +1135,15 @@ class Parser {
                 const end = this.source.indexOf('\n', this.index);
                 this.index = end === -1 ? this.source.length : end;
             } else if (char === ';') {
+                // `;;`, `;&` and `;;&` end a `case` arm.
+                const armEnd = /^;(;&?|&)/.exec(this.source.slice(this.index));
+                if (armEnd !== null && cases.at(-1) === depth) {
+                    this.index += armEnd[0].length;
+                    finish(';');
+                    items.push({ kind: 'close' });
+                    startCaseArm();
+                    continue;
+                }
                 this.index += this.startsWith(';;') ? 2 : 1;
                 finish(';');
             } else if (this.startsWith('&&') || this.startsWith('||')) {
@@ -1013,7 +1151,7 @@ class Parser {
                 this.index += 2;
             } else if (this.startsWith('&>')) {
                 this.index += this.startsWith('&>>') ? 3 : 2;
-                this.readRedirectionTarget();
+                this.readRedirectionTarget(substitutions);
             } else if (char === '&') {
                 this.index += 1;
                 finish('&');
@@ -1035,7 +1173,10 @@ class Parser {
                     continue;
                 }
                 this.index += 1;
-                items.push({ kind: 'open', isFunction: functionPending });
+                items.push({
+                    kind: 'open',
+                    scope: functionPending ? 'function' : 'subshell',
+                });
                 functionPending = false;
                 depth += 1;
             } else if (char === ')') {
@@ -1048,9 +1189,10 @@ class Parser {
                     }
                     throw new ParseError('unmatched ")"');
                 }
+                if (cases.at(-1) === depth) throw new ParseError('unclosed case');
                 depth -= 1;
                 items.push({ kind: 'close' });
-            } else if (char === '<' || char === '>') {
+            } else if ((char === '<' || char === '>') && this.peek(1) !== '(') {
                 // A file descriptor written against the operator, as in `2>&1`, is not a word.
                 const last = words.at(-1);
                 if (
@@ -1060,7 +1202,7 @@ class Parser {
                 ) {
                     words.pop();
                 }
-                this.readRedirection();
+                this.readRedirection(substitutions);
             } else {
                 const word = this.readWord(substitutions);
                 lastWordEnd = this.index;
@@ -1074,10 +1216,27 @@ class Parser {
                 if (commandStart && word.text === '{') {
                     braces.push(functionPending ? 'function' : 'group');
                     if (functionPending) {
-                        items.push({ kind: 'open', isFunction: true });
+                        items.push({ kind: 'open', scope: 'function' });
                         functionPending = false;
                         continue;
                     }
+                } else if (commandStart && word.text === 'case') {
+                    this.readCaseHead(substitutions);
+                    finish(';');
+                    cases.push(depth);
+                    startCaseArm();
+                    continue;
+                } else if (
+                    commandStart &&
+                    word.text === 'esac' &&
+                    cases.at(-1) === depth
+                ) {
+                    finish(';');
+                    items.push({ kind: 'close' });
+                    cases.pop();
+                    continue;
+                } else if (commandStart && word.text === '[[') {
+                    this.readConditional(substitutions);
                 } else if (
                     commandStart &&
                     word.text === '}' &&
@@ -1114,30 +1273,126 @@ class Parser {
         return true;
     }
 
-    readRedirection() {
+    /** Reads a redirection; a command substitution in its target is parsed into `substitutions`. */
+    readRedirection(substitutions) {
         if (this.startsWith('<<<')) {
             this.index += 3;
-            this.readRedirectionTarget();
+            this.readRedirectionTarget(substitutions);
         } else if (this.startsWith('<<')) {
             const stripTabs = this.startsWith('<<-');
             this.index += stripTabs ? 3 : 2;
-            const delimiter = this.readRedirectionTarget();
+            // A heredoc delimiter is not expanded.
+            const delimiter = this.readRedirectionTarget([]);
             this.heredocs.push({ delimiter: delimiter.text, stripTabs });
         } else {
             const operator = /^(>>|>\||>&|<&|<>|>|<)/.exec(
                 this.source.slice(this.index)
             )[0];
             this.index += operator.length;
-            this.readRedirectionTarget();
+            this.readRedirectionTarget(substitutions);
         }
     }
 
-    readRedirectionTarget() {
+    readRedirectionTarget(substitutions) {
         while (this.peek() === ' ' || this.peek() === '\t') this.index += 1;
         const start = this.index;
-        const word = this.readWord([]);
+        const word = this.readWord(substitutions);
         if (this.index === start) throw new ParseError('redirection without a target');
         return word;
+    }
+
+    /** Skips blanks, line breaks (with the heredoc bodies they end) and comments. */
+    skipLineBreaks() {
+        for (;;) {
+            const char = this.peek();
+            if (char === ' ' || char === '\t') {
+                this.index += 1;
+            } else if (char === '\\' && this.peek(1) === '\n') {
+                this.index += 2;
+            } else if (char === '\n') {
+                this.index += 1;
+                this.skipHeredocBodies();
+            } else if (char === '#') {
+                const end = this.source.indexOf('\n', this.index);
+                this.index = end === -1 ? this.source.length : end;
+            } else {
+                return;
+            }
+        }
+    }
+
+    /** Reads one word, or throws with `what` when there is none at the cursor. */
+    readRequiredWord(substitutions, what) {
+        const start = this.index;
+        const word = this.readWord(substitutions);
+        if (this.index === start) {
+            const found = this.peek() === undefined ? 'the end' : `"${this.peek()}"`;
+            throw new ParseError(`${what} expected, found ${found}`);
+        }
+        return word;
+    }
+
+    /** Reads the elements of an array assignment (`name=(…)`) from its `(`. */
+    readArray(substitutions) {
+        this.index += 1;
+        for (;;) {
+            this.skipLineBreaks();
+            if (this.peek() === ')') {
+                this.index += 1;
+                return;
+            }
+            this.readRequiredWord(substitutions, 'an array element or ")"');
+        }
+    }
+
+    /** Reads the word after `case` and the `in` that follows it. */
+    readCaseHead(substitutions) {
+        this.skipLineBreaks();
+        this.readRequiredWord(substitutions, 'a word after "case"');
+        this.skipLineBreaks();
+        if (this.readRequiredWord(substitutions, '"in"').text !== 'in') {
+            throw new ParseError('case without "in"');
+        }
+    }
+
+    /**
+     * Reads the patterns of a `case` arm up to its `)`, and says whether there was one: `false`
+     * when it reads the `esac` that ends the `case` instead.
+     */
+    readCasePatterns(substitutions) {
+        this.skipLineBreaks();
+        if (/^esac(?=$|[\s;&|()<>])/.test(this.source.slice(this.index))) {
+            this.index += 'esac'.length;
+            return false;
+        }
+        if (this.peek() === '(') this.index += 1;
+        for (;;) {
+            this.skipLineBreaks();
+            this.readRequiredWord(substitutions, 'a case pattern');
+            this.skipLineBreaks();
+            const char = this.peek();
+            this.index += 1;
+            if (char === ')') return true;
+            if (char !== '|') throw new ParseError('case pattern without ")"');
+        }
+    }
+
+    /**
+     * Reads the rest of a `[[ … ]]` test after `[[`. Inside it `<` and `>` compare strings and
+     * `(`, `)`, `&&`, `||` and the `|` of a regular expression are not command syntax.
+     */
+    readConditional(substitutions) {
+        for (;;) {
+            this.skipLineBreaks();
+            const char = this.peek();
+            if (char === undefined) throw new ParseError('unclosed "[["');
+            if (/^\]\](?=$|[\s;&|()<>])/.test(this.source.slice(this.index))) {
+                this.index += 2;
+                return;
+            }
+            if ('()<>|&'.includes(char)) this.index += 1;
+            else this.readRequiredWord(substitutions, 'a "[[ ]]" operand');
+        }
     }
 
     /** Skips the bodies of the heredocs opened on the line just ended. */
@@ -1158,8 +1413,23 @@ class Parser {
     readWord(substitutions) {
         let text = '';
         let expanded = false;
+        let globIndex = -1;
         while (this.index < this.source.length) {
             const char = this.peek();
+            if (this.peek(1) === '(' && text === '' && '<>='.includes(char)) {
+                // A process substitution: `<(…)`, `>(…)`, or zsh's `=(…)`.
+                this.index += 2;
+                substitutions.push(this.parseList(true));
+                text = `${char}(...)`;
+                expanded = true;
+                continue;
+            }
+            if (char === '(' && ARRAY_ASSIGNMENT.test(text)) {
+                this.readArray(substitutions);
+                text += '(...)';
+                expanded = true;
+                continue;
+            }
             if (' \t\n;&|()<>'.includes(char)) break;
             if (char === '\\') {
                 const next = this.peek(1);
@@ -1183,11 +1453,12 @@ class Parser {
                 text += this.readBackticks(substitutions);
                 expanded = true;
             } else {
+                if (globIndex === -1 && '*?['.includes(char)) globIndex = text.length;
                 text += char;
                 this.index += 1;
             }
         }
-        return { text, expanded };
+        return { text, expanded, globIndex };
     }
 
     readDoubleQuoted(substitutions) {
