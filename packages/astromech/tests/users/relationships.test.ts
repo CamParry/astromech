@@ -9,11 +9,12 @@ import type { AstromechConfig } from '@/types/index';
 import type { Kysely } from 'kysely';
 import { createTestDb, setupTestConfig } from '@tests/harness';
 import { beforeEach, describe, expect, it } from 'vitest';
+import { getConfig } from '@/config/registry';
+import { rebuildRelationshipIndex } from '@/content/relationship-index';
 import { relationshipRepository } from '@/content/repository/relationships';
 import { encodeWith } from '@/database/codec';
 import { usersTable } from '@/database/tables';
 import { DEFAULT_ROLE_SLUG } from '@/permissions/roles';
-import { rebuildRelationshipIndex } from '@/transport/cli/relationship-index';
 import { makeTranslatableUsersConfig } from './users-config';
 
 /** One per-locale relationship field on users. */
@@ -57,7 +58,7 @@ describe('user relationships', () => {
     it('gives a user with no content row a source with no references', async () => {
         const noContentId = await insertUserRowOnly();
 
-        await rebuildRelationshipIndex();
+        await rebuildRelationshipIndex(getConfig());
 
         const rows = await relationshipRepository.findBySource(noContentId, 'user');
         expect(rows).toEqual([]);

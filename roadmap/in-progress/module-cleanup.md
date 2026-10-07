@@ -119,9 +119,12 @@ the repository copies.
 
 - [ ] `transport/http/routes/rest-route.ts` serves routes and writes the OpenAPI
       document. Split the documentation half out, and share one path-param regex.
-- [ ] `transport/cli/relationship-index.ts` and
-      `transport/cli/validate-stored-content.ts` are content logic. Move them to
-      `content/`.
+- [x] The relationship index rebuild and the stored-content validation report
+      in `transport/cli/` are content logic. Move them to `content/`. Both
+      moved whole, since neither held CLI code: `content/relationship-index.ts`
+      and `content/validate-stored-content.ts`. The rebuild and drift check now
+      take the config as their first argument, since a `content/` file may not
+      read the config registry.
 - [x] `globals/schema.ts` imports status and date schemas from `entries/schema.ts`,
       and `content/prepare-fields.ts` imports the validation mode from `entries/`. Move all
       four to `content/`. The schemas are in `content/schema.ts`, with

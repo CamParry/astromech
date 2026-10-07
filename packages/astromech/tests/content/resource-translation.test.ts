@@ -11,10 +11,11 @@ import type { AstromechConfig, Field, JsonObject } from '@/types/index';
 import { createTestDb, makeTestConfig, setupTestConfig } from '@tests/harness';
 import { beforeEach, describe, expect, it } from 'vitest';
 import { currentServices } from '@/app-context/services';
+import { getConfig } from '@/config/registry';
+import { rebuildRelationshipIndex } from '@/content/relationship-index';
 import { relationshipRepository } from '@/content/repository/relationships';
 import { ResourceValidationError } from '@/errors/resource';
 import { mediaRepository } from '@/media/repository';
-import { rebuildRelationshipIndex } from '@/transport/cli/relationship-index';
 import { userRepository } from '@/users/repository';
 
 const entriesService = currentServices.entries;
@@ -273,7 +274,7 @@ describe.each(Object.entries(ADAPTERS))('%s', (_kind, adapter: Adapter) => {
             await adapter.write(id, { credit: postB }, 'fr');
             const written = await storedRows();
 
-            await rebuildRelationshipIndex();
+            await rebuildRelationshipIndex(getConfig());
 
             expect(await storedRows()).toEqual(written);
         });

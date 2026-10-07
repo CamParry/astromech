@@ -12,11 +12,11 @@ import { generateMethodManifest } from '@/codegen/method-manifest';
 import { generateClientTypes } from '@/codegen/type-generator';
 import { buildAdminConfig } from '@/config/admin-config';
 import { resolveConfig } from '@/config/resolve';
+import { validateStoredContent } from '@/content/validate-stored-content';
 import { createRepository } from '@/database/repository/create-repository';
 import { entryContentTable } from '@/entries/tables';
 import { globalContentTable } from '@/globals/tables';
 import { buildPermissionCatalogue } from '@/policies/permission-catalogue';
-import { validateStoredContent } from '@/transport/cli/validate-stored-content';
 
 const entriesService = currentServices.entries;
 const globalsService = currentServices.globals;

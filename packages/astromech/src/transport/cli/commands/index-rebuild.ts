@@ -1,9 +1,9 @@
-import type { DriftReport } from '@/transport/cli/relationship-index';
+import type { DriftReport } from '@/content/relationship-index';
 import { defineCommand } from 'citty';
 import {
     checkRelationshipIndex,
     rebuildRelationshipIndex,
-} from '@/transport/cli/relationship-index';
+} from '@/content/relationship-index';
 import { pluralise } from '@/utilities/strings';
 import { configArgs } from '../common-args';
 import { withApplication } from '../config';
@@ -23,16 +23,16 @@ export default defineCommand({
         },
     },
     run: ({ args }) =>
-        withApplication(args, async () => {
+        withApplication(args, async (app) => {
             const scope = args.type ? { type: args.type } : {};
 
             if (args.check) {
-                const report = await checkRelationshipIndex(scope);
+                const report = await checkRelationshipIndex(app.config, scope);
                 reportDrift(report);
                 return;
             }
 
-            const report = await rebuildRelationshipIndex(scope);
+            const report = await rebuildRelationshipIndex(app.config, scope);
             console.log(
                 `Rebuilt the relationships index: ${pluralise(report.sourcesScanned, 'source')} scanned, ` +
                     `${pluralise(report.rowsWritten, 'row')} written, ` +
