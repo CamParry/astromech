@@ -20,7 +20,7 @@
                 "hooks": [
                     {
                         "type": "command",
-                        "command": "jq -r '.tool_input.file_path' | { read -r f; [[ \"$f\" == *.css ]] && pnpm exec stylelint --fix \"$f\"; } 2>/dev/null || true"
+                        "command": "jq -r '.tool_input.file_path' | { read -r f; root=$(git -C \"$(dirname \"$f\")\" rev-parse --show-toplevel) && cd \"$root\" && { [[ \"$f\" != *.css ]] || pnpm exec stylelint --fix \"$f\"; pnpm exec prettier --write --ignore-unknown \"$f\"; }; } >/dev/null 2>&1 || true"
                     }
                 ]
             }
