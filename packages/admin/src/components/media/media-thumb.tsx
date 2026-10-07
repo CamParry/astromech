@@ -5,7 +5,7 @@
  */
 
 import type { Media } from 'astromech';
-import { buildVariantUrl } from 'astromech/shared';
+import { buildVariantUrl, fileExtension } from 'astromech/shared';
 import React from 'react';
 import adminConfig from 'virtual:astromech/admin-config';
 import { FileTypeIcon, versionedMediaUrl } from '../../utilities/media';
@@ -73,7 +73,7 @@ function thumbSources(item: Media, width: number): { type: string; srcset: strin
     const widths = adminConfig.imageWidths ?? [];
     if (version == null || widths.length === 0) return [];
 
-    const ext = extOf(item.filename);
+    const ext = fileExtension(item.filename);
     const ladder = [pickWidth(widths, width), pickWidth(widths, width * 2)].filter(
         (w, i, a): w is number => w != null && a.indexOf(w) === i
     );
@@ -104,9 +104,4 @@ function pickWidth(widths: number[], target: number): number | null {
     if (widths.length === 0) return null;
     const sorted = [...widths].sort((a, b) => a - b);
     return sorted.find((w) => w >= target) ?? sorted[sorted.length - 1] ?? null;
-}
-
-function extOf(filename: string): string {
-    const dot = filename.lastIndexOf('.');
-    return dot >= 0 ? filename.slice(dot + 1) : '';
 }

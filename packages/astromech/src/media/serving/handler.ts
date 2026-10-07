@@ -4,7 +4,8 @@ import { currentServices } from '@/app-context/services';
 import { getConfig } from '@/config/registry';
 import { getStorageDriver } from '@/storage/registry';
 import { toBytes } from '@/utilities/bytes';
-import { extOf, originalKey } from '../internal/keys';
+import { fileExtension } from '../file-extension';
+import { originalKey } from '../internal/keys';
 import { getImageConfig } from './image/registry';
 import { canTransformImage } from './image/transformable';
 import {
@@ -86,7 +87,7 @@ async function serveMediaItem(media: Media, info: MediaRequestInfo): Promise<Res
     const params = parseImageParams(search);
     // Derive the extension from the stored record, never the URL path — the URL
     // ext is cosmetic and untrusted (path-traversal guard for the storage key).
-    const ext = extOf(media.filename);
+    const ext = fileExtension(media.filename);
     const key = originalKey(id, media.filename);
 
     // No image params — serve original

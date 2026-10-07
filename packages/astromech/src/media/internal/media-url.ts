@@ -1,7 +1,8 @@
 import { getConfig } from '@/config/registry';
 import { getStorageDriver } from '@/storage/registry';
+import { fileExtension } from '../file-extension';
 import { buildMediaUrl } from '../serving/image/url';
-import { extOf, originalKey } from './keys';
+import { originalKey } from './keys';
 
 /**
  * Resolve the delivery URL for a media item. `access: 'public'` prefers the
@@ -15,5 +16,5 @@ export function resolveMediaUrl(id: string, filename: string): string {
             getStorageDriver().getPublicUrl?.(originalKey(id, filename)) ?? null;
         if (publicUrl !== null) return publicUrl;
     }
-    return buildMediaUrl(config.mediaRoute, id, extOf(filename));
+    return buildMediaUrl(config.mediaRoute, id, fileExtension(filename));
 }
