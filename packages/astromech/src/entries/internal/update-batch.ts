@@ -16,6 +16,7 @@ import { patchedFieldNames } from '@/content/prepare-fields';
 import { resolvePublishedAt } from '@/content/published-at';
 import { requireStagedChange } from '@/content/staging';
 import { propagateSharedFields } from '@/content/translatable';
+import { resolveValidationMode } from '@/content/validation-mode';
 import { changesVersionedContent, snapshotVersion } from '@/content/versions';
 import { assertGuardHolds, writeGuarded } from '@/content/write-guard';
 import { resolveEntryType } from '@/entries/entry-types';
@@ -28,7 +29,6 @@ import { getEntryOfType } from '../read-entry';
 import { syncEntryRelationships } from '../relationships';
 import { entryRepository } from '../repository/entries-table';
 import { entrySchema, updateEntrySchema } from '../schema';
-import { entryValidationMode } from '../validation-mode';
 import { prepareEntryFields } from './prepare-fields';
 import { prepareEntryRow } from './prepare-row';
 import { uniqueSlugIfChanged } from './slug';
@@ -333,8 +333,10 @@ function completes(
 ): boolean {
     return (
         status !== undefined &&
-        entryValidationMode({ status, hasStatuses: entryType.capabilities.statuses }) ===
-            'complete'
+        resolveValidationMode({
+            status,
+            hasStatuses: entryType.capabilities.statuses,
+        }) === 'complete'
     );
 }
 

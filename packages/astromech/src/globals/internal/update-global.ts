@@ -14,10 +14,10 @@ import { resolveResourceLocale } from '@/content/locale';
 import { patchedFieldNames } from '@/content/prepare-fields';
 import { resolvePublishedAt } from '@/content/published-at';
 import { propagateSharedFields } from '@/content/translatable';
+import { resolveValidationMode } from '@/content/validation-mode';
 import { changesVersionedContent, snapshotVersion } from '@/content/versions';
 import { assertGuardHolds, writeGuarded } from '@/content/write-guard';
 import { transaction } from '@/database/transaction';
-import { entryValidationMode } from '@/entries/validation-mode';
 import { ResourceNotFoundError, ResourceValidationError } from '@/errors/resource';
 import { parseHookOutput, parseOutput } from '@/services/parse-method-output';
 import { syncGlobalRelationships } from '../relationships';
@@ -213,7 +213,7 @@ async function fieldsToStore(params: {
     }
     const completes =
         data.status !== undefined &&
-        entryValidationMode({
+        resolveValidationMode({
             status: data.status,
             hasStatuses: global.capabilities.statuses,
         }) === 'complete';

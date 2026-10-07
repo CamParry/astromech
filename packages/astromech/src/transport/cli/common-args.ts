@@ -4,7 +4,7 @@
  */
 
 import type { ArgsDef } from 'citty';
-import { statusSchema } from '@/entries/schema';
+import { statusSchema } from '@/content/schema';
 
 /** `--config`, for a command that reads the config and never opens the database. */
 export const configPathArgs = {

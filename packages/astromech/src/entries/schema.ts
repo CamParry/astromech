@@ -1,11 +1,13 @@
 import { z } from '@hono/zod-openapi';
-import { auditKeys, publishedAtKey, versionSchema } from '@/content/schema';
+import {
+    auditKeys,
+    optionalDate,
+    publishedAtKey,
+    statusSchema,
+    versionSchema,
+} from '@/content/schema';
 import { withFallback } from '@/services/fallback';
 import { jsonObject, unparsedJsonObject } from '@/services/json';
-import { ENTRY_STATUSES } from '@/types/domain';
-
-/** An entry's or a global's publication status, one of `ENTRY_STATUSES`. */
-export const statusSchema = z.enum(ENTRY_STATUSES);
 
 const slugField = z
     .string()
@@ -13,18 +15,6 @@ const slugField = z
         /^[a-z0-9]+(?:-[a-z0-9]+)*$/,
         'Slug must be lowercase alphanumeric with hyphens'
     )
-    .optional();
-
-/** A `Date`, or an offset ISO string coerced to one — nullable and optional. */
-export const optionalDate = z
-    .union([
-        z.date(),
-        z
-            .string()
-            .datetime({ offset: true })
-            .transform((v) => new Date(v)),
-    ])
-    .nullable()
     .optional();
 
 /**
@@ -80,16 +70,6 @@ export function updateEntrySchema({ titled }: { titled: boolean }) {
     const schema = titled ? titledUpdateEntryPayloadSchema : updateEntryPayloadSchema;
     return schema.openapi('UpdateEntry');
 }
-
-export const scheduleEntrySchema = z.strictObject({
-    publishedAt: z.union([
-        z.date(),
-        z
-            .string()
-            .datetime({ offset: true })
-            .transform((v) => new Date(v)),
-    ]),
-});
 
 /**
  * Overrides accepted by `duplicate`; `locale` copies that locale alone. Authored here rather than inline in a route:

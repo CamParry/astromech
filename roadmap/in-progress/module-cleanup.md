@@ -117,9 +117,12 @@ the repository copies.
 - [ ] `transport/cli/relationship-index.ts` and
       `transport/cli/validate-stored-content.ts` are content logic. Move them to
       `content/`.
-- [ ] `globals/schema.ts` imports status and date schemas from `entries/schema.ts`,
-      and `content/prepare-fields.ts` imports `entries/validation-mode.ts`. Move all
-      four to `content/`.
+- [x] `globals/schema.ts` imports status and date schemas from `entries/schema.ts`,
+      and `content/prepare-fields.ts` imports the validation mode from `entries/`. Move all
+      four to `content/`. The schemas are in `content/schema.ts`, with
+      `scheduleEntrySchema` renamed `scheduleSchema` (globals now import it
+      rather than alias it); `entryValidationMode` is `resolveValidationMode` in
+      `content/validation-mode.ts`, since users and media reach it too.
 - [ ] `types/` holds contracts away from their owners (driver contracts, admin
       resource types, service interfaces) and imports every module's schema.
       Move each next to its owner, keep `types/index.ts` as the public list.

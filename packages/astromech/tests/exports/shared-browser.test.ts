@@ -23,7 +23,7 @@ const allowlist = [
     /^src\/types\//,
     /^src\/entries\/entry-types\.ts$/,
     /^src\/entries\/entry-url\.ts$/,
-    /^src\/entries\/validation-mode\.ts$/,
+    /^src\/content\/validation-mode\.ts$/,
     /^src\/media\/image-widths\.ts$/,
     /^src\/permissions\/(entry|global)-permission\.ts$/,
     /^src\/media\/serving\/image\/url\.ts$/,
