@@ -69,7 +69,7 @@ export const restoreEntryVersion = defineServiceMethod({
                     from: current.slug,
                     to: restored.slug,
                 });
-                await syncEntryRelationships(config, restored, type);
+                await syncEntryRelationships(config, restored);
                 return restored;
             },
         });

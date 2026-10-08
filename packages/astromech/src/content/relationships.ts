@@ -1,7 +1,7 @@
 /**
  * Relationship indexing for a resource whose content is one row per locale, plus
- * a staged row per locale where it has staging: globals, users and media.
- * Entries share the merge rule here and read their own stored rows.
+ * a staged row per locale where it has staging: entries, globals, users and
+ * media.
  */
 
 import type {
@@ -20,12 +20,12 @@ import { RESOURCE_CONFIG } from './resources';
 type ContentRelationshipsShape = {
     /** The resource's repository; only its stored-row read is used. */
     repository: { findStoredRows(ids?: readonly string[]): Promise<StoredRows> };
-    /** The content rows' column holding the resource id: `userId`, `globalId`. */
+    /** The content rows' column holding the resource id: `entryId`, `userId`. */
     resourceIdColumn: string;
     kind: ResourceType;
     /**
      * The index's `sourceType` for one resource row, and the target its fields
-     * are read for (a global's key); absent means null.
+     * are read for (an entry's type, a global's key); absent means null.
      */
     sourceType?: (resourceRow: Record<string, unknown>) => string | null;
 };
@@ -42,7 +42,10 @@ type ContentFields = { fields?: unknown; stagedFor?: string | null };
  */
 export function createContentRelationships(shape: ContentRelationshipsShape): {
     sync: (config: ResolvedConfig, id: string) => Promise<void>;
-    all: (config: ResolvedConfig) => Promise<RelationshipIndexSource[]>;
+    all: (
+        config: ResolvedConfig,
+        options?: { type?: string }
+    ) => Promise<RelationshipIndexSource[]>;
 } {
     /**
      * Replace one resource's rows in the index with the references its stored
@@ -62,16 +65,24 @@ export function createContentRelationships(shape: ContentRelationshipsShape): {
      * its STORED content holds across all locales. The rebuild side of `sync`,
      * read as stored rows rather than through a repository `findMany()`, whose
      * join is pinned to one locale. Stored data has already been through
-     * `parseFields`, so the traversal mints no ids here.
+     * `parseFields`, so the traversal mints no ids here. `type` keeps only the
+     * resources whose `sourceType` it is.
      */
-    async function all(config: ResolvedConfig): Promise<RelationshipIndexSource[]> {
-        return sources(config);
+    async function all(
+        config: ResolvedConfig,
+        options?: { type?: string }
+    ): Promise<RelationshipIndexSource[]> {
+        return sources(config, undefined, options?.type);
     }
 
-    /** One index source per stored resource, of `ids` or of every resource. */
+    /**
+     * One index source per stored resource, of `ids` or of every resource, and
+     * of `type` when given.
+     */
     async function sources(
         config: ResolvedConfig,
-        ids?: readonly string[]
+        ids?: readonly string[],
+        type?: string
     ): Promise<RelationshipIndexSource[]> {
         const { resourceRows, contents } = await shape.repository.findStoredRows(ids);
 
@@ -83,7 +94,13 @@ export function createContentRelationships(shape: ContentRelationshipsShape): {
             else contentRowsById.set(resourceId, [row]);
         }
 
-        return resourceRows.map((resourceRow) =>
+        const kept =
+            type === undefined
+                ? resourceRows
+                : resourceRows.filter(
+                      (resourceRow) => sourceTypeOf(resourceRow) === type
+                  );
+        return kept.map((resourceRow) =>
             indexSource(
                 config,
                 resourceRow,
@@ -97,7 +114,7 @@ export function createContentRelationships(shape: ContentRelationshipsShape): {
         resourceRow: Record<string, unknown>,
         rows: readonly ContentFields[]
     ): RelationshipIndexSource {
-        const sourceType = shape.sourceType?.(resourceRow) ?? null;
+        const sourceType = sourceTypeOf(resourceRow);
         // A target no longer declared has no fields, so it holds no references.
         const definitions = flattenFieldNodes(
             RESOURCE_CONFIG[shape.kind].fields(config, sourceType ?? undefined)
@@ -115,6 +132,10 @@ export function createContentRelationships(shape: ContentRelationshipsShape): {
                 findReferences(definitions, fields)
             ),
         };
+    }
+
+    function sourceTypeOf(resourceRow: Record<string, unknown>): string | null {
+        return shape.sourceType?.(resourceRow) ?? null;
     }
 
     return { sync, all };

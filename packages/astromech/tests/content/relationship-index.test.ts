@@ -19,6 +19,7 @@ import {
 import { relationshipRepository } from '@/content/repository/relationships';
 import { createRepository } from '@/database/repository/create-repository';
 import { relationshipsTable } from '@/database/tables';
+import { syncEntryRelationships } from '@/entries/relationships';
 import { mediaRepository } from '@/media/repository';
 
 const api = currentServices.entries;
@@ -264,6 +265,22 @@ describe('checkRelationshipIndex', () => {
 
         expect(report.missing.length).toBeGreaterThan(0);
         expect(report.unexpected).toEqual([]);
+    });
+
+    it('reads the rows of a type no longer configured as unexpected', async () => {
+        const { article } = await seedContent();
+        const held = await relationshipRepository.findBySource(article, 'entry');
+        const { article: _dropped, ...entries } = makeIndexConfig().entries ?? {};
+        setupTestConfig({ ...makeIndexConfig(), entries });
+
+        // The write seam has no schema to read, so it leaves the rows alone.
+        await syncEntryRelationships(getConfig(), { id: article, type: 'article' });
+        expect(await relationshipRepository.findBySource(article, 'entry')).toEqual(held);
+
+        const report = await checkRelationshipIndex(getConfig());
+        expect(report.missing).toEqual([]);
+        expect(report.unexpected).toHaveLength(held.length);
+        expect(report.unexpected.every((row) => row.sourceId === article)).toBe(true);
     });
 });
 
