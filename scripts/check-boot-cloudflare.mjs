@@ -144,7 +144,13 @@ async function expectSignInLimited(base) {
     // Cloudflare overwrites it. A fresh /64 per run keeps a count left in
     // `.wrangler/state` by a run in the last minute from carrying over.
     const address = `2001:db8:${randomGroup()}:${randomGroup()}::1`;
+    // A fresh email per run for the same reason: refused sign-ins count against
+    // the account for 15 minutes, and the fifth locks it with a 429 of its own
+    // (`ACCOUNT_LOCK` in `packages/astromech/src/security/sign-in-failures.ts`).
+    // With one fixed email, a second run within 15 minutes saw 401, 401, 429, 429.
+    const email = `nobody-${randomGroup()}${randomGroup()}@example.com`;
     const statuses = [];
+    const codes = [];
     for (let attempt = 0; attempt < 4; attempt++) {
         const response = await fetch(url, {
             method: 'POST',
@@ -156,21 +162,34 @@ async function expectSignInLimited(base) {
                 'CF-Connecting-IP': address,
             },
             body: JSON.stringify({
-                email: 'nobody@example.com',
+                email,
                 password: 'not-a-password',
             }),
             redirect: 'manual',
             signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
         });
         statuses.push(response.status);
+        codes.push(await errorCode(response));
     }
     const expected = [401, 401, 401, 429];
     if (statuses.join() !== expected.join()) {
+        // The codes tell the rate limiter's 429 (no code) from an account
+        // lock's (`ACCOUNT_LOCKED`).
         throw new Error(
-            `${url} returned ${statuses.join(', ')}, expected ${expected.join(', ')} — sign-ins are counted and limited`
+            `${url} returned ${statuses.join(', ')} (codes ${codes.join(', ')}), expected ${expected.join(', ')} — sign-ins are counted and limited`
         );
     }
     console.log(`  ok  ${statuses.join(', ')} ${url} — sign-ins are counted and limited`);
+}
+
+/** The `code` of a Better Auth error body, or `none`. */
+async function errorCode(response) {
+    try {
+        const body = JSON.parse(await response.text());
+        return typeof body?.code === 'string' ? body.code : 'none';
+    } catch {
+        return 'none';
+    }
 }
 
 /** A random 16-bit IPv6 group, in hex. */
