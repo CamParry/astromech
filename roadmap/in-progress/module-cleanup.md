@@ -124,9 +124,11 @@ the repository copies.
 - [ ] **Admin: three permission-denied behaviours** (redirect in an effect, toast
       then redirect, banner) and none on the media page or entries list. One
       guard.
-- [ ] **Plugins rebuild the API base URL** from a private build global
+- [x] **Plugins rebuild the API base URL** from a private build global
       (`@astromech/backups`, `@astromech/assistant`). Add a route helper to the
-      plugin context; rename its misnamed `modal` to `confirm`.
+      plugin context; rename its misnamed `modal` to `confirm`. The helper is
+      `rawRouteUrl(path)` on `useAstromechPlugin()`, after the `rawRoutes` it
+      reaches.
 - [x] **Entry create and a new translation derive the title, status, slug and
       fields the same way** (`entries/methods/create.ts` and `planTranslation`
       in `entries/internal/update-batch.ts`), which `report:drift` lists;
