@@ -389,7 +389,9 @@ use these components when a page of your own needs a list.
   Its setters (`setQuery`, `setSort`, `setPage`, `setFilters`) write the URL,
   and a change to the search, the sort or a filter returns to the first page.
 - `<DataList>` renders the toolbar, the table, pagination, and the loading,
-  error and empty states. A column is `{ key, label, sortable?, link?, render }`.
+  error and empty states. Its search box calls `onSearch` once typing pauses
+  for 250 ms, so a search sends one query rather than one per keystroke.
+  A column is `{ key, label, sortable?, link?, render }`.
   `rowHref` makes a click anywhere in the row open it, and `link` makes that
   column's cell the link a keyboard reaches. `rowActions` returns a row's menu.
   `bulkActions` adds row selection: each is `{ label, run(ids), tone? }`, and a
