@@ -1,7 +1,7 @@
 /**
  * @vitest-environment happy-dom
  *
- * The entry field renderer: a named group is a group named by its heading and
+ * The field renderer: a named group is a group named by its heading and
  * scopes its children's values and paths to its key, an unnamed group draws a
  * surface over its parent's values, and a layout field inside a container item
  * renders its fields as controls.
@@ -11,9 +11,9 @@ import type { DataField, Field } from '@/types/index';
 import { act, render, screen, within } from '@testing-library/react';
 import { describe, expect, it } from 'vitest';
 import '@/admin/rendering/register-fields';
-import { EntryFieldColumn } from '@/admin/components/entries/entry-fields-renderer';
 import { useFieldValue } from '@/admin/components/fields/field-context';
 import { FieldErrorsProvider } from '@/admin/components/fields/field-errors-context';
+import { FieldValuesColumn } from '@/admin/components/fields/field-list';
 import { FormField } from '@/admin/components/fields/form-field';
 import { registerField } from '@/admin/rendering/field-registry';
 import { accordion, group, repeater, tab, tabs, text } from '@/fields/builder';
@@ -47,7 +47,7 @@ function typeInto(input: HTMLInputElement, text: string): void {
 function mountColumn(nodes: Field[], values: Record<string, unknown>) {
     const commits: Commit[] = [];
     const { container } = render(
-        <EntryFieldColumn
+        <FieldValuesColumn
             nodes={nodes}
             values={values}
             onChange={(name, value) => commits.push({ name, value })}
@@ -56,7 +56,7 @@ function mountColumn(nodes: Field[], values: Record<string, unknown>) {
     return { host: container, commits };
 }
 
-describe('EntryFieldColumn', () => {
+describe('FieldValuesColumn', () => {
     it('renders a named group at the root as a titled panel over its key', () => {
         const { host, commits } = mountColumn(
             [
@@ -163,7 +163,7 @@ describe('a named group in a column', () => {
     it('shows the error filed under the group’s own path', () => {
         render(
             <FieldErrorsProvider value={{ meta: ['Must be an object'] }}>
-                <EntryFieldColumn
+                <FieldValuesColumn
                     nodes={[group('meta', { fields: [text('summary')] })]}
                     values={{ meta: 'not an object' }}
                     onChange={() => undefined}

@@ -31,8 +31,8 @@ import {
 import React, { useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { buildDefaultValues } from '../../utilities/defaults';
-import { FieldList } from '../entries/entry-fields-renderer';
 import { useFieldControl } from './field-control-context';
+import { FieldList } from './field-list';
 import { InlineTitle } from './inline-title';
 import './repeater-field.css';
 

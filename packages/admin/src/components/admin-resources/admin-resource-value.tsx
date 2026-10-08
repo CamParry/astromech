@@ -6,7 +6,7 @@
 import type { DataField } from 'astromech';
 import { Check } from 'lucide-react';
 import React from 'react';
-import { useLabel } from '../../i18n/entry-namespace';
+import { useLabel } from '../../i18n/label-namespace';
 import { formatDate, formatDatetime } from '../../utilities/dates';
 import { fieldOptions } from '../fields/field-options';
 

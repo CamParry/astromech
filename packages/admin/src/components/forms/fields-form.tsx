@@ -7,12 +7,12 @@
 import type { UseFieldsFormResult } from '../../hooks/use-fields-form';
 import type { Field } from 'astromech';
 import React from 'react';
-import { EntryNamespaceProvider } from '../../i18n/entry-namespace';
-import { EntryFieldColumn } from '../entries/entry-fields-renderer';
+import { LabelNamespaceProvider } from '../../i18n/label-namespace';
 import {
     FieldErrorsProvider,
     FieldWarningsProvider,
 } from '../fields/field-errors-context';
+import { FieldValuesColumn } from '../fields/field-list';
 import { FieldValidationProvider } from '../fields/field-validation-context';
 import { FormLayout, FormLayoutContent, Stack } from '../ui/page';
 
@@ -59,7 +59,7 @@ export function FieldsFormProvider({
     children,
 }: FieldsFormProviderProps): React.ReactElement {
     return (
-        <EntryNamespaceProvider namespace={form.namespace}>
+        <LabelNamespaceProvider namespace={form.namespace}>
             <FormErrors messages={form.formErrors} />
             <FieldValidationProvider value={form.fieldValidation}>
                 <FieldErrorsProvider value={form.fieldErrors}>
@@ -68,7 +68,7 @@ export function FieldsFormProvider({
                     </FieldWarningsProvider>
                 </FieldErrorsProvider>
             </FieldValidationProvider>
-        </EntryNamespaceProvider>
+        </LabelNamespaceProvider>
     );
 }
 
@@ -96,7 +96,7 @@ export function FieldColumn({
     return (
         <tanstackForm.Field name="fields">
             {(field) => (
-                <EntryFieldColumn
+                <FieldValuesColumn
                     nodes={fields ?? form.fieldDefinitions}
                     values={field.state.value}
                     onChange={(name, value) =>

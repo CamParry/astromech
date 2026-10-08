@@ -18,7 +18,7 @@ import { entryMutations } from '../../hooks/entries';
 import { useAdminEntryType } from '../../hooks/use-admin-entry-type';
 import { useAdminMutation } from '../../hooks/use-admin-mutation';
 import { entryEditResource, useEditController } from '../../hooks/use-edit-controller';
-import { EntryNamespaceProvider } from '../../i18n/entry-namespace';
+import { LabelNamespaceProvider } from '../../i18n/label-namespace';
 import { resolveForm } from '../../rendering/resolve';
 import { formatDatetime } from '../../utilities/dates';
 import { entryEditPath, entryTypeBasePath } from '../../utilities/entry-admin-path';
@@ -153,7 +153,7 @@ function EntryEditBody({
     if (controller.isLoading) return <PageLoading />;
 
     return (
-        <EntryNamespaceProvider namespace={namespace}>
+        <LabelNamespaceProvider namespace={namespace}>
             <Page>
                 <DeleteEntryModal
                     open={deleteOpen}
@@ -329,7 +329,7 @@ function EntryEditBody({
                     />
                 </PageContent>
             </Page>
-        </EntryNamespaceProvider>
+        </LabelNamespaceProvider>
     );
 }
 

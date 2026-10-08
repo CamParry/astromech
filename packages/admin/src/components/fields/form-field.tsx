@@ -1,6 +1,6 @@
 import type { BaseFieldProps, DataField } from 'astromech';
 import React from 'react';
-import { useLabel } from '../../i18n/entry-namespace';
+import { useLabel } from '../../i18n/label-namespace';
 import { getFieldComponent, getFieldOptions } from '../../rendering/field-registry';
 import { Input } from '../ui/input';
 import { FieldPathProvider } from './field-context';

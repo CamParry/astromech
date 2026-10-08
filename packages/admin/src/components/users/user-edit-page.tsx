@@ -18,7 +18,7 @@ import { useAdminMutation } from '../../hooks/use-admin-mutation';
 import { useFieldsForm } from '../../hooks/use-fields-form';
 import { usePermissions } from '../../hooks/use-permissions';
 import { userMutations, useUser, useUserVersions } from '../../hooks/users';
-import { EntryNamespaceProvider, labelNamespace } from '../../i18n/entry-namespace';
+import { labelNamespace, LabelNamespaceProvider } from '../../i18n/label-namespace';
 import { localeOptions } from '../../utilities/content-locale';
 import { FieldColumn, FieldsForm } from '../forms/fields-form';
 import { Breadcrumb } from '../ui/breadcrumb';
@@ -158,7 +158,7 @@ function UserEditBody({
     const { form, mutation, handleSubmit, isDirty, confirmDiscard } = userForm;
 
     return (
-        <EntryNamespaceProvider namespace={namespace}>
+        <LabelNamespaceProvider namespace={namespace}>
             <Page>
                 <PageHeader>
                     <PageTitle>
@@ -320,6 +320,6 @@ function UserEditBody({
                     />
                 </PageContent>
             </Page>
-        </EntryNamespaceProvider>
+        </LabelNamespaceProvider>
     );
 }

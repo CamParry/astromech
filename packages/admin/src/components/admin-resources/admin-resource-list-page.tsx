@@ -18,7 +18,7 @@ import {
     adminResourceMutations,
 } from '../../hooks/admin-resources';
 import { useAdminMutation } from '../../hooks/use-admin-mutation';
-import { useLabel } from '../../i18n/entry-namespace';
+import { useLabel } from '../../i18n/label-namespace';
 import { Button } from '../ui/button';
 import { useConfirm } from '../ui/confirm';
 import { DataList } from '../ui/data-list';

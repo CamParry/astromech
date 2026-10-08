@@ -17,7 +17,7 @@ import { useAdminEntryType } from '../../hooks/use-admin-entry-type';
 import { useAdminMutation } from '../../hooks/use-admin-mutation';
 import { useEntryForm } from '../../hooks/use-entry-form';
 import { queryKeys } from '../../hooks/use-query-keys';
-import { EntryNamespaceProvider } from '../../i18n/entry-namespace';
+import { LabelNamespaceProvider } from '../../i18n/label-namespace';
 import { resolveForm } from '../../rendering/resolve';
 import { entryEditPath, entryTypeBasePath } from '../../utilities/entry-admin-path';
 import { FieldColumn, FieldsForm } from '../forms/fields-form';
@@ -139,7 +139,7 @@ function EntryNewBody({
     }
 
     return (
-        <EntryNamespaceProvider namespace={namespace}>
+        <LabelNamespaceProvider namespace={namespace}>
             <Page>
                 {isNonDefaultLocale && (
                     <CreateLocaleModal
@@ -237,6 +237,6 @@ function EntryNewBody({
                     />
                 </PageContent>
             </Page>
-        </EntryNamespaceProvider>
+        </LabelNamespaceProvider>
     );
 }

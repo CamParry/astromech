@@ -21,7 +21,7 @@ import { act, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import React from 'react';
 import { describe, expect, it, vi } from 'vitest';
-import { EntryFieldColumn } from '@/admin/components/entries/entry-fields-renderer';
+import { FieldValuesColumn } from '@/admin/components/fields/field-list';
 import { useEntryForm } from '@/admin/hooks/use-entry-form';
 import { renderAdmin } from '../../_support/render-admin';
 
@@ -97,7 +97,7 @@ async function mountEditPage({
                 {(f) => {
                     if (record) seen.push(structuredClone(f.state.value));
                     return (
-                        <EntryFieldColumn
+                        <FieldValuesColumn
                             nodes={nodes}
                             values={f.state.value}
                             onChange={(name, value) =>
