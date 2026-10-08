@@ -51,7 +51,10 @@ export type ListState = {
      * fetch. An empty search and no sort are left out.
      */
     queryParams: ListQueryParams;
-    /** Set the search text and return to the first page. */
+    /**
+     * Set the search text and return to the first page. It replaces the
+     * history entry rather than pushing one per keystroke.
+     */
     setQuery: (value: string) => void;
     /** Sort by `key`, or clear the sort with `null`, and return to the first page. */
     setSort: (key: string, direction: 'asc' | 'desc' | null) => void;
@@ -76,16 +79,11 @@ export function useListState({
     const page = search.page ?? 1;
     // One object per sort param, so a memo keyed on it survives a re-render.
     const sort = useMemo(() => parseSort(search.sort), [search.sort]);
-    const queryParams: ListQueryParams = {
-        ...(q ? { search: q } : {}),
-        ...(sort ? { sort: { [sort.key]: sort.direction } } : {}),
-        page,
-        limit: pageSize,
-    };
 
-    function update(patch: Record<string, unknown>): void {
+    function update(patch: Record<string, unknown>, replace = false): void {
         void navigate({
             to: '.',
+            replace,
             search: (prev: Record<string, unknown>) =>
                 withoutUndefined({ ...prev, ...patch }),
         });
@@ -97,8 +95,8 @@ export function useListState({
         page,
         limit: pageSize,
         offset: (page - 1) * pageSize,
-        queryParams,
-        setQuery: (value) => update({ q: value || undefined, page: undefined }),
+        queryParams: listQueryParams({ q, sort, page }, pageSize),
+        setQuery: (value) => update({ q: value || undefined, page: undefined }, true),
         setSort: (key, direction) =>
             update({
                 sort: direction === null ? undefined : `${key}:${direction}`,
@@ -106,6 +104,22 @@ export function useListState({
             }),
         setPage: (value) => update({ page: value > 1 ? value : undefined }),
         setFilters: (patch) => update({ ...patch, page: undefined }),
+    };
+}
+
+/**
+ * The search, sort and page as a `query` method takes them. An empty search
+ * and no sort are left out.
+ */
+export function listQueryParams(
+    { q, sort, page }: { q: string; sort: ListSort | null; page: number },
+    limit: number
+): ListQueryParams {
+    return {
+        ...(q ? { search: q } : {}),
+        ...(sort ? { sort: { [sort.key]: sort.direction } } : {}),
+        page,
+        limit,
     };
 }
 
@@ -128,7 +142,7 @@ export function validateListSearch(search: Record<string, unknown>): ListSearch 
 }
 
 /** Parse a `${key}:${direction}` sort param. */
-function parseSort(raw: string | undefined): ListSort | null {
+export function parseSort(raw: string | undefined): ListSort | null {
     if (raw === undefined) return null;
     const index = raw.lastIndexOf(':');
     const key = raw.slice(0, index);

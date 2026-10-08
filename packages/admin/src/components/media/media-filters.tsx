@@ -1,5 +1,7 @@
 /**
- * Search and type controls for a media surface, rendered inside its toolbar.
+ * Search and type controls for the media picker, rendered inside its toolbar.
+ * The library page takes its search from `DataList` and only the type select
+ * from here.
  */
 
 import type { MediaBrowserQuery, TypeFilter } from '../../types/media';
@@ -24,7 +26,7 @@ export function MediaFilters({
     const { t } = useTranslation();
 
     // The input is local so typing stays instant; only the settled value is
-    // pushed to the host, which is what the request and any URL are built from.
+    // pushed to the host, which is what the request is built from.
     const [searchInput, setSearchInput] = useState(query.q);
     const debouncedSearch = useDebounce(searchInput, SEARCH_DEBOUNCE_MS);
 
@@ -33,10 +35,6 @@ export function MediaFilters({
         onQueryChange({ q: debouncedSearch, page: 1 });
     }, [debouncedSearch, query.q, onQueryChange]);
 
-    function handleTypeChange(value: string | null): void {
-        onQueryChange({ type: (value ?? 'all') as TypeFilter, page: 1 });
-    }
-
     return (
         <>
             <SearchInput
@@ -44,16 +42,36 @@ export function MediaFilters({
                 value={searchInput}
                 onChange={(e) => setSearchInput(e.target.value)}
             />
-            <Select
+            <MediaTypeSelect
                 value={query.type}
-                onValueChange={handleTypeChange}
-                options={TYPE_FILTER_VALUES.map((value) => ({
-                    value,
-                    label: t(TYPE_FILTER_KEYS[value]),
-                }))}
-                triggerPrefix={t('media.typeFilterPrefix')}
-                className="am-select-trigger-auto"
+                onChange={(type) => onQueryChange({ type, page: 1 })}
             />
         </>
+    );
+}
+
+export type MediaTypeSelectProps = {
+    value: TypeFilter;
+    onChange: (value: TypeFilter) => void;
+};
+
+/** The type filter: one MIME class, or every file. */
+export function MediaTypeSelect({
+    value,
+    onChange,
+}: MediaTypeSelectProps): React.ReactElement {
+    const { t } = useTranslation();
+
+    return (
+        <Select
+            value={value}
+            onValueChange={(next) => onChange((next ?? 'all') as TypeFilter)}
+            options={TYPE_FILTER_VALUES.map((filter) => ({
+                value: filter,
+                label: t(TYPE_FILTER_KEYS[filter]),
+            }))}
+            triggerPrefix={t('media.typeFilterPrefix')}
+            className="am-select-trigger-auto"
+        />
     );
 }

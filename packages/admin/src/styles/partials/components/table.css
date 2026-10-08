@@ -70,10 +70,6 @@
     cursor: pointer;
 }
 
-.am-table-checkbox-col {
-    width: 2.5rem;
-}
-
 .am-table-row-selected,
 .am-table tbody tr[data-selected='true'] {
     /* No styling */

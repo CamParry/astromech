@@ -21,7 +21,7 @@ import { UploadButton } from '../ui/upload-button';
 import { MediaCard } from './media-card';
 import { MediaEmpty } from './media-empty';
 import { MediaFilters } from './media-filters';
-import { MediaSortSelect } from './media-sort-select';
+import { MediaSortSelect, sortPatch } from './media-sort-select';
 import { MediaUploadDialog } from './media-upload-dialog';
 
 const DEFAULT_PER_PAGE = 24;
@@ -58,7 +58,12 @@ export function MediaPicker({
             <Toolbar>
                 <ToolbarStart>
                     <MediaFilters query={query} onQueryChange={onQueryChange} />
-                    <MediaSortSelect query={query} onQueryChange={onQueryChange} />
+                    <MediaSortSelect
+                        sort={query.sort ?? null}
+                        onSort={(key, direction) =>
+                            onQueryChange(sortPatch(key, direction))
+                        }
+                    />
                 </ToolbarStart>
 
                 {canUpload && (

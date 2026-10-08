@@ -146,6 +146,7 @@ export type { PaginationProps } from './pagination';
 
 export { DataList } from './data-list';
 export type { DataListProps, DataListColumn, DataListBulkAction } from './data-list';
+export type { SelectionResult } from './use-selection';
 
 export { useListState, validateListSearch } from './use-list-state';
 export type {
