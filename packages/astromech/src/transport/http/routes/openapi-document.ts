@@ -209,6 +209,8 @@ function clashingComponent(
  * the body is the argument object, and a 200 answers the result bare. A method
  * with no `output` answers whatever its handler returns, so its 200 names no
  * schema. An unknown plugin or method is the router's 404, so none is documented.
+ * A method that takes no arguments documents no body, so neither the 400 for a
+ * body that is not a JSON object nor the 422 applies to a caller that follows it.
  */
 function pluginMethodRoute(
     route: { id: string; path: string },
@@ -248,6 +250,7 @@ function pluginMethodRoute(
                       }
                     : { description: success },
             ...errorResponses({
+                badRequest: takesArguments ? ['the body is not a JSON object'] : [],
                 ...accessRefusals(method.access),
                 input: takesArguments,
             }),

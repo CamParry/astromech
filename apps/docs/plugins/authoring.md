@@ -1415,6 +1415,10 @@ a shared component, so pick a name no other plugin or core uses: a schema the
 document cannot describe, or one whose name another schema already has, is
 left undescribed and the server logs a warning.
 
+Over HTTP the body is the argument object. An empty body calls the method with
+no arguments, and a body that is not a JSON object (unreadable JSON, an array,
+a string) answers `400` before the method runs.
+
 `access` says what a caller must hold, in one of four forms:
 
 - `'public'`: the method is ungated, signed in or not.

@@ -748,11 +748,14 @@ describe('the served document', () => {
         expect(responseSchema(echo, 200)?.properties?.['echoed']).toEqual({
             type: 'string',
         });
-        expect(statuses(echo)).toEqual(['200', '401', '403', '422', '500']);
+        expect(statuses(echo)).toEqual(['200', '400', '401', '403', '422', '500']);
+        expect(echo?.responses['400']?.description).toBe(
+            'Bad request: the body is not a JSON object.'
+        );
         expect(warnings).toEqual([]);
     });
 
-    it('documents no body, and no 422, for a plugin method that takes no arguments', async () => {
+    it('documents no body, and no 400 or 422, for a plugin method that takes no arguments', async () => {
         const { document: doc } = await servedDocument([probe]);
         const whoami = doc.paths['/plugins/probe/whoami']?.['post'];
         expect(whoami?.requestBody).toBeUndefined();
