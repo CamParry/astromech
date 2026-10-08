@@ -523,6 +523,7 @@ function createEntryRepository() {
         findEntryRowsByType,
         findContentRowsByType,
         findContentRowsByEntry,
+        findStoredRows: content.findStoredRows,
     };
 }
 

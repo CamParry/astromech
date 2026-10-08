@@ -163,7 +163,6 @@ export async function updateEntryBatch(
               })
             : writeTranslation({
                   config,
-                  type: entryType.id,
                   id: plan.id,
                   locale,
                   write: plan.write,
@@ -284,7 +283,7 @@ async function updateOne(params: {
         });
     }
     if (fields) {
-        await syncEntryRelationships(config, entry, entryType.id);
+        await syncEntryRelationships(config, entry);
         // A staged row is not one of the entry's locales, so its shared fields
         // stay with it until the merge.
         if (!staged) {
@@ -380,13 +379,12 @@ async function planTranslation(params: {
  */
 async function writeTranslation(params: {
     config: ResolvedConfig;
-    type: string;
     id: string;
     locale: string;
     write: EntryRowWrite;
     guard: WriteGuard;
 }): Promise<EntryResource> {
-    const { config, type, id, locale, write, guard } = params;
+    const { config, id, locale, write, guard } = params;
     const entry = await writeGuarded({
         kind: 'entry',
         address: { id, locale },
@@ -394,7 +392,7 @@ async function writeTranslation(params: {
         repository: entryRepository,
         write: () => entryRepository.translatable.create({ id, locale }, write, guard),
     });
-    await syncEntryRelationships(config, entry, type);
+    await syncEntryRelationships(config, entry);
     return entry;
 }
 

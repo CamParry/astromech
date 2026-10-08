@@ -75,10 +75,12 @@ the repository copies.
       the two bulk entry deletes do not go through it, and it would need a
       resource kind globals cannot give. `tests/content/delete-relationship-rows.test.ts`
       checks all five.
-- [ ] **Entries build their own relationship index.** `entries/relationships.ts`
+- [x] **Entries build their own relationship index.** `entries/relationships.ts`
       repeats `createContentRelationships` (`content/relationships.ts`) plus three
       repository reads only it uses. Add a type filter and bind entries through
-      the factory.
+      the factory. Done, but the three reads stay: `validate-stored-content.ts`
+      and `entries/methods/restore.ts` use them too. The factory's `all` filters
+      by `sourceType` after reading, so `--type` reads every entry row.
 - [x] **The staging merge exists twice, with two merge rules.**
       `entries/methods/staging/merge.ts` takes the staged fields as they are;
       `globals/methods/staging/merge.ts` patches them over the canonical. One

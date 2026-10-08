@@ -61,7 +61,7 @@ export const createStagedEntry = defineServiceMethod({
                         guard
                     ),
             });
-            await syncEntryRelationships(config, created, type);
+            await syncEntryRelationships(config, created);
             return created;
         });
     },

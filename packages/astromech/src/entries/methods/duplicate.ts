@@ -67,7 +67,7 @@ export const duplicateEntry = defineServiceMethod({
                 await entryRepository.update({ id: row.id, locale: write.locale }, write);
             }
             // Once, at the end: the index is per entry and reads every locale back.
-            await syncEntryRelationships(config, row, type);
+            await syncEntryRelationships(config, row);
             // Re-read so `locales` names every copied locale, not just the first.
             return getEntryOfType(type, row.id, first.locale);
         });

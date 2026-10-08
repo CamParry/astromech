@@ -88,7 +88,7 @@ export const mergeStagedEntry = defineServiceMethod({
             // Deleted before the re-index, so references only the staged change
             // held are dropped.
             await entryRepository.staging.delete({ id, locale });
-            await syncEntryRelationships(config, updated, type);
+            await syncEntryRelationships(config, updated);
             return updated;
         });
 

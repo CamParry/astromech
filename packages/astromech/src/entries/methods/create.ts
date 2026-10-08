@@ -51,7 +51,7 @@ export const createEntry = defineServiceMethod({
 
         const created = await transaction(async () => {
             const row = await entryRepository.create({ type, ...write });
-            await syncEntryRelationships(config, row, type);
+            await syncEntryRelationships(config, row);
             return row;
         });
 

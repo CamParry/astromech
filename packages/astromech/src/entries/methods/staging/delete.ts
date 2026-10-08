@@ -38,7 +38,7 @@ export const deleteStagedEntry = defineServiceMethod({
         // The entry keeps its other content, so its index is re-derived, not deleted.
         await transaction(async () => {
             await entryRepository.staging.delete({ id, locale });
-            await syncEntryRelationships(config, canonical, type);
+            await syncEntryRelationships(config, canonical);
         });
     },
 });
