@@ -12,6 +12,7 @@ import type { z } from 'zod';
 import { createTestDb, makeTestConfig, setupTestConfig } from '@tests/harness';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { currentServices } from '@/app-context/services';
+import { RESOURCE_TYPES } from '@/content/resource-types';
 import { RESOURCE_CONFIG } from '@/content/resources';
 import {
     entryVersionsTable,
@@ -20,7 +21,6 @@ import {
     userVersionsTable,
 } from '@/database/tables';
 import { mediaRepository } from '@/media/repository';
-import { RESOURCE_TYPES } from '@/types/domain';
 
 const entriesService = currentServices.entries;
 const globalsService = currentServices.globals;

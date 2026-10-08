@@ -10,7 +10,7 @@ import type { Field, JsonObject, ResourceType } from '@/types/index';
 import { createTestDb, makeTestConfig, setupTestConfig } from '@tests/harness';
 import { beforeEach, describe, expect, it } from 'vitest';
 import { currentServices } from '@/app-context/services';
-import { RESOURCE_TYPES } from '@/types/domain';
+import { RESOURCE_TYPES } from '@/content/resource-types';
 
 const entriesService = currentServices.entries;
 const globalsService = currentServices.globals;

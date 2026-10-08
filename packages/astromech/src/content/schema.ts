@@ -5,8 +5,9 @@
  */
 
 import { z } from '@hono/zod-openapi';
+import { RESOURCE_TYPES } from '@/content/resource-types';
 import { withFallback } from '@/services/fallback';
-import { ENTRY_STATUSES, RESOURCE_TYPES } from '@/types/domain';
+import { ENTRY_STATUSES } from '@/types/domain';
 
 /** An entry's or a global's publication status, one of `ENTRY_STATUSES`. */
 export const statusSchema = z.enum(ENTRY_STATUSES);

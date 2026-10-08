@@ -9,11 +9,11 @@ import type { TargetKind } from '@/types/domain';
 import type { Field } from '@/types/fields';
 import type { JsonObject, ResolvedConfig } from '@/types/index';
 import { resourceExistenceRepository } from '@/content/repository/resource-existence';
+import { TARGET_KINDS } from '@/content/resource-types';
 import { resolveEntryType } from '@/entries/entry-types';
 import { parseInstancePath } from '@/fields/field-path';
 import { collectRelationshipDeclarations, findReferences } from '@/fields/references';
 import { RESERVED_KEY } from '@/fields/reserved-keys';
-import { TARGET_KINDS } from '@/types/domain';
 import { isRecord } from '@/utilities/is-record';
 
 /**

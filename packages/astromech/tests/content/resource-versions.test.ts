@@ -17,10 +17,10 @@ import {
 } from '@tests/harness';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { currentServices } from '@/app-context/services';
+import { RESOURCE_TYPES } from '@/content/resource-types';
 import { ResourceNotFoundError } from '@/errors/resource';
 import { mediaRepository } from '@/media/repository';
 import { defineHook } from '@/plugins/define-hook';
-import { RESOURCE_TYPES } from '@/types/domain';
 import { userRepository } from '@/users/repository';
 
 const entriesService = currentServices.entries;

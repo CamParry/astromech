@@ -9,6 +9,7 @@ import {
     sessionsTable,
     verificationsTable,
 } from '@/auth/tables';
+import { RESOURCE_TYPES, TARGET_KINDS } from '@/content/resource-types';
 import { defineTable } from '@/database/define-table';
 import { entriesTable, entryContentTable, entryVersionsTable } from '@/entries/tables';
 import { globalContentTable, globalsTable, globalVersionsTable } from '@/globals/tables';
@@ -20,7 +21,6 @@ import {
     blockedAddressesTable,
     signInFailuresTable,
 } from '@/security/tables';
-import { RESOURCE_TYPES, TARGET_KINDS } from '@/types/domain';
 import { userContentTable, usersTable, userVersionsTable } from '@/users/tables';
 
 /**
