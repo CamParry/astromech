@@ -28,7 +28,6 @@ export function toAdminEntryType(entryType: ResolvedEntryType): AdminEntryType {
         plural: entryType.plural,
         versioning: !!entryType.versioning,
         translatable: entryType.translatable ?? false,
-        slug: entryType.slug ? entryType.slug : null,
         adminColumns: entryType.adminColumns ?? [],
         fields: entryType.fields,
         url: entryType.url ?? null,

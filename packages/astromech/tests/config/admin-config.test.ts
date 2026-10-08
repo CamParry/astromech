@@ -47,7 +47,7 @@ describe('toAdminEntryType', () => {
         expect(admin.plural).toBe('Posts');
         expect(admin.versioning).toBe(false);
         expect(admin.translatable).toBe(false);
-        expect(admin.slug).toBeNull();
+        expect(admin.capabilities.slug).toBe(true);
         expect(admin.adminColumns).toEqual([]);
         expect(admin.fields).toBeDefined();
         expect(admin.url).toBeNull();
@@ -183,7 +183,7 @@ describe('buildAdminConfig', () => {
         expect(post?.plural).toBe('Posts');
         expect(post?.versioning).toBe(false);
         expect(post?.translatable).toBe(false);
-        expect(post?.slug).toBeNull();
+        expect(post?.capabilities.slug).toBe(true);
         expect(Array.isArray(post?.adminColumns)).toBe(true);
         expect(post?.capabilities).toBeDefined();
         expect(post?.titleField).toBe('title');

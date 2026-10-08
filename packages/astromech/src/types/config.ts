@@ -185,11 +185,6 @@ export type SchedulerDriver = {
     stop?(): void | Promise<void>;
 };
 
-export type SlugConfig = {
-    source?: string;
-    prefix?: string;
-};
-
 export type AdminColumn = {
     field: string;
     label?: Label;
@@ -222,8 +217,11 @@ export type EntryType = {
      */
     staging?: boolean;
     translatable?: boolean;
-    /** Disable slug generation for this entry type by setting `false`. Default on. */
-    slug?: SlugConfig | false;
+    /**
+     * Whether entries have a slug, generated from the title and editable in the
+     * admin. Default true.
+     */
+    slug?: boolean;
     /** Whether entries have status (unpublished/published/scheduled). Default true. */
     statuses?: boolean;
     /** Whether entries can be soft-deleted (trashed). Default true. */
@@ -738,7 +736,6 @@ export type AdminEntryType = {
     icon?: string;
     versioning: boolean;
     translatable: boolean;
-    slug: SlugConfig | null;
     adminColumns: AdminColumn[];
     fields: ResolvedEntryFields;
     views?: ('list' | 'grid')[];

@@ -31,11 +31,6 @@ const entryTypeMetaSchema = z
             z.boolean(),
             z.object({ maxVersions: z.number().optional() }),
         ]),
-        slug: z.union([
-            z.object({ source: z.string().optional(), prefix: z.string().optional() }),
-            z.literal(false),
-            z.null(),
-        ]),
         adminColumns: z.array(openObject),
         fields: z.object({ main: z.array(openObject), sidebar: z.array(openObject) }),
         capabilities: z.object({
@@ -126,7 +121,6 @@ function entryTypeMeta(
         single: config.single,
         plural: config.plural,
         versioning: config.versioning ?? false,
-        slug: config.slug ?? null,
         adminColumns: config.adminColumns ?? [],
         fields: config.fields,
         capabilities: config.capabilities,
