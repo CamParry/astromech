@@ -40,10 +40,7 @@ export function useListController(
         type,
         locale: !hasI18n || locale === LOCALE_FILTER_ALL ? 'all' : locale,
         ...(isTrash ? { trashed: true } : status !== 'all' ? { where: { status } } : {}),
-        page,
-        limit: perPage,
-        search: q,
-        ...(sort ? { sort: { [sort.key]: sort.direction } } : {}),
+        ...list.queryParams,
     });
 
     const rows = data?.data;

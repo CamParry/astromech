@@ -4,6 +4,7 @@
  * the same search, and `setFilters` writes those.
  */
 
+import type { SortOption } from 'astromech';
 import { useNavigate, useSearch } from '@tanstack/react-router';
 import { useMemo } from 'react';
 
@@ -16,6 +17,18 @@ export type ListSearch = {
     /** `${columnKey}:${'asc' | 'desc'}` */
     sort?: string;
     page?: number;
+};
+
+/**
+ * The keys every `query` service method and admin resource `list` method takes
+ * for search, sort and page. A caller spreads in its own filters beside them.
+ */
+export type ListQueryParams = {
+    search?: string;
+    sort?: SortOption;
+    /** The page, from 1. */
+    page: number;
+    limit: number;
 };
 
 export type UseListStateOptions = {
@@ -33,6 +46,11 @@ export type ListState = {
     limit: number;
     /** The rows before this page, to pass to a fetch. */
     offset: number;
+    /**
+     * The search, sort and page as a `query` method takes them, to pass to a
+     * fetch. An empty search and no sort are left out.
+     */
+    queryParams: ListQueryParams;
     /** Set the search text and return to the first page. */
     setQuery: (value: string) => void;
     /** Sort by `key`, or clear the sort with `null`, and return to the first page. */
@@ -54,9 +72,16 @@ export function useListState({
     const navigate = useNavigate();
     const raw: Record<string, unknown> = useSearch({ strict: false });
     const search = validateListSearch(raw);
+    const q = search.q ?? '';
     const page = search.page ?? 1;
     // One object per sort param, so a memo keyed on it survives a re-render.
     const sort = useMemo(() => parseSort(search.sort), [search.sort]);
+    const queryParams: ListQueryParams = {
+        ...(q ? { search: q } : {}),
+        ...(sort ? { sort: { [sort.key]: sort.direction } } : {}),
+        page,
+        limit: pageSize,
+    };
 
     function update(patch: Record<string, unknown>): void {
         void navigate({
@@ -67,11 +92,12 @@ export function useListState({
     }
 
     return {
-        q: search.q ?? '',
+        q,
         sort,
         page,
         limit: pageSize,
         offset: (page - 1) * pageSize,
+        queryParams,
         setQuery: (value) => update({ q: value || undefined, page: undefined }),
         setSort: (key, direction) =>
             update({

@@ -40,16 +40,7 @@ export function UsersListPage(): React.ReactElement {
         }
     }, []);
 
-    const {
-        data: usersResult,
-        isLoading,
-        isError,
-    } = useUsersQuery({
-        ...(list.q ? { search: list.q } : {}),
-        ...(list.sort ? { sort: { [list.sort.key]: list.sort.direction } } : {}),
-        page: list.page,
-        limit: list.limit,
-    });
+    const { data: usersResult, isLoading, isError } = useUsersQuery(list.queryParams);
     const deleteMutation = useAdminMutation(userMutations().delete);
 
     const columns: DataListColumn<User>[] = [

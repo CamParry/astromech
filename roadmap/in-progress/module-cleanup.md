@@ -120,7 +120,10 @@ the repository copies.
 - [ ] **Admin: the media page bypasses `<DataList>`**, hand-rolling URL state,
       selection, bulk actions and the table. Entry create and entry/global update
       bypass the mutation table. The list-to-query mapping is written four times;
-      have `useListState` return it.
+      have `useListState` return it. The mapping is done: `useListState` returns
+      `queryParams`, which the users, admin resource and entries lists pass on,
+      and the media page's own copy in `hooks/use-media-browser.ts` goes with
+      the media page.
 - [ ] **Admin: three permission-denied behaviours** (redirect in an effect, toast
       then redirect, banner) and none on the media page or entries list. One
       guard.

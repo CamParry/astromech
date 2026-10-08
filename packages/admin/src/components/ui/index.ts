@@ -152,6 +152,7 @@ export type {
     ListState,
     ListSort,
     ListSearch,
+    ListQueryParams,
     UseListStateOptions,
 } from './use-list-state';
 

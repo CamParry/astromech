@@ -59,12 +59,11 @@ function AdminResourceList({
     const list = useListState({ pageSize: PER_PAGE });
     const { resource, basePath, can } = target;
 
-    const input: AdminResourceListInput = {
-        ...(resource.search && list.q ? { search: list.q } : {}),
-        ...(list.sort ? { sort: { [list.sort.key]: list.sort.direction } } : {}),
-        page: list.page,
-        limit: list.limit,
-    };
+    // A resource without a search box takes no `search`.
+    const { search: _search, ...withoutSearch } = list.queryParams;
+    const input: AdminResourceListInput = resource.search
+        ? list.queryParams
+        : withoutSearch;
     const {
         data: result,
         isLoading,
