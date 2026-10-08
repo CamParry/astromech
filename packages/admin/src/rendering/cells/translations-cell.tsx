@@ -1,4 +1,4 @@
-import type { CellRenderer } from 'astromech';
+import type { CellRenderer } from '../types';
 import { entryEditPath } from '../../utilities/entry-admin-path';
 import { Link } from './link';
 

@@ -1,28 +1,13 @@
 /**
- * Resolved rendering contracts — JSON-serializable shapes for admin entry
+ * Resolved rendering contracts: JSON-serializable shapes for admin entry
  * pages, resolved client-side from `AdminEntryType`. Renderers are referenced
  * by string key, never by component reference, so they stay serializable.
  */
-import type { Entry } from './domain';
-import type { Field, Label } from './fields';
+import type { CellKind, Entry, Field, Label } from 'astromech';
 import type * as React from 'react';
 
-export type CellKind =
-    | 'text'
-    | 'title'
-    | 'badge'
-    | 'status'
-    | 'slug'
-    | 'date'
-    | 'boolean'
-    | 'number'
-    | 'relationship'
-    | 'locale'
-    | 'translations'
-    | 'author';
-
 export type TableColumn = {
-    /** Stable key — field name for field columns, system key for system columns. */
+    /** Stable key: field name for field columns, system key for system columns. */
     key: string;
     /**
      * System columns carry an i18n key (shell calls `t()`); admin columns carry

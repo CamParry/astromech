@@ -1,4 +1,4 @@
-import type { CellRenderer } from 'astromech';
+import type { CellRenderer } from '../types';
 import { formatDate } from '../../utilities/dates';
 
 export const DateCell: CellRenderer = ({ value }) => (

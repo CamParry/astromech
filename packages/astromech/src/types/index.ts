@@ -14,7 +14,6 @@ export * from './query';
 export * from './services';
 export * from './typed-entries';
 export * from './typed-globals';
-export * from './resolved';
 export * from './ai-context';
 export * from './ai';
 export * from '@/cron/driver';

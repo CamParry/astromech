@@ -1,4 +1,4 @@
-import type { CellRenderer } from 'astromech';
+import type { CellRenderer } from '../types';
 
 /** The entry's title; the entries list makes it the row's link. */
 export const TitleCell: CellRenderer = ({ row, ctx }) =>

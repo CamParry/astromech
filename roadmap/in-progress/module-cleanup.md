@@ -167,11 +167,14 @@ the repository copies.
 - [ ] `types/` holds contracts away from their owners (driver contracts, admin
       resource types, service interfaces) and imports every module's schema.
       Move each next to its owner, keep `types/index.ts` as the public list.
-      Start with the driver contracts. Admin-only render types in
-      `types/resolved.ts` move to `packages/admin`. The driver contracts are
-      done, each in a `driver.ts` beside its module's `drivers/` directory;
-      the admin resource types, the service interfaces and the admin-only
-      render types remain.
+      Start with the driver contracts. Admin-only render types move to
+      `packages/admin`. The driver contracts are done, each in a `driver.ts`
+      beside its module's `drivers/` directory. The render types are done:
+      the table, form and cell renderer types are in the admin's
+      `rendering/types.ts` and no longer exported from `astromech`, and
+      `CellKind` stays in core beside `AdminColumn` in `types/config.ts`,
+      which uses it. The admin resource types and the service interfaces
+      remain.
 - [x] `RESOURCE_TYPES` sits in `types/domain.ts`, apart from `RESOURCE_CONFIG`
       in `content/resources.ts`. Moving it there leaves it undefined at load
       time: `content/schema.ts` builds `usageSchema` from it, and

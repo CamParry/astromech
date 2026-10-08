@@ -1,4 +1,4 @@
-import type { CellRenderer } from 'astromech';
+import type { CellRenderer } from '../types';
 import { isEntryStatus } from 'astromech/shared';
 import { StatusBadge } from '../../components/ui/status-badge';
 
