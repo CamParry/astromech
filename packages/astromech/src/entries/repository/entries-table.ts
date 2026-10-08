@@ -20,6 +20,7 @@ import type { Expression, SqlBool } from 'kysely';
 import { getDefaultContentLocale } from '@/config/content-locale';
 import { buildOrderBy } from '@/content/list';
 import { createContentRepository, lastUpdate } from '@/content/repository/content-table';
+import { relationshipRepository } from '@/content/repository/relationships';
 import { sortableColumns } from '@/content/resources';
 import { encodePatchWith } from '@/database/codec';
 import { getDb } from '@/database/registry';
@@ -27,6 +28,7 @@ import { createRepository } from '@/database/repository/create-repository';
 import { compileWhere } from '@/database/repository/where';
 import { entriesTable, entryContentTable, entryVersionsTable } from '@/database/tables';
 import { compareTimestamps } from '@/database/timestamps';
+import { transaction } from '@/database/transaction';
 import { ResourceNotFoundError } from '@/errors/resource';
 import { UnknownWhereKeyError } from '../errors';
 import { isReferencesFilter } from './references-filter';
@@ -346,6 +348,17 @@ function createEntryRepository() {
             : content.update(ref, data, guard);
     }
 
+    /**
+     * Drops the entry with every locale and version, which cascade from the
+     * `entries` row, and every relationship pointing at (or from) it. Call it
+     * inside a transaction: an index outliving a failed delete would name an
+     * entry that is gone.
+     */
+    async function del(id: string): Promise<void> {
+        await relationshipRepository.deleteByResource(id, 'entry');
+        await content.delete(id);
+    }
+
     const trash = {
         trash: async (id: string, actor?: string | null): Promise<void> => {
             const row = await resourceRows.findOne({ id });
@@ -387,8 +400,18 @@ function createEntryRepository() {
             return restored;
         },
 
+        /**
+         * Drops every trashed entry of `type`, as `delete` drops one, in one
+         * transaction.
+         */
         emptyTrash: async (type: string): Promise<void> => {
-            await resourceRows.deleteMany({ type, deletedAt: { ne: null } });
+            const where = { type, deletedAt: { ne: null } };
+            await transaction(async () => {
+                for (const id of await resourceRows.pluck('id', { where })) {
+                    await relationshipRepository.deleteByResource(id, 'entry');
+                }
+                await resourceRows.deleteMany(where);
+            });
         },
     };
 
@@ -490,7 +513,7 @@ function createEntryRepository() {
         create,
         update,
         explainConflict: content.explainConflict,
-        delete: content.delete,
+        delete: del,
         trash,
         versions: content.versions,
         staging: content.staging,

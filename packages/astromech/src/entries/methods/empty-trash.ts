@@ -1,13 +1,11 @@
 import { z } from '@hono/zod-openapi';
-import { relationshipRepository } from '@/content/repository/relationships';
-import { transaction } from '@/database/transaction';
 import { defineServiceMethod } from '@/services/define-service-method';
 import { entryAccess } from '../internal/access';
 import { entryRepository } from '../repository/entries-table';
 
 /**
- * Deletes each trashed entry of `type` with every locale and version, clearing
- * its relationship rows first. No entry hooks fire.
+ * Deletes each trashed entry of `type` with every locale, version and
+ * relationship row. No entry hooks fire.
  */
 export const emptyTrash = defineServiceMethod({
     summary: 'Permanently delete every trashed entry.',
@@ -19,20 +17,6 @@ export const emptyTrash = defineServiceMethod({
     destructive: true,
     idempotent: true,
     async handler(params): Promise<void> {
-        const { type } = params;
-
-        const trashed = await entryRepository.findMany({
-            type,
-            locale: 'all',
-            trashed: true,
-        });
-        const ids = new Set(trashed.map((entry) => entry.id));
-
-        await transaction(async () => {
-            for (const id of ids) {
-                await relationshipRepository.deleteByResource(id, 'entry');
-            }
-            await entryRepository.trash.emptyTrash(type);
-        });
+        await entryRepository.trash.emptyTrash(params.type);
     },
 });

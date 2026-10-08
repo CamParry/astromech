@@ -4,6 +4,7 @@
  * the per-type repository contract; keeping them here keeps raw DB out of jobs.
  */
 
+import { relationshipRepository } from '@/content/repository/relationships';
 import { decodeWith } from '@/database/codec';
 import { createRepository } from '@/database/repository/create-repository';
 import { entriesTable, entryContentTable } from '@/database/tables';
@@ -57,16 +58,20 @@ function createEntryMaintenanceRepository() {
     }
 
     /**
-     * Hard-delete every trashed entry deleted on or before `cutoff`. Content
-     * rows and versions cascade. Returns the purged entry ids so the caller can
-     * clean up what has no FK to cascade on. SQL `deletedAt <= cutoff` is
-     * already false for NULL, so no guard is needed.
+     * Hard-delete every trashed entry deleted on or before `cutoff`, and drop
+     * every relationship pointing at (or from) each. Content rows and versions
+     * cascade; the relationship rows have no FK to cascade on. Returns the
+     * purged entry ids. SQL `deletedAt <= cutoff` is already false for NULL, so
+     * no guard is needed.
      */
     async function purgeTrashedBefore(cutoff: Date): Promise<string[]> {
         const where = { deletedAt: { lte: cutoff } };
         const doomed = await entries.pluck('id', { where });
         if (doomed.length === 0) return [];
         await entries.deleteMany(where);
+        for (const id of doomed) {
+            await relationshipRepository.deleteByResource(id, 'entry');
+        }
         return doomed;
     }
 
