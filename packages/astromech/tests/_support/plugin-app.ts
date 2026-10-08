@@ -4,19 +4,19 @@
  * HTTP API, so a plugin's tests reach core one way.
  */
 import type { DB } from '@/database/types';
+import type { EntriesService } from '@/entries/service-types';
+import type { GlobalsService } from '@/globals/service-types';
+import type { MediaService } from '@/media/service-types';
 import type { AdminConfig } from '@/types/config';
 import type {
     AstromechConfig,
     AstromechPluginServices,
-    EntriesService,
-    GlobalsService,
-    MediaService,
     PluginContext,
     ResolvedConfig,
     Role,
     User,
-    UsersService,
 } from '@/types/index';
+import type { UsersService } from '@/users/service-types';
 import type { Kysely } from 'kysely';
 import { createTestDb, requestAs, setupTestConfig } from '@tests/harness';
 import { createAppContext, systemAppContext } from '@/app-context/app-context';

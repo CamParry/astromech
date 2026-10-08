@@ -8,7 +8,8 @@
  * the recipients, so it is a privileged emit and not a method anyone may call.
  */
 
-import type { NotificationsService, NotifyInput } from '@/types/index';
+import type { NotificationsService } from './service-types';
+import type { NotifyInput } from '@/types/index';
 import { defineService } from '@/services/define-service';
 import { userRepository } from '@/users/repository';
 import { countNotifications } from './methods/count';

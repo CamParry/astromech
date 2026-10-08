@@ -4,7 +4,7 @@
  * every policy lives there or in `internal/**`.
  */
 
-import type { GlobalsService } from '@/types/index';
+import type { GlobalsService } from './service-types';
 import { defineService } from '@/services/define-service';
 import { assertRequiredCapability } from './capabilities';
 import { getGlobal } from './methods/get';

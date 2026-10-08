@@ -7,10 +7,10 @@
  * happens before the service function is entered.
  */
 
+import type { EntriesService } from '@/entries/service-types';
 import type {
     AstromechConfig,
     CoreManifestMethod,
-    EntriesService,
     ManifestMethod,
     Permission,
     PluginDefinition,

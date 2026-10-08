@@ -4,7 +4,7 @@
  * `internal/**`. Consumers reach the bound form as `app.users`.
  */
 
-import type { UsersService } from '@/types/index';
+import type { UsersService } from './service-types';
 import { defineService } from '@/services/define-service';
 import { createUser } from './methods/create';
 import { deleteUser } from './methods/delete';

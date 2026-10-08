@@ -4,7 +4,7 @@
  * `internal/**`. Consumers reach the bound form as `app.media`.
  */
 
-import type { MediaService } from '@/types/index';
+import type { MediaService } from './service-types';
 import { defineService } from '@/services/define-service';
 import { deleteMedia } from './methods/delete';
 import { getMedia } from './methods/get';

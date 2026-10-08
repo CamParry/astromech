@@ -4,7 +4,8 @@
  * catalogue fixes, and a bound update answering one entry or a list.
  */
 
-import type { EntriesService, Entry, Role } from '@/types/index';
+import type { EntriesService } from '@/entries/service-types';
+import type { Entry, Role } from '@/types/index';
 import { createTestDb, makeTestConfig, setupTestConfig } from '@tests/harness';
 import { inputKeys } from '@tests/strict-input';
 import { beforeEach, describe, expect, it } from 'vitest';

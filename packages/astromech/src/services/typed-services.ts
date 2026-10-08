@@ -3,12 +3,10 @@
  * given their typed facades. Imports types only, so the browser client uses it.
  */
 
-import type {
-    EntriesService,
-    GlobalsService,
-    TypedEntriesService,
-    TypedGlobalsService,
-} from '@/types/index';
+import type { EntriesService } from '@/entries/service-types';
+import type { TypedEntriesService } from '@/entries/typed-entries';
+import type { GlobalsService } from '@/globals/service-types';
+import type { TypedGlobalsService } from '@/globals/typed-globals';
 
 /** A handle whose `entries` and `globals` take the typed facades. */
 type WithTypedFacades<S> = Omit<S, 'entries' | 'globals'> & {

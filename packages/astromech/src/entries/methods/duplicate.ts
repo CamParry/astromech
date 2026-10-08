@@ -1,11 +1,7 @@
 import type { EntryRowWrite } from '../internal/prepare-row';
 import type { EntryResource } from '../repository/types';
-import type {
-    EntryDuplicateOverrides,
-    ResolvedConfig,
-    ResolvedEntryType,
-    User,
-} from '@/types/index';
+import type { EntryDuplicateOverrides } from '../service-types';
+import type { ResolvedConfig, ResolvedEntryType, User } from '@/types/index';
 import { z } from '@hono/zod-openapi';
 import { transaction } from '@/database/transaction';
 import { resolveEntryType } from '@/entries/entry-types';

@@ -1,4 +1,5 @@
-import type { Entry, EntryCreateData, EntryStatus, JsonObject } from '@/types/index';
+import type { EntryCreateData } from '@/entries/service-types';
+import type { Entry, EntryStatus, JsonObject } from '@/types/index';
 import { defineCommand } from 'citty';
 import { configArgs, fieldsArgs, jsonArgs, localeArgs, statusArgs } from '../common-args';
 import { withApplication } from '../config';

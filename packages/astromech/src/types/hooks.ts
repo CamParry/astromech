@@ -6,7 +6,8 @@
 
 import type { Entry, EntryStatus, Global, JsonObject, User } from './domain';
 import type { PluginContext } from './plugins';
-import type { ParsedEntryUpdateData, ParsedGlobalUpdateData } from './services';
+import type { ParsedEntryUpdateData } from '@/entries/service-types';
+import type { ParsedGlobalUpdateData } from '@/globals/service-types';
 
 /**
  * `data` is the row about to be written, not a copy of it: a `beforeCreate`

@@ -1,4 +1,5 @@
 import type { EntryResource } from '../repository/types';
+import type { ParsedEntryUpdateData } from '../service-types';
 import type { EntryRowWrite } from './prepare-row';
 import type { ContentRowId } from '@/content/repository/types';
 import type { WriteGuard } from '@/content/write-guard';
@@ -6,7 +7,6 @@ import type {
     AppContext,
     EntryStatus,
     JsonObject,
-    ParsedEntryUpdateData,
     ResolvedConfig,
     ResolvedEntryType,
     User,

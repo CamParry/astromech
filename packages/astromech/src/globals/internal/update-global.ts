@@ -1,10 +1,10 @@
 import type { GlobalResource } from '../repository';
+import type { ParsedGlobalUpdateData } from '../service-types';
 import type { WriteGuard } from '@/content/write-guard';
 import type {
     AppContext,
     EntryStatus,
     JsonObject,
-    ParsedGlobalUpdateData,
     ResolvedConfig,
     ResolvedGlobal,
 } from '@/types/index';

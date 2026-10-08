@@ -7,7 +7,8 @@
  * envelope: `count`'s `{ data: { count } }` and the 204s.
  */
 
-import type { Notification, NotificationsService, User } from '@/types/index';
+import type { NotificationsService } from '@/notifications/service-types';
+import type { Notification, User } from '@/types/index';
 import { roleWith } from '@tests/fixtures';
 import { createTestDb, makeTestConfig, setupTestConfig } from '@tests/harness';
 import { mountRouter } from '@tests/mount-router';

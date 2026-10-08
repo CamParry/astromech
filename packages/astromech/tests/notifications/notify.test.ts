@@ -12,7 +12,8 @@
  */
 
 import type { DB } from '@/database/types';
-import type { Notification, NotificationsService } from '@/types/index';
+import type { NotificationsService } from '@/notifications/service-types';
+import type { Notification } from '@/types/index';
 import type { Kysely } from 'kysely';
 import { makeUser } from '@tests/fixtures';
 import { createTestDb, createTestUser, setupTestConfig } from '@tests/harness';
