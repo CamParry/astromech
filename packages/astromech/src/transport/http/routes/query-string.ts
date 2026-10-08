@@ -9,6 +9,7 @@
  */
 
 import type { SortDirection } from '@/types/index';
+import { isRecord } from '@/utilities/is-record';
 
 /** `args` as query params: every defined value, stringified. */
 export function toQueryParams(args: Record<string, unknown>): Record<string, string> {
@@ -50,8 +51,4 @@ export function fromQueryParams(query: Record<string, string>): Record<string, u
 function sortParams(sort: unknown): Record<string, string> {
     const first = isRecord(sort) ? Object.entries(sort)[0] : undefined;
     return first === undefined ? {} : { sort: first[0], dir: String(first[1]) };
-}
-
-function isRecord(value: unknown): value is Record<string, unknown> {
-    return typeof value === 'object' && value !== null && !Array.isArray(value);
 }

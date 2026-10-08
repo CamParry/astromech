@@ -7,6 +7,7 @@
 
 import type { FieldValidator, RichTextAllow } from '@/types/fields';
 import { Node } from '@tiptap/pm/model';
+import { isRecord } from '@/utilities/is-record';
 import { findUnsafeLink } from './safe-links';
 import { schemaFor } from './schema';
 
@@ -39,9 +40,7 @@ export function validateRichTextDocument(
     if (typeof value === 'string') {
         return 'Must be a rich text document, not an HTML string';
     }
-    if (typeof value !== 'object' || value === null || Array.isArray(value)) {
-        return 'Must be a rich text document';
-    }
+    if (!isRecord(value)) return 'Must be a rich text document';
 
     let node: Node;
     try {

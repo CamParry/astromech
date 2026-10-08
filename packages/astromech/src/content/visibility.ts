@@ -12,6 +12,7 @@ import type { EntryStatus, Field, JsonObject, JsonValue } from '@/types/index';
 import { getFieldType } from '@/fields/field-type-registry';
 import { flattenFieldNodes } from '@/fields/flatten';
 import { PUBLIC_STRIPPED_KEYS, RESERVED_KEY } from '@/fields/reserved-keys';
+import { isRecord } from '@/utilities/is-record';
 
 const RESERVED_KEYS: ReadonlySet<string> = new Set(Object.values(RESERVED_KEY));
 
@@ -96,13 +97,7 @@ function passesPreviewRowFilter(record: VisibleRecord): boolean {
 function structuralStrip(value: JsonValue): JsonValue {
     if (Array.isArray(value)) {
         const filtered = value.filter(
-            (item) =>
-                !(
-                    item !== null &&
-                    typeof item === 'object' &&
-                    !Array.isArray(item) &&
-                    item[RESERVED_KEY.disabled] === true
-                )
+            (item) => !(isRecord(item) && item[RESERVED_KEY.disabled] === true)
         );
         return filtered.map((item) => structuralStrip(item));
     }

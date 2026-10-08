@@ -13,8 +13,9 @@ import { createServices } from '@/app-context/services';
 import { entryCatalogue } from '@/entries/catalogue';
 import { entriesDefinition } from '@/entries/service';
 import { ValidationError } from '@/errors/validation';
-import { badRequest, fromZodError } from '@/transport/http/middleware/errors';
+import { fromZodError } from '@/transport/http/middleware/errors';
 import { ENTRIES_ROUTE_SPECS } from './http-routes';
+import { readJsonObject } from './json-body';
 import { mountRestRoutes } from './rest-route';
 import { missingEntryType, routeAccess } from './route-access';
 
@@ -70,12 +71,9 @@ function mountCrossType(
     // here. A missing or malformed one is an input failure like any other, and
     // the rest of the body is the method's to parse.
     router.post(path, async (c) => {
-        const body = await c.req.json<unknown>().catch(() => undefined);
-        if (body === undefined) return badRequest(c, 'Invalid JSON body');
-        if (typeof body !== 'object' || body === null || Array.isArray(body)) {
-            return badRequest(c, 'The request body must be a JSON object');
-        }
-        const types = bodyTypes(body as Record<string, unknown>);
+        const body = await readJsonObject(c);
+        if (body instanceof Response) return body;
+        const types = bodyTypes(body);
         if (types === null) {
             const refused = ValidationError.fromFieldErrors({
                 type: ['Expected an entry type id, or a non-empty list of them'],
@@ -85,7 +83,7 @@ function mountCrossType(
 
         // Each type in turn, so a type the caller has no grant for answers 403
         // before a later one's 404.
-        const full = (body as Record<string, unknown>)['full'] === true;
+        const full = body['full'] === true;
         for (const type of types) {
             const denied = routeAccess(
                 c,

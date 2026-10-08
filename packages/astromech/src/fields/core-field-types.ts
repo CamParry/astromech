@@ -43,6 +43,7 @@ import {
     tree,
     url,
 } from '@/fields/builder';
+import { isRecord } from '@/utilities/is-record';
 import {
     coerceDate,
     coerceEmail,
@@ -78,10 +79,6 @@ import { coerceRichText, validateRichText } from './rich-text/validate';
  */
 const MAX_TREE_DEPTH = 50;
 
-function isPlainObject(value: unknown): value is Record<string, unknown> {
-    return typeof value === 'object' && value !== null && !Array.isArray(value);
-}
-
 /** Shallow-clone an item and guarantee it carries a stable `_id`. */
 function cloneWithId(item: Record<string, unknown>): {
     item: Record<string, unknown>;
@@ -115,7 +112,7 @@ function arrayChildren(
     for (const raw of value) {
         // A non-object item can hold no fields; pass it through untouched rather
         // than rewriting it into `{ _id }` and losing whatever was there.
-        if (!isPlainObject(raw)) {
+        if (!isRecord(raw)) {
             next.push(raw);
             continue;
         }
@@ -151,7 +148,7 @@ function treeChildren(
     function walk(nodes: unknown[], depth: number): unknown[] {
         const out: unknown[] = [];
         for (const raw of nodes) {
-            if (!isPlainObject(raw)) {
+            if (!isRecord(raw)) {
                 out.push(raw);
                 continue;
             }
@@ -183,7 +180,7 @@ const validateBlockTypes: FieldValidator = async (ctx) => {
     const declared = new Set((ctx.field.blocks ?? []).map((block) => block.type));
     const unknownTypes: string[] = [];
     for (const item of ctx.value) {
-        if (!isPlainObject(item)) continue;
+        if (!isRecord(item)) continue;
         const type = item[RESERVED_KEY.type];
         const label = typeof type === 'string' ? type : String(type);
         if (!declared.has(label) && !unknownTypes.includes(label)) {
@@ -345,7 +342,7 @@ const dataFieldTypes: CoreDataFieldType[] = [
         layout: true,
         subFields: ownFields(false),
         children: (field, value) => {
-            const next = { ...(isPlainObject(value) ? value : {}) };
+            const next = { ...(isRecord(value) ? value : {}) };
             return {
                 next,
                 scopes: [
@@ -382,7 +379,7 @@ const dataFieldTypes: CoreDataFieldType[] = [
             Array.isArray(value)
                 ? value.filter(
                       (item) =>
-                          !isPlainObject(item) ||
+                          !isRecord(item) ||
                           field.blocks?.some(
                               (block) => block.type === item[RESERVED_KEY.type]
                           ) === true

@@ -135,3 +135,30 @@ describe('arguments from the query string', () => {
         expect(empty.data).toEqual([]);
     });
 });
+
+/** `POST /media/:id/versions/1/restore`, a route with no body key, with a raw body. */
+function restore(body: string): Promise<Response> | Response {
+    return mountRouter('/media', mediaRouter, roleWith(['*'])).request(
+        `/media/${id}/versions/1/restore`,
+        { method: 'POST', headers: { 'Content-Type': 'application/json' }, body }
+    );
+}
+
+describe('the request body', () => {
+    it('reads an empty body as no arguments', async () => {
+        const res = await restore('');
+        expect(res.status).toBe(404);
+    });
+
+    it('400s a JSON value other than an object where the body is the arguments', async () => {
+        const res = await restore('[1]');
+        expect(res.status).toBe(400);
+        const body = (await res.json()) as { error: { message: string } };
+        expect(body.error.message).toBe('The request body must be a JSON object');
+    });
+
+    it('passes any JSON value on under a body key, for the method to refuse', async () => {
+        const res = await put(allowed, '[1]');
+        expect(res.status).toBe(422);
+    });
+});

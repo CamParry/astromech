@@ -14,6 +14,7 @@ import { parseInstancePath } from '@/fields/field-path';
 import { collectRelationshipDeclarations, findReferences } from '@/fields/references';
 import { RESERVED_KEY } from '@/fields/reserved-keys';
 import { TARGET_KINDS } from '@/types/domain';
+import { isRecord } from '@/utilities/is-record';
 
 /**
  * Field values with dead relation ids removed, plus the drop count. `values` MUST
@@ -137,9 +138,4 @@ function findItem(container: unknown, id: string): Record<string, unknown> | und
 function withoutId(value: unknown, targetId: string): unknown {
     if (Array.isArray(value)) return value.filter((id) => id !== targetId);
     return value === targetId ? null : value;
-}
-
-/** A plain object — the shape both a container item and a field scope have. */
-function isRecord(value: unknown): value is Record<string, unknown> {
-    return typeof value === 'object' && value !== null && !Array.isArray(value);
 }
