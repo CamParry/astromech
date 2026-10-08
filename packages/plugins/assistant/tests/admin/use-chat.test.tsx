@@ -25,7 +25,10 @@ const { sessionsService } = vi.hoisted(() => ({
 
 vi.mock('astromech/ui/app', () => ({
     useAiContextItems: () => [],
-    useAstromechPlugin: () => ({ serviceKey: 'assistant', service: sessionsService }),
+    useAstromechPlugin: () => ({
+        service: sessionsService,
+        rawRouteUrl: (path: string) => `/cms/api/plugins/assistant${path}`,
+    }),
 }));
 
 // `act` only batches and flushes once React is told it is under test.

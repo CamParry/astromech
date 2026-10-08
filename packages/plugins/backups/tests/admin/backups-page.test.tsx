@@ -8,7 +8,7 @@
 import type { RenderAdminResult } from '../../../../admin/tests/_support/render-admin';
 import type { BackupRun, ListRunsResult } from '../../src/service/backups';
 import { screen, waitFor, within } from '@testing-library/react';
-import { afterEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { sessionQueryOptions } from '../../../../admin/src/context/auth';
 import { createAppQueryClient } from '../../../../admin/src/query-client';
 import { renderPluginPage } from '../../../../admin/tests/_support/render-admin';
@@ -29,6 +29,10 @@ vi.mock('astromech/fetch', async (importOriginal) => {
         ...real,
         astromechUntypedClient: { ...real.astromechUntypedClient, plugins: { backups } },
     };
+});
+
+beforeEach(() => {
+    vi.stubGlobal('__ASTROMECH_BASE_PATH__', '/cms');
 });
 
 afterEach(() => {

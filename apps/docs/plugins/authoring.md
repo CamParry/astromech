@@ -1314,6 +1314,18 @@ export const exportRoutes: PluginRawRoute[] = [
 Raw routes mount under the **service key**, alongside RPC, and their `access`
 resolves the same way, so a bare permission key is namespaced identically.
 
+An admin page reaches one through `rawRouteUrl` from `useAstromechPlugin()`,
+which takes the path as the route declares it, with its `:name` segments
+filled in, and returns the full URL under the site's `basePath`:
+
+```tsx
+const { rawRouteUrl } = useAstromechPlugin();
+
+<a href={rawRouteUrl(`/exports/${exportId}/download`)} download>
+    Download
+</a>;
+```
+
 A handler is a closure, like a hook or a cron handler, so a factory-form plugin
 builds its routes from its resolved options: `@astromech/backups` passes its
 `keep` option to `buildBackupRoutes(keep)`.

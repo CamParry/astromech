@@ -29,7 +29,7 @@ import React, { useState } from 'react';
 /**
  * The plugin's own JSON methods, as `useAstromechPlugin().service` exposes
  * them. Restore and download are not here — they stream, so they stay raw
- * routes and are called through `pluginFetch` / `downloadUrl` below.
+ * routes, reached through `rawRouteUrl`.
  */
 type BackupsService = {
     list: () => Promise<ListRunsResult>;
@@ -41,22 +41,6 @@ type ConfirmState =
     | { kind: 'restore'; run: BackupRun }
     | { kind: 'delete'; run: BackupRun }
     | null;
-
-declare const __ASTROMECH_BASE_PATH__: string;
-
-/** Base for the two raw (streaming) routes; everything else goes through `service`. */
-function apiBase(): string {
-    const base =
-        typeof __ASTROMECH_BASE_PATH__ !== 'undefined' ? __ASTROMECH_BASE_PATH__ : '/cms';
-    return `${base}/api`;
-}
-
-function rawFetch(plugin: string, path: string, init?: RequestInit): Promise<Response> {
-    return fetch(`${apiBase()}/plugins/${plugin}${path}`, {
-        credentials: 'include',
-        ...init,
-    });
-}
 
 /**
  * The error a failed restore throws. A body in the API's error shape (the 401
@@ -106,7 +90,7 @@ function formatDate(date: Date | null | undefined): string {
 }
 
 export default function BackupsPage(): React.ReactElement {
-    const { plugin, serviceKey, service, toast, t } = useAstromechPlugin();
+    const { plugin, service, rawRouteUrl, toast, t } = useAstromechPlugin();
     const backupsService = service as BackupsService;
     const queryClient = useQueryClient();
 
@@ -136,8 +120,9 @@ export default function BackupsPage(): React.ReactElement {
     // Restore streams a gunzipped dump into the driver, so it stays a raw route.
     const restoreMutation = useMutation({
         mutationFn: async (id: string) => {
-            const res = await rawFetch(serviceKey, `/runs/${id}/restore`, {
+            const res = await fetch(rawRouteUrl(`/runs/${id}/restore`), {
                 method: 'POST',
+                credentials: 'include',
             });
             if (!res.ok) throw await restoreError(res);
         },
@@ -237,11 +222,6 @@ export default function BackupsPage(): React.ReactElement {
               ? t('backups.restore.confirmLabel')
               : t('backups.delete.confirmLabel');
 
-    // Streams a gzipped artifact, so it stays a raw route and is linked directly.
-    function downloadUrl(run: BackupRun): string {
-        return `${apiBase()}/plugins/${serviceKey}/runs/${run.id}/download`;
-    }
-
     return (
         <div className="am-backups-page">
             {!capabilities.canDump && (
@@ -300,7 +280,9 @@ export default function BackupsPage(): React.ReactElement {
                                         {live && (
                                             <div className="am-backups-row-actions">
                                                 <a
-                                                    href={downloadUrl(run)}
+                                                    href={rawRouteUrl(
+                                                        `/runs/${run.id}/download`
+                                                    )}
                                                     download
                                                     className="am-btn am-btn-secondary am-btn-sm"
                                                 >

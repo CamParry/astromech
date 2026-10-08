@@ -1,7 +1,7 @@
 /**
  * Plugin UI context and `useAstromechPlugin()`. The `/plugin/$` catch-all
  * provides the plugin identity; the hook hands plugin components their
- * runtime toolbox (service, toast, modal, currentUser, navigate, t).
+ * runtime toolbox (service, rawRouteUrl, toast, confirm, currentUser, navigate, t).
  */
 
 import { useNavigate } from '@tanstack/react-router';
@@ -25,6 +25,8 @@ export type PluginUiIdentity = {
     permissionNamespace: string;
 };
 
+declare const __ASTROMECH_BASE_PATH__: string;
+
 const PluginUiContext = React.createContext<PluginUiIdentity | null>(null);
 
 /** Provides the identity of the plugin whose surface is rendering. */
@@ -40,7 +42,10 @@ export function PluginUiProvider({
     );
 }
 
-/** A plugin component's runtime toolbox: service, toast, modal, currentUser, navigate, t. */
+/**
+ * A plugin component's runtime toolbox: service, rawRouteUrl, toast, confirm,
+ * currentUser, navigate, t.
+ */
 export function useAstromechPlugin() {
     const identity = React.useContext(PluginUiContext);
     if (!identity) {
@@ -55,19 +60,25 @@ export function useAstromechPlugin() {
     const { user } = useAuth();
     const navigate = useNavigate();
     const { t } = useTranslation(identity.permissionNamespace);
+    const { serviceKey } = identity;
+    const rawRouteUrl = React.useCallback(
+        (path: string) => `${__ASTROMECH_BASE_PATH__}/api/plugins/${serviceKey}${path}`,
+        [serviceKey]
+    );
 
     return {
         plugin: identity.namespace,
+        /** The `astromechUntypedClient.plugins` key and `/api/plugins/` route segment. */
+        serviceKey,
+        service: (astromechUntypedClient.plugins as Record<string, unknown>)[serviceKey],
         /**
-         * The `/api/plugins/<serviceKey>` route segment, for building a raw
-         * (streaming) route URL by hand; RPC methods are already bound on `service`.
+         * The URL of one of this plugin's raw routes, for the requests `service`
+         * cannot make (streaming, binary): `path` as the route declares it, with
+         * its `:name` segments filled in, e.g. `rawRouteUrl('/runs/run_1/download')`.
          */
-        serviceKey: identity.serviceKey,
-        service: (astromechUntypedClient.plugins as Record<string, unknown>)[
-            identity.serviceKey
-        ],
+        rawRouteUrl,
         toast,
-        modal: confirm,
+        confirm,
         currentUser: user,
         navigate,
         t,

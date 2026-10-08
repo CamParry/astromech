@@ -48,18 +48,11 @@ type SessionsService = {
     clearSession: () => Promise<null>;
 };
 
-declare const __ASTROMECH_BASE_PATH__: string;
-
-/** Base for the raw (streaming) chat route; the site can move the mount. */
-function apiBase(): string {
-    const base =
-        typeof __ASTROMECH_BASE_PATH__ !== 'undefined' ? __ASTROMECH_BASE_PATH__ : '/cms';
-    return `${base}/api`;
-}
-
 /** Hold the transcript and drive one in-flight request against the chat route. */
 export function useChat(): UseChat {
-    const { serviceKey, service } = useAstromechPlugin();
+    const { service, rawRouteUrl } = useAstromechPlugin();
+    // The chat streams, so it is a raw route rather than a `service` method.
+    const chatUrl = rawRouteUrl('/chat');
     const [entries, setEntries] = useState<ChatEntry[]>([]);
     const [tail, setTail] = useState('');
     const [isStreaming, setIsStreaming] = useState(false);
@@ -131,7 +124,7 @@ export function useChat(): UseChat {
             setIsStreaming(true);
 
             void runStream({
-                url: `${apiBase()}/plugins/${serviceKey}/chat`,
+                url: chatUrl,
                 body: {
                     messages: toMessages(next),
                     aiContext: [...aiContext],
@@ -170,7 +163,7 @@ export function useChat(): UseChat {
                 setTail('');
             });
         },
-        [aiContext, serviceKey, updateEntries, updatePending]
+        [aiContext, chatUrl, updateEntries, updatePending]
     );
 
     const send = useCallback(
