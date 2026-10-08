@@ -15,12 +15,12 @@ import {
 } from '@tests/harness';
 import { beforeEach, describe, expect, it } from 'vitest';
 import { createAppContext } from '@/app-context/app-context';
+import { RESOURCE_TYPES } from '@/content/resource-types';
 import { getDb } from '@/database/registry';
 import { createRepository } from '@/database/repository/create-repository';
 import { entriesDefinition } from '@/entries/service';
 import { globalsDefinition } from '@/globals/service';
 import { mediaDefinition } from '@/media/service';
-import { RESOURCE_TYPES } from '@/types/domain';
 import { usersDefinition } from '@/users/service';
 import { userContentTable } from '@/users/tables';
 

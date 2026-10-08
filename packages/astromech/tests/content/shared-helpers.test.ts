@@ -13,6 +13,7 @@ import { currentServices } from '@/app-context/services';
 import { pruneDanglingRelations } from '@/content/dangling-relations';
 import { mergeContentReferences } from '@/content/relationships';
 import { relationshipRepository } from '@/content/repository/relationships';
+import { RESOURCE_TYPES } from '@/content/resource-types';
 import { RESOURCE_CONFIG } from '@/content/resources';
 import { listUsage } from '@/content/usage';
 import { getDb } from '@/database/registry';
@@ -20,7 +21,6 @@ import { entrySnapshotSchema } from '@/entries/schema';
 import { syncGlobalRelationships } from '@/globals/relationships';
 import { globalSnapshotSchema } from '@/globals/schema';
 import { mediaSnapshotSchema } from '@/media/schema';
-import { RESOURCE_TYPES } from '@/types/domain';
 import { userSnapshotSchema } from '@/users/schema';
 
 const entriesService = currentServices.entries;

@@ -162,11 +162,18 @@ the repository copies.
       Move each next to its owner, keep `types/index.ts` as the public list.
       Start with the driver contracts. Admin-only render types in
       `types/resolved.ts` move to `packages/admin`.
-- [ ] `RESOURCE_TYPES` sits in `types/domain.ts`, apart from `RESOURCE_CONFIG`
+- [x] `RESOURCE_TYPES` sits in `types/domain.ts`, apart from `RESOURCE_CONFIG`
       in `content/resources.ts`. Moving it there leaves it undefined at load
       time: `content/schema.ts` builds `usageSchema` from it, and
       `content/resources.ts` imports the resource schemas, which import
-      `content/schema.ts`. Break that cycle first.
+      `content/schema.ts`. Break that cycle first. `RESOURCE_TYPES` and
+      `TARGET_KINDS` are now in `content/resource-types.ts`, a leaf beside
+      `resources.ts` that imports nothing; `types/domain.ts` keeps the
+      `ResourceType` and `TargetKind` types, derived type-only. Not
+      `resources.ts` itself: `content/schema.ts` and `database/tables.ts`
+      build enums from the constants at load time, and importing
+      `resources.ts` would load every resource's schema into both, which is
+      the cycle.
 - [x] `utilities/` is a mixed bag: `ai-context.ts` to `ai/`, `locale.ts` to its
       one consumer. `permission-match.ts` is in `planned/permissions.md`. The
       AI context message is `ai/context-message.ts`. `locale.ts` stays: ten
