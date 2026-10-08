@@ -2,7 +2,8 @@
  * `entryMutations(type)` run through `useAdminMutation`: each write invalidates
  * the type's keys and toasts its result, bulk restore is one request and reads
  * nothing more, a single restore names every slug that changed in any locale,
- * and a staged change that already exists resolves as `null`.
+ * a staged change that already exists resolves as `null`, and a create counts
+ * on the dashboard while an update writes the saved row to its own key.
  *
  * @vitest-environment happy-dom
  */
@@ -15,7 +16,9 @@ import { useAdminMutation } from '@/admin/hooks/use-admin-mutation';
 import { queryKeys } from '@/admin/hooks/use-query-keys';
 import { createTestQueryClient, renderAdminHook } from '../_support/render-admin';
 
-const { restore, publish, createStaged, query } = vi.hoisted(() => ({
+const { create, update, restore, publish, createStaged, query } = vi.hoisted(() => ({
+    create: vi.fn(),
+    update: vi.fn(),
     restore: vi.fn(),
     publish: vi.fn(),
     createStaged: vi.fn(),
@@ -24,10 +27,14 @@ const { restore, publish, createStaged, query } = vi.hoisted(() => ({
 
 vi.mock('astromech/fetch', async (importOriginal) => ({
     ...(await importOriginal<object>()),
-    astromechUntypedClient: { entries: { restore, publish, createStaged, query } },
+    astromechUntypedClient: {
+        entries: { create, update, restore, publish, createStaged, query },
+    },
 }));
 
 afterEach(() => {
+    create.mockReset();
+    update.mockReset();
     restore.mockReset();
     publish.mockReset();
     createStaged.mockReset();
@@ -52,7 +59,7 @@ function mount<T>(hook: () => T) {
     const queryClient = createTestQueryClient();
     const invalidate = vi.spyOn(queryClient, 'invalidateQueries');
     const { result } = renderAdminHook(hook, { queryClient });
-    return { result, invalidate };
+    return { result, invalidate, queryClient };
 }
 
 describe('entryMutations', () => {
@@ -153,4 +160,57 @@ describe('entryMutations', () => {
         await waitFor(() => expect(onSuccess).toHaveBeenCalled());
         expect(onSuccess.mock.calls[0]?.[0]).toBeNull();
     });
+
+    it('creates an entry, toasts it and refreshes the type and the dashboard counts', async () => {
+        create.mockResolvedValue({ id: 'p1', locale: 'en' });
+        const { result, invalidate } = mount(() =>
+            useAdminMutation(entryMutations('post', 'Post').create)
+        );
+
+        result.current.mutate({ title: 'Hello', fields: {} });
+
+        expect(await screen.findByText('Post created.')).toBeTruthy();
+        expect(create).toHaveBeenCalledWith({
+            type: 'post',
+            data: { title: 'Hello', fields: {} },
+        });
+        expect(invalidate).toHaveBeenCalledWith({
+            queryKey: queryKeys.entries.all('post'),
+        });
+        expect(invalidate).toHaveBeenCalledWith({
+            queryKey: queryKeys.entries.counts(),
+        });
+    });
+
+    it.each([
+        [false, queryKeys.entries.get('post', 'p1', 'en')],
+        [true, queryKeys.entries.staged('post', 'p1', 'en')],
+    ])(
+        'writes the saved row to its own key before refreshing the type (staged: %s)',
+        async (staged, key) => {
+            const saved = { id: 'p1', locale: 'en', title: 'Saved' };
+            update.mockResolvedValue(saved);
+            const { result, invalidate, queryClient } = mount(() =>
+                useAdminMutation(entryMutations('post', 'Post').update)
+            );
+            // The row is in the cache by the time the type's keys go stale.
+            let seeded: unknown;
+            invalidate.mockImplementation(() => {
+                seeded ??= queryClient.getQueryData(key);
+                return Promise.resolve();
+            });
+
+            result.current.mutate({ id: 'p1', locale: 'en', staged, data: {} });
+
+            expect(await screen.findByText('Post updated.')).toBeTruthy();
+            expect(update).toHaveBeenCalledWith({
+                type: 'post',
+                id: 'p1',
+                locale: 'en',
+                staged,
+                data: {},
+            });
+            expect(seeded).toEqual(saved);
+        }
+    );
 });

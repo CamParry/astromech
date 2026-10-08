@@ -5,9 +5,7 @@
 
 import type { UseAdminEntryTypeResult } from '../../hooks/use-admin-entry-type';
 import type { Entry, EntryUpdateData } from 'astromech';
-import { useQueryClient } from '@tanstack/react-query';
 import { useNavigate } from '@tanstack/react-router';
-import { astromechUntypedClient } from 'astromech/fetch';
 import { defaultContentLocale } from 'astromech/shared';
 import React, { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -16,7 +14,6 @@ import { entryMutations } from '../../hooks/entries';
 import { useAdminEntryType } from '../../hooks/use-admin-entry-type';
 import { useAdminMutation } from '../../hooks/use-admin-mutation';
 import { useEntryForm } from '../../hooks/use-entry-form';
-import { queryKeys } from '../../hooks/use-query-keys';
 import { LabelNamespaceProvider } from '../../i18n/label-namespace';
 import { resolveForm } from '../../rendering/resolve';
 import { entryEditPath, entryTypeBasePath } from '../../utilities/entry-admin-path';
@@ -73,7 +70,6 @@ function EntryNewBody({
     const navigate = useNavigate();
     const { toast } = useToast();
     const { t } = useTranslation();
-    const queryClient = useQueryClient();
 
     const hasI18n = config.capabilities.translatable;
     const isNonDefaultLocale =
@@ -88,8 +84,20 @@ function EntryNewBody({
     // The two columns together are the full field tree the client validates.
     const fieldDefinitions = React.useMemo(() => [...main, ...sidebar], [main, sidebar]);
 
-    const createTranslation = useAdminMutation(entryMutations(type).createTranslation, {
-        onSuccess: (entry) => handleCreated(entry),
+    const mutations = entryMutations(type, config.single);
+    // The form reports a failed save, a 422 onto its fields.
+    const create = useAdminMutation(mutations.create, { toastError: false });
+    // `createTranslation` toasts nothing of its own, since the locale switcher
+    // opens the new locale silently; here it creates, so the page says so.
+    const addLocale = useAdminMutation(mutations.createTranslation, {
+        toastError: false,
+        onSuccess: () => toastCreated(),
+    });
+    const createTranslation = useAdminMutation(mutations.createTranslation, {
+        onSuccess: (entry) => {
+            toastCreated();
+            openEntry(entry);
+        },
     });
 
     const entryForm = useEntryForm({
@@ -100,18 +108,18 @@ function EntryNewBody({
         hasStatuses,
         saveFn: (payload) => writeEntry(payload),
         publishFn: (payload) => writeEntry(payload),
-        onSuccess: (entry) => {
-            void queryClient.invalidateQueries({ queryKey: queryKeys.entries.all(type) });
-            handleCreated(entry);
-        },
+        onSuccess: (entry) => openEntry(entry),
     });
     const { form, mutation, handleSave, handlePublish } = entryForm;
 
-    function handleCreated(entry: Entry): void {
+    function toastCreated(): void {
         toast({
             message: t('entries.created', { name: config.single }),
             variant: 'success',
         });
+    }
+
+    function openEntry(entry: Entry): void {
         void navigate({
             to: entryEditPath(basePath, entry.id, { locale: entry.locale }),
         });
@@ -125,16 +133,15 @@ function EntryNewBody({
     function writeEntry(payload: EntryUpdateData): Promise<Entry> {
         if (chosenEntryId !== null) {
             const { status, ...rest } = payload;
-            return astromechUntypedClient.entries.update({
-                type,
+            return addLocale.mutateAsync({
                 id: chosenEntryId,
                 locale: requestedLocale,
                 data: status === 'unpublished' ? rest : payload,
             });
         }
-        return astromechUntypedClient.entries.create({
-            type,
-            data: { ...payload, ...(hasI18n ? { locale: requestedLocale } : {}) },
+        return create.mutateAsync({
+            ...payload,
+            ...(hasI18n ? { locale: requestedLocale } : {}),
         });
     }
 

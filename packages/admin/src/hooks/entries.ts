@@ -5,7 +5,12 @@
  */
 
 import type { UseMutationResult } from '@tanstack/react-query';
-import type { Entry, EntryQueryParams } from 'astromech';
+import type {
+    Entry,
+    EntryCreateData,
+    EntryQueryParams,
+    EntryUpdateData,
+} from 'astromech';
 import { mutationOptions, queryOptions, useQuery } from '@tanstack/react-query';
 import { AstromechApiError, astromechUntypedClient } from 'astromech/fetch';
 import { useTranslation } from 'react-i18next';
@@ -102,6 +107,48 @@ export function entryMutations(type: string, name: string = type) {
     const invalidates = [all, queryKeys.entries.counts()];
     const messageValues = { name };
     return {
+        create: mutationOptions({
+            mutationKey: [...all, 'create'],
+            mutationFn: (data: EntryCreateData) => entries.create({ type, data }),
+            meta: {
+                invalidates,
+                successMessage: 'entries.created',
+                errorMessage: 'entries.createFailed',
+                messageValues,
+            },
+        }),
+        /**
+         * Save one locale, or its staged change when `staged` is true. The
+         * saved row is written to its key before the invalidation, so a form
+         * that resets to it never re-renders from the stale cached row.
+         */
+        update: mutationOptions({
+            mutationKey: [...all, 'update'],
+            mutationFn: async (
+                {
+                    id,
+                    locale,
+                    staged,
+                    data,
+                }: EntryLocale & { staged: boolean; data: EntryUpdateData },
+                { client }
+            ) => {
+                const saved = await entries.update({ type, id, locale, staged, data });
+                client.setQueryData(
+                    staged
+                        ? queryKeys.entries.staged(type, id, locale)
+                        : queryKeys.entries.get(type, id, locale),
+                    saved
+                );
+                return saved;
+            },
+            meta: {
+                invalidates,
+                successMessage: 'entries.updated',
+                errorMessage: 'entries.updateFailed',
+                messageValues,
+            },
+        }),
         trash: mutationOptions({
             mutationKey: [...all, 'trash'],
             mutationFn: (id: string) => entries.trash({ type, id }),
@@ -192,12 +239,16 @@ export function entryMutations(type: string, name: string = type) {
         /**
          * Add a locale to an entry. `update` on a locale with no content row
          * creates it from the default locale's shared fields, so an empty
-         * patch is the whole request.
+         * patch is the whole request; `data` writes the new row's own values.
          */
         createTranslation: mutationOptions({
             mutationKey: [...all, 'createTranslation'],
-            mutationFn: ({ id, locale }: EntryLocale) =>
-                entries.update({ type, id, locale, data: {} }),
+            mutationFn: ({
+                id,
+                locale,
+                data = {},
+            }: EntryLocale & { data?: EntryUpdateData }) =>
+                entries.update({ type, id, locale, data }),
             meta: { invalidates, errorMessage: 'translations.createFailed' },
         }),
         /**

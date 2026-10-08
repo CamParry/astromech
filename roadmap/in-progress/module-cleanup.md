@@ -117,16 +117,17 @@ the repository copies.
       (`errors/validation.ts`, `services/parse-method-input.ts`).
       `parseMethodInput` now calls `parseInput`, keeping only its own rule
       that no argument is the empty object.
-- [ ] **Admin: the media page bypasses `<DataList>`**, hand-rolling URL state,
+- [x] **Admin: the media page bypasses `<DataList>`**, hand-rolling URL state,
       selection, bulk actions and the table. Entry create and entry/global update
       bypass the mutation table. The list-to-query mapping is written four times;
-      have `useListState` return it. The mapping is done: `useListState` returns
-      `queryParams`, which the users, admin resource and entries lists pass on,
-      and the media picker's `useMediaBrowser` builds its params with the same
-      `listQueryParams`. The media page is done too: `MediaListPage` is a
+      have `useListState` return it. All three parts are done: `useListState`
+      returns `queryParams`, which the users, admin resource and entries lists
+      and the media picker's `useMediaBrowser` share; `MediaListPage` is a
       `<DataList>` over `useListState`, its grid a `renderBody` that `DataList`
-      now hands the selection, and the URL's `sort` + `dir` became
-      `sort=key:dir`. The mutation table part remains.
+      hands the selection, with `sort=key:dir` in the URL; and entry create and
+      entry and global update are `create` and `update` rows in `entryMutations`
+      and `globalMutations`, whose `update` writes the saved row to its key
+      before the invalidation. A create now also refreshes the dashboard counts.
 - [ ] **Admin: three permission-denied behaviours** (redirect in an effect, toast
       then redirect, banner) and none on the media page or entries list. One
       guard.
