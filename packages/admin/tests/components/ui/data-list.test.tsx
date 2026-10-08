@@ -2,7 +2,8 @@
  * @vitest-environment happy-dom
  *
  * `DataList` over flat rows and `useListState`: it renders the rows, writes a
- * sort and a search to the URL and returns to the first page, links each row
+ * sort and a search to the URL and returns to the first page, waits for a pause
+ * in typing before it searches, follows a search changed in the URL, links each row
  * (leaving a click on a control in it to the control), confirms a destructive
  * bulk action before running it, hands a custom body the selection, and shows
  * the empty, loading and error states.
@@ -13,9 +14,9 @@ import type {
     DataListColumn,
     DataListProps,
 } from '@/admin/components/ui/data-list';
-import { fireEvent, screen, waitFor, within } from '@testing-library/react';
+import { act, fireEvent, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { describe, expect, it, vi } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import { DataList } from '@/admin/components/ui/data-list';
 import { useListState, validateListSearch } from '@/admin/components/ui/use-list-state';
 import { renderAdmin } from '../../_support/render-admin';
@@ -40,6 +41,7 @@ type ListOptions = {
     isError?: boolean;
     bulkActions?: DataListBulkAction[];
     renderBody?: DataListProps<Redirect>['renderBody'];
+    onSearch?: (value: string) => void;
 };
 
 /** A redirects list over `useListState`, as a plugin page would write it. */
@@ -50,6 +52,7 @@ function RedirectsList({
     isError = false,
     bulkActions,
     renderBody,
+    onSearch,
 }: ListOptions) {
     const list = useListState();
     return (
@@ -59,7 +62,10 @@ function RedirectsList({
             isLoading={isLoading}
             isError={isError}
             search={list.q}
-            onSearch={list.setQuery}
+            onSearch={(value) => {
+                onSearch?.(value);
+                list.setQuery(value);
+            }}
             sort={list.sort}
             onSort={list.setSort}
             page={list.page}
@@ -120,6 +126,96 @@ describe('DataList', () => {
         await waitFor(() =>
             expect(view.search()).toEqual({ q: 'old', sort: 'from:desc' })
         );
+    });
+
+    describe('search', () => {
+        afterEach(() => {
+            vi.useRealTimers();
+        });
+
+        /** Fake only the timer the search waits on, leaving React's and the router's alone. */
+        function fakeTimers(): void {
+            vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout'] });
+        }
+
+        it('searches once typing pauses, showing each keystroke before then', async () => {
+            const onSearch = vi.fn();
+            const view = mountList('/redirects', { onSearch });
+            await screen.findByText('/old');
+            const input = screen.getByRole<HTMLInputElement>('searchbox');
+            fakeTimers();
+
+            for (const value of ['o', 'ol', 'old']) {
+                fireEvent.change(input, { target: { value } });
+                act(() => vi.advanceTimersByTime(100));
+            }
+
+            expect(input.value).toBe('old');
+            expect(onSearch).not.toHaveBeenCalled();
+            expect(view.search()).toEqual({});
+
+            await act(() => vi.advanceTimersByTimeAsync(250));
+
+            expect(onSearch).toHaveBeenCalledOnce();
+            expect(onSearch).toHaveBeenCalledWith('old');
+            expect(view.search()).toEqual({ q: 'old' });
+        });
+
+        it('keeps a keystroke that lands while a search is on its way to the URL', async () => {
+            const view = mountList('/redirects');
+            await screen.findByText('/old');
+            const input = screen.getByRole<HTMLInputElement>('searchbox');
+            fakeTimers();
+
+            fireEvent.change(input, { target: { value: 'ol' } });
+            act(() => vi.advanceTimersByTime(250));
+            // The next keystroke lands before the list renders `q=ol`.
+            fireEvent.change(input, { target: { value: 'old' } });
+            await act(() => vi.advanceTimersByTimeAsync(0));
+
+            expect(view.search()).toEqual({ q: 'ol' });
+            expect(input.value).toBe('old');
+
+            await act(() => vi.advanceTimersByTimeAsync(250));
+            expect(view.search()).toEqual({ q: 'old' });
+            expect(input.value).toBe('old');
+        });
+
+        it('clears the search after the same pause', async () => {
+            const onSearch = vi.fn();
+            const view = mountList('/redirects?q=old', { onSearch });
+            await screen.findByText('/old');
+            const input = screen.getByRole<HTMLInputElement>('searchbox');
+            fakeTimers();
+
+            fireEvent.change(input, { target: { value: '' } });
+            expect(input.value).toBe('');
+            expect(onSearch).not.toHaveBeenCalled();
+
+            await act(() => vi.advanceTimersByTimeAsync(250));
+
+            expect(onSearch).toHaveBeenCalledWith('');
+            expect(view.search()).toEqual({});
+        });
+
+        it('shows a search changed in the URL, dropping a pending one', async () => {
+            const onSearch = vi.fn();
+            const view = mountList('/redirects?q=old', { onSearch });
+            await screen.findByText('/old');
+            const input = screen.getByRole<HTMLInputElement>('searchbox');
+            expect(input.value).toBe('old');
+
+            fakeTimers();
+            fireEvent.change(input, { target: { value: 'olde' } });
+            await view.navigate('/redirects?q=gone');
+
+            expect(input.value).toBe('gone');
+            await act(() => vi.advanceTimersByTimeAsync(250));
+
+            expect(onSearch).not.toHaveBeenCalled();
+            expect(view.search()).toEqual({ q: 'gone' });
+            expect(input.value).toBe('gone');
+        });
     });
 
     it('links the row, and opens it on a click anywhere in the row', async () => {

@@ -9,8 +9,9 @@ import type { SortDirection } from './table';
 import type { ListSort } from './use-list-state';
 import type { SelectionResult } from './use-selection';
 import { MoreHorizontalIcon } from 'lucide-react';
-import React from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
+import { useDebounce } from '../../hooks/use-debounce';
 import { Checkbox } from './checkbox';
 import { useConfirm } from './confirm';
 import { useContextMenu } from './context-menu';
@@ -22,6 +23,9 @@ import { Spinner } from './spinner';
 import { Table } from './table';
 import { Toolbar, ToolbarEnd, ToolbarStart } from './toolbar';
 import { useSelection } from './use-selection';
+
+/** How long the search waits after the last keystroke before it applies. */
+const SEARCH_DEBOUNCE_MS = 250;
 
 /** One column of a `DataList`. */
 export type DataListColumn<Row> = {
@@ -54,6 +58,7 @@ export type DataListProps<Row extends { id: string }> = {
     isError?: boolean;
     /** The search text; the search input shows when `onSearch` is given. */
     search?: string;
+    /** Runs once typing pauses, not on every keystroke. */
     onSearch?: (value: string) => void;
     searchPlaceholder?: string;
     sort?: ListSort | null;
@@ -183,10 +188,10 @@ export function DataList<Row extends { id: string }>({
                             />
                         )}
                         {onSearch !== undefined && (
-                            <SearchInput
-                                placeholder={searchPlaceholder ?? t('common.search')}
+                            <DataListSearch
                                 value={search ?? ''}
-                                onChange={(e) => onSearch(e.target.value)}
+                                onSearch={onSearch}
+                                placeholder={searchPlaceholder ?? t('common.search')}
                             />
                         )}
                         {filters}
@@ -281,6 +286,52 @@ export function DataList<Row extends { id: string }>({
                 />
             )}
         </>
+    );
+}
+
+type DataListSearchProps = {
+    value: string;
+    onSearch: (value: string) => void;
+    placeholder: string;
+};
+
+/**
+ * The search input. It shows each keystroke at once and calls `onSearch` once
+ * typing pauses, so a search sends one query rather than one per keystroke.
+ * Clearing the box waits for the same pause. A new `value` from outside, such
+ * as the back button or a link, replaces the text.
+ */
+function DataListSearch({
+    value,
+    onSearch,
+    placeholder,
+}: DataListSearchProps): React.ReactElement {
+    const [text, setText] = useState(value);
+    const debounced = useDebounce(text, SEARCH_DEBOUNCE_MS);
+    // The search last applied, from either side, so the input can tell its
+    // own search coming back through `value` from a change made elsewhere.
+    const applied = useRef(value);
+
+    useEffect(() => {
+        // `debounced` lags `text` for a pause after a change from outside, so
+        // only a settled value applies.
+        if (debounced !== text || debounced === applied.current) return;
+        applied.current = debounced;
+        onSearch(debounced);
+    }, [debounced, text, onSearch]);
+
+    useEffect(() => {
+        if (value === applied.current) return;
+        applied.current = value;
+        setText(value);
+    }, [value]);
+
+    return (
+        <SearchInput
+            placeholder={placeholder}
+            value={text}
+            onChange={(e) => setText(e.target.value)}
+        />
     );
 }
 
