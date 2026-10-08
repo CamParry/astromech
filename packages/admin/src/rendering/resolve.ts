@@ -1,4 +1,5 @@
-import type { AdminEntryType, ResolvedForm, ResolvedTable, TableColumn } from 'astromech';
+import type { ResolvedForm, ResolvedTable, TableColumn } from './types';
+import type { AdminEntryType } from 'astromech';
 import { flattenEntryFields } from 'astromech/shared';
 import { defaultCellKind } from './cell-kind-map';
 

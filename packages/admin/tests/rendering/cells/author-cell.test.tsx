@@ -5,7 +5,8 @@
  * otherwise, so a raw id never reaches the table.
  */
 
-import type { CellRenderContext, Entry, TableColumn } from '@/types/index';
+import type { CellRenderContext, TableColumn } from '@/admin/rendering/types';
+import type { Entry } from '@/types/index';
 import { render } from '@testing-library/react';
 import { describe, expect, it } from 'vitest';
 import { AuthorCell } from '@/admin/rendering/cells/author-cell';

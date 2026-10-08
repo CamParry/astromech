@@ -14,13 +14,27 @@ import type {
 } from './fields';
 import type { PluginDefinition, PluginNavItem } from './plugins';
 import type { SortOption } from './query';
-import type { CellKind } from './resolved';
 import type { SchedulerDriver } from '@/cron/driver';
 import type { DatabaseDriver } from '@/database/driver';
 import type { EmailDriver } from '@/email/driver';
 import type { ImageConfig } from '@/media/serving/image/driver';
 import type { CaptchaConfig, CaptchaWidget } from '@/security/captcha/types';
 import type { StorageDriver } from '@/storage/driver';
+
+/** How the admin's entries table displays a column's value. */
+export type CellKind =
+    | 'text'
+    | 'title'
+    | 'badge'
+    | 'status'
+    | 'slug'
+    | 'date'
+    | 'boolean'
+    | 'number'
+    | 'relationship'
+    | 'locale'
+    | 'translations'
+    | 'author';
 
 export type AdminColumn = {
     field: string;

@@ -3,8 +3,9 @@
  * the table row both offer in their menu and on right-click.
  */
 
+import type { CellRenderContext, TableColumn } from '../../rendering/types';
 import type { DropdownItem } from '../ui/dropdown';
-import type { CellRenderContext, Entry, TableColumn } from 'astromech';
+import type { Entry } from 'astromech';
 import { Copy, MoreHorizontalIcon, Pencil, RotateCcw, Trash2 } from 'lucide-react';
 import React from 'react';
 import { useTranslation } from 'react-i18next';

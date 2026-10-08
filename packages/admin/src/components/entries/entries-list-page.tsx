@@ -5,9 +5,10 @@
  */
 
 import type { UseAdminEntryTypeResult } from '../../hooks/use-admin-entry-type';
+import type { CellRenderContext, TableColumn } from '../../rendering/types';
 import type { DataListBulkAction, DataListColumn } from '../ui/data-list';
 import type { RowActionsProps } from './entry-list-items';
-import type { CellRenderContext, Entry, TableColumn } from 'astromech';
+import type { Entry } from 'astromech';
 import { useNavigate } from '@tanstack/react-router';
 import { Check, PlusIcon, RotateCcw, Trash2 } from 'lucide-react';
 import React, { useCallback, useState } from 'react';
