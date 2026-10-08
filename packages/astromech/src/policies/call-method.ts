@@ -3,18 +3,17 @@
  * method by its manifest id: find the method on a service handle, scoped to a
  * role or trusted, and call it with the caller's argument object.
  */
+import type { ServiceRecord } from '@/services/call-service-method';
 import type { AppContext, ManifestMethod, Services } from '@/types/index';
 import { createServices, currentServices } from '@/app-context/services';
 import { PermissionDeniedError } from '@/errors/permission';
+import { callServiceMethod } from '@/services/call-service-method';
 
 /**
  * Who a call acts for: a context, whose role the scoped handle checks, or a
  * trusted local caller, which acts as the current request or the system.
  */
 export type MethodCaller = { ctx: AppContext } | 'trusted';
-
-/** Anything callable through a string key. */
-type ServiceRecord = Record<string, unknown>;
 
 /** The handle keys that hold a content service. */
 type ContentModule = Exclude<keyof Services, 'plugins'>;
@@ -68,21 +67,16 @@ export function contentService(handle: Services, module: string): ServiceRecord 
     return handle[module as ContentModule];
 }
 
-/**
- * Call `service[key](args)`. Called with `service` as the receiver so a method
- * that reaches for a sibling through the object keeps working; a detached
- * function reference would pass today and break on the first one that doesn't.
- */
-async function callOn(
+/** Call `service[key](args)`, a method the manifest says `service` has. */
+function callOn(
     service: ServiceRecord | undefined,
     key: string,
     args: Record<string, unknown>
 ): Promise<unknown> {
-    const fn = service?.[key];
-    if (typeof fn !== 'function') {
-        throw new Error(
-            `Method "${key}" is in the manifest but absent from the service it names.`
-        );
-    }
-    return (fn as (input: unknown) => Promise<unknown>).call(service, args);
+    return callServiceMethod(
+        service,
+        key,
+        args,
+        `Method "${key}" is in the manifest but absent from the service it names.`
+    );
 }

@@ -17,6 +17,7 @@ import {
 } from '@/plugins/runtime/plugin-services';
 import { scopeMethods, scopePlugins } from '@/policies/scoped-services';
 import { securityDefinition } from '@/security/service';
+import { callServiceMethod } from '@/services/call-service-method';
 import { usersDefinition } from '@/users/service';
 
 /** How the handle `createServices` builds treats each method's `access`. */
@@ -114,12 +115,13 @@ export const currentServices: Services = {
 function forwardToCurrent<K extends ContentKey>(key: K): Services[K] {
     const forwarded: Record<string, (input: unknown) => Promise<unknown>> = {};
     for (const method of Object.keys(DEFINITIONS[key].catalogue)) {
-        forwarded[method] = async (input) => {
-            const service: Record<string, unknown> = createServices(
-                await currentAppContext()
-            )[key];
-            return (service[method] as (input: unknown) => unknown).call(service, input);
-        };
+        forwarded[method] = async (input) =>
+            callServiceMethod(
+                createServices(await currentAppContext())[key],
+                method,
+                input,
+                `Method "${method}" is absent from the ${key} service.`
+            );
     }
     return forwarded as Services[K];
 }

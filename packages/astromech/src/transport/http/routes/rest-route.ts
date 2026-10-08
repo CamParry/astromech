@@ -9,6 +9,7 @@ import { z } from '@hono/zod-openapi';
 import { createServices } from '@/app-context/services';
 import { ValidationError } from '@/errors/validation';
 import { contentService } from '@/policies/call-method';
+import { callServiceMethod } from '@/services/call-service-method';
 import { badRequest, fromZodError, notFound } from '@/transport/http/middleware/errors';
 import { domainName, methodName, pathParamNames } from './http-routes';
 import { accepts, inputShape } from './method-input';
@@ -203,19 +204,19 @@ async function readBody(
     return body as Record<string, unknown>;
 }
 
-/** Call `<domain>.<method>` on the handle scoped to the caller's role. */
+/**
+ * Call `<domain>.<method>` on the handle scoped to the caller's role. A
+ * session-scoped method takes its subject from the request scope rather than
+ * from its arguments; the scope is already established here.
+ */
 function invoke(c: Context<Env>, id: string, args: unknown): Promise<unknown> {
     const handle = createServices(c.var.ctx, { overrideAccess: false });
-    const service = contentService(handle, domainName(id));
-    const fn = service[methodName(id)];
-    if (typeof fn !== 'function') {
-        throw new Error(`Method '${id}' is absent from the scoped services handle.`);
-    }
-
-    // Called on the service, as `callMethod` does. A session-scoped method takes
-    // its subject from the request scope rather than from its arguments; the
-    // scope is already established here.
-    return Promise.resolve((fn as (args: unknown) => unknown).call(service, args));
+    return callServiceMethod(
+        contentService(handle, domainName(id)),
+        methodName(id),
+        args,
+        `Method '${id}' is absent from the scoped services handle.`
+    );
 }
 
 /** Wrap a result in the route's envelope. */

@@ -96,9 +96,11 @@ the repository copies.
       reaches `app-context.ts` through `plugins/runtime/plugin-services.ts` and
       `plugin-runtime.ts`, and `app-context.ts` reaches `services.ts` through
       `transport/tools/scoped-tools.ts` and `policies/call-method.ts`.
-- [ ] **Find-a-method-and-call-it exists three times**: `callOn`
+- [x] **Find-a-method-and-call-it exists three times**: `callOn`
       (`policies/call-method.ts`), `invoke` (`transport/http/routes/rest-route.ts`)
-      and `forwardToCurrent` (`app-context/services.ts`).
+      and `forwardToCurrent` (`app-context/services.ts`). All three call
+      `callServiceMethod` (`services/call-service-method.ts`), a leaf module
+      so no new import edge joins the cycle; each passes its own error message.
 - [ ] **JSON body reading and the plain-object check** repeat across
       `rest-route.ts`, `transport/http/routes/entries.ts`, the RPC transport, the
       query-string parser and the CLI `call` command.
