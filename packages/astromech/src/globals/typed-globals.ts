@@ -2,13 +2,13 @@
  * The typed-global narrowing surface — the generated global map the codegen
  * augments, and the literal-type overloads layered over it.
  *
- * Runtime is `GlobalsService` (services.ts). This file layers literal-key
- * overloads on top so a caller passing a string-literal `key` gets a narrowed
- * `TypedGlobal` result instead of the wide `Global`.
+ * Runtime is `GlobalsService` (`service-types.ts`). This file layers
+ * literal-key overloads on top so a caller passing a string-literal `key` gets
+ * a narrowed `TypedGlobal` result instead of the wide `Global`.
  */
 
-import type { Global, VersionMetadata } from './domain';
-import type { GlobalsService, GlobalUpdateData } from './services';
+import type { GlobalsService, GlobalUpdateData } from './service-types';
+import type { Global, VersionMetadata } from '@/types/domain';
 
 /**
  * Open interface augmented by generated types (`.astro/astromech.d.ts`). Each

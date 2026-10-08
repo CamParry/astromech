@@ -4,7 +4,7 @@
  * there is none, since a session-scoped verb has no subject without one.
  */
 
-import type { NotificationsService } from '@/types/index';
+import type { NotificationsService } from '@/notifications/service-types';
 import { makeUser } from '@tests/fixtures';
 import { createTestDb, createTestUser, setupTestConfig } from '@tests/harness';
 import { beforeEach, describe, expect, it } from 'vitest';

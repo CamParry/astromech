@@ -4,7 +4,7 @@
  * CRUD operations for CMS users.
  */
 import type { AuthVariables } from '@/transport/http/middleware/auth';
-import type { UserUpdateData } from '@/types/index';
+import type { UserUpdateData } from '@/users/service-types';
 import { OpenAPIHono } from '@hono/zod-openapi';
 import { permissionsFor } from '@/permissions/permissions-for';
 import {

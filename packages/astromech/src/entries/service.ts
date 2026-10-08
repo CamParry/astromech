@@ -5,7 +5,7 @@
  */
 
 import type { Capability } from './capabilities';
-import type { EntriesService } from '@/types/index';
+import type { EntriesService } from './service-types';
 import { defineService } from '@/services/define-service';
 import { assertTypeCapability } from './capabilities';
 import { typeOf } from './internal/access';

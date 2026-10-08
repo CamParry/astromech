@@ -1,5 +1,6 @@
 import type { EntryResource } from '../repository/types';
-import type { AppContext, ParsedEntryUpdateData } from '@/types/index';
+import type { ParsedEntryUpdateData } from '../service-types';
+import type { AppContext } from '@/types/index';
 import { z } from '@hono/zod-openapi';
 import { resolveEntryType } from '@/entries/entry-types';
 import { ResourceConflictError } from '@/errors/resource';

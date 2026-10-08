@@ -4,6 +4,8 @@
  * leaf — a caller like any other (`DECISIONS.md`).
  */
 
+import type { TypedEntriesService } from '@/entries/typed-entries';
+import type { TypedGlobalsService } from '@/globals/typed-globals';
 import type { StoragePutOptions } from '@/storage/driver';
 import type {
     AnyServiceMethod,
@@ -17,8 +19,6 @@ import type {
     PluginRawRoute,
     PluginServiceNamespace,
     ResolvedPluginIdentity,
-    TypedEntriesService,
-    TypedGlobalsService,
 } from '@/types/index';
 import { systemAppContext } from '@/app-context/app-context';
 import { createServices } from '@/app-context/services';

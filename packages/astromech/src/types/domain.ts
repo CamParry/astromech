@@ -5,7 +5,7 @@
 
 import type { meSchema } from '@/auth/schema';
 import type { RESOURCE_TYPES, TARGET_KINDS } from '@/content/resource-types';
-import type { versionMetadataSchema } from '@/content/schema';
+import type { usageSchema, versionMetadataSchema } from '@/content/schema';
 import type { entrySchema, entryVersionSchema } from '@/entries/schema';
 import type { globalSchema, globalVersionSchema } from '@/globals/schema';
 import type {
@@ -51,6 +51,12 @@ export type Global = z.output<typeof globalSchema>;
  * resource. Documented key by key on `versionMetadataSchema`.
  */
 export type VersionMetadata = z.output<typeof versionMetadataSchema>;
+
+/**
+ * One reference in the relationships index pointing at a resource: a row of a
+ * `usedBy` answer. Documented key by key on `usageSchema`.
+ */
+export type Usage = z.output<typeof usageSchema>;
 
 /**
  * One saved version of one locale of an entry: its metadata, and `snapshot`,

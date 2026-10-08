@@ -4,7 +4,8 @@
  * a session scope, and a sibling call through `ctx.users` acts as the same user.
  */
 
-import type { Role, UsersService } from '@/types/index';
+import type { Role } from '@/types/index';
+import type { UsersService } from '@/users/service-types';
 import { createTestDb, createTestUser, setupTestConfig } from '@tests/harness';
 import { beforeEach, describe, expect, it } from 'vitest';
 import { createAppContext } from '@/app-context/app-context';

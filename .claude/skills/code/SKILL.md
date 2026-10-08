@@ -97,8 +97,8 @@ is guessable from any other.
   object does, which is true of `duplicate`'s `overrides` and nowhere else.
 
 - **`defineService` returns a `ServiceDefinition`, not the service.**
-  `XService` in `types/services.ts` is the bound interface a caller holds, and
-  `definition.bind(ctx)` produces it. Only `createServices`
+  `XService` in the module's `service-types.ts` is the bound interface a
+  caller holds, and `definition.bind(ctx)` produces it. Only `createServices`
   (`app-context/services.ts`) binds; everything else reads its handle.
 
 - **A handler never re-parses its own `input`.** `defineService.bind()` has
@@ -108,7 +108,8 @@ is guessable from any other.
 - **A handler's parameter is inferred from `input`, never annotated.** The
   schema is the source of both input types: the handler receives `z.output`,
   and `z.input` is what a caller passes and what the domain input types in
-  `types/services.ts` are declared as. Annotate the return type only.
+  each module's `service-types.ts` are declared as. Annotate the return type
+  only.
 
 - **Every core method declares `output`.** `bind()` parses the handler's result
   through it, so a handler returns the resource (`UserResource`) and a caller

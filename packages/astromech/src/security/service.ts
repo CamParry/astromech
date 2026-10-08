@@ -3,7 +3,7 @@
  * `methods/**` into the `SecurityService` definition.
  */
 
-import type { SecurityService } from '@/types/index';
+import type { SecurityService } from './service-types';
 import { defineService } from '@/services/define-service';
 import { allowAddress } from './methods/allow';
 import { blockAddress } from './methods/block';

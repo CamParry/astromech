@@ -164,21 +164,18 @@ the repository copies.
       `scheduleEntrySchema` renamed `scheduleSchema` (globals now import it
       rather than alias it); `entryValidationMode` is `resolveValidationMode` in
       `content/validation-mode.ts`, since users and media reach it too.
-- [ ] `types/` holds contracts away from their owners (driver contracts, admin
+- [x] `types/` holds contracts away from their owners (driver contracts, admin
       resource types, service interfaces) and imports every module's schema.
       Move each next to its owner, keep `types/index.ts` as the public list.
       Start with the driver contracts. Admin-only render types move to
-      `packages/admin`. The driver contracts are done, each in a `driver.ts`
-      beside its module's `drivers/` directory. The render types are done:
-      the table, form and cell renderer types are in the admin's
-      `rendering/types.ts` and no longer exported from `astromech`, and
-      `CellKind` stays in core beside `AdminColumn` in `types/config.ts`,
-      which uses it. The admin resource types are done, in
-      `plugins/admin-resource.ts` beside `define-admin-resource.ts`; the other
-      admin types (`AdminPage`, `AdminConfig`, the slots) stay in
-      `types/config.ts`: pages and the admin config serve the site and
-      plugins alike, and the slots are a feature of their own. The service
-      interfaces remain.
+      `packages/admin`. Done in four steps: each driver contract is in a
+      `driver.ts` beside its module's `drivers/`, the render types are in the
+      admin's `rendering/types.ts`, the admin resource types are in
+      `plugins/admin-resource.ts`, and each service type and its input types
+      are in its module's `service-types.ts` (the typed facades in
+      `entries/typed-entries.ts` and `globals/typed-globals.ts`, `Usage` in
+      `types/domain.ts`), leaving `types/services.ts` with only the
+      `Services` and `TypedServices` aggregates.
 - [x] `RESOURCE_TYPES` sits in `types/domain.ts`, apart from `RESOURCE_CONFIG`
       in `content/resources.ts`. Moving it there leaves it undefined at load
       time: `content/schema.ts` builds `usageSchema` from it, and

@@ -1,4 +1,5 @@
-import type { Entry, EntryStatus, EntryUpdateData, JsonObject } from '@/types/index';
+import type { EntryUpdateData } from '@/entries/service-types';
+import type { Entry, EntryStatus, JsonObject } from '@/types/index';
 import { defineCommand } from 'citty';
 import {
     configArgs,

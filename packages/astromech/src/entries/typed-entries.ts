@@ -2,18 +2,18 @@
  * The typed-entry narrowing surface — the generated entry-type map and the
  * literal-type overloads layered over it.
  *
- * Runtime is `EntriesService` (services.ts). This file layers literal-type
- * overloads on top so that callers passing string-literal types get a narrowed
- * `TypedEntry` result instead of the wide `Entry`.
+ * Runtime is `EntriesService` (`service-types.ts`). This file layers
+ * literal-type overloads on top so that callers passing string-literal types
+ * get a narrowed `TypedEntry` result instead of the wide `Entry`.
  */
 
-import type { Entry, EntryStatus, JsonObject, VersionMetadata } from './domain';
-import type { EntryQueryParams, QueryResult } from './query';
 import type {
     EntriesService,
     EntryDuplicateOverrides,
     EntryUpdateData,
-} from './services';
+} from './service-types';
+import type { Entry, EntryStatus, JsonObject, VersionMetadata } from '@/types/domain';
+import type { EntryQueryParams, QueryResult } from '@/types/query';
 
 /**
  * Open interface augmented by generated types (`.astro/astromech.d.ts`). Each

@@ -4,17 +4,14 @@
  * resolves its route from `routes/http-routes.ts` and unwraps the envelope.
  */
 
+import type { EntriesService } from '@/entries/service-types';
+import type { GlobalsService } from '@/globals/service-types';
+import type { MediaService } from '@/media/service-types';
+import type { NotificationsService } from '@/notifications/service-types';
+import type { SecurityService } from '@/security/service-types';
 import type { MountedRoute, ResponseEnvelope } from '@/transport/http/routes/http-routes';
-import type {
-    EntriesService,
-    GlobalsService,
-    Media,
-    MediaService,
-    NotificationsService,
-    PluginServiceNamespace,
-    SecurityService,
-    UsersService,
-} from '@/types/index';
+import type { Media, PluginServiceNamespace } from '@/types/index';
+import type { UsersService } from '@/users/service-types';
 import { typedServices } from '@/services/typed-services';
 import { fillPathParams, HTTP_ROUTES } from '@/transport/http/routes/http-routes';
 import { toQueryParams } from '@/transport/http/routes/query-string';

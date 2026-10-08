@@ -8,15 +8,13 @@ import type { ResolvedConfig } from './config';
 import type { NotifyInput, Role, User } from './domain';
 import type { HookEvent, HookPayloadFor } from './hooks';
 import type { PluginDatabase, PluginEmail, PluginLogger, PluginMethods } from './plugins';
-import type {
-    EntriesService,
-    GlobalsService,
-    MediaService,
-    NotificationsService,
-    SecurityService,
-    UsersService,
-} from './services';
 import type { DB } from '@/database/types';
+import type { EntriesService } from '@/entries/service-types';
+import type { GlobalsService } from '@/globals/service-types';
+import type { MediaService } from '@/media/service-types';
+import type { NotificationsService } from '@/notifications/service-types';
+import type { SecurityService } from '@/security/service-types';
+import type { UsersService } from '@/users/service-types';
 import type { Kysely } from 'kysely';
 
 /** Everything a service method's handler runs with. */

@@ -3,13 +3,9 @@
  * permission, schemas and capability gating all vary with the entry type, so the
  * manifest generator and the REST mount call this factory once per type.
  */
+import type { EntriesService } from './service-types';
 import type { Capability } from '@/entries/capabilities';
-import type {
-    EntriesService,
-    Permission,
-    ResolvedEntryType,
-    ServiceMethodContract,
-} from '@/types/index';
+import type { Permission, ResolvedEntryType, ServiceMethodContract } from '@/types/index';
 import { z } from '@hono/zod-openapi';
 import { declaresCapability } from '@/content/capabilities';
 import { availableMethodPermissions } from '@/content/method-permissions';
