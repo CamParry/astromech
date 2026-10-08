@@ -384,6 +384,8 @@ use these components when a page of your own needs a list.
 
 - `useListState({ pageSize })` reads the search text (`q`), the sort and the
   page from the URL, and returns them with the `limit` and `offset` to fetch.
+  `queryParams` holds them as a `query` method takes them:
+  `{ search?, sort?, page, limit }`, with `sort` as `{ [column]: 'asc' | 'desc' }`.
   Its setters (`setQuery`, `setSort`, `setPage`, `setFilters`) write the URL,
   and a change to the search, the sort or a filter returns to the first page.
 - `<DataList>` renders the toolbar, the table, pagination, and the loading,
@@ -407,7 +409,12 @@ type Redirect = {
     enabled: boolean;
 };
 type RedirectsService = {
-    list(params: { search?: string; page: number; limit: number }): Promise<{
+    list(params: {
+        search?: string;
+        sort?: Record<string, 'asc' | 'desc'>;
+        page: number;
+        limit: number;
+    }): Promise<{
         data: Redirect[];
         pagination: { pages: number } | null;
     }>;
@@ -419,9 +426,8 @@ export default function RedirectsPage() {
     const redirects = service as RedirectsService;
     const list = useListState({ pageSize: 20 });
     const { data, isLoading, isError } = useQuery({
-        queryKey: ['redirects', list.q, list.page],
-        queryFn: () =>
-            redirects.list({ search: list.q, page: list.page, limit: list.limit }),
+        queryKey: ['redirects', list.queryParams],
+        queryFn: () => redirects.list(list.queryParams),
     });
 
     return (

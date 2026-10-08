@@ -2,7 +2,7 @@
  * @vitest-environment happy-dom
  *
  * `useListState` reads the search, sort and page from the URL, derives the
- * fetch's `limit` and `offset`, and writes changes back while keeping a
+ * fetch's `limit`, `offset` and query params, and writes changes back while keeping a
  * route's own params. `validateListSearch` drops params that do not parse.
  */
 
@@ -54,6 +54,12 @@ describe('useListState', () => {
             limit: 10,
             offset: 20,
         });
+        expect(state().queryParams).toEqual({
+            search: 'hello',
+            sort: { title: 'desc' },
+            page: 3,
+            limit: 10,
+        });
     });
 
     it('defaults to the first page with no search or sort', async () => {
@@ -61,6 +67,7 @@ describe('useListState', () => {
         await screen.findByText('ready');
 
         expect(state()).toMatchObject({ q: '', sort: null, page: 1, offset: 0 });
+        expect(state().queryParams).toEqual({ page: 1, limit: 10 });
     });
 
     it('keeps a route param and drops the page when the search changes', async () => {
