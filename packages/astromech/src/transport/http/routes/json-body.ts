@@ -33,3 +33,19 @@ export async function readJsonObject(
     }
     return body.value;
 }
+
+/** Whether the request body is empty or only whitespace. */
+export async function isEmptyBody(c: Context): Promise<boolean> {
+    return (await c.req.text()).trim() === '';
+}
+
+/**
+ * The request body as a method's argument object: no arguments (`{}`) for an
+ * empty body, else the body as a JSON object, or a 400 when it is not one.
+ */
+export async function readArguments(
+    c: Context
+): Promise<Record<string, unknown> | Response> {
+    if (await isEmptyBody(c)) return {};
+    return readJsonObject(c);
+}

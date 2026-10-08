@@ -12,7 +12,7 @@ import { contentService } from '@/policies/call-method';
 import { callServiceMethod } from '@/services/call-service-method';
 import { badRequest, fromZodError, notFound } from '@/transport/http/middleware/errors';
 import { domainName, methodName, pathParamNames } from './http-routes';
-import { readJsonBody, readJsonObject } from './json-body';
+import { isEmptyBody, readArguments, readJsonBody } from './json-body';
 import { accepts, inputShape } from './method-input';
 import { fromQueryParams } from './query-string';
 import { documentRoute } from './rest-route-document';
@@ -189,8 +189,8 @@ async function readBody(
     route: HttpRouteSpec
 ): Promise<Record<string, unknown> | Response> {
     if (route.verb === 'get' || route.verb === 'delete') return {};
-    if ((await c.req.text()).trim() === '') return {};
-    if (route.bodyKey === undefined) return readJsonObject(c);
+    if (route.bodyKey === undefined) return readArguments(c);
+    if (await isEmptyBody(c)) return {};
 
     const body = await readJsonBody(c);
     return body instanceof Response ? body : { [route.bodyKey]: body.value };

@@ -17,6 +17,7 @@ import {
 } from '@/plugins/runtime/plugin-runtime';
 import { optionalAuth } from '@/transport/http/middleware/auth';
 import { forbidden, notFound, unauthorized } from '@/transport/http/middleware/errors';
+import { readArguments } from '@/transport/http/routes/json-body';
 
 type PluginEnv = { Variables: AuthVariables };
 
@@ -81,7 +82,8 @@ export function createPluginsRouter(): Hono<PluginEnv> {
  * Call one plugin method as `c.var.ctx` and answer its raw result, the one
  * answer both `POST /plugins/:name/:method` and `POST /rpc/plugins.*` give.
  * Access is the scoped handle's: a refusal reaches `onError`, 401 without a
- * session and 403 with one. An unparseable body is no argument.
+ * session and 403 with one. An empty body is no arguments, and a body that is
+ * not a JSON object is 400, as on the REST routes.
  */
 export async function answerPluginMethod(
     c: Context<PluginEnv>,
@@ -95,8 +97,9 @@ export async function answerPluginMethod(
         return notFound(c, `Plugin method "${name}.${method}" not found`);
     }
 
-    const body: unknown = await c.req.json().catch(() => undefined);
-    const result = await call(body);
+    const args = await readArguments(c);
+    if (args instanceof Response) return args;
+    const result = await call(args);
     // Built directly: c.json's generic chokes on the recursive JsonValue type.
     return new Response(JSON.stringify(result ?? null), {
         headers: { 'Content-Type': 'application/json' },

@@ -39,6 +39,7 @@ describe('the redirects methods in the OpenAPI document', () => {
         });
         expect(Object.keys(create?.responses ?? {})).toEqual([
             '200',
+            '400',
             '401',
             '403',
             '422',
@@ -49,7 +50,12 @@ describe('the redirects methods in the OpenAPI document', () => {
     it('documents the public `lookup` with no 401 or 403', async () => {
         const { document } = await servedDocument([redirects()]);
         const lookup = document.paths['/plugins/redirects/lookup']?.['post'];
-        expect(Object.keys(lookup?.responses ?? {})).toEqual(['200', '422', '500']);
+        expect(Object.keys(lookup?.responses ?? {})).toEqual([
+            '200',
+            '400',
+            '422',
+            '500',
+        ]);
         const output = lookup?.responses['200']?.content?.['application/json'].schema;
         // Null for a path with no enabled rule.
         expect(output?.anyOf?.[1]).toEqual({ type: 'null' });

@@ -208,6 +208,53 @@ describe('POST /rpc/:id', () => {
         expect(body.data.data.map((entry) => entry.title)).toEqual(['Hello']);
     });
 
+    it('reads an empty body as no arguments', async () => {
+        const app = await freshApp();
+        const res = await requestAs(app, identity, `${api}/rpc/notifications.count`, {
+            method: 'POST',
+        });
+        expect(res.status).toBe(200);
+        expect(await res.json()).toEqual({ data: 0 });
+    });
+
+    it.each([
+        ['not JSON', '{"id":', 'Invalid JSON body'],
+        ['a JSON array', '[]', 'The request body must be a JSON object'],
+        ['JSON null', 'null', 'The request body must be a JSON object'],
+    ])(
+        '400s a body that is %s, rather than calling with no arguments',
+        async (_label, body, message) => {
+            const app = await freshApp();
+            await entriesService.create({ type: 'post', data: { title: 'Hello' } });
+            const res = await requestAs(app, identity, `${api}/rpc/entries.post.query`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body,
+            });
+            expect(res.status).toBe(400);
+            expect(((await res.json()) as ErrorBody).error).toMatchObject({
+                code: 'BAD_REQUEST',
+                message,
+            });
+        }
+    );
+
+    it('400s an unreadable body on a plugin method, as the plugin route does', async () => {
+        const app = await freshApp();
+        const res = await requestAs(
+            app,
+            identity,
+            `${api}/rpc/plugins.testMyPlugin.doSomething`,
+            {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: '[]',
+            }
+        );
+        expect(res.status).toBe(400);
+        expect(((await res.json()) as ErrorBody).error.code).toBe('BAD_REQUEST');
+    });
+
     it('404s an unknown method id', async () => {
         const app = await freshApp();
         const res = await call(app, 'users.explode');

@@ -100,7 +100,8 @@ JSON cannot express, and a session-scoped method (the notifications ones) has no
 signed-in user on a trusted transport. Both are reachable over HTTP instead, at
 `POST {basePath}/api/rpc/{method id}`. A plugin method answers there exactly as at
 `POST {basePath}/api/plugins/{serviceKey}/{method}`: its raw result, not wrapped
-in `{ data }`.
+in `{ data }`. On both routes the JSON body is the argument object: an empty
+body is no arguments, and a body that is not a JSON object answers `400`.
 
 The per-domain commands above stay: they hold flag parsing `call` has no way to
 offer — `--fields @file`, an ISO date coerced to a `Date`, and `users:create`'s

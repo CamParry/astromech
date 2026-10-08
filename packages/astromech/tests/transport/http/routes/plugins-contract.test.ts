@@ -168,7 +168,7 @@ describe('POST /plugins/:name/:method — access branches', () => {
         expect(await res.json()).toEqual({ echoed: { hello: 'world' } });
     });
 
-    it('treats an unparseable body as the empty argument object', async () => {
+    it('treats an empty body as no arguments', async () => {
         const app = await freshApp();
         const res = await requestAs(
             app,
@@ -178,6 +178,33 @@ describe('POST /plugins/:name/:method — access branches', () => {
         );
         expect(res.status).toBe(200);
         expect(await res.json()).toEqual({ echoed: {} });
+    });
+
+    it.each([
+        ['not JSON', '{"hello":', 'Invalid JSON body'],
+        ['a JSON array', '[]', 'The request body must be a JSON object'],
+        ['a JSON string', '"hello"', 'The request body must be a JSON object'],
+    ])('400s a body that is %s', async (_label, body, message) => {
+        const app = await freshApp();
+        const res = await requestAs(
+            app,
+            signedInWith(['plugin:probe:read']),
+            '/plugins/probe/echo',
+            { method: 'POST', headers: { 'Content-Type': 'application/json' }, body }
+        );
+        expect(res.status).toBe(400);
+        const answer = (await res.json()) as { error: { code: string; message: string } };
+        expect(answer.error).toMatchObject({ code: 'BAD_REQUEST', message });
+    });
+
+    it('400s an unreadable body even for a method that takes no arguments', async () => {
+        const app = await freshApp();
+        const res = await requestAs(app, signedOut, '/plugins/probe/ping', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: 'not json',
+        });
+        expect(res.status).toBe(400);
     });
 
     it('422s a body the method’s own input schema rejects', async () => {
