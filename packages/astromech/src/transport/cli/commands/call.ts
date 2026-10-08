@@ -7,6 +7,7 @@
 import type { ManifestMethod, ToolDefinition } from '@/types/index';
 import { defineCommand } from 'citty';
 import { buildDispatch } from '@/transport/tools/dispatch';
+import { isRecord } from '@/utilities/is-record';
 import { configArgs, jsonArgs } from '../common-args';
 import { withApplication } from '../config';
 import { bootedManifest } from '../methods';
@@ -62,8 +63,6 @@ async function callArguments(
 ): Promise<Record<string, unknown>> {
     if (value === undefined) return {};
     const parsed = await parseJsonArg(value);
-    if (typeof parsed !== 'object' || parsed === null || Array.isArray(parsed)) {
-        throw new Error('--args must be a JSON object.');
-    }
-    return parsed as Record<string, unknown>;
+    if (!isRecord(parsed)) throw new Error('--args must be a JSON object.');
+    return parsed;
 }

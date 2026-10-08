@@ -13,6 +13,7 @@ import { optionalAuth } from '@/transport/http/middleware/auth';
 import { badRequest, notFound, unauthorized } from '@/transport/http/middleware/errors';
 import { answerPluginMethod } from '@/transport/http/routes/plugins';
 import { resolveScopedMethod } from '@/transport/tools/scoped-tools';
+import { isRecord } from '@/utilities/is-record';
 import { errorResponses } from './error-responses';
 
 type Env = { Variables: AuthVariables };
@@ -94,9 +95,7 @@ router.openAPIRegistry.registerPath({
  * none. An entries method takes its type from the id, which `callMethod` pins.
  */
 function callArgs(body: unknown): Record<string, unknown> {
-    return typeof body === 'object' && body !== null && !Array.isArray(body)
-        ? (body as Record<string, unknown>)
-        : {};
+    return isRecord(body) ? body : {};
 }
 
 export { router as rpcRouter };

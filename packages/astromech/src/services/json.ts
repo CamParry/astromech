@@ -6,6 +6,7 @@
 import type { JsonObject, JsonValue } from '@/types/index';
 import { z } from '@hono/zod-openapi';
 import * as zod from 'zod';
+import { isRecord } from '@/utilities/is-record';
 
 /**
  * One JSON value, unvalidated: whether a value fits its field is `parseFields`'
@@ -32,8 +33,5 @@ export const jsonObject = zod.record(zod.string(), jsonValue);
  * change after the data is stored. A read only confirms it is an object.
  */
 export const unparsedJsonObject = z
-    .custom<JsonObject>(
-        (value) => typeof value === 'object' && value !== null && !Array.isArray(value),
-        { message: 'Expected a JSON object' }
-    )
+    .custom<JsonObject>(isRecord, { message: 'Expected a JSON object' })
     .openapi({ type: 'object', additionalProperties: true });

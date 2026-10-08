@@ -5,6 +5,7 @@
  */
 
 import type { DataField, FieldValidationContext, FieldValidator } from '@/types/fields';
+import { isRecord } from '@/utilities/is-record';
 import { slugify } from '@/utilities/strings';
 import { isUnsafeHref } from './rich-text/safe-links';
 
@@ -68,9 +69,9 @@ export const validateJson: FieldValidator = async (ctx) =>
 // key-value
 
 export const coerceKeyValue = (value: unknown): unknown => {
-    if (typeof value !== 'object' || value === null || Array.isArray(value)) return value;
+    if (!isRecord(value)) return value;
     const out: Record<string, string> = {};
-    for (const [key, pairValue] of Object.entries(value as Record<string, unknown>)) {
+    for (const [key, pairValue] of Object.entries(value)) {
         if (key === '' || pairValue === null || pairValue === undefined) continue;
         out[key] = typeof pairValue === 'string' ? pairValue : String(pairValue);
     }
@@ -79,9 +80,7 @@ export const coerceKeyValue = (value: unknown): unknown => {
 
 export const validateKeyValue: FieldValidator = async (ctx) => {
     const value = ctx.value;
-    return typeof value === 'object' && value !== null && !Array.isArray(value)
-        ? true
-        : 'Must be a set of key/value pairs';
+    return isRecord(value) ? true : 'Must be a set of key/value pairs';
 };
 
 // choice — select, radio-group, multiselect, checkbox-group
@@ -249,10 +248,8 @@ const URL_REFERENCE_BASE = 'https://astromech.invalid/';
  */
 export const validateLink: FieldValidator = async (ctx) => {
     const value = ctx.value;
-    if (typeof value !== 'object' || value === null || Array.isArray(value)) {
-        return 'Must be a link';
-    }
-    const { url, label, target } = value as Record<string, unknown>;
+    if (!isRecord(value)) return 'Must be a link';
+    const { url, label, target } = value;
     if (typeof url !== 'string') return 'A link needs a url';
     const urlProblem = linkUrlProblem(url);
     if (urlProblem !== null) return urlProblem;
@@ -287,9 +284,7 @@ function linkUrlProblem(url: string): string | null {
 /** A group holds one object of child values. */
 export const validateGroup: FieldValidator = async (ctx) => {
     const value = ctx.value;
-    return typeof value === 'object' && value !== null && !Array.isArray(value)
-        ? true
-        : 'Must be a group of fields';
+    return isRecord(value) ? true : 'Must be a group of fields';
 };
 
 /** Repeaters, blocks and trees all hold a list of items. */

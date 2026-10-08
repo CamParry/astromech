@@ -103,9 +103,16 @@ the repository copies.
       and `forwardToCurrent` (`app-context/services.ts`). All three call
       `callServiceMethod` (`services/call-service-method.ts`), a leaf module
       so no new import edge joins the cycle; each passes its own error message.
-- [ ] **JSON body reading and the plain-object check** repeat across
+- [x] **JSON body reading and the plain-object check** repeat across
       `rest-route.ts`, `transport/http/routes/entries.ts`, the RPC transport, the
-      query-string parser and the CLI `call` command.
+      query-string parser and the CLI `call` command. The check is `isRecord`
+      in `utilities/is-record.ts`, used by every copy that means a JSON object,
+      in `fields/`, `content/` and `services/` too. It is not `isPlainObject`:
+      lodash's and `is-plain-obj`'s also check the prototype, and this one does
+      not. `readJsonBody` and `readJsonObject` in
+      `transport/http/routes/json-body.ts` answer the two 400s for the REST
+      routes and the cross-type entry routes; the RPC and plugin routes still
+      read the body their own way.
 - [x] **`parseInput` and `parseMethodInput`** both parse and throw a 422
       (`errors/validation.ts`, `services/parse-method-input.ts`).
       `parseMethodInput` now calls `parseInput`, keeping only its own rule
