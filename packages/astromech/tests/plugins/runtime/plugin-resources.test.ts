@@ -3,8 +3,8 @@
  * and fields, and the admin config form with each method's permission resolved.
  */
 
+import type { AdminResource } from '@/plugins/admin-resource';
 import type {
-    AdminResource,
     AnyServiceMethod,
     PluginDefinition,
     ServiceMethodAccess,

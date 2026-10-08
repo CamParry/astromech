@@ -9,7 +9,6 @@
 import type { AppContext } from './app-context';
 import type {
     AdminPage,
-    AdminResource,
     AdminSlotContribution,
     EntryType,
     GlobalConfig,
@@ -24,6 +23,7 @@ import type { TypedGlobalsService } from './typed-globals';
 import type { Table } from '@/database/define-table';
 import type { DbDump } from '@/database/driver';
 import type { PermissionDeclarations } from '@/permissions/define';
+import type { AdminResource } from '@/plugins/admin-resource';
 import type { StorageObject, StoragePutOptions } from '@/storage/driver';
 import type { z } from '@hono/zod-openapi';
 import type { MigrationProvider } from 'kysely/migration';

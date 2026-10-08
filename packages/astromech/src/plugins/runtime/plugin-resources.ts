@@ -5,11 +5,10 @@
 
 import type {
     AdminResource,
-    PluginDefinition,
     ResolvedAdminResource,
     ResolvedAdminResourceMethod,
-    ResolvedPluginIdentity,
-} from '@/types/index';
+} from '@/plugins/admin-resource';
+import type { PluginDefinition, ResolvedPluginIdentity } from '@/types/index';
 import { flattenFieldNodes } from '@/fields/flatten';
 import { resolvePluginPermission } from './plugin-identity';
 
