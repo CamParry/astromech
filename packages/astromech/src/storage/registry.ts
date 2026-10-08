@@ -4,7 +4,7 @@
  * state duplicates across the package's entry chunks otherwise.
  */
 
-import type { StorageDriver } from '@/types/index';
+import type { StorageDriver } from '@/storage/driver';
 import { createRegistry } from '@/registry';
 
 const storage = createRegistry<StorageDriver>('storage', {

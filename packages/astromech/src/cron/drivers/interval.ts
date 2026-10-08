@@ -1,4 +1,4 @@
-import type { SchedulerDriver } from '@/types/index';
+import type { SchedulerDriver } from '@/cron/driver';
 import { globals } from '@/registry';
 
 /** In-process ticker driving onTick once a minute. The default scheduler. */

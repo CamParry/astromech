@@ -1,4 +1,4 @@
-import type { StorageDriver } from '@/types/index';
+import type { StorageDriver } from '@/storage/driver';
 import { deletePrefix } from '@/storage/prefix';
 import { log } from '@/utilities/log';
 import { variantPrefix } from '../serving/image/url';

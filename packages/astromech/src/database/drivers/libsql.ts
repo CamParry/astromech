@@ -4,8 +4,8 @@
  * provided explicitly (`libsql()` or `libsql({ url: 'file:./dev.db' })`).
  */
 
+import type { DbDump, RestoreOptions } from '@/database/driver';
 import type { DB } from '@/database/types';
-import type { DbDump, RestoreOptions } from '@/types/config';
 import type { Client, Config, Row, Transaction } from '@libsql/client';
 import type { DialectAdapter } from 'kysely';
 import type { Migration, MigrationProvider } from 'kysely/migration';

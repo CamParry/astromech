@@ -1,5 +1,7 @@
 import type { ImageFormat } from './image/url';
-import type { ImageSource, Media, StorageDriver } from '@/types/index';
+import type { ImageSource } from '@/media/serving/image/driver';
+import type { StorageDriver } from '@/storage/driver';
+import type { Media } from '@/types/index';
 import { currentServices } from '@/app-context/services';
 import { getConfig } from '@/config/registry';
 import { getStorageDriver } from '@/storage/registry';

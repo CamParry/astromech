@@ -11,12 +11,9 @@ import type {
     AdminPage,
     AdminResource,
     AdminSlotContribution,
-    DbDump,
     EntryType,
     GlobalConfig,
     ResolvedConfig,
-    StorageObject,
-    StoragePutOptions,
 } from './config';
 import type { Permission } from './domain';
 import type { FieldType } from './fields';
@@ -25,7 +22,9 @@ import type { ServiceMethod, ToolDefinition } from './methods';
 import type { TypedEntriesService } from './typed-entries';
 import type { TypedGlobalsService } from './typed-globals';
 import type { Table } from '@/database/define-table';
+import type { DbDump } from '@/database/driver';
 import type { PermissionDeclarations } from '@/permissions/define';
+import type { StorageObject, StoragePutOptions } from '@/storage/driver';
 import type { z } from '@hono/zod-openapi';
 import type { MigrationProvider } from 'kysely/migration';
 import type { ComponentType, ReactElement } from 'react';

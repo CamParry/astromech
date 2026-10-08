@@ -1,6 +1,6 @@
 # Astromech Architecture
 
-Where the parts live and the rules between them. The contracts are the types in `packages/astromech/src/types/`; when this file and the code disagree, fix the file.
+Where the parts live and the rules between them. The public types are listed in `packages/astromech/src/types/index.ts`, and each contract is declared with the module that owns it; when this file and the code disagree, fix the file.
 
 ## What it is
 

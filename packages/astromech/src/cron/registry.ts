@@ -5,7 +5,8 @@
  * one entry chunk is visible to the runner reached through another.
  */
 
-import type { AppContext, SchedulerDriver } from '@/types/index';
+import type { SchedulerDriver } from '@/cron/driver';
+import type { AppContext } from '@/types/index';
 import { interval } from '@/cron/drivers/interval';
 import { isWorkersRuntime } from '@/env';
 import { AstromechError } from '@/errors/astromech-error';
