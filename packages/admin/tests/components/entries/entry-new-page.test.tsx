@@ -41,7 +41,6 @@ const POST: AdminEntryType = {
     plural: 'Posts',
     versioning: false,
     translatable: false,
-    slug: null,
     adminColumns: [],
     fields: {
         main: [{ name: 'excerpt', type: 'text', label: 'Excerpt' }],

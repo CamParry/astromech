@@ -21,7 +21,6 @@ const fullConfig: AdminEntryType = {
     plural: 'Posts',
     versioning: true,
     translatable: true,
-    slug: { source: 'title' },
     adminColumns: [{ field: 'featured', label: 'Featured' }, { field: 'category' }],
     fields: {
         main: [
@@ -41,7 +40,6 @@ const titlelessConfig: AdminEntryType = {
     plural: 'Redirects',
     versioning: false,
     translatable: false,
-    slug: null,
     adminColumns: [
         { field: 'from' },
         { field: 'to' },
@@ -204,17 +202,11 @@ describe('resolveForm', () => {
         expect(form.hasStatuses).toBe(true);
     });
 
-    it('hasSlug is false when slug capability is on but slug config is null', () => {
-        const config: AdminEntryType = { ...fullConfig, slug: null };
-        expect(resolveForm(config).hasSlug).toBe(false);
-    });
-
-    it('hasSlug is false when slug config is undefined (nullish parity)', () => {
-        const config = {
-            ...fullConfig,
-            slug: undefined,
-        } as unknown as AdminEntryType;
-        expect(resolveForm(config).hasSlug).toBe(false);
+    it('hasSlug follows the slug capability', () => {
+        expect(resolveForm({ ...fullConfig, capabilities: caps() }).hasSlug).toBe(true);
+        expect(
+            resolveForm({ ...fullConfig, capabilities: caps({ slug: false }) }).hasSlug
+        ).toBe(false);
     });
 
     it('reflects titleless / disabled-capabilities config', () => {

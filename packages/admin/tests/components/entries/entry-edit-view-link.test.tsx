@@ -50,7 +50,6 @@ const ENTRY_TYPE_CONFIG: AdminEntryType = {
     plural: 'Posts',
     versioning: false,
     translatable: true,
-    slug: null,
     adminColumns: [],
     fields: { main: [], sidebar: [] },
     url: '/blog/{slug}',

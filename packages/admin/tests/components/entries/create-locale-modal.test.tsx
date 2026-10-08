@@ -46,7 +46,6 @@ const POST: AdminEntryType = {
     plural: 'Posts',
     versioning: false,
     translatable: true,
-    slug: null,
     adminColumns: [],
     fields: { main: [], sidebar: [] },
     url: null,

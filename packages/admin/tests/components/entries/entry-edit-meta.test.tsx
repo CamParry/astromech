@@ -49,7 +49,6 @@ const ENTRY_TYPE_CONFIG: AdminEntryType = {
     plural: 'Case Studies',
     versioning: false,
     translatable: false,
-    slug: null,
     adminColumns: [],
     fields: {
         main: [{ name: 'excerpt', type: 'textarea', label: 'Excerpt' }],

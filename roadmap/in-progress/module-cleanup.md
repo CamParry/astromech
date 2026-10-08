@@ -184,7 +184,7 @@ the repository copies.
       `base` override.
 - [x] Two unrelated `pluginNamespace` exports; rename the Proxy builder. It is
       `createPluginServices`, after `createServices` and `createPluginContext`.
-- [ ] `SlugConfig`'s `source` and `prefix` (`types/config.ts`): nothing reads
+- [x] `SlugConfig`'s `source` and `prefix` (`types/config.ts`): nothing reads
       them, since a slug always derives from the title. **Needs a decision
       first:** the `slug` object's presence is what shows the slug input in
       the admin (`config/admin-config.ts` sends `slug: null` without it, and
@@ -192,7 +192,8 @@ the repository copies.
       slug capability on but no `slug` object generates slugs the form cannot
       edit. Either show the input whenever `capabilities.slug` is on and drop
       `SlugConfig`, or make `slug` a boolean. The `entry-types` route's
-      response schema lists both fields too.
+      response schema lists both fields too. Done: the input now follows
+      `capabilities.slug`, and `slug` is a boolean.
 
 ## Public API
 

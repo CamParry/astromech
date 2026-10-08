@@ -107,7 +107,7 @@ export function resolveForm(config: AdminEntryType): ResolvedForm {
     return {
         type: config.single,
         hasTitle: config.titleField !== false,
-        hasSlug: config.capabilities.slug && config.slug != null,
+        hasSlug: config.capabilities.slug,
         hasStatuses: config.capabilities.statuses,
         main: config.fields.main,
         sidebar: config.fields.sidebar,

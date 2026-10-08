@@ -47,7 +47,6 @@ function postType(trash: boolean): AdminEntryType {
         plural: 'Posts',
         versioning: false,
         translatable: false,
-        slug: null,
         adminColumns: [],
         fields: { main: [], sidebar: [] },
         url: null,

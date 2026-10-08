@@ -52,7 +52,6 @@ type TypeMeta = {
     single: string;
     plural: string;
     versioning: boolean;
-    slug: string | null;
     adminColumns: string[];
     fields: unknown[];
     capabilities: Record<string, boolean>;
@@ -65,7 +64,6 @@ const META_KEYS = [
     'fields',
     'plural',
     'single',
-    'slug',
     'titleField',
     'type',
     'versioning',
@@ -92,7 +90,7 @@ describe('GET /entry-types', () => {
         ]);
     });
 
-    it('projects exactly nine keys per type', async () => {
+    it('projects exactly eight keys per type', async () => {
         const res = await app().request('/entry-types');
         const [post] = (await res.json()) as TypeMeta[];
         expect(Object.keys(post ?? {}).sort()).toEqual(META_KEYS);
@@ -119,7 +117,7 @@ describe('GET /entry-types', () => {
 });
 
 describe('GET /entry-types/:type', () => {
-    it('returns one type, unenveloped, with the same nine keys', async () => {
+    it('returns one type, unenveloped, with the same eight keys', async () => {
         const res = await app().request('/entry-types/note');
         expect(res.status).toBe(200);
         const body = (await res.json()) as TypeMeta;

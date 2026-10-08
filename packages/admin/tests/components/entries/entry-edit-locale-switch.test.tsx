@@ -113,7 +113,6 @@ const ENTRY_TYPE_CONFIG: AdminEntryType = {
     plural: 'Case Studies',
     versioning: false,
     translatable: true,
-    slug: null,
     adminColumns: [],
     fields: {
         main: [
