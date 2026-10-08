@@ -206,7 +206,8 @@ function createMediaRepository() {
      * item that is gone.
      */
     async function del(id: string): Promise<void> {
-        // Not in `content.delete`: entries drop theirs in their services instead.
+        // Here rather than in `content.delete`, which users and the bulk entry
+        // deletes do not go through: each repository delete drops its own.
         await relationshipRepository.deleteByResource(id, 'media');
         await content.delete(id);
     }

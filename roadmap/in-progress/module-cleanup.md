@@ -62,12 +62,19 @@ the repository copies.
       and access string. `DECISIONS.md` rejected a `createVersionsMethods`
       factory; revisit that for these two, whose addressing and output shape
       match.
-- [ ] **Each resource drops its relationship rows on delete in its own place.**
+- [x] **Each resource drops its relationship rows on delete in its own place.**
       Media and users do it in their repository's `delete`; entries do it in
       `emptyTrash` (`entries/methods/empty-trash.ts`), `deleteEntryBatch`
       (`entries/internal/delete-batch.ts`) and `trashPurgeJob`
       (`entries/jobs/trash-purge.ts`). Move the drop into the content
-      repository's `delete`, which changes entries too.
+      repository's `delete`, which changes entries too. Done in each repository
+      delete instead: `entryRepository.delete`, `trash.emptyTrash` and
+      `entryMaintenanceRepository.purgeTrashedBefore` now drop their own rows,
+      as media's and users' `delete` already did, so no method or job calls
+      `relationshipRepository`. Not `content.delete`: users' guarded delete and
+      the two bulk entry deletes do not go through it, and it would need a
+      resource kind globals cannot give. `tests/content/delete-relationship-rows.test.ts`
+      checks all five.
 - [ ] **Entries build their own relationship index.** `entries/relationships.ts`
       repeats `createContentRelationships` (`content/relationships.ts`) plus three
       repository reads only it uses. Add a type filter and bind entries through

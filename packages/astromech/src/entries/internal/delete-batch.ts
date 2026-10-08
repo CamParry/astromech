@@ -1,6 +1,5 @@
 import type { EntryResource } from '../repository/types';
 import type { AppContext } from '@/types/index';
-import { relationshipRepository } from '@/content/repository/relationships';
 import { parseOutput } from '@/services/parse-method-output';
 import { getEntryResources } from '../read-entry';
 import { entryRepository } from '../repository/entries-table';
@@ -18,8 +17,6 @@ export async function deleteEntryBatch(
     await removeEntryBatch(params, ctx, {
         permanent: true,
         async write(entry) {
-            await relationshipRepository.deleteByResource(entry.id, 'entry');
-            // Content rows and versions cascade from the `entries` row.
             await entryRepository.delete(entry.id);
         },
     });

@@ -2,12 +2,10 @@
  * Built-in CRON job: Purge old trashed entries.
  *
  * Hard-deletes entries that have been in the trash longer than
- * config.trash.retentionDays. Versions cascade via their FK; relationship index
- * rows have none, so the purged ids are cleared from the index by hand.
+ * config.trash.retentionDays, with their versions and relationship rows.
  */
 
 import type { CronJob } from '@/cron/registry';
-import { relationshipRepository } from '@/content/repository/relationships';
 import { entryMaintenanceRepository } from '../repository/maintenance';
 
 export const trashPurgeJob: CronJob = {
@@ -19,11 +17,6 @@ export const trashPurgeJob: CronJob = {
         const cutoff = new Date();
         cutoff.setDate(cutoff.getDate() - config.trash.retentionDays);
 
-        const purged = await entryMaintenanceRepository.purgeTrashedBefore(cutoff);
-        // Both directions: the references a purged entry held, and the ones other
-        // entries still record as pointing at it.
-        for (const id of purged) {
-            await relationshipRepository.deleteByResource(id, 'entry');
-        }
+        await entryMaintenanceRepository.purgeTrashedBefore(cutoff);
     },
 };

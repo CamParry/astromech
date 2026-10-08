@@ -271,7 +271,8 @@ function createUserRepository() {
             .returning('id')
             .execute();
         if (deleted.length === 0) return explainRefusal(id);
-        // Not in `content.delete`: entries drop theirs in their services instead.
+        // Here rather than in `content.delete`, which this guarded delete and the
+        // bulk entry deletes do not go through: each repository delete drops its own.
         await relationshipRepository.deleteByResource(id, 'user');
         return 'deleted';
     }
