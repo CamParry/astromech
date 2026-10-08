@@ -122,8 +122,11 @@ the repository copies.
       bypass the mutation table. The list-to-query mapping is written four times;
       have `useListState` return it. The mapping is done: `useListState` returns
       `queryParams`, which the users, admin resource and entries lists pass on,
-      and the media page's own copy in `hooks/use-media-browser.ts` goes with
-      the media page.
+      and the media picker's `useMediaBrowser` builds its params with the same
+      `listQueryParams`. The media page is done too: `MediaListPage` is a
+      `<DataList>` over `useListState`, its grid a `renderBody` that `DataList`
+      now hands the selection, and the URL's `sort` + `dir` became
+      `sort=key:dir`. The mutation table part remains.
 - [ ] **Admin: three permission-denied behaviours** (redirect in an effect, toast
       then redirect, banner) and none on the media page or entries list. One
       guard.

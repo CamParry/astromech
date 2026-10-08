@@ -30,6 +30,7 @@ export const isolatedTests = [
     'tests/components/fields/reference-field-loading.test.tsx',
     'tests/components/media/media-detail-modal-replace.test.tsx',
     'tests/components/media/media-detail-modal.test.tsx',
+    'tests/components/media/media-list-page.test.tsx',
     'tests/components/media/media-picker.test.tsx',
     'tests/components/media/media-upload-dialog.test.tsx',
     'tests/components/users/user-edit-page.test.tsx',

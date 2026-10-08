@@ -33,7 +33,7 @@ export function MediaCard({
                     <Checkbox
                         checked={checked ?? false}
                         onChange={() => onToggleCheck(item.id)}
-                        aria-label={t('media.selectFile', { filename: item.filename })}
+                        ariaLabel={t('media.selectFile', { filename: item.filename })}
                     />
                 </div>
             )}

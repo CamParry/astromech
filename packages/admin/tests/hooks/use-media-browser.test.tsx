@@ -1,8 +1,8 @@
 /**
  * @vitest-environment happy-dom
  *
- * The library page and the field picker both map their browsing state through
- * this hook, so the params it hands the transport are the shared contract.
+ * The field picker maps its browsing state through this hook, so the params it
+ * hands the transport must match the ones the library page sends.
  */
 
 import type { MediaBrowserResult } from '@/admin/hooks/use-media-browser';
@@ -122,22 +122,26 @@ describe('useMediaBrowser type params', () => {
 
 describe('useMediaBrowser sort params', () => {
     it('should omit sort when no column is chosen', async () => {
-        expect(await requestParams({ sort: undefined, dir: undefined })).toStrictEqual({
+        expect(await requestParams({ sort: undefined })).toStrictEqual({
             page: 1,
             limit: PER_PAGE,
         });
     });
 
-    it('should default a sort with no direction to ascending', async () => {
-        expect(await requestParams({ sort: 'size' })).toStrictEqual({
+    it('should pass an ascending sort', async () => {
+        expect(
+            await requestParams({ sort: { key: 'size', direction: 'asc' } })
+        ).toStrictEqual({
             sort: { size: 'asc' },
             page: 1,
             limit: PER_PAGE,
         });
     });
 
-    it('should pass an explicit descending direction', async () => {
-        expect(await requestParams({ sort: 'size', dir: 'desc' })).toStrictEqual({
+    it('should pass a descending sort', async () => {
+        expect(
+            await requestParams({ sort: { key: 'size', direction: 'desc' } })
+        ).toStrictEqual({
             sort: { size: 'desc' },
             page: 1,
             limit: PER_PAGE,

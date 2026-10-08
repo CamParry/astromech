@@ -11,7 +11,7 @@ import { EmptyState } from '../ui/empty-state';
 import { UploadZone } from '../ui/upload-zone';
 
 export type MediaEmptyProps = {
-    query: MediaBrowserQuery;
+    query: Pick<MediaBrowserQuery, 'q' | 'type'>;
     canUpload: boolean;
     isUploading: boolean;
     onUpload: (files: File[]) => void;

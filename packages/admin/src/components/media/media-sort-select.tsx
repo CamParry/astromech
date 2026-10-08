@@ -4,6 +4,7 @@
 
 import type { MediaBrowserQuery } from '../../types/media';
 import type { SortDirection } from '../ui/table';
+import type { ListSort } from '../ui/use-list-state';
 import React from 'react';
 import { useTranslation } from 'react-i18next';
 import { isSortKey } from '../../types/media';
@@ -12,29 +13,29 @@ import { Select } from '../ui/select';
 const SORT_NONE = 'none';
 
 export type MediaSortSelectProps = {
-    query: MediaBrowserQuery;
-    onQueryChange: (next: Partial<MediaBrowserQuery>) => void;
+    sort: ListSort | null;
+    /** Called as a sortable column header calls it; a `null` direction clears the sort. */
+    onSort: (key: string, direction: SortDirection) => void;
 };
 
 export function MediaSortSelect({
-    query,
-    onQueryChange,
+    sort,
+    onSort,
 }: MediaSortSelectProps): React.ReactElement {
     const { t } = useTranslation();
-    const { sort, dir } = query;
 
     function handleSortSelect(value: string | null): void {
         const [key = '', direction] = (value ?? '').split(':');
         if (!isSortKey(key)) {
-            onQueryChange(sortPatch(key, null));
+            onSort(key, null);
             return;
         }
-        onQueryChange(sortPatch(key, direction === 'desc' ? 'desc' : 'asc'));
+        onSort(key, direction === 'desc' ? 'desc' : 'asc');
     }
 
     return (
         <Select
-            value={sort ? `${sort}:${dir ?? 'asc'}` : SORT_NONE}
+            value={sort ? `${sort.key}:${sort.direction}` : SORT_NONE}
             onValueChange={handleSortSelect}
             options={sortOptions(t)}
             triggerPrefix={t('media.sortPrefix')}
@@ -43,15 +44,15 @@ export function MediaSortSelect({
     );
 }
 
-/** The query patch for a sort change; table headers apply it too. */
+/** The picker's query patch for a sort change. A key the API cannot sort by clears the sort. */
 export function sortPatch(
     key: string,
     direction: SortDirection
 ): Partial<MediaBrowserQuery> {
     if (direction === null || !isSortKey(key)) {
-        return { sort: undefined, dir: undefined, page: 1 };
+        return { sort: undefined, page: 1 };
     }
-    return { sort: key, dir: direction, page: 1 };
+    return { sort: { key, direction }, page: 1 };
 }
 
 /** The four sortable columns in both directions, plus the unsorted default. */

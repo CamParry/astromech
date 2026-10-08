@@ -3,11 +3,16 @@
  *
  * `DataList` over flat rows and `useListState`: it renders the rows, writes a
  * sort and a search to the URL and returns to the first page, links each row
- * (leaving a click on a control in it to the control), confirms a destructive bulk action before running it, and shows the empty,
- * loading and error states.
+ * (leaving a click on a control in it to the control), confirms a destructive
+ * bulk action before running it, hands a custom body the selection, and shows
+ * the empty, loading and error states.
  */
 
-import type { DataListBulkAction, DataListColumn } from '@/admin/components/ui/data-list';
+import type {
+    DataListBulkAction,
+    DataListColumn,
+    DataListProps,
+} from '@/admin/components/ui/data-list';
 import { fireEvent, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
@@ -34,6 +39,7 @@ type ListOptions = {
     isLoading?: boolean;
     isError?: boolean;
     bulkActions?: DataListBulkAction[];
+    renderBody?: DataListProps<Redirect>['renderBody'];
 };
 
 /** A redirects list over `useListState`, as a plugin page would write it. */
@@ -43,6 +49,7 @@ function RedirectsList({
     isLoading = false,
     isError = false,
     bulkActions,
+    renderBody,
 }: ListOptions) {
     const list = useListState();
     return (
@@ -63,6 +70,7 @@ function RedirectsList({
                 { label: `Edit ${row.from}`, href: `/redirects/${row.id}` },
             ]}
             {...(bulkActions !== undefined ? { bulkActions } : {})}
+            {...(renderBody !== undefined ? { renderBody } : {})}
             empty={<p>No redirects yet</p>}
         />
     );
@@ -201,6 +209,42 @@ describe('DataList', () => {
         await userEvent.click(await screen.findByRole('menuitem', { name: 'Publish' }));
 
         expect(publish).toHaveBeenCalledWith(['r1', 'r2']);
+    });
+
+    it('hands a custom body the selection, so a grid offers bulk actions too', async () => {
+        const publish = vi.fn();
+        mountList('/redirects', {
+            bulkActions: [{ label: 'Publish', run: publish }],
+            renderBody: (rows, selection) => (
+                <ul>
+                    {rows.map((row) => (
+                        <li key={row.id}>
+                            <button
+                                type="button"
+                                aria-pressed={selection?.checkedIds.has(row.id)}
+                                onClick={() => selection?.toggle(row.id)}
+                            >
+                                {row.from}
+                            </button>
+                        </li>
+                    ))}
+                </ul>
+            ),
+        });
+
+        await userEvent.click(await screen.findByRole('button', { name: '/gone' }));
+        await userEvent.click(screen.getByRole('button', { name: 'Bulk actions (1)' }));
+        await userEvent.click(await screen.findByRole('menuitem', { name: 'Publish' }));
+
+        expect(publish).toHaveBeenCalledWith(['r2']);
+    });
+
+    it('hands a custom body no selection when no bulk action is given', async () => {
+        const renderBody = vi.fn(() => <p>Grid</p>);
+        mountList('/redirects', { renderBody });
+
+        expect(await screen.findByText('Grid')).toBeTruthy();
+        expect(renderBody).toHaveBeenCalledWith(REDIRECTS, null);
     });
 
     it('offers no selection when no bulk action is given', async () => {

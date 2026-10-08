@@ -1,3 +1,4 @@
+import type { ListSort } from '../components/ui/use-list-state';
 import type { MediaMimeTypeFilter } from 'astromech';
 import { MEDIA_MIME_TYPE_FILTERS, MEDIA_SORT_FIELDS } from 'astromech/shared';
 
@@ -28,13 +29,15 @@ export const TYPE_FILTER_KEYS: Record<TypeFilter, string> = {
 /** A column the media list can be ordered by. */
 export type MediaSortKey = (typeof MEDIA_SORT_FIELDS)[number];
 
-/** The browsing state a media surface reads from: search, filter, sort, page. */
+/**
+ * The media picker's browsing state: search, filter, sort, page. The library
+ * page keeps the same state in the URL through `useListState`.
+ */
 export type MediaBrowserQuery = {
     q: string;
     type: TypeFilter;
     /** Explicitly `| undefined`: clearing a sort passes it, under exactOptionalPropertyTypes. */
-    sort?: MediaSortKey | undefined;
-    dir?: 'asc' | 'desc' | undefined;
+    sort?: ListSort | undefined;
     page: number;
 };
 

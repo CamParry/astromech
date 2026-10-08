@@ -7,6 +7,7 @@
 import type { DropdownItem } from './dropdown';
 import type { SortDirection } from './table';
 import type { ListSort } from './use-list-state';
+import type { SelectionResult } from './use-selection';
 import { MoreHorizontalIcon } from 'lucide-react';
 import React from 'react';
 import { useTranslation } from 'react-i18next';
@@ -76,8 +77,12 @@ export type DataListProps<Row extends { id: string }> = {
     empty?: React.ReactNode;
     /** Clears the selection when it changes, beside the search, sort and page. */
     selectionKey?: string;
-    /** Renders the rows in place of the table, such as a card grid. */
-    renderBody?: (rows: Row[]) => React.ReactNode;
+    /**
+     * Renders the rows in place of the table, such as a card grid. `selection`
+     * is the list's row selection, or `null` when it has no bulk actions; a body
+     * that ignores it offers no selection.
+     */
+    renderBody?: (rows: Row[], selection: SelectionResult | null) => React.ReactNode;
 };
 
 export function DataList<Row extends { id: string }>({
@@ -112,7 +117,7 @@ export function DataList<Row extends { id: string }>({
         selectionKey ?? '',
     ].join('\u0000');
     const selection = useSelection(rows, scope);
-    const selectable = bulkActions.length > 0 && renderBody === undefined;
+    const selectable = bulkActions.length > 0;
 
     function handleBulk(action: DataListBulkAction): void {
         const ids = [...selection.checkedIds];
@@ -200,7 +205,7 @@ export function DataList<Row extends { id: string }>({
                 ) : rows.length === 0 ? (
                     emptyNode
                 ) : (
-                    renderBody(rows)
+                    renderBody(rows, selectable ? selection : null)
                 )
             ) : (
                 <Table.Root aria-busy={isLoading || undefined}>

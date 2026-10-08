@@ -1,12 +1,12 @@
 /**
- * `sortPatch` is applied by both the grid's sort Select and the table's column
- * headers, so a key it cannot honour has to clear the sort rather than pass on.
+ * `sortPatch` turns the picker's sort Select into a query patch, so a key it
+ * cannot honour has to clear the sort rather than pass on.
  */
 
 import { describe, expect, it } from 'vitest';
 import { sortPatch } from '@/admin/components/media/media-sort-select';
 
-const CLEARED = { sort: undefined, dir: undefined, page: 1 };
+const CLEARED = { sort: undefined, page: 1 };
 
 describe('sortPatch', () => {
     it('should clear the sort when the direction is null', () => {
@@ -24,16 +24,14 @@ describe('sortPatch', () => {
 
     it('should return an ascending pair for a known key', () => {
         expect(sortPatch('filename', 'asc')).toStrictEqual({
-            sort: 'filename',
-            dir: 'asc',
+            sort: { key: 'filename', direction: 'asc' },
             page: 1,
         });
     });
 
     it('should return a descending pair for a known key', () => {
         expect(sortPatch('createdAt', 'desc')).toStrictEqual({
-            sort: 'createdAt',
-            dir: 'desc',
+            sort: { key: 'createdAt', direction: 'desc' },
             page: 1,
         });
     });

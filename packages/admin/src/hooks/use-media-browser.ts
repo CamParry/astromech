@@ -1,10 +1,12 @@
 /**
- * Turns media browsing state into a page of results. Both the library page and
- * the field picker run this, so neither maps query params itself.
+ * Turns the media picker's browsing state into a page of results. The library
+ * page holds its state in the URL through `useListState` instead; both map
+ * search, sort and page through `listQueryParams`.
  */
 
 import type { MediaBrowserQuery } from '../types/media';
 import type { Media } from 'astromech';
+import { listQueryParams } from '../components/ui/use-list-state';
 import { useMediaQuery } from './media';
 
 export type MediaBrowserResult = {
@@ -20,15 +22,12 @@ export function useMediaBrowser(
     query: MediaBrowserQuery,
     perPage: number
 ): MediaBrowserResult {
-    const { q, type: typeFilter, sort, dir } = query;
+    const { q, type: typeFilter, sort } = query;
     const currentPage = Math.max(1, query.page);
 
     const { data, isLoading, isError } = useMediaQuery({
-        ...(q ? { search: q } : {}),
+        ...listQueryParams({ q, sort: sort ?? null, page: currentPage }, perPage),
         ...(typeFilter !== 'all' ? { where: { mimeType: typeFilter } } : {}),
-        ...(sort ? { sort: { [sort]: dir ?? 'asc' } } : {}),
-        page: currentPage,
-        limit: perPage,
     });
 
     return {
