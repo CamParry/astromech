@@ -4,6 +4,7 @@
  * leaf — a caller like any other (`DECISIONS.md`).
  */
 
+import type { StoragePutOptions } from '@/storage/driver';
 import type {
     AnyServiceMethod,
     AppContext,
@@ -16,7 +17,6 @@ import type {
     PluginRawRoute,
     PluginServiceNamespace,
     ResolvedPluginIdentity,
-    StoragePutOptions,
     TypedEntriesService,
     TypedGlobalsService,
 } from '@/types/index';

@@ -4,7 +4,7 @@
  * Cloudflare Workers — use the Cloudflare driver there.
  */
 
-import type { ImageDriver, ImageSource } from '@/types/index';
+import type { ImageDriver, ImageSource } from '@/media/serving/image/driver';
 import { encode } from 'blurhash';
 import sharpLib from 'sharp';
 

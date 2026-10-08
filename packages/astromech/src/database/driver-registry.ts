@@ -4,7 +4,7 @@
  * runtime. Mirrors the storage registry pattern.
  */
 
-import type { DatabaseDriver } from '@/types/index';
+import type { DatabaseDriver } from '@/database/driver';
 import { createRegistry } from '@/registry';
 
 const dbDriver = createRegistry<DatabaseDriver>('dbDriver', {

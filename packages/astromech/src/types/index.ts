@@ -1,6 +1,7 @@
 /**
- * Astromech type definitions
- * All types are re-exported from this barrel so existing imports work unchanged.
+ * The public list of Astromech types. Most are declared in this directory; each
+ * driver contract is declared in the module that owns the driver and listed
+ * here so the public API names it.
  */
 export * from './domain';
 export * from './fields';
@@ -16,3 +17,8 @@ export * from './typed-globals';
 export * from './resolved';
 export * from './ai-context';
 export * from './ai';
+export * from '@/cron/driver';
+export * from '@/database/driver';
+export * from '@/email/driver';
+export * from '@/media/serving/image/driver';
+export * from '@/storage/driver';

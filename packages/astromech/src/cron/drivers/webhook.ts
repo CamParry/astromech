@@ -1,4 +1,4 @@
-import type { SchedulerDriver } from '@/types/index';
+import type { SchedulerDriver } from '@/cron/driver';
 
 /** No in-process ticker: an external poke (POST /cron/run) drives onTick
  *  directly via the route. Selecting this driver just declares that intent. */

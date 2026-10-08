@@ -4,7 +4,7 @@
  * unused since Cloudflare fetches the origin itself. Caches at the edge.
  */
 
-import type { ImageDriver } from '@/types/index';
+import type { ImageDriver } from '@/media/serving/image/driver';
 import { CLOUDFLARE_IMAGES_DRIVER } from '@/media/image-drivers';
 
 export function cloudflareImages(): ImageDriver {

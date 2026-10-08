@@ -161,7 +161,10 @@ the repository copies.
       resource types, service interfaces) and imports every module's schema.
       Move each next to its owner, keep `types/index.ts` as the public list.
       Start with the driver contracts. Admin-only render types in
-      `types/resolved.ts` move to `packages/admin`.
+      `types/resolved.ts` move to `packages/admin`. The driver contracts are
+      done, each in a `driver.ts` beside its module's `drivers/` directory;
+      the admin resource types, the service interfaces and the admin-only
+      render types remain.
 - [x] `RESOURCE_TYPES` sits in `types/domain.ts`, apart from `RESOURCE_CONFIG`
       in `content/resources.ts`. Moving it there leaves it undefined at load
       time: `content/schema.ts` builds `usageSchema` from it, and

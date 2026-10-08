@@ -11,7 +11,7 @@ import type {
     StoragePutOptions,
     StorageRange,
     StorageStat,
-} from '@/types/index';
+} from '@/storage/driver';
 import { createReadStream } from 'node:fs';
 import { mkdir, readdir, stat, unlink, writeFile } from 'node:fs/promises';
 import { dirname, join, relative, sep } from 'node:path';

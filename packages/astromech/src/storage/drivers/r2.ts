@@ -11,7 +11,7 @@ import type {
     StoragePutOptions,
     StorageRange,
     StorageStat,
-} from '@/types/index';
+} from '@/storage/driver';
 import { resolveBinding } from '@/integrations/cloudflare/bindings';
 import { fixedLengthStream, toBytes } from '@/utilities/bytes';
 

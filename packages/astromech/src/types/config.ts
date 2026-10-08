@@ -1,5 +1,6 @@
 /**
- * Configuration types: entry type config, drivers, Astromech config
+ * Configuration types: entry type config and the Astromech config. Each driver
+ * contract lives with the module that owns it.
  */
 
 import type { AiConfig } from './ai';
@@ -14,176 +15,12 @@ import type {
 import type { PluginDefinition, PluginNavItem } from './plugins';
 import type { SortOption } from './query';
 import type { CellKind } from './resolved';
-import type { DB } from '@/database/types';
-import type { ImageFormat } from '@/media/serving/image/url';
+import type { SchedulerDriver } from '@/cron/driver';
+import type { DatabaseDriver } from '@/database/driver';
+import type { EmailDriver } from '@/email/driver';
+import type { ImageConfig } from '@/media/serving/image/driver';
 import type { CaptchaConfig, CaptchaWidget } from '@/security/captcha/types';
-import type { Kysely } from 'kysely';
-import type { MigrationProvider } from 'kysely/migration';
-
-export type DbDump = {
-    /** Raw bytes of a consistent SQLite snapshot. */
-    stream: ReadableStream<Uint8Array>;
-    /** Release temp resources (e.g. delete the temp dump file). Always call when done. */
-    cleanup: () => Promise<void>;
-};
-
-export type DatabaseDriver = {
-    /** The driver's name, as `libsql` or `d1`. */
-    name: string;
-    getInstance(): Kysely<DB>;
-    /**
-     * Whether the driver supports interactive transactions (`BEGIN`/`COMMIT`
-     * across round-trips). Absent or `true` means yes. Cloudflare D1 has no
-     * interactive transactions — only `batch()` — so it declares `false`, and
-     * domains that can degrade (the entry repository) drop their transaction method
-     * rather than pretending.
-     */
-    supportsTransactions?: boolean;
-    /**
-     * Whether this driver talks to a database the developer's machine does not
-     * own. Optional and feature-detected: a driver that cannot tell omits it and
-     * the CLI treats the database as local.
-     */
-    isRemote?(): boolean | Promise<boolean>;
-    /** Produce a consistent full-DB snapshot. Optional — absent on drivers that can't dump in-process (e.g. D1). */
-    dump?(): Promise<DbDump>;
-    /** Restore a full-DB snapshot from raw SQLite bytes, migrated to this schema first. Optional. */
-    restore?(source: ReadableStream<Uint8Array>, opts: RestoreOptions): Promise<void>;
-};
-
-/** How `DatabaseDriver.restore` brings a backup in. */
-export type RestoreOptions = {
-    /** Tables whose live rows stay as they are. */
-    preserve: string[];
-    /** Tables left empty rather than restored. */
-    empty: string[];
-    /** The site's merged migration chain, run forward on the backup before the copy. */
-    migrations: MigrationProvider;
-};
-
-export type StorageRange = {
-    /** Byte offset of the first byte to return. */
-    offset: number;
-    /** Bytes to return. Omit for "to the end of the object". */
-    length?: number;
-};
-
-export type StorageObject = {
-    body: ReadableStream;
-    /** Bytes in `body` — less than `totalSize` for a ranged read. */
-    size: number;
-    /** Full object size, regardless of range. Needed to emit `Content-Range`. */
-    totalSize: number;
-    contentType?: string;
-    etag?: string;
-};
-
-export type StorageStat = {
-    size: number;
-    contentType?: string;
-    etag?: string;
-    uploadedAt?: Date;
-};
-
-export type StorageList = {
-    keys: string[];
-    /** Present when more keys remain. Pass back to continue. */
-    cursor?: string;
-};
-
-/** Options for `StorageDriver.put`. */
-export type StoragePutOptions = {
-    contentType?: string;
-    /**
-     * The body's length in bytes, when the caller knows it. A driver whose
-     * backend needs a length holds a stream given without one in memory.
-     */
-    contentLength?: number;
-};
-
-export type StorageDriver = {
-    name: string;
-
-    /** Store `body` under `key`. Any stream is accepted, of known length or not. */
-    put(
-        key: string,
-        body: ReadableStream | Uint8Array,
-        opts?: StoragePutOptions
-    ): Promise<void>;
-    get(key: string, opts?: { range?: StorageRange }): Promise<StorageObject | null>;
-    stat(key: string): Promise<StorageStat | null>;
-    delete(key: string): Promise<void>;
-    list(
-        prefix: string,
-        opts?: { cursor?: string; limit?: number }
-    ): Promise<StorageList>;
-
-    // Optional capabilities, feature-detected at the call site. Detection is
-    // load-bearing, not politeness: an R2 binding cannot sign URLs at all and
-    // `filesystem()` cannot either, so these are genuinely absent on shipped
-    // drivers. Never assume a method exists.
-    /** Permanent, cacheable, CDN-frontable URL. Null when the driver has none. */
-    getPublicUrl?(key: string): string | null;
-    /** Time-limited upload URL for direct client uploads. */
-    getSignedUploadUrl?(
-        key: string,
-        opts: { expiresIn: number; contentType?: string }
-    ): Promise<string>;
-    /** Time-limited download URL. */
-    getSignedDownloadUrl?(key: string, opts: { expiresIn: number }): Promise<string>;
-};
-
-export type ImageSource = {
-    contentType: string;
-    getBytes(): Promise<Uint8Array>;
-    originUrl: string;
-};
-
-export type ImageDriver = {
-    name: string;
-    /**
-     * Names every setting that shapes the driver's output, such as its encoder
-     * and quality. It joins each variant's storage key and ETag; defaults to `name`.
-     */
-    cacheKey?: string;
-    transform(
-        src: ImageSource,
-        opts: { width: number; format: ImageFormat }
-    ): Promise<{ body: ReadableStream | Uint8Array; contentType: string }>;
-    /**
-     * Whether the driver can make variants of a file of this content type. A
-     * type it cannot is served as the original with no srcset; absent, it can.
-     */
-    canTransform?(contentType: string): Promise<boolean>;
-    placeholder?(bytes: Uint8Array): Promise<string | null>;
-    cachesVariants?: boolean;
-};
-
-export type ImageConfig = {
-    driver: ImageDriver;
-    widths?: number[];
-    avif?: boolean;
-};
-
-/** No `from` — the driver supplies the envelope sender it was configured with. */
-export type EmailMessage = {
-    to: string;
-    subject: string;
-    html: string;
-    text?: string;
-};
-
-export type EmailDriver = {
-    name: string;
-    send(message: EmailMessage): Promise<void>;
-};
-
-export type SchedulerDriver = {
-    readonly name: string;
-    /** Begin producing ticks; each tick invokes onTick(now). */
-    start(onTick: (now: Date) => Promise<void>): void | Promise<void>;
-    stop?(): void | Promise<void>;
-};
+import type { StorageDriver } from '@/storage/driver';
 
 export type AdminColumn = {
     field: string;

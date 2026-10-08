@@ -11,7 +11,7 @@ import type {
     StoragePutOptions,
     StorageRange,
     StorageStat,
-} from '@/types/index';
+} from '@/storage/driver';
 import { AwsClient } from 'aws4fetch';
 import { resolveEnv } from '@/env';
 import { AstromechError } from '@/errors/astromech-error';

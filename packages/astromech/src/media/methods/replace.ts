@@ -1,5 +1,5 @@
 import type { MediaResource } from '../repository';
-import type { StorageDriver } from '@/types/index';
+import type { StorageDriver } from '@/storage/driver';
 import { z } from '@hono/zod-openapi';
 import { ResourceNotFoundError } from '@/errors/resource';
 import { defineServiceMethod } from '@/services/define-service-method';

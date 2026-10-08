@@ -1,4 +1,4 @@
-import type { SchedulerDriver } from '@/types/index';
+import type { SchedulerDriver } from '@/cron/driver';
 
 /** Cloudflare Cron Triggers are a dumb frequent ticker; cadence is core's.
  *  The Worker entry calls the exported scheduled handler (wired separately),

@@ -1,4 +1,5 @@
-import type { MediaMetadata, StorageDriver } from '@/types/index';
+import type { StorageDriver } from '@/storage/driver';
+import type { MediaMetadata } from '@/types/index';
 import {
     isOptimisableImage,
     isReadableImage,

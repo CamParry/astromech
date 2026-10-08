@@ -4,7 +4,7 @@
  * reads probe rather than throw.
  */
 
-import type { EmailDriver } from '@/types/index';
+import type { EmailDriver } from '@/email/driver';
 import { createRegistry } from '@/registry';
 
 const email = createRegistry<EmailDriver>('email', { required: false });

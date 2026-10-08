@@ -1,4 +1,4 @@
-import type { EmailDriver } from '@/types/index';
+import type { EmailDriver } from '@/email/driver';
 
 export type ConsoleEmailOptions = {
     from: string;

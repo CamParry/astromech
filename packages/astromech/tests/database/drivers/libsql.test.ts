@@ -6,8 +6,8 @@
  * file database.
  */
 
+import type { DbDump } from '@/database/driver';
 import type { DB } from '@/database/types';
-import type { DbDump } from '@/types/config';
 import type { Kysely } from 'kysely';
 import type { Migration, MigrationProvider } from 'kysely/migration';
 import { randomUUID } from 'node:crypto';
