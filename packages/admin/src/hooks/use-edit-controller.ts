@@ -9,13 +9,12 @@ import type { UseAdminGlobalResult } from './use-admin-global';
 import type { EntryFormValues, EntryPayload } from './use-entry-form';
 import type { QueryKey, UseMutationOptions } from '@tanstack/react-query';
 import type { Entry, Field, Global } from 'astromech';
-import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { useQuery } from '@tanstack/react-query';
 import { useNavigate } from '@tanstack/react-router';
 import { astromechUntypedClient } from 'astromech/fetch';
 import React from 'react';
 import { useTranslation } from 'react-i18next';
 import { useConfirm } from '../components/ui/confirm';
-import { useToast } from '../components/ui/toast';
 import { resolveForm } from '../rendering/resolve';
 import { entryEditPath, entryVersionsPath } from '../utilities/entry-admin-path';
 import { formatDatetimeForInput } from '../utilities/formatters';
@@ -35,11 +34,9 @@ type EditQuery<TData> = { queryKey: QueryKey; queryFn: () => Promise<TData> };
 /**
  * What the edit controller needs from one locale of one entry or global: its
  * reads, its one `update`, its staging writes and the paths between its rows.
- * `TAddress` is what the staging writes take.
+ * `TAddress` is the row's address, which every write takes.
  */
 export type EditResource<TRecord extends EditRecord, TAddress> = {
-    /** What the toasts and the staging banner call it. */
-    label: string;
     namespace: string;
     capabilities: { statuses: boolean; staging: boolean; versioning: boolean };
     can: (action: 'update' | 'publish') => boolean;
@@ -48,12 +45,14 @@ export type EditResource<TRecord extends EditRecord, TAddress> = {
     /** The staged change, flagged `diverged` when the canonical moved on after it. */
     staged: EditQuery<(TRecord & { diverged: boolean }) | null>;
     versions: EditQuery<unknown[]>;
-    /** Every key the resource's writes make stale. */
-    all: QueryKey;
     toFormValues: (record: TRecord | null) => Partial<EntryFormValues>;
-    /** The one write: fields, and on a canonical row the status and publish gate. */
-    update: (payload: EntryPayload, staged: boolean) => Promise<TRecord>;
     address: TAddress;
+    /** The one write: fields, and on a canonical row the status and publish gate. */
+    update: UseMutationOptions<
+        TRecord,
+        Error,
+        TAddress & { staged: boolean; data: EntryPayload }
+    >;
     createStaged: UseMutationOptions<TRecord | null, Error, TAddress>;
     mergeStaged: UseMutationOptions<TRecord, Error, TAddress>;
     deleteStaged: UseMutationOptions<void, Error, TAddress>;
@@ -71,7 +70,6 @@ export function entryEditResource(
     const mutations = entryMutations(type, config.single);
     const entries = astromechUntypedClient.entries;
     return {
-        label: config.single,
         namespace,
         capabilities: config.capabilities,
         can,
@@ -88,7 +86,6 @@ export function entryEditResource(
             queryKey: queryKeys.entries.versions(type, id, locale),
             queryFn: () => entries.versions({ type, id, locale }),
         },
-        all: queryKeys.entries.all(type),
         toFormValues: (entry) => ({
             title: entry?.title ?? '',
             slug: entry?.slug ?? '',
@@ -96,8 +93,8 @@ export function entryEditResource(
             publishedAt: formatDatetimeForInput(entry?.publishedAt),
             fields: entry?.fields ?? {},
         }),
-        update: (data, staged) => entries.update({ type, id, locale, staged, data }),
         address: { id, locale },
+        update: mutations.update,
         createStaged: mutations.createStaged,
         mergeStaged: mutations.mergeStaged,
         deleteStaged: mutations.deleteStaged,
@@ -109,17 +106,16 @@ export function entryEditResource(
     };
 }
 
-/** One locale of one global, for `useEditController`. */
+/** One locale of one global, for `useEditController`; `label` is what the toasts call it. */
 export function globalEditResource(
     global: UseAdminGlobalResult,
     locale: string,
     label: string
 ): EditResource<Global, { locale: string }> {
     const { key, config, basePath, namespace, can } = global;
-    const mutations = globalMutations(key);
+    const mutations = globalMutations(key, label);
     const globals = astromechUntypedClient.globals;
     return {
-        label,
         namespace,
         capabilities: config.capabilities,
         can,
@@ -142,28 +138,13 @@ export function globalEditResource(
             queryKey: queryKeys.globals.versions(key, locale),
             queryFn: () => globals.versions({ key, locale }),
         },
-        all: queryKeys.globals.all(key),
         toFormValues: (row) => ({
             status: row?.status ?? 'unpublished',
             publishedAt: formatDatetimeForInput(row?.publishedAt),
             fields: row?.fields ?? {},
         }),
-        // A staged row carries no status of its own: it takes the canonical's
-        // when it is merged.
-        update: ({ fields, status, publishedAt }, staged) =>
-            globals.update({
-                key,
-                locale,
-                staged,
-                data: staged
-                    ? { fields }
-                    : {
-                          fields,
-                          ...(status !== undefined ? { status } : {}),
-                          ...(publishedAt !== undefined ? { publishedAt } : {}),
-                      },
-            }),
         address: { locale },
+        update: mutations.update,
         createStaged: mutations.createStaged,
         mergeStaged: mutations.mergeStaged,
         deleteStaged: mutations.deleteStaged,
@@ -180,10 +161,8 @@ export function useEditController<TRecord extends EditRecord, TAddress>(
     { staged: isStaged }: { staged: boolean }
 ) {
     const { t } = useTranslation();
-    const { toast } = useToast();
     const confirm = useConfirm();
     const navigate = useNavigate();
-    const queryClient = useQueryClient();
     const { capabilities, paths } = resource;
     const hasStaging = capabilities.staging;
     const hasVersioning = capabilities.versioning;
@@ -206,6 +185,9 @@ export function useEditController<TRecord extends EditRecord, TAddress>(
     const { main, sidebar } = resource.form;
     const fieldDefinitions = React.useMemo(() => [...main, ...sidebar], [main, sidebar]);
 
+    // The form reports a failed save, a 422 onto its fields.
+    const update = useAdminMutation(resource.update, { toastError: false });
+
     const form = useEntryForm<TRecord>({
         fieldDefinitions,
         operation: 'update',
@@ -214,19 +196,10 @@ export function useEditController<TRecord extends EditRecord, TAddress>(
         hasSlug: resource.form.hasSlug,
         hasStatuses: resource.form.hasStatuses,
         readOnly: isReadOnly,
-        saveFn: (payload) => resource.update(payload, isStaged),
-        publishFn: (payload) => resource.update(payload, isStaged),
-        onSuccess: (saved) => {
-            // Seed the row before invalidating, so the re-render `form.reset`
-            // triggers sees the saved values, not the stale cached row.
-            const query = isStaged ? resource.staged : resource.canonical;
-            queryClient.setQueryData(query.queryKey, saved);
-            void queryClient.invalidateQueries({ queryKey: resource.all });
-            toast({
-                message: t('entries.updated', { name: resource.label }),
-                variant: 'success',
-            });
-        },
+        saveFn: (data) =>
+            update.mutateAsync({ ...resource.address, staged: isStaged, data }),
+        publishFn: (data) =>
+            update.mutateAsync({ ...resource.address, staged: isStaged, data }),
     });
 
     // Each write below either follows the editor's agreement to drop unsaved

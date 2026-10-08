@@ -4,6 +4,7 @@
  * never saved in is written by the first `update` there.
  */
 
+import type { GlobalUpdateData } from 'astromech';
 import { mutationOptions, queryOptions, useQuery } from '@tanstack/react-query';
 import { astromechUntypedClient } from 'astromech/fetch';
 import { openExisting } from './entries';
@@ -40,12 +41,58 @@ export function useGlobalVersions(key: string, locale: string, enabled = true) {
     return useQuery({ ...globalVersionsQueryOptions(key, locale), enabled });
 }
 
-/** Every write the admin makes to one global, each invalidating the global's keys. */
-export function globalMutations(key: string) {
+/**
+ * Every write the admin makes to one global, each invalidating the global's
+ * keys. `name` is what the toasts call the global.
+ */
+export function globalMutations(key: string, name: string = key) {
     const globals = astromechUntypedClient.globals;
     const all = queryKeys.globals.all(key);
     const invalidates = [all];
     return {
+        /**
+         * Save one locale, or its staged change when `staged` is true. A
+         * staged row carries no status of its own: it takes the canonical's
+         * when it is merged. The saved row is written to its key before the
+         * invalidation, as `entryMutations` does.
+         */
+        update: mutationOptions({
+            mutationKey: [...all, 'update'],
+            mutationFn: async (
+                {
+                    locale,
+                    staged,
+                    data: { fields, status, publishedAt },
+                }: { locale: string; staged: boolean; data: GlobalUpdateData },
+                { client }
+            ) => {
+                const saved = await globals.update({
+                    key,
+                    locale,
+                    staged,
+                    data: staged
+                        ? { fields }
+                        : {
+                              fields,
+                              ...(status !== undefined ? { status } : {}),
+                              ...(publishedAt !== undefined ? { publishedAt } : {}),
+                          },
+                });
+                client.setQueryData(
+                    staged
+                        ? queryKeys.globals.staged(key, locale)
+                        : queryKeys.globals.get(key, locale),
+                    saved
+                );
+                return saved;
+            },
+            meta: {
+                invalidates,
+                successMessage: 'entries.updated',
+                errorMessage: 'entries.updateFailed',
+                messageValues: { name },
+            },
+        }),
         restoreVersion: mutationOptions({
             mutationKey: [...all, 'restoreVersion'],
             mutationFn: ({ locale, version }: { locale: string; version: number }) =>

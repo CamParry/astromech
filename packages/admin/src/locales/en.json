@@ -148,6 +148,7 @@
         "restoredNewSlugs_other": "Some slugs were in use, so they are now {{slugs}}.",
         "updated": "{{name}} updated.",
         "created": "{{name}} created.",
+        "createFailed": "Create failed",
         "deleteFailed": "Delete failed",
         "duplicateFailed": "Duplicate failed",
         "restoreFailed": "Restore failed",
