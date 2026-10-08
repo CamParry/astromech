@@ -1,4 +1,4 @@
-import type { AdminResource } from '@/types/index';
+import type { AdminResource } from '@/plugins/admin-resource';
 
 /**
  * Define an admin resource for a plugin's `admin.resources`: list, create and

@@ -173,8 +173,12 @@ the repository copies.
       the table, form and cell renderer types are in the admin's
       `rendering/types.ts` and no longer exported from `astromech`, and
       `CellKind` stays in core beside `AdminColumn` in `types/config.ts`,
-      which uses it. The admin resource types and the service interfaces
-      remain.
+      which uses it. The admin resource types are done, in
+      `plugins/admin-resource.ts` beside `define-admin-resource.ts`; the other
+      admin types (`AdminPage`, `AdminConfig`, the slots) stay in
+      `types/config.ts`: pages and the admin config serve the site and
+      plugins alike, and the slots are a feature of their own. The service
+      interfaces remain.
 - [x] `RESOURCE_TYPES` sits in `types/domain.ts`, apart from `RESOURCE_CONFIG`
       in `content/resources.ts`. Moving it there leaves it undefined at load
       time: `content/schema.ts` builds `usageSchema` from it, and
