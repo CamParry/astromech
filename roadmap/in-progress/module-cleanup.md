@@ -167,8 +167,12 @@ the repository copies.
       schemas (`types/query.ts`). Derive them. The query methods' inputs moved
       to `queryMediaSchema` and `queryUsersSchema` in each module's
       `schema.ts`, and both types are `z.input` of them.
-- [ ] Generic form code is named as entry code in the admin
-      (`components/entries/entry-fields-renderer.tsx`, `EntryNamespaceProvider`).
+- [x] Generic form code is named as entry code in the admin
+      (`entry-fields-renderer.tsx` in `components/entries/`,
+      `EntryNamespaceProvider`). The renderer is now
+      `components/fields/field-list.tsx`, its root column `FieldValuesColumn`
+      (`FieldColumn` is the public form-bound one), and the provider
+      `LabelNamespaceProvider` in `i18n/label-namespace.tsx`.
 - [x] `packages/schema-engine/src/generate.ts` mixes migration generation with a
       rebaseline parser. Split it. The parser and its checks are in
       `packages/schema-engine/src/rebaseline.ts`, with no `node:fs`;

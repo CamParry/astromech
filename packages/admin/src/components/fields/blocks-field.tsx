@@ -32,9 +32,9 @@ import {
 import React, { useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useBlocksField } from '../../hooks/use-blocks-field';
-import { useLabel } from '../../i18n/entry-namespace';
-import { FieldList } from '../entries/entry-fields-renderer';
+import { useLabel } from '../../i18n/label-namespace';
 import { useFieldControl } from './field-control-context';
+import { FieldList } from './field-list';
 import { InlineTitle } from './inline-title';
 import './blocks-field.css';
 

@@ -13,7 +13,7 @@ import adminConfig from 'virtual:astromech/admin-config';
 import { useAiContext } from '../../context/ai-context';
 import { useAdminGlobal } from '../../hooks/use-admin-global';
 import { globalEditResource, useEditController } from '../../hooks/use-edit-controller';
-import { EntryNamespaceProvider } from '../../i18n/entry-namespace';
+import { LabelNamespaceProvider } from '../../i18n/label-namespace';
 import { resolveLabel } from '../../i18n/labels';
 import { globalBasePath, globalEditPath } from '../../utilities/global-admin-path';
 import { StatusField } from '../entries/entry-form-fields';
@@ -92,7 +92,7 @@ function GlobalEditBody({
     if (controller.isLoading) return <PageLoading />;
 
     return (
-        <EntryNamespaceProvider namespace={namespace}>
+        <LabelNamespaceProvider namespace={namespace}>
             <Page>
                 <PageHeader>
                     <PageTitle>
@@ -160,6 +160,6 @@ function GlobalEditBody({
                     />
                 </PageContent>
             </Page>
-        </EntryNamespaceProvider>
+        </LabelNamespaceProvider>
     );
 }

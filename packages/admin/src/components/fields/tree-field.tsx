@@ -34,8 +34,8 @@ import {
 import React, { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useTreeField } from '../../hooks/use-tree-field';
-import { FieldList } from '../entries/entry-fields-renderer';
 import { useFieldControl } from './field-control-context';
+import { FieldList } from './field-list';
 import './tree-field.css';
 
 // Lock dragging to the vertical axis — sortable strategy governs reordering

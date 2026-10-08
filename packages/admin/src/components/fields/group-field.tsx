@@ -1,7 +1,7 @@
 import type { BaseFieldProps } from 'astromech';
 import { parseInstancePath } from 'astromech/shared';
-import { FieldList } from '../entries/entry-fields-renderer';
 import { useFieldControl } from './field-control-context';
+import { FieldList } from './field-list';
 import './group-field.css';
 
 export function GroupField({ name, value, field, onChange, disabled }: BaseFieldProps) {

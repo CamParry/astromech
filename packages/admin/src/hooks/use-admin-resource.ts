@@ -16,7 +16,7 @@ import type {
 } from 'astromech';
 import { astromechUntypedClient } from 'astromech/fetch';
 import adminConfig from 'virtual:astromech/admin-config';
-import { labelNamespace } from '../i18n/entry-namespace';
+import { labelNamespace } from '../i18n/label-namespace';
 import { usePermissions } from './use-permissions';
 
 /** A view's method: `list`, `get`, `create`, `update` or `delete`. */

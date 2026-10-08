@@ -12,7 +12,7 @@ import { useTranslation } from 'react-i18next';
 import { adminResourceMutations } from '../../hooks/admin-resources';
 import { useAdminMutation } from '../../hooks/use-admin-mutation';
 import { useFieldsForm } from '../../hooks/use-fields-form';
-import { useLabel } from '../../i18n/entry-namespace';
+import { useLabel } from '../../i18n/label-namespace';
 import { FieldsForm } from '../forms/fields-form';
 import { Breadcrumb } from '../ui/breadcrumb';
 import { Button } from '../ui/button';

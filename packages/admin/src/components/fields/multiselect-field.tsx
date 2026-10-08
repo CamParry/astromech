@@ -1,5 +1,5 @@
 import type { BaseFieldProps } from 'astromech';
-import { useLabel } from '../../i18n/entry-namespace';
+import { useLabel } from '../../i18n/label-namespace';
 import { MultiSelect } from '../ui/multi-select';
 import { useFieldControl } from './field-control-context';
 import { fieldOptions } from './field-options';

@@ -11,7 +11,7 @@ import type {
 import React from 'react';
 import { useTranslation } from 'react-i18next';
 import { useAdminResource } from '../../hooks/use-admin-resource';
-import { EntryNamespaceProvider } from '../../i18n/entry-namespace';
+import { LabelNamespaceProvider } from '../../i18n/label-namespace';
 import { NotFoundPage } from '../layout/not-found-page';
 import { Page, PageContent } from '../ui/page';
 
@@ -50,8 +50,8 @@ export function AdminResourceGuard({
     }
 
     return (
-        <EntryNamespaceProvider namespace={target.namespace}>
+        <LabelNamespaceProvider namespace={target.namespace}>
             {children(target)}
-        </EntryNamespaceProvider>
+        </LabelNamespaceProvider>
     );
 }

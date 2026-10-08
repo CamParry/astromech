@@ -22,7 +22,7 @@ import { Button } from '../../components/ui/button';
 import { Input } from '../../components/ui/input';
 import { setupCheckQueryOptions, useAuth } from '../../context/auth';
 import { readValidationErrors, useFieldsForm } from '../../hooks/use-fields-form';
-import { labelNamespace } from '../../i18n/entry-namespace';
+import { labelNamespace } from '../../i18n/label-namespace';
 import { resolveLabel } from '../../i18n/labels';
 import { requiredFieldErrors } from '../../utilities/requires-field-values';
 

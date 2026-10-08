@@ -1,5 +1,5 @@
 /**
- * Recursive field renderer for an entry's columns and a container's items. A
+ * Recursive field renderer for a form's columns and a container's items. A
  * layout field draws a surface over its parent's values; a named `group`
  * scopes its children to its key. Data fields render through `FormField`.
  */
@@ -7,7 +7,7 @@
 import type { DataField, Field, FieldPathSegment, LayoutField } from 'astromech';
 import { formatInstancePath, isLayoutField } from 'astromech/shared';
 import React from 'react';
-import { useLabel } from '../../i18n/entry-namespace';
+import { useLabel } from '../../i18n/label-namespace';
 import { FieldValuesProvider } from '../fields/field-context';
 import { useFieldError } from '../fields/field-errors-context';
 import { FormField } from '../fields/form-field';
@@ -62,7 +62,7 @@ export function FieldList({
  * standalone; a run of data fields is grouped into an implicit Panel, unless
  * `surface` is false, where loose fields render bare.
  */
-export function EntryFieldColumn({
+export function FieldValuesColumn({
     nodes,
     values,
     onChange,

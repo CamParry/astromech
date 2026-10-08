@@ -7,7 +7,7 @@
 import type { AdminGlobal, GlobalAction } from 'astromech';
 import { globalPermission } from 'astromech/shared';
 import adminConfig from 'virtual:astromech/admin-config';
-import { labelNamespace } from '../i18n/entry-namespace';
+import { labelNamespace } from '../i18n/label-namespace';
 import { globalBasePath } from '../utilities/global-admin-path';
 import { usePermissions } from './use-permissions';
 

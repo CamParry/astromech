@@ -7,7 +7,7 @@
 import type { AdminEntryType, EntryAction } from 'astromech';
 import { entryPermission } from 'astromech/shared';
 import adminConfig from 'virtual:astromech/admin-config';
-import { labelNamespace } from '../i18n/entry-namespace';
+import { labelNamespace } from '../i18n/label-namespace';
 import { entryTypeBasePath } from '../utilities/entry-admin-path';
 import { usePermissions } from './use-permissions';
 

@@ -16,7 +16,7 @@ import {
 } from '../../hooks/admin-resources';
 import { useAdminMutation } from '../../hooks/use-admin-mutation';
 import { useFieldsForm } from '../../hooks/use-fields-form';
-import { useLabel } from '../../i18n/entry-namespace';
+import { useLabel } from '../../i18n/label-namespace';
 import { FieldsForm } from '../forms/fields-form';
 import { NotFoundPage } from '../layout/not-found-page';
 import { Breadcrumb } from '../ui/breadcrumb';

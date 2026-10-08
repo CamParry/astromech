@@ -17,7 +17,7 @@ import {
     validationSummaryMessage,
 } from '../components/fields/field-error-summary';
 import { useToast } from '../components/ui/toast';
-import { labelNamespace } from '../i18n/entry-namespace';
+import { labelNamespace } from '../i18n/label-namespace';
 import { resolveLabel } from '../i18n/labels';
 import { useFieldValidation } from './use-field-validation';
 import { useHotkeys } from './use-hotkeys';

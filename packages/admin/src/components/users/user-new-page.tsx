@@ -13,7 +13,7 @@ import { useAdminMutation } from '../../hooks/use-admin-mutation';
 import { useFieldsForm } from '../../hooks/use-fields-form';
 import { usePermissions } from '../../hooks/use-permissions';
 import { userMutations } from '../../hooks/users';
-import { labelNamespace } from '../../i18n/entry-namespace';
+import { labelNamespace } from '../../i18n/label-namespace';
 import { FieldColumn, FieldsForm } from '../forms/fields-form';
 import { Breadcrumb } from '../ui/breadcrumb';
 import { Button } from '../ui/button';
