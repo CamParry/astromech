@@ -3,6 +3,7 @@ import type { AudienceContext } from '@/content/visibility';
 import type { EntryQueryParams, Field, QueryResult, ResolvedConfig } from '@/types/index';
 import { applyVisibility } from '@/content/visibility';
 import { resolveEntryType } from '@/entries/entry-types';
+import { sortableFieldNames } from '@/entries/sort-fields';
 import { flattenEntryFields } from '@/fields/flatten';
 import { sha256Hex } from '@/utilities/hash';
 import { entryRepository } from '../repository/entries-table';
@@ -40,6 +41,9 @@ export async function queryPreviewEntries(
         locale: params.locale,
         where: params.where,
         sort: params.sort,
+        sortableFields: entryTypeCfg
+            ? sortableFieldNames(entryTypeCfg.fields, 'public')
+            : [],
         ...(limit === 'all' ? {} : { limit, offset: (page - 1) * limit }),
     });
 

@@ -37,6 +37,45 @@ addressed as `<namespace>/<type>` — see
 The field builders, and how grouping and layout fields decide where values are
 stored, are in [fields.md](fields.md).
 
+## Sorting a list
+
+`Astromech.entries.query()` takes `sort` as `{ key: 'asc' | 'desc' }`, or a
+list of them for a tiebreak. A key is one of the entry's own columns (`title`,
+`status`, `slug`, `createdAt`, `updatedAt`, `publishedAt`) or the name of a
+top-level field that holds one value: `text`, `textarea`, `number`, `range`,
+`boolean`, `date`, `datetime`, `select`, `radio-group`, `email`, `url`, `color`
+or `slug`. Over the REST API it travels as `?sort=price&dir=asc`.
+
+```ts
+const { data } = await Astromech.entries.query({
+    type: 'product',
+    sort: { price: 'asc' },
+});
+```
+
+- A number field sorts by value, a date field by date (while its values share
+  one format), and a boolean as `false` then `true`.
+- An entry with no value sorts first ascending and last descending.
+- Entries with equal values keep one order from page to page: newest first.
+- A query over several types sorts by a field only when every type declares it.
+- A public read cannot sort by a `private` field.
+- A field named like one of the entry's columns (a `title` field, say) cannot be
+  sorted by: the key sorts by the column.
+
+Any other key answers 400 `UnknownSortKeyError`, whose message lists the keys
+that would work.
+
+An admin column marked `sortable` lets an editor sort the list by that field:
+
+```ts
+import * as columns from 'astromech/columns';
+
+adminColumns: [columns.number('price', { sortable: true })],
+```
+
+Config loading fails when a `sortable` column names a field the list cannot
+sort by, so the admin never offers a sort the API refuses.
+
 ## Updating entries
 
 `Astromech.entries.update()` takes a **patch**, not a replacement. A field the

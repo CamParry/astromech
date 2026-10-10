@@ -242,6 +242,7 @@ The other members, all optional:
 | ------------- | ----------------------------------------------------------------------------------------------------------- |
 | `affectsData` | `false` for a field that stores nothing, such as a preview. Data paths skip it; the admin still renders it. |
 | `isRelation`  | The value is an id or a list of ids the relationships index records.                                        |
+| `sortable`    | The value is one string, number or boolean, so an entries list can sort by a top-level field of the type.   |
 | `toPublic`    | The value a public read returns, as rich text returns HTML.                                                 |
 | `children`    | A container's nested value scopes, so parsing and public reads recurse into it.                             |
 | `subFields`   | A container's declared field lists, so config validation and relationship paths reach them.                 |

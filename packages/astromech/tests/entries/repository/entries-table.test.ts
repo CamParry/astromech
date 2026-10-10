@@ -426,6 +426,149 @@ describe('findMany and count', () => {
     );
 });
 
+describe('findMany sorted by a field', () => {
+    const sortableFields = ['name', 'price', 'released'];
+
+    /** Create one post per row, each `fields` as given. */
+    async function seed(rows: Record<string, unknown>[]): Promise<void> {
+        for (const [index, fields] of rows.entries()) {
+            await entryRepository.create({
+                type: 'post',
+                title: `P${index}`,
+                slug: `p${index}`,
+                fields: fields as never,
+            });
+        }
+    }
+
+    /** One page of the `fields[key]` values, sorted by `key` in `direction`. */
+    async function page(
+        key: string,
+        direction: 'asc' | 'desc',
+        offset: number
+    ): Promise<unknown[]> {
+        const rows = await entryRepository.findMany({
+            type: 'post',
+            sort: { [key]: direction },
+            sortableFields,
+            limit: 2,
+            offset,
+        });
+        return rows.map((row) => row.fields[key] ?? null);
+    }
+
+    it('orders a text field by its value, across a page boundary', async () => {
+        await seed([{ name: 'cherry' }, { name: 'apple' }, { name: 'banana' }]);
+        expect([
+            ...(await page('name', 'asc', 0)),
+            ...(await page('name', 'asc', 2)),
+        ]).toEqual(['apple', 'banana', 'cherry']);
+        expect([
+            ...(await page('name', 'desc', 0)),
+            ...(await page('name', 'desc', 2)),
+        ]).toEqual(['cherry', 'banana', 'apple']);
+    });
+
+    it('orders a number field numerically, not as text', async () => {
+        await seed([{ price: 10 }, { price: 9 }, { price: 100 }]);
+        expect([
+            ...(await page('price', 'asc', 0)),
+            ...(await page('price', 'asc', 2)),
+        ]).toEqual([9, 10, 100]);
+        expect([
+            ...(await page('price', 'desc', 0)),
+            ...(await page('price', 'desc', 2)),
+        ]).toEqual([100, 10, 9]);
+    });
+
+    it('orders a date field by date', async () => {
+        await seed([
+            { released: '2024-03-01' },
+            { released: '2023-12-31' },
+            { released: '2024-01-15' },
+        ]);
+        expect([
+            ...(await page('released', 'asc', 0)),
+            ...(await page('released', 'asc', 2)),
+        ]).toEqual(['2023-12-31', '2024-01-15', '2024-03-01']);
+        expect([
+            ...(await page('released', 'desc', 0)),
+            ...(await page('released', 'desc', 2)),
+        ]).toEqual(['2024-03-01', '2024-01-15', '2023-12-31']);
+    });
+
+    it('sorts a missing value as NULL: first ascending, last descending', async () => {
+        await seed([{ price: 2 }, {}, { price: 1 }]);
+        const values = async (direction: 'asc' | 'desc') =>
+            (
+                await entryRepository.findMany({
+                    type: 'post',
+                    sort: { price: direction },
+                    sortableFields,
+                })
+            ).map((row) => row.fields['price'] ?? null);
+        expect(await values('asc')).toEqual([null, 1, 2]);
+        expect(await values('desc')).toEqual([2, 1, null]);
+    });
+
+    it('keeps rows with equal values in one order from page to page', async () => {
+        await seed([{ price: 1 }, { price: 1 }, { price: 1 }, { price: 1 }]);
+        const ids = async (offset: number) =>
+            (
+                await entryRepository.findMany({
+                    type: 'post',
+                    sort: { price: 'asc' },
+                    sortableFields,
+                    limit: 2,
+                    offset,
+                })
+            ).map((row) => row.id);
+        const all = (
+            await entryRepository.findMany({
+                type: 'post',
+                sort: { price: 'asc' },
+                sortableFields,
+            })
+        ).map((row) => row.id);
+        expect([...(await ids(0)), ...(await ids(2))]).toEqual(all);
+        expect(new Set(all).size).toBe(4);
+    });
+
+    it('orders a list over several types by a field both hold', async () => {
+        await entryRepository.create({ type: 'post', title: 'P', fields: { body: 'b' } });
+        await entryRepository.create({ type: 'note', title: 'N', fields: { body: 'a' } });
+        const rows = await entryRepository.findMany({
+            type: ['post', 'note'],
+            sort: { body: 'asc' },
+            sortableFields: ['body'],
+        });
+        expect(rows.map((row) => row.title)).toEqual(['N', 'P']);
+    });
+
+    it('refuses a field outside sortableFields, listing what would work', async () => {
+        await seed([{ name: 'a' }]);
+        const read = entryRepository.findMany({
+            type: 'post',
+            sort: { body: 'asc' },
+            sortableFields: ['name'],
+        });
+        await expect(read).rejects.toMatchObject({
+            name: 'UnknownSortKeyError',
+            status: 400,
+            key: 'body',
+            sortableFields: [
+                'title',
+                'status',
+                'createdAt',
+                'updatedAt',
+                'publishedAt',
+                'slug',
+                'name',
+            ],
+        });
+    });
+});
+
 describe('staging (forward versioning)', () => {
     it('stages a second content row for the same entry and locale', async () => {
         const canonical = await entryRepository.create({

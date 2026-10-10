@@ -174,6 +174,35 @@ describe('the entries list', () => {
         await waitFor(() => expect(view.search()).toEqual({ sort: 'title:asc' }));
     });
 
+    it('sends a field sort to the query and keeps the rows in the order it answers', async () => {
+        adminConfig.entryTypes = {
+            post: {
+                ...POST,
+                adminColumns: [{ field: 'price', label: 'Price', sortable: true }],
+            },
+        };
+        // Numeric order, which a sort by text would turn into 10, 9.
+        query.mockResolvedValue({
+            data: [
+                { ...makeEntry('e1', 'Cheap'), fields: { price: 9 } },
+                { ...makeEntry('e2', 'Dear'), fields: { price: 10 } },
+            ],
+            pagination: { page: 1, pages: 1, total: 2, limit: 20 },
+        });
+
+        mountList('/entries/post?sort=price:asc');
+
+        await screen.findByText('Cheap');
+        expect(query).toHaveBeenCalledWith(
+            expect.objectContaining({ sort: { price: 'asc' } })
+        );
+        const titles = screen
+            .getAllByRole('link')
+            .map((link) => link.textContent)
+            .filter((text) => text === 'Cheap' || text === 'Dear');
+        expect(titles).toEqual(['Cheap', 'Dear']);
+    });
+
     it('links each title to its row, in the row’s locale, for a keyboard user', async () => {
         adminConfig.entryTypes = {
             post: {

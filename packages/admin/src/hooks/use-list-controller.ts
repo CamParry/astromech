@@ -4,12 +4,10 @@
  * filters and the entries query they drive, all held in the URL.
  */
 
-import type { ListSort } from '../components/ui/use-list-state';
 import type { UseAdminEntryTypeResult } from './use-admin-entry-type';
 import type { Entry, EntryStatus } from 'astromech';
 import { useSearch } from '@tanstack/react-router';
 import { defaultContentLocale, isEntryStatus } from 'astromech/shared';
-import React from 'react';
 import adminConfig from 'virtual:astromech/admin-config';
 import { useListState } from '../components/ui/use-list-state';
 import { validateEntriesListSearch } from '../utilities/entry-admin-path';
@@ -20,6 +18,9 @@ export type StatusFilter = EntryStatus | 'all' | 'trashed';
 
 /** The locale filter's value for "every locale". */
 export const LOCALE_FILTER_ALL = '__all__';
+
+/** The rows before the query answers: one array, so a memo keyed on it holds. */
+const NO_ENTRIES: Entry[] = [];
 
 export function useListController(
     entryType: UseAdminEntryTypeResult,
@@ -43,11 +44,9 @@ export function useListController(
         ...list.queryParams,
     });
 
-    const rows = data?.data;
-    const sorted = React.useMemo(() => sortPage(rows ?? [], sort), [rows, sort]);
-
     return {
-        data: sorted,
+        // In the order the query answers: the sort travels in `queryParams`.
+        data: data?.data ?? NO_ENTRIES,
         total: data?.pagination?.total ?? 0,
         pages: data?.pagination?.pages ?? 1,
         isLoading,
@@ -71,25 +70,6 @@ export function useListController(
         setSort: list.setSort,
         setPage: list.setPage,
     };
-}
-
-/** Order one page by the sort column, which may be a system column or a field. */
-function sortPage(entries: Entry[], sort: ListSort | null): Entry[] {
-    if (sort === null) return entries;
-    const value = (entry: Entry): string => {
-        const raw =
-            sort.key === 'title'
-                ? entry.title
-                : sort.key === 'updatedAt'
-                  ? entry.updatedAt
-                  : (entry.fields as Record<string, unknown>)[sort.key];
-        return String(raw ?? '');
-    };
-    return [...entries].sort((a, b) =>
-        sort.direction === 'asc'
-            ? value(a).localeCompare(value(b))
-            : value(b).localeCompare(value(a))
-    );
 }
 
 function isStatusFilter(value: unknown): value is StatusFilter {

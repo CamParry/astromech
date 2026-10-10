@@ -51,6 +51,7 @@ import { userRepository } from '@/users/repository';
 type TestSchema = {
     round_trip: { id: string; title: string; count: number };
     migrated: { id: string; label: string };
+    json_sort: { id: string; fields: string | null };
 };
 
 // Local D1 state persists between the tests of this file, so every table this
@@ -59,6 +60,7 @@ type TestSchema = {
 const OWNED_TABLES = [
     'round_trip',
     'migrated',
+    'json_sort',
     'introspected',
     'user_content',
     'users',
@@ -147,6 +149,27 @@ describe('d1() against local emulation', () => {
             .where('id', '=', 'a')
             .executeTakeFirst();
         expect(deleted).toBeUndefined();
+    });
+
+    // The entries list orders by a field this way (`fieldValue` in
+    // `entries/repository/entries-table.ts`), with the JSON path bound.
+    it('orders by a JSON key with the path bound as a parameter', async () => {
+        await sql`CREATE TABLE json_sort (id TEXT PRIMARY KEY, fields TEXT)`.execute(db);
+        await db
+            .insertInto('json_sort')
+            .values([
+                { id: 'a', fields: JSON.stringify({ price: 10 }) },
+                { id: 'b', fields: JSON.stringify({ price: 9 }) },
+                { id: 'c', fields: JSON.stringify({}) },
+                { id: 'd', fields: JSON.stringify({ price: 100 }) },
+            ])
+            .execute();
+        const rows = await db
+            .selectFrom('json_sort')
+            .select('id')
+            .orderBy(sql`json_extract(${sql.ref('fields')}, ${'$."price"'})`, 'asc')
+            .execute();
+        expect(rows.map((row) => row.id)).toEqual(['c', 'b', 'a', 'd']);
     });
 
     it('maps insertId and affected-row counts from D1 meta', async () => {

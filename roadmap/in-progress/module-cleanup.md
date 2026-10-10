@@ -222,8 +222,10 @@ the repository copies.
 
 ## Dead or near-dead
 
-- [ ] `sortPage` in the admin list controller (see the `sortable` item in
-      `backlog.md`).
+- [x] `sortPage` in the admin list controller (see the `sortable` item in
+      `backlog.md`). Gone: the entries repository now sorts by a top-level
+      field whose type is `sortable`, by its bare name, and config resolve
+      refuses a `sortable` admin column the list cannot sort by.
 - [x] The `notifications.count` special cases: a bespoke route, a documented
       override and a client override, all to answer `{ data: { count } }`.
       All three went: `GET /notifications/count` is a table row and answers

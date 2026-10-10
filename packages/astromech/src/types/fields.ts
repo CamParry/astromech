@@ -295,6 +295,11 @@ export type FieldType = {
     /** Whether the type may be declared without a name, as a layout field. */
     layout?: boolean;
     isRelation?: boolean;
+    /**
+     * Whether a list can order by a top-level field of this type: its value is
+     * one string, number or boolean that orders the way a reader expects.
+     */
+    sortable?: boolean;
 };
 
 /**

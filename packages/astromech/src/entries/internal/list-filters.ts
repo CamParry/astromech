@@ -2,11 +2,13 @@ import type { ListParams } from '../repository/types';
 import type { VisibilityShape } from '@/content/visibility';
 import type { ResolvedConfig, WhereFilters } from '@/types/index';
 import { hasStatuses } from '@/content/resources';
+import { sharedSortableFields } from '@/entries/sort-fields';
 
 /**
  * The repository filters for the rows a list read returns: `query` lists them
  * and `count` counts them. A public read keeps the rows `isPubliclyVisible`
  * (`content/visibility.ts`) passes as of `now`, so a count matches the rows.
+ * `sortableFields` holds the fields every listed type may be ordered by.
  */
 export function entryListFilters(
     config: ResolvedConfig,
@@ -30,6 +32,7 @@ export function entryListFilters(
         locale: params.locale,
         trashed: params.trashed ?? false,
         search: params.search,
+        sortableFields: sharedSortableFields(config, types, shape),
         // A public read decides the status itself, so a caller's status filter is dropped.
         where: filtersPublished ? withoutStatus(where) : where,
         ...(filtersPublished
