@@ -23,6 +23,7 @@ import { resolveForm } from '../../rendering/resolve';
 import { formatDatetime } from '../../utilities/dates';
 import { entryEditPath, entryTypeBasePath } from '../../utilities/entry-admin-path';
 import { FieldColumn, FieldsForm } from '../forms/fields-form';
+import { ForbiddenPage } from '../layout/forbidden-page';
 import { NotFoundPage } from '../layout/not-found-page';
 import { LocaleSwitcher } from '../translations/locale-switcher';
 import { Breadcrumb } from '../ui/breadcrumb';
@@ -67,6 +68,7 @@ export function EntryEditPage({
     const entryType = useAdminEntryType(type);
     const resolvedLocale = locale ?? defaultContentLocale(adminConfig);
     if (entryType === null) return <NotFoundPage path={entryTypeBasePath(type)} />;
+    if (!entryType.can('read')) return <ForbiddenPage />;
     return (
         <EntryEditBody
             key={`${id}:${resolvedLocale}:${String(staged)}`}

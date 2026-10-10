@@ -10,6 +10,7 @@ import React from 'react';
 import { useTranslation } from 'react-i18next';
 import adminConfig from 'virtual:astromech/admin-config';
 import { pages } from 'virtual:astromech/plugins/components';
+import { ForbiddenPage } from '../../../components/layout/forbidden-page';
 import { ComponentPageView } from '../../../components/pages/component-page-view';
 import { EmptyState } from '../../../components/ui/empty-state';
 import { Page, PageContent } from '../../../components/ui/page';
@@ -68,15 +69,7 @@ function PluginPage(): React.ReactElement {
     }
 
     if (registration.permission !== null && !hasPermission(registration.permission)) {
-        return (
-            <Page>
-                <PageContent>
-                    <div className="am-banner am-banner-error" role="alert">
-                        {t('plugins.accessDenied')}
-                    </div>
-                </PageContent>
-            </Page>
-        );
+        return <ForbiddenPage />;
     }
 
     const owner = adminConfig.plugins.find(

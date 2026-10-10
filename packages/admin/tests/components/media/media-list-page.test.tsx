@@ -5,7 +5,8 @@
  * URL: the URL drives the query, a column sort and the type filter write it,
  * and a filename opens the detail modal. Bulk delete works from the table and
  * the grid, and steps back a page when it empties the last one. An empty
- * library invites an upload; an empty search says what matched nothing.
+ * library invites an upload; an empty search says what matched nothing. A
+ * user without `media:read` sees the forbidden message in place.
  */
 
 import type { Media, QueryResult } from '@/types/index';
@@ -189,6 +190,16 @@ describe('the media library', () => {
         await view.user.click(screen.getByRole('button', { name: 'Delete' }));
 
         await waitFor(() => expect(view.search()).toEqual({}));
+    });
+
+    it('shows a user without media:read the forbidden message in place', async () => {
+        const view = mountPage('/media', { permissions: ['users:read'] });
+
+        expect(
+            await screen.findByText("You don't have permission to view this page.")
+        ).toBeTruthy();
+        expect(view.pathname()).toBe('/media');
+        expect(media.query).not.toHaveBeenCalled();
     });
 
     it('offers no selection without the delete permission', async () => {

@@ -7,7 +7,7 @@
  * the publish panel changed it, which needs publish; a schedule needs a date.
  * A locale with no row is opened, not written, the merge confirm warns when the
  * staged read reports `diverged`, staging over unsaved edits asks first, and
- * merging over them asks once.
+ * merging over them asks once. A user without read sees the forbidden message.
  */
 
 import type { RenderAdminResult } from '../../_support/render-admin';
@@ -197,6 +197,17 @@ const DIVERGED_MESSAGE =
     'Heads up: the current entry has been edited since this staged change was created. Merging will overwrite those edits. This cannot be undone.';
 
 describe('the global edit page', () => {
+    it('shows a user without read the forbidden message in place', async () => {
+        const { api, get } = makeApi({ canonical: makeGlobal() });
+        const page = mountPage({ api, config: config(), permissions: ['media:read'] });
+
+        expect(
+            await screen.findByText("You don't have permission to view this page.")
+        ).toBeTruthy();
+        expect(page.location()).toBe(`${BASE_PATH}?locale=en`);
+        expect(get).not.toHaveBeenCalled();
+    });
+
     it('renders an empty form for a global that has never been saved', async () => {
         const { api } = makeApi({ canonical: null });
         mountPage({ api, config: config() });

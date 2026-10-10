@@ -3,7 +3,8 @@
  *
  * The users list keeps its search, sort and page in the URL: the URL drives
  * the query, a sort by name writes the URL, each row links to its user, and
- * a delete asks before it calls the server.
+ * a delete asks before it calls the server. A user without `users:read` sees
+ * the forbidden message in place.
  */
 
 import type { QueryResult, User } from '@/types/index';
@@ -54,7 +55,7 @@ afterEach(() => {
 });
 
 /** Mount the list at `url` beside a user page its rows link to. */
-function mountList(url: string) {
+function mountList(url: string, permissions: string[] = ['*']) {
     return renderAdmin(
         [
             {
@@ -64,7 +65,7 @@ function mountList(url: string) {
             },
             { path: '/users/$id', component: () => <p>User page</p> },
         ],
-        { url }
+        { url, permissions }
     );
 }
 
@@ -127,5 +128,15 @@ describe('the users list', () => {
         mountList('/users');
 
         expect(await screen.findByText('No users found')).toBeTruthy();
+    });
+
+    it('shows a user without users:read the forbidden message in place', async () => {
+        const view = mountList('/users', ['media:read']);
+
+        expect(
+            await screen.findByText("You don't have permission to view this page.")
+        ).toBeTruthy();
+        expect(view.pathname()).toBe('/users');
+        expect(query).not.toHaveBeenCalled();
     });
 });

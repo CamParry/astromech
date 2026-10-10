@@ -607,9 +607,9 @@ sort on it. `search: true` adds a search box.
 read-only, which suits records your plugin only collects. Without `delete`,
 there is no delete action, single or bulk.
 
-**Every named method declares `access: { permission }`.** The admin hides a
-view from a user who lacks the permission of the method behind it, and hides
-the sidebar item from a user who lacks the list method's. The server still
+**Every named method declares `access: { permission }`.** A user who lacks
+the permission of the method behind a view sees a no-permission message in its
+place, and no sidebar item without the list method's. The server still
 checks every call. The config fails to load when a named method is missing
 from `service` or declares another access form, when a column names no field,
 or when two resources share a name.

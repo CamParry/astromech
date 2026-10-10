@@ -7,7 +7,7 @@ import type { UseAdminEntryTypeResult } from '../../hooks/use-admin-entry-type';
 import type { Entry, EntryUpdateData } from 'astromech';
 import { useNavigate } from '@tanstack/react-router';
 import { defaultContentLocale } from 'astromech/shared';
-import React, { useEffect, useState } from 'react';
+import React, { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import adminConfig from 'virtual:astromech/admin-config';
 import { entryMutations } from '../../hooks/entries';
@@ -18,6 +18,7 @@ import { LabelNamespaceProvider } from '../../i18n/label-namespace';
 import { resolveForm } from '../../rendering/resolve';
 import { entryEditPath, entryTypeBasePath } from '../../utilities/entry-admin-path';
 import { FieldColumn, FieldsForm } from '../forms/fields-form';
+import { ForbiddenPage } from '../layout/forbidden-page';
 import { NotFoundPage } from '../layout/not-found-page';
 import { Breadcrumb } from '../ui/breadcrumb';
 import { Button } from '../ui/button';
@@ -34,28 +35,16 @@ export function EntryNewPage({
     type: string;
     /** Requested locale from the route search params; defaults to default locale. */
     requestedLocale: string | undefined;
-}): React.ReactElement | null {
+}): React.ReactElement {
     const entryType = useAdminEntryType(type);
     if (entryType === null) return <NotFoundPage path={entryTypeBasePath(type)} />;
-    if (!entryType.can('create')) return <CreateForbidden to={entryType.basePath} />;
+    if (!entryType.can('create')) return <ForbiddenPage />;
     return (
         <EntryNewBody
             entryType={entryType}
             requestedLocale={requestedLocale ?? defaultContentLocale(adminConfig)}
         />
     );
-}
-
-/** Send a user who may not create back to the list, saying why. */
-function CreateForbidden({ to }: { to: string }): null {
-    const navigate = useNavigate();
-    const { toast } = useToast();
-    const { t } = useTranslation();
-    useEffect(() => {
-        toast({ message: t('permissions.forbidden'), variant: 'error' });
-        void navigate({ to });
-    }, []);
-    return null;
 }
 
 function EntryNewBody({

@@ -20,6 +20,7 @@ import { useAdminGlobal } from '../../hooks/use-admin-global';
 import { useAdminMutation } from '../../hooks/use-admin-mutation';
 import { resolveLabel } from '../../i18n/labels';
 import { globalBasePath, globalEditPath } from '../../utilities/global-admin-path';
+import { ForbiddenPage } from '../layout/forbidden-page';
 import { NotFoundPage } from '../layout/not-found-page';
 import { VersionHistory } from '../versions/version-history';
 
@@ -33,6 +34,7 @@ export function GlobalVersionsPage({
 }): React.ReactElement {
     const global = useAdminGlobal(globalKey);
     if (global === null) return <NotFoundPage path={globalBasePath(globalKey)} />;
+    if (!global.can('read')) return <ForbiddenPage />;
     return <GlobalVersionsBody global={global} locale={locale} />;
 }
 

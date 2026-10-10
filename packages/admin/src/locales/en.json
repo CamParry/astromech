@@ -309,8 +309,7 @@
         "confirmDeleteMessage": "This action cannot be undone."
     },
     "permissions": {
-        "readOnly": "You have read-only access to this entry type.",
-        "forbidden": "You don't have permission to access this page."
+        "readOnly": "You have read-only access to this entry type."
     },
     "topbar": {
         "brand": "Astromech",
@@ -546,23 +545,20 @@
     "errors": {
         "notFound": "Page not found",
         "unauthorized": "You must be logged in to access this page",
-        "forbidden": "You do not have permission to access this page",
+        "forbidden": "You don't have permission to view this page.",
         "generic": "An unexpected error occurred",
         "componentCrashed": "The \"{{source}}\" component failed to render."
     },
     "plugins": {
-        "pageNotFound": "Plugin page not found",
-        "accessDenied": "You don't have permission to view this page."
+        "pageNotFound": "Plugin page not found"
     },
     "globals": {
         "saved": "{{label}} saved.",
         "updated": "{{name}} updated.",
-        "notFound": "Global not found",
-        "accessDenied": "You don't have permission to edit global settings."
+        "notFound": "Global not found"
     },
     "pages": {
         "saved": "{{label}} saved.",
-        "notFound": "Page not found",
-        "accessDenied": "You don't have permission to view this page."
+        "notFound": "Page not found"
     }
 }

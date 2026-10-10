@@ -4,7 +4,7 @@
  * The entries list keeps its filter, sort and page in the URL through
  * `useListController`: the URL drives the query, and a sort writes the URL
  * and returns to the first page. An id the config does not declare renders
- * the not-found page.
+ * the not-found page, and a user without read sees the forbidden message.
  */
 
 import type { AdminEntryType, Entry, QueryResult, User } from '@/types/index';
@@ -247,6 +247,17 @@ describe('the entries list', () => {
             expect(items.map((item) => item.textContent)).toEqual(actions);
         }
     );
+
+    it('shows a user without read the forbidden message in place', async () => {
+        adminConfig.entryTypes = { post: POST };
+        const view = mountList('/entries/post', 'post', ['entry:page:read']);
+
+        expect(
+            await screen.findByText("You don't have permission to view this page.")
+        ).toBeTruthy();
+        expect(view.pathname()).toBe('/entries/post');
+        expect(query).not.toHaveBeenCalled();
+    });
 
     it('renders the not-found page for a type the config does not declare', async () => {
         mountList('/entries/missing', 'missing');

@@ -19,6 +19,7 @@ import { globalBasePath, globalEditPath } from '../../utilities/global-admin-pat
 import { StatusField } from '../entries/entry-form-fields';
 import { EditActions, EditBanners, VersionsLink } from '../entries/staging-controls';
 import { FieldColumn, FieldsForm } from '../forms/fields-form';
+import { ForbiddenPage } from '../layout/forbidden-page';
 import { NotFoundPage } from '../layout/not-found-page';
 import { LocaleSwitcher } from '../translations/locale-switcher';
 import { Breadcrumb } from '../ui/breadcrumb';
@@ -54,6 +55,7 @@ export function GlobalEditPage({
     const global = useAdminGlobal(globalKey);
     const resolvedLocale = locale ?? defaultContentLocale(adminConfig);
     if (global === null) return <NotFoundPage path={globalBasePath(globalKey)} />;
+    if (!global.can('read')) return <ForbiddenPage />;
     return (
         <GlobalEditBody
             key={`${globalKey}:${resolvedLocale}:${String(staged)}`}

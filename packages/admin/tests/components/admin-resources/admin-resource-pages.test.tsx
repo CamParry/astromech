@@ -210,10 +210,13 @@ describe('the admin resource list', () => {
         expect(rpc.listEvents).toHaveBeenCalledWith({ page: 1, limit: 20 });
     });
 
-    it('refuses a user without the list permission', async () => {
-        mount('/plugin/redirects/resources/rules', []);
+    it('shows a user without the list permission the forbidden message in place', async () => {
+        const view = mount('/plugin/redirects/resources/rules', []);
 
-        expect(await screen.findByRole('alert')).toBeTruthy();
+        expect(
+            await screen.findByText("You don't have permission to view this page.")
+        ).toBeTruthy();
+        expect(view.path()).toBe('/plugin/redirects/resources/rules');
         expect(rpc.list).not.toHaveBeenCalled();
     });
 

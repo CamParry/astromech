@@ -1,7 +1,7 @@
 /**
  * Renders an admin resource page only when the resource declares the method
  * the page needs and the user holds its permission; otherwise the not-found
- * page or an access-denied banner.
+ * page or the forbidden page.
  */
 
 import type {
@@ -9,11 +9,10 @@ import type {
     UseAdminResourceResult,
 } from '../../hooks/use-admin-resource';
 import React from 'react';
-import { useTranslation } from 'react-i18next';
 import { useAdminResource } from '../../hooks/use-admin-resource';
 import { LabelNamespaceProvider } from '../../i18n/label-namespace';
+import { ForbiddenPage } from '../layout/forbidden-page';
 import { NotFoundPage } from '../layout/not-found-page';
-import { Page, PageContent } from '../ui/page';
 
 export type AdminResourceGuardProps = {
     /** The owning plugin's namespace. */
@@ -30,24 +29,13 @@ export function AdminResourceGuard({
     method,
     children,
 }: AdminResourceGuardProps): React.ReactElement {
-    const { t } = useTranslation();
     const target = useAdminResource(plugin, name);
 
     if (target === null || target.resource.methods[method] === undefined) {
         return <NotFoundPage path={`/plugin/${plugin}/resources/${name}`} />;
     }
 
-    if (!target.can(method)) {
-        return (
-            <Page>
-                <PageContent>
-                    <div className="am-banner am-banner-error" role="alert">
-                        {t('plugins.accessDenied')}
-                    </div>
-                </PageContent>
-            </Page>
-        );
-    }
+    if (!target.can(method)) return <ForbiddenPage />;
 
     return (
         <LabelNamespaceProvider namespace={target.namespace}>

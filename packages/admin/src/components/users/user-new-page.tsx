@@ -1,12 +1,12 @@
 /**
  * User create page: `useFieldsForm` over the declared `users.fields`, with the
- * name, email and role beside them. Sends a user who may not create users back
- * to the dashboard.
+ * name, email and role beside them, or the forbidden page for a user who may
+ * not create users.
  */
 
 import type { JsonObject } from 'astromech';
 import { useNavigate } from '@tanstack/react-router';
-import React, { useEffect } from 'react';
+import React from 'react';
 import { useTranslation } from 'react-i18next';
 import adminConfig from 'virtual:astromech/admin-config';
 import { useAdminMutation } from '../../hooks/use-admin-mutation';
@@ -15,6 +15,7 @@ import { usePermissions } from '../../hooks/use-permissions';
 import { userMutations } from '../../hooks/users';
 import { labelNamespace } from '../../i18n/label-namespace';
 import { FieldColumn, FieldsForm } from '../forms/fields-form';
+import { ForbiddenPage } from '../layout/forbidden-page';
 import { Breadcrumb } from '../ui/breadcrumb';
 import { Button } from '../ui/button';
 import { Page, PageContent, PageHeader, PageTitle, Stack } from '../ui/page';
@@ -25,15 +26,14 @@ import { requiredValidator, UserRoleField, UserTextField } from './user-profile-
 type UserFormExtras = { name: string; email: string; role: string };
 
 export function UserNewPage(): React.ReactElement {
+    const { canCreateUsers } = usePermissions();
+    if (!canCreateUsers()) return <ForbiddenPage />;
+    return <UserNewBody />;
+}
+
+function UserNewBody(): React.ReactElement {
     const { t } = useTranslation();
     const navigate = useNavigate();
-    const { canCreateUsers } = usePermissions();
-
-    useEffect(() => {
-        if (!canCreateUsers()) {
-            void navigate({ to: '/' });
-        }
-    }, []);
 
     const fieldDefinitions = adminConfig.users.fields;
 
