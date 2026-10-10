@@ -17,6 +17,7 @@ import type { Where } from '@/database/repository/where';
 import type { EntryContentRow, EntryTableRow } from '@/entries/tables';
 import type { JsonObject, ReferencesFilter, SortOption } from '@/types/index';
 import type { Expression, SqlBool } from 'kysely';
+import { sql } from 'kysely';
 import { getDefaultContentLocale } from '@/config/content-locale';
 import { buildOrderBy } from '@/content/list';
 import { createContentRepository, lastUpdate } from '@/content/repository/content-table';
@@ -39,24 +40,50 @@ type JoinedEb = Parameters<JoinedWhere>[0];
 /** The `where` keys that name a content-row column; `id` names the entry row's. */
 const CONTENT_WHERE_KEYS = new Set(['status', 'slug', 'title']);
 
-type OrderPair = [column: string, direction: 'asc' | 'desc'];
+type OrderPair = [column: string | Expression<unknown>, direction: 'asc' | 'desc'];
 
 /** Sort columns on the entry row; every other sortable column is the content row's. */
 const ENTRY_SORT_COLUMNS = new Set(['createdAt', 'updatedAt']);
 
+/** The order a list takes when its `sort` names nothing, and after what it names. */
+const DEFAULT_ORDER = { field: 'createdAt', direction: 'desc' } as const;
+
 /**
- * `createdAt` and `updatedAt` are the entry row's, every other sortable column
- * the content row's: the same split the returned shape makes.
+ * The ORDER BY a list's `sort` asks for. `createdAt` and `updatedAt` are the
+ * entry row's, every other system column the content row's: the same split the
+ * returned shape makes. A name in `sortableFields` orders by that key of the
+ * `fields` JSON, by type: numbers numerically, strings by code point, booleans
+ * as 0 and 1. A row without the value sorts as NULL, which SQLite places first
+ * ascending and last descending. After the requested order comes the default
+ * one, then the content row's id, so rows with equal values keep one order from
+ * page to page.
  */
-function orderPairs(sort?: SortOption | SortOption[]): OrderPair[] {
-    return buildOrderBy(sortableColumns('entry'), sort, [
-        { field: 'createdAt', direction: 'desc' },
-    ]).map(
-        ({ field, direction }): OrderPair => [
-            ENTRY_SORT_COLUMNS.has(field) ? `entries.${field}` : `entryContent.${field}`,
-            direction,
-        ]
-    );
+function orderPairs(
+    sort: SortOption | SortOption[] | undefined,
+    sortableFields: readonly string[]
+): OrderPair[] {
+    const system = sortableColumns('entry');
+    const clauses = buildOrderBy([...system, ...sortableFields], sort, [DEFAULT_ORDER]);
+    if (!clauses.some(({ field }) => field === DEFAULT_ORDER.field)) {
+        clauses.push(DEFAULT_ORDER);
+    }
+    return [
+        ...clauses.map(({ field, direction }): OrderPair => {
+            if (!system.includes(field)) return [fieldValue(field), direction];
+            const table = ENTRY_SORT_COLUMNS.has(field) ? 'entries' : 'entryContent';
+            return [`${table}.${field}`, direction];
+        }),
+        ['entryContent.id', 'desc'],
+    ];
+}
+
+/**
+ * One top-level key of the content row's `fields` JSON. The path is a bound
+ * parameter and the key is quoted in it, so a field name never reaches the SQL
+ * text; `sortableFieldNames` leaves out a name holding `"`, which cannot be quoted.
+ */
+function fieldValue(name: string): Expression<unknown> {
+    return sql`json_extract(${sql.ref('entryContent.fields')}, ${`$."${name}"`})`;
 }
 
 function buildListWhere(
@@ -292,7 +319,10 @@ function createEntryRepository() {
 
     async function findMany(params: ListParams): Promise<EntryResource[]> {
         let query = content.kysely().joined().where(listWhere(params));
-        for (const [column, direction] of orderPairs(params.sort)) {
+        for (const [column, direction] of orderPairs(
+            params.sort,
+            params.sortableFields ?? []
+        )) {
             query = query.orderBy(column, direction);
         }
         if (params.limit !== undefined) query = query.limit(params.limit);

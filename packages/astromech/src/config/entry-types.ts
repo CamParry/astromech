@@ -11,6 +11,7 @@ import type {
     ResolvedEntryType,
 } from '@/types/index';
 import { QUALIFIED_SEPARATOR, qualifyEntryType } from '@/entries/entry-types';
+import { assertSortableColumns } from '@/entries/sort-fields';
 import { assertUniqueDataNames, validateFieldTree } from '@/fields/field-tree';
 import {
     pluginEntryTypes,
@@ -104,9 +105,9 @@ export function toResolvedFields(fields: EntryFields | undefined): ResolvedEntry
 }
 
 /**
- * Resolve a single entry type: validate its titleField and field tree
- * (crash-loud on mismatch). `typeKey` is stamped onto the result as `id`, used
- * in error messages.
+ * Resolve a single entry type: validate its titleField, field tree and
+ * sortable admin columns (crash-loud on mismatch). `typeKey` is stamped onto
+ * the result as `id`, used in error messages.
  */
 export function toResolvedEntryType(
     typeKey: string,
@@ -121,6 +122,7 @@ export function toResolvedEntryType(
     validateFieldTree(owner, resolvedFields.main);
     validateFieldTree(owner, resolvedFields.sidebar);
     assertUniqueDataNames(owner, resolvedFields);
+    assertSortableColumns(owner, entryType.adminColumns ?? [], resolvedFields);
 
     const { fields: _fields, type: _type, ...rest } = entryType;
     return {

@@ -59,6 +59,12 @@ export type ListParams = {
      */
     publiclyVisible?: { asOf: Date; typesWithoutStatuses: readonly string[] } | undefined;
     sort?: SortOption | SortOption[] | undefined;
+    /**
+     * The top-level fields `sort` may name besides the system columns
+     * (`sharedSortableFields` in `entries/sort-fields.ts`); absent means none.
+     * `count` ignores it.
+     */
+    sortableFields?: readonly string[] | undefined;
     /** Rows to return; absent means every match. `count` ignores it. */
     limit?: number | undefined;
     /** Rows to skip before the first returned. `count` ignores it. */

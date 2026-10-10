@@ -253,12 +253,14 @@ function ownFields(repeats: boolean): (field: DataField) => SubFields[] {
 const dataFieldTypes: CoreDataFieldType[] = [
     {
         type: 'text',
+        sortable: true,
         build: text,
         validate: validateText,
         tsType: () => 'string',
     },
     {
         type: 'textarea',
+        sortable: true,
         build: textarea,
         validate: validateText,
         tsType: () => 'string',
@@ -275,6 +277,7 @@ const dataFieldTypes: CoreDataFieldType[] = [
     },
     {
         type: 'number',
+        sortable: true,
         build: number,
         coerce: coerceNumber,
         validate: validateNumber,
@@ -282,6 +285,7 @@ const dataFieldTypes: CoreDataFieldType[] = [
     },
     {
         type: 'boolean',
+        sortable: true,
         build: boolean,
         validate: validateBoolean,
         tsType: () => 'boolean',
@@ -289,6 +293,7 @@ const dataFieldTypes: CoreDataFieldType[] = [
     },
     {
         type: 'date',
+        sortable: true,
         build: date,
         coerce: coerceDate,
         validate: validateDate,
@@ -296,6 +301,7 @@ const dataFieldTypes: CoreDataFieldType[] = [
     },
     {
         type: 'datetime',
+        sortable: true,
         build: datetime,
         coerce: coerceDate,
         validate: validateDate,
@@ -303,6 +309,7 @@ const dataFieldTypes: CoreDataFieldType[] = [
     },
     {
         type: 'select',
+        sortable: true,
         build: select,
         validate: validateChoice,
         tsType: () => 'string',
@@ -409,6 +416,7 @@ const dataFieldTypes: CoreDataFieldType[] = [
     },
     {
         type: 'email',
+        sortable: true,
         build: email,
         tsType: () => 'string',
         coerce: coerceEmail,
@@ -416,6 +424,7 @@ const dataFieldTypes: CoreDataFieldType[] = [
     },
     {
         type: 'url',
+        sortable: true,
         build: url,
         tsType: () => 'string',
         coerce: coerceUrl,
@@ -423,18 +432,21 @@ const dataFieldTypes: CoreDataFieldType[] = [
     },
     {
         type: 'color',
+        sortable: true,
         build: color,
         validate: validateColor,
         tsType: () => 'string',
     },
     {
         type: 'slug',
+        sortable: true,
         build: slug,
         validate: validateSlug,
         tsType: () => 'string',
     },
     {
         type: 'range',
+        sortable: true,
         build: range,
         coerce: coerceNumber,
         validate: validateNumber,
@@ -449,6 +461,7 @@ const dataFieldTypes: CoreDataFieldType[] = [
     },
     {
         type: 'radio-group',
+        sortable: true,
         build: radioGroup,
         validate: validateChoice,
         tsType: () => 'string',

@@ -302,7 +302,8 @@ export type JoinedWhere = (
  */
 export type JoinedQuery = {
     where(fn: JoinedWhere): JoinedQuery;
-    orderBy(column: string, direction: 'asc' | 'desc'): JoinedQuery;
+    /** A column by `table.column`, or an expression such as a JSON key. */
+    orderBy(column: string | Expression<unknown>, direction: 'asc' | 'desc'): JoinedQuery;
     limit(count: number): JoinedQuery;
     offset(count: number): JoinedQuery;
     execute(): Promise<Record<string, unknown>[]>;
