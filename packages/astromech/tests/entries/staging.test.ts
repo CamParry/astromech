@@ -17,10 +17,12 @@ import type { JsonObject } from '@/types/index';
 import {
     createTestDb,
     createTestUser,
+    getEntryType,
     makeTestConfig,
     registerTestPlugins,
     runAsUser,
     setupTestConfig,
+    withEntryTypes,
 } from '@tests/harness';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { currentServices } from '@/app-context/services';
@@ -38,8 +40,8 @@ beforeEach(async () => {
 
     const cfg = makeTestConfig();
     // post: versioning on + relationship field; note: versioning off.
-    if (cfg.entries.post) cfg.entries.post.staging = true;
-    if (cfg.entries.note) cfg.entries.note.staging = true;
+    getEntryType(cfg, 'post').staging = true;
+    getEntryType(cfg, 'note').staging = true;
     setupTestConfig(cfg);
 });
 
@@ -521,7 +523,8 @@ describe('mergeStaged', () => {
 describe('mergeStaged — field validation', () => {
     beforeEach(() => {
         const cfg = makeTestConfig();
-        cfg.entries['post'] = {
+        cfg.entries = withEntryTypes(cfg.entries, {
+            type: 'post',
             single: 'Post',
             plural: 'Posts',
             versioning: true,
@@ -531,7 +534,7 @@ describe('mergeStaged — field validation', () => {
                 { name: 'link', type: 'url', label: 'Link' },
                 { name: 'page_slug', type: 'slug', label: 'Page Slug' },
             ],
-        };
+        });
         setupTestConfig(cfg);
     });
 

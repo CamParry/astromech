@@ -11,7 +11,7 @@ in `astromech.config.ts` and `.env`.
 ## Declaring a global
 
 Globals go in the top-level `globals` array, beside `entries`. Each one carries
-its own `key`:
+its own `key`, as each entry type carries its own `type`:
 
 ```ts
 // astromech.config.ts
@@ -19,9 +19,9 @@ import { defineConfig, defineGlobal } from 'astromech';
 import * as fields from 'astromech/fields';
 
 export default defineConfig({
-    entries: {
+    entries: [
         /* … */
-    },
+    ],
     globals: [
         defineGlobal({
             key: 'site',

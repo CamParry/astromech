@@ -11,6 +11,7 @@ import type { Kysely } from 'kysely';
 import {
     createTestDb,
     createTestUser,
+    getEntryType,
     makeTestConfig,
     runAsUser,
     setupTestConfig,
@@ -27,7 +28,7 @@ let other: User;
 beforeEach(async () => {
     db = await createTestDb();
     const config = makeTestConfig();
-    if (config.entries.post) config.entries.post.staging = true;
+    getEntryType(config, 'post').staging = true;
     setupTestConfig(config);
     author = await createTestUser(db, {
         name: 'Author',

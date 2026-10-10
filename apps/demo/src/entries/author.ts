@@ -1,13 +1,13 @@
 /**
  * The `author` entry type, split out of `astromech.config.ts` to demonstrate
  * `defineEntryType` — the helper for entry types that want their own module.
- * The record key in the config (`author`) is still what names the type.
  */
 
 import { defineEntryType } from 'astromech';
 import * as fields from 'astromech/fields';
 
 export const author = defineEntryType({
+    type: 'author',
     single: 'Author',
     plural: 'Authors',
     icon: 'UserRound',

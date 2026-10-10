@@ -39,8 +39,9 @@ vi.mock('@/transport/tools/scoped-tools', () => ({
 }));
 
 const config: ResolvedConfig = resolveTestConfig({
-    entries: {
-        posts: {
+    entries: [
+        {
+            type: 'posts',
             single: 'Post',
             plural: 'Posts',
             translatable: false,
@@ -50,14 +51,15 @@ const config: ResolvedConfig = resolveTestConfig({
                 { name: 'seo-meta', type: 'json' },
             ],
         },
-        pages: {
+        {
+            type: 'pages',
             single: 'Page',
             plural: 'Pages',
             translatable: false,
             versioning: false,
             fields: [{ name: 'body', type: 'richtext' }],
         },
-    },
+    ],
 });
 
 const def = (

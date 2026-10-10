@@ -9,7 +9,12 @@
 
 import type { AstromechConfig, Entry } from '@/types/index';
 import { adminRole } from '@tests/fixtures';
-import { createTestDb, makeTestConfig, setupTestConfig } from '@tests/harness';
+import {
+    createTestDb,
+    getEntryType,
+    makeTestConfig,
+    setupTestConfig,
+} from '@tests/harness';
 import { mountRouter, seedTestUser } from '@tests/mount-router';
 import { beforeEach, describe, expect, it } from 'vitest';
 import { currentServices } from '@/app-context/services';
@@ -24,7 +29,7 @@ function app() {
 /** `makeTestConfig` with trash switched off for `note`. */
 function configWithoutTrash(): AstromechConfig {
     const config = makeTestConfig();
-    if (config.entries['note']) config.entries['note'].trash = false;
+    getEntryType(config, 'note').trash = false;
     return config;
 }
 

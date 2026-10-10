@@ -30,8 +30,10 @@ import {
     createTestDb,
     createTestStorage,
     createTestUser,
+    getEntryType,
     makeTestConfig,
     setupTestConfig,
+    withEntryTypes,
 } from '@tests/harness';
 import { seedTestUser, testUser } from '@tests/mount-router';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
@@ -85,10 +87,10 @@ function makeConfig(): AstromechConfig {
     return {
         ...base,
         storage: createTestStorage(),
-        entries: {
-            ...base.entries,
-            post: {
-                ...base.entries['post'],
+        entries: withEntryTypes(
+            base.entries,
+            {
+                ...getEntryType(base, 'post'),
                 single: 'Post',
                 plural: 'Posts',
                 // `POST /entries/post/:id/staged` is gated on this capability.
@@ -110,7 +112,8 @@ function makeConfig(): AstromechConfig {
             },
             // The resource-validator testbed: a string result is form-level, a
             // map result lands on a field.
-            event: {
+            {
+                type: 'event',
                 single: 'Event',
                 plural: 'Events',
                 fields: [
@@ -133,8 +136,8 @@ function makeConfig(): AstromechConfig {
                     return undefined;
                 },
             },
-            note: {
-                ...base.entries['note'],
+            {
+                ...getEntryType(base, 'note'),
                 single: 'Note',
                 plural: 'Notes',
                 fields: [
@@ -151,8 +154,8 @@ function makeConfig(): AstromechConfig {
                         ],
                     },
                 ],
-            },
-        },
+            }
+        ),
         users: {
             fields: [{ name: 'bio', type: 'text', label: 'Bio', required: true }],
         },

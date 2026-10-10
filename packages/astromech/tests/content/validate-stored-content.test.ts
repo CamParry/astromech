@@ -7,7 +7,12 @@
  */
 
 import type { AstromechConfig, JsonObject } from '@/types/index';
-import { createTestDb, makeTestConfig, setupTestConfig } from '@tests/harness';
+import {
+    createTestDb,
+    getEntryType,
+    makeTestConfig,
+    setupTestConfig,
+} from '@tests/harness';
 import { beforeEach, describe, expect, it } from 'vitest';
 import { systemAppContext } from '@/app-context/app-context';
 import { currentServices } from '@/app-context/services';
@@ -31,9 +36,10 @@ function makeValidateConfig(): AstromechConfig {
     const base = makeTestConfig();
     return {
         ...base,
-        entries: {
+        entries: [
             ...base.entries,
-            article: {
+            {
+                type: 'article',
                 single: 'Article',
                 plural: 'Articles',
                 staging: true,
@@ -54,7 +60,8 @@ function makeValidateConfig(): AstromechConfig {
                     },
                 ],
             },
-            report: {
+            {
+                type: 'report',
                 single: 'Report',
                 plural: 'Reports',
                 fields: [
@@ -66,7 +73,7 @@ function makeValidateConfig(): AstromechConfig {
                     },
                 ],
             },
-        },
+        ],
         users: {
             fields: [
                 {
@@ -209,17 +216,9 @@ describe('validateStoredContent', () => {
             data: { title: 'Rated', fields: { rating: 4 } },
         });
         const config = makeValidateConfig();
-        setupTestConfig({
-            ...config,
-            entries: {
-                ...config.entries,
-                report: {
-                    ...config.entries.report!,
-                    validate: async ({ values }) =>
-                        Number(values.rating) > 3 ? 'Rating is too high to file' : null,
-                },
-            },
-        });
+        getEntryType(config, 'report').validate = async ({ values }) =>
+            Number(values.rating) > 3 ? 'Rating is too high to file' : null;
+        setupTestConfig(config);
 
         const result = await validateStoredContent(systemAppContext(), {
             type: 'report',

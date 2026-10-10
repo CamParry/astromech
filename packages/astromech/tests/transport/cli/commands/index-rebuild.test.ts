@@ -49,10 +49,10 @@ function writeConfig(options: { remote?: boolean } = {}): Promise<string> {
     return writeSiteConfig(root, {
         database: join(root, 'site.db'),
         migrationsDir: join(root, 'no-migrations'),
-        entries: {
-            post: { single: 'Post', plural: 'Posts', fields: [related] },
-            note: { single: 'Note', plural: 'Notes', fields: [related] },
-        },
+        entries: [
+            { type: 'post', single: 'Post', plural: 'Posts', fields: [related] },
+            { type: 'note', single: 'Note', plural: 'Notes', fields: [related] },
+        ],
         remote: options.remote === true,
         throwOnOpen: options.remote === true,
     });

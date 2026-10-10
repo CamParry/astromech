@@ -254,7 +254,7 @@ async function indexRelationships(): Promise<void> {
 
 /** An entry type's top-level fields, as authored in the site config. */
 function entryFields(type: string): Field[] {
-    const fields = config.entries?.[type]?.fields;
+    const fields = config.entries?.find((entryType) => entryType.type === type)?.fields;
     if (fields === undefined) return [];
     return Array.isArray(fields) ? fields : [...fields.main, ...(fields.sidebar ?? [])];
 }
@@ -1402,7 +1402,7 @@ async function seed(): Promise<void> {
                         text(' in your project root:')
                     ),
                     codeBlock(
-                        "import { defineConfig } from 'astromech';\nimport { libsql } from 'astromech/database/libsql';\nimport * as fields from 'astromech/fields';\n\nexport default defineConfig({\n  db: libsql({ url: 'file:./database.db' }),\n  entries: {\n    post: {\n      single: 'Post',\n      plural: 'Posts',\n      fields: [\n        fields.richtext('body', { required: true }),\n        fields.textarea('excerpt'),\n      ],\n    },\n  },\n});\n"
+                        "import { defineConfig } from 'astromech';\nimport { libsql } from 'astromech/database/libsql';\nimport * as fields from 'astromech/fields';\n\nexport default defineConfig({\n  db: libsql({ url: 'file:./database.db' }),\n  entries: [\n    {\n      type: 'post',\n      single: 'Post',\n      plural: 'Posts',\n      fields: [\n        fields.richtext('body', { required: true }),\n        fields.textarea('excerpt'),\n      ],\n    },\n  ],\n});\n"
                     ),
                     heading(2, text('Initialise the DB')),
                     codeBlock(

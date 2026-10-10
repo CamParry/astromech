@@ -7,7 +7,12 @@
  */
 
 import type { AstromechConfig, Entry, JsonObject } from '@/types/index';
-import { createTestDb, makeTestConfig, setupTestConfig } from '@tests/harness';
+import {
+    createTestDb,
+    makeTestConfig,
+    setupTestConfig,
+    withEntryTypes,
+} from '@tests/harness';
 import { beforeEach, describe, expect, it } from 'vitest';
 import { currentServices } from '@/app-context/services';
 
@@ -24,9 +29,10 @@ function makePatchConfig(metaType: 'json' | 'key-value' = 'json'): AstromechConf
     const base = makeTestConfig();
     return {
         ...base,
-        entries: {
-            ...base.entries,
-            post: {
+        entries: withEntryTypes(
+            base.entries,
+            {
+                type: 'post',
                 single: 'Post',
                 plural: 'Posts',
                 versioning: true,
@@ -66,12 +72,8 @@ function makePatchConfig(metaType: 'json' | 'key-value' = 'json'): AstromechConf
             },
             // No field definitions: the schema is unknown here, so nothing may
             // be projected away.
-            blank: {
-                single: 'Blank',
-                plural: 'Blanks',
-                fields: [],
-            },
-        },
+            { type: 'blank', single: 'Blank', plural: 'Blanks', fields: [] }
+        ),
     };
 }
 

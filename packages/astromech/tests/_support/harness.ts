@@ -36,6 +36,7 @@ import type {
     AppContext,
     AstromechConfig,
     DatabaseDriver,
+    EntryType,
     JsonObject,
     PluginDefinition,
     ResolvedConfig,
@@ -150,14 +151,15 @@ const testDatabase: DatabaseDriver = {
  *   titleless and titled → titled incoming relations are both reachable.
  * Two locales (en default + de) so translation flows are exercisable.
  */
-export function makeTestConfig(): AstromechConfig {
+export function makeTestConfig(): TestConfig {
     return {
         db: testDatabase,
         storage: noopStorage,
         defaultLocale: 'en',
         locales: ['en', 'de'],
-        entries: {
-            post: {
+        entries: [
+            {
+                type: 'post',
                 single: 'Post',
                 plural: 'Posts',
                 versioning: true,
@@ -179,14 +181,16 @@ export function makeTestConfig(): AstromechConfig {
                     },
                 ],
             },
-            note: {
+            {
+                type: 'note',
                 single: 'Note',
                 plural: 'Notes',
                 versioning: false,
                 translatable: false,
                 fields: [{ name: 'body', type: 'text', label: 'Body' }],
             },
-            snippet: {
+            {
+                type: 'snippet',
                 single: 'Snippet',
                 plural: 'Snippets',
                 titleField: false,
@@ -197,13 +201,15 @@ export function makeTestConfig(): AstromechConfig {
                     { name: 'value', type: 'text', label: 'Value' },
                 ],
             },
-            card: {
+            {
+                type: 'card',
                 single: 'Card',
                 plural: 'Cards',
                 titleField: false,
                 fields: [{ name: 'label', type: 'text', label: 'Label' }],
             },
-            bookmark: {
+            {
+                type: 'bookmark',
                 single: 'Bookmark',
                 plural: 'Bookmarks',
                 fields: [
@@ -215,8 +221,41 @@ export function makeTestConfig(): AstromechConfig {
                     },
                 ],
             },
-        },
+        ],
     };
+}
+
+/** An authored config whose `entries` is always present, for a test to read or extend. */
+type TestConfig = AstromechConfig & { entries: EntryType[] };
+
+/**
+ * The entry type `type` in `config`, for a test to read or change in place.
+ * Throws when the config has no such type.
+ */
+export function getEntryType(config: AstromechConfig, type: string): EntryType {
+    const entryType = config.entries?.find((candidate) => candidate.type === type);
+    if (entryType === undefined) {
+        throw new Error(`the test config has no entry type "${type}"`);
+    }
+    return entryType;
+}
+
+/**
+ * `entries` with each of `entryTypes` in place of the type with the same
+ * `type`, or appended when there is none.
+ */
+export function withEntryTypes(
+    entries: EntryType[] | undefined,
+    ...entryTypes: EntryType[]
+): EntryType[] {
+    const replaced = (entries ?? []).map(
+        (entryType) =>
+            entryTypes.find((candidate) => candidate.type === entryType.type) ?? entryType
+    );
+    const added = entryTypes.filter(
+        (candidate) => !replaced.some((entryType) => entryType.type === candidate.type)
+    );
+    return [...replaced, ...added];
 }
 
 /**

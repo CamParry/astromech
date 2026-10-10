@@ -267,8 +267,9 @@ export default defineConfig({
         }),
     ],
 
-    entries: {
-        page: {
+    entries: [
+        {
+            type: 'page',
             single: 'Page',
             plural: 'Pages',
             icon: 'FileText',
@@ -328,7 +329,8 @@ export default defineConfig({
             },
         },
 
-        post: {
+        {
+            type: 'post',
             single: 'Post',
             plural: 'Posts',
             icon: 'Newspaper',
@@ -370,7 +372,8 @@ export default defineConfig({
         // here is inline. Both are supported — see apps/docs/content/entry-types.md.
         author,
 
-        caseStudy: {
+        {
+            type: 'caseStudy',
             single: 'Case Study',
             plural: 'Case Studies',
             icon: 'BookOpen',
@@ -419,7 +422,8 @@ export default defineConfig({
             },
         },
 
-        category: {
+        {
+            type: 'category',
             single: 'Category',
             plural: 'Categories',
             icon: 'FolderTree',
@@ -428,7 +432,8 @@ export default defineConfig({
             fields: [fields.textarea('description', { label: 'Description' })],
         },
 
-        tag: {
+        {
+            type: 'tag',
             single: 'Tag',
             plural: 'Tags',
             icon: 'Tag',
@@ -436,7 +441,7 @@ export default defineConfig({
             url: '/blog/tag/{slug}',
             fields: [fields.color('color', { label: 'Color' })],
         },
-    },
+    ],
 
     admin: {
         pages: [

@@ -5,7 +5,12 @@
  */
 
 import type { AstromechConfig } from '@/types/index';
-import { createTestDb, makeTestConfig, setupTestConfig } from '@tests/harness';
+import {
+    createTestDb,
+    makeTestConfig,
+    setupTestConfig,
+    withEntryTypes,
+} from '@tests/harness';
 import { beforeEach, describe, expect, it } from 'vitest';
 import { currentServices } from '@/app-context/services';
 
@@ -18,15 +23,13 @@ function configWithSlugOffType(): AstromechConfig {
     const config = makeTestConfig();
     return {
         ...config,
-        entries: {
-            ...config.entries,
-            note: {
-                single: 'Note',
-                plural: 'Notes',
-                slug: false,
-                fields: [{ name: 'body', type: 'text', label: 'Body' }],
-            },
-        },
+        entries: withEntryTypes(config.entries, {
+            type: 'note',
+            single: 'Note',
+            plural: 'Notes',
+            slug: false,
+            fields: [{ name: 'body', type: 'text', label: 'Body' }],
+        }),
     };
 }
 

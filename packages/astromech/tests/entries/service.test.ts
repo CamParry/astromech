@@ -10,6 +10,7 @@ import { expectConsole } from '@tests/console';
 import {
     createTestDb,
     failWritesTo,
+    getEntryType,
     makeTestConfig,
     registerTestPlugins,
     setupTestConfig,
@@ -1098,7 +1099,7 @@ describe('an entry addressed as another type', () => {
     beforeEach(async () => {
         // The staging and preview token methods need staging on the type they address.
         const config = makeTestConfig();
-        if (config.entries['post']) config.entries['post'].staging = true;
+        getEntryType(config, 'post').staging = true;
         setupTestConfig(config);
 
         const note = await api.create({
@@ -1527,12 +1528,8 @@ describe('hooks', () => {
 
     it('fires afterUpdate when a staged change merges, with the row as it was and the merged values', async () => {
         const base = makeTestConfig();
-        const post = base.entries['post'];
-        if (!post) throw new Error('test harness missing `post` entry type');
-        setupTestConfig({
-            ...base,
-            entries: { ...base.entries, post: { ...post, staging: true } },
-        });
+        getEntryType(base, 'post').staging = true;
+        setupTestConfig(base);
         const seen: { slug: string | null; data: unknown }[] = [];
         registerTestPlugins([
             {

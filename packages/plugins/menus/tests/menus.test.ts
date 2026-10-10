@@ -12,7 +12,7 @@
 import type { MenuItem } from '../src/index';
 import type { AstromechConfig, JsonObject, PluginDefinition } from '@/types/index';
 import type { PluginTestApp } from '@tests/plugin-app';
-import { makeTestConfig } from '@tests/harness';
+import { getEntryType, makeTestConfig } from '@tests/harness';
 import { createPluginTestApp } from '@tests/plugin-app';
 import { beforeEach, describe, expect, it } from 'vitest';
 import { menus } from '../src/index';
@@ -45,8 +45,7 @@ function makeMenusConfig(
 ): AstromechConfig {
     const base = makeTestConfig();
     // Add a url template to the post type so entry refs can resolve
-    const post = base.entries['post'];
-    if (post) post.url = '/blog/{slug}';
+    getEntryType(base, 'post').url = '/blog/{slug}';
     return {
         ...base,
         plugins: [menus({ menus: menuList })],

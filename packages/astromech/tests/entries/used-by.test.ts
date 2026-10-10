@@ -19,9 +19,10 @@ function makeRelationsConfig(): AstromechConfig {
     const base = makeTestConfig();
     return {
         ...base,
-        entries: {
+        entries: [
             ...base.entries,
-            article: {
+            {
+                type: 'article',
                 single: 'Article',
                 plural: 'Articles',
                 staging: true,
@@ -48,7 +49,7 @@ function makeRelationsConfig(): AstromechConfig {
                     },
                 ],
             },
-        },
+        ],
         users: {
             fields: [
                 {

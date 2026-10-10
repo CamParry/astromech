@@ -49,11 +49,10 @@ export type VersioningConfig = {
 
 export type EntryType = {
     /**
-     * Type key. Plugin entry types self-declare this so they can be listed in
-     * the plugin `entries` array; root config entry types are keyed by the
-     * `entries` record and leave this unset.
+     * The type's key, unique within its `entries` array. No `/` or `:`. A
+     * site's type is addressed by it as is, a plugin's as `<namespace>/<type>`.
      */
-    type?: string;
+    type: string;
     /**
      * Field tree for this entry type. Either a flat list (single column) or an
      * explicit `{ main, sidebar }` two-column split. Layout fields
@@ -116,7 +115,7 @@ export type ResolvedEntryCapabilities = {
 };
 
 export type ResolvedEntryType = Omit<EntryType, 'fields' | 'type'> & {
-    /** The addressable id: the site's `entries` key, or `{plugin}/{type}` for a plugin's. */
+    /** The addressable id: the site type's `type`, or `{plugin}/{type}` for a plugin's. */
     id: string;
     /** The namespace of the plugin that declares the type; absent for the site's own. */
     plugin?: string;
@@ -315,7 +314,8 @@ export type AstromechConfig = {
      * step reads, relative to the working directory. Default `./migrations`.
      */
     migrationsDir?: string;
-    entries: Record<string, EntryType>;
+    /** The site's entry types, each self-contained with its own `type`. */
+    entries?: EntryType[];
     /** Site-wide globals, each self-contained with its own `key`. */
     globals?: GlobalConfig[];
     admin?: {

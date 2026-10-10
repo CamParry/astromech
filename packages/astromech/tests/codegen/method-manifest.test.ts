@@ -57,27 +57,30 @@ const testPlugin: PluginDefinition = {
 };
 
 const resolved = resolveTestConfig({
-    entries: {
-        posts: {
+    entries: [
+        {
+            type: 'posts',
             single: 'Post',
             plural: 'Posts',
             versioning: true,
             fields: [{ name: 'title', type: 'text' }],
         },
-        pages: {
+        {
+            type: 'pages',
             single: 'Page',
             plural: 'Pages',
             versioning: false,
             fields: [{ name: 'title', type: 'text' }],
         },
-        articles: {
+        {
+            type: 'articles',
             single: 'Article',
             plural: 'Articles',
             versioning: true,
             staging: true,
             fields: [{ name: 'title', type: 'text' }],
         },
-    },
+    ],
     plugins: [testPlugin],
 });
 

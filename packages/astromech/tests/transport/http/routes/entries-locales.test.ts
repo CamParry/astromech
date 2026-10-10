@@ -19,7 +19,12 @@ import type {
     VersionMetadata,
 } from '@/types/index';
 import { adminRole } from '@tests/fixtures';
-import { createTestDb, makeTestConfig, setupTestConfig } from '@tests/harness';
+import {
+    createTestDb,
+    getEntryType,
+    makeTestConfig,
+    setupTestConfig,
+} from '@tests/harness';
 import { mountRouter, seedTestUser } from '@tests/mount-router';
 import { beforeEach, describe, expect, it } from 'vitest';
 import { currentServices } from '@/app-context/services';
@@ -34,7 +39,7 @@ function app() {
 /** `makeTestConfig` with `post` staging on, so the preview routes are reachable. */
 function configWithStaging(): AstromechConfig {
     const config = makeTestConfig();
-    if (config.entries['post']) config.entries['post'].staging = true;
+    getEntryType(config, 'post').staging = true;
     return config;
 }
 

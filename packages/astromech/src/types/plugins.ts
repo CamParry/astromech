@@ -359,7 +359,10 @@ export type PluginDefinition = PluginIdentity & {
      * derives them from the plugin's registered entry types.
      */
     permissions?: PermissionDeclarations;
-    /** Entry types contributed by the plugin. Each self-declares its `type`. */
+    /**
+     * Entry types contributed by the plugin, the same shape as the site's.
+     * Each is addressed as `<namespace>/<type>` on the one entries service.
+     */
     entries?: EntryType[];
     /**
      * Globals contributed by the plugin. Each is addressed as

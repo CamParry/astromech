@@ -1,4 +1,4 @@
-import type { EntryType, PluginDefinition, ResolvedPluginIdentity } from '@/types/index';
+import type { PluginDefinition, ResolvedPluginIdentity } from '@/types/index';
 import { pluginNamespace, pluginServiceKey } from '@/utilities/plugin-namespace';
 
 /**
@@ -26,23 +26,6 @@ export function titleCaseNamespace(namespace: string): string {
         .filter(Boolean)
         .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
         .join(' ');
-}
-
-/**
- * Plugin entry types as `[type, config]` pairs. Configs in the `entries` array
- * self-declare their `type`; this validates presence and adapts to the keyed
- * shape the resolver, nav, and repository registry consume.
- */
-export function pluginEntryTypes(def: PluginDefinition): [string, EntryType][] {
-    return (def.entries ?? []).map((entryType) => {
-        if (!entryType.type) {
-            throw new Error(
-                `Astromech plugin "${def.package}" declares an entry type without a "type". ` +
-                    `Plugin entry configs must set their own \`type\` key.`
-            );
-        }
-        return [entryType.type, entryType];
-    });
 }
 
 /** Compute the full identity for a single plugin definition. */

@@ -136,7 +136,6 @@ describe('astromech', () => {
 export default {
     db: d1({ binding: 'DB' }),
     migrationsDir: ${JSON.stringify(join(site, 'migrations'))},
-    entries: {},
 };
 `
             );

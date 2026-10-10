@@ -24,9 +24,10 @@ function makeConfig(validate: ResourceValidator): AstromechConfig {
     const base = makeTestConfig();
     return {
         ...base,
-        entries: {
+        entries: [
             ...base.entries,
-            event: {
+            {
+                type: 'event',
                 single: 'Event',
                 plural: 'Events',
                 fields: [
@@ -41,7 +42,7 @@ function makeConfig(validate: ResourceValidator): AstromechConfig {
                 ],
                 validate,
             },
-        },
+        ],
     };
 }
 

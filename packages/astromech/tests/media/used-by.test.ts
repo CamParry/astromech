@@ -22,9 +22,10 @@ function makeUsageConfig(): AstromechConfig {
     const base = makeTestConfig();
     return {
         ...base,
-        entries: {
+        entries: [
             ...base.entries,
-            article: {
+            {
+                type: 'article',
                 single: 'Article',
                 plural: 'Articles',
                 staging: true,
@@ -38,7 +39,7 @@ function makeUsageConfig(): AstromechConfig {
                     },
                 ],
             },
-        },
+        ],
         users: {
             fields: [{ name: 'avatar', type: 'media', label: 'Avatar' }],
         },

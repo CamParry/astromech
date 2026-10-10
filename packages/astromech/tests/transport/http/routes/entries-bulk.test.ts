@@ -10,6 +10,7 @@ import type { AstromechConfig, Entry } from '@/types/index';
 import { adminRole } from '@tests/fixtures';
 import {
     createTestDb,
+    getEntryType,
     makeTestConfig,
     registerTestPlugins,
     setupTestConfig,
@@ -42,15 +43,15 @@ function post(path: string, body: unknown): Promise<Response> | Response {
 /** `makeTestConfig` with trash switched off for `note`. */
 function configWithoutTrash(): AstromechConfig {
     const config = makeTestConfig();
-    if (config.entries['note']) config.entries['note'].trash = false;
+    getEntryType(config, 'note').trash = false;
     return config;
 }
 
 /** `makeTestConfig` with a `post` field the field pipeline can reject. */
 function configWithValidatedContact(): AstromechConfig {
     const config = makeTestConfig();
-    const post = config.entries['post'];
-    if (post && Array.isArray(post.fields)) {
+    const post = getEntryType(config, 'post');
+    if (Array.isArray(post.fields)) {
         post.fields = [
             ...post.fields,
             {

@@ -218,8 +218,9 @@ start", "supply at least one contact method". Declare a `validate` on the entry
 type (or on a global, `media`, or `users`):
 
 ```ts
-entries: {
-    event: {
+entries: [
+    {
+        type: 'event',
         single: 'Event',
         plural: 'Events',
         fields: [...],
@@ -233,7 +234,7 @@ entries: {
             return null;
         },
     },
-},
+],
 ```
 
 Return an **object** to attach messages to fields by path — the same

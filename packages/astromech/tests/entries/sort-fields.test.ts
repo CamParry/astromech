@@ -5,8 +5,14 @@
  * would refuse.
  */
 
-import type { AdminColumn, AstromechConfig, EntryType } from '@/types/index';
-import { createTestDb, makeTestConfig, setupTestConfig } from '@tests/harness';
+import type { AdminColumn } from '@/types/index';
+import {
+    createTestDb,
+    getEntryType,
+    makeTestConfig,
+    setupTestConfig,
+    withEntryTypes,
+} from '@tests/harness';
 import { beforeEach, describe, expect, it } from 'vitest';
 import { currentServices } from '@/app-context/services';
 import { toResolvedFields } from '@/config/entry-types';
@@ -149,10 +155,10 @@ describe('entries.query sorted by a field', () => {
 
     it('refuses a private field in a public read', async () => {
         const config = makeTestConfig();
-        config.entries['note'] = {
-            ...config.entries['note'],
-            fields: [fields.text('body'), fields.text('secret', { private: true })],
-        } as EntryType;
+        getEntryType(config, 'note').fields = [
+            fields.text('body'),
+            fields.text('secret', { private: true }),
+        ];
         setupTestConfig(config);
         await expect(
             api.query({ type: 'note', sort: { secret: 'asc' } })
@@ -165,8 +171,9 @@ describe('entries.query sorted by a field', () => {
 
 describe('a sortable admin column at config resolve', () => {
     function resolveWith(adminColumns: AdminColumn[]): () => void {
-        const config: AstromechConfig = makeTestConfig();
-        config.entries['post'] = {
+        const config = makeTestConfig();
+        config.entries = withEntryTypes(config.entries, {
+            type: 'post',
             single: 'Post',
             plural: 'Posts',
             fields: [
@@ -176,7 +183,7 @@ describe('a sortable admin column at config resolve', () => {
                 fields.relationship('related', { target: 'post' }),
             ],
             adminColumns,
-        };
+        });
         return () => resolveConfig(config);
     }
 

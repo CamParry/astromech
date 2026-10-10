@@ -18,9 +18,10 @@ function makeCapabilityTestConfig(): AstromechConfig {
     return {
         ...makeTestConfig(),
         locales: ['en'],
-        entries: {
+        entries: [
             // All capabilities default ON — no restriction.
-            full: {
+            {
+                type: 'full',
                 single: 'Full',
                 plural: 'Fulls',
                 versioning: true,
@@ -28,7 +29,8 @@ function makeCapabilityTestConfig(): AstromechConfig {
                 fields: [{ name: 'body', type: 'text' as const, label: 'Body' }],
             },
             // statuses explicitly off.
-            nostatuses: {
+            {
+                type: 'nostatuses',
                 single: 'NoStatuses',
                 plural: 'NoStatuses',
                 statuses: false,
@@ -37,7 +39,8 @@ function makeCapabilityTestConfig(): AstromechConfig {
                 fields: [{ name: 'body', type: 'text' as const, label: 'Body' }],
             },
             // trash explicitly off.
-            notrash: {
+            {
+                type: 'notrash',
                 single: 'NoTrash',
                 plural: 'NoTrash',
                 trash: false,
@@ -46,14 +49,15 @@ function makeCapabilityTestConfig(): AstromechConfig {
                 fields: [{ name: 'body', type: 'text' as const, label: 'Body' }],
             },
             // versioning explicitly off.
-            noversioning: {
+            {
+                type: 'noversioning',
                 single: 'NoVersioning',
                 plural: 'NoVersioning',
                 versioning: false,
                 translatable: false,
                 fields: [{ name: 'body', type: 'text' as const, label: 'Body' }],
             },
-        },
+        ],
     };
 }
 

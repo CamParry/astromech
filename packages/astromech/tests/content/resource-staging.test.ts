@@ -8,6 +8,7 @@
 import type { PluginHooks } from '@/types/index';
 import {
     createTestDb,
+    getEntryType,
     makeTestConfig,
     registerTestPlugins,
     setupTestConfig,
@@ -179,7 +180,7 @@ const ADAPTERS: Record<(typeof STAGED_RESOURCES)[number], Adapter> = {
 beforeEach(async () => {
     await createTestDb();
     const config = makeTestConfig();
-    if (config.entries.note) config.entries.note.staging = true;
+    getEntryType(config, 'note').staging = true;
     setupTestConfig({
         ...config,
         globals: [

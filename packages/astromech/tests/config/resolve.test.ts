@@ -18,6 +18,7 @@ const driver: DatabaseDriver = {
 };
 
 const entryType = (single: string): EntryType => ({
+    type: single.toLowerCase(),
     single,
     plural: `${single}s`,
     fields: [{ name: 'body', type: 'text' }],
@@ -26,7 +27,7 @@ const entryType = (single: string): EntryType => ({
 const baseConfig = (plugins: PluginDefinition[]): AstromechConfig => ({
     db: driver,
     storage: noopStorage,
-    entries: { post: entryType('Post') },
+    entries: [entryType('Post')],
     plugins,
 });
 
@@ -51,7 +52,7 @@ describe('resolveConfig plugin entry types', () => {
             baseConfig([
                 {
                     package: '@astromech/forms',
-                    entries: [{ ...entryType('Form'), type: 'form' }],
+                    entries: [entryType('Form')],
                 },
             ])
         );
@@ -68,7 +69,7 @@ describe('resolveConfig plugin entry types', () => {
             baseConfig([
                 {
                     package: '@acme/forms',
-                    entries: [{ ...entryType('Form'), type: 'form' }],
+                    entries: [entryType('Form')],
                 },
             ])
         );
@@ -84,13 +85,13 @@ describe('resolveConfig plugin entry types', () => {
         }
     });
 
-    it('rejects a site entry type key holding the qualified separator', () => {
+    it('rejects a site entry type holding the qualified separator', () => {
         expect(() =>
             resolveConfig({
                 ...baseConfig([]),
-                entries: { 'forms/form': entryType('Form') },
+                entries: [{ ...entryType('Form'), type: 'forms/form' }],
             })
-        ).toThrow(/must not contain "\/"/);
+        ).toThrow(/must not contain "\/" or ":"/);
     });
 });
 
@@ -98,8 +99,9 @@ describe('resolveConfig flat fields', () => {
     const flatConfig = (): AstromechConfig => ({
         db: driver,
         storage: noopStorage,
-        entries: {
-            post: {
+        entries: [
+            {
+                type: 'post',
                 single: 'Post',
                 plural: 'Posts',
                 fields: [
@@ -107,7 +109,7 @@ describe('resolveConfig flat fields', () => {
                     { name: 'to', type: 'text' },
                 ],
             },
-        },
+        ],
         plugins: [],
     });
 
@@ -132,8 +134,9 @@ describe('resolveConfig { main, sidebar } fields shape', () => {
         const resolved = resolveConfig({
             db: driver,
             storage: noopStorage,
-            entries: {
-                post: {
+            entries: [
+                {
+                    type: 'post',
                     single: 'Post',
                     plural: 'Posts',
                     fields: {
@@ -141,7 +144,7 @@ describe('resolveConfig { main, sidebar } fields shape', () => {
                         sidebar: [{ name: 'author', type: 'text' }],
                     },
                 },
-            },
+            ],
             plugins: [],
         });
         expect(resolved.entryTypes['post']?.fields.main).toHaveLength(1);
@@ -154,13 +157,14 @@ describe('resolveConfig { main, sidebar } fields shape', () => {
         const resolved = resolveConfig({
             db: driver,
             storage: noopStorage,
-            entries: {
-                post: {
+            entries: [
+                {
+                    type: 'post',
                     single: 'Post',
                     plural: 'Posts',
                     fields: { main: [{ name: 'body', type: 'text' }] },
                 },
-            },
+            ],
             plugins: [],
         });
         expect(resolved.entryTypes['post']?.fields.sidebar).toEqual([]);
@@ -172,9 +176,7 @@ describe('resolveConfig undefined fields', () => {
         const resolved = resolveConfig({
             db: driver,
             storage: noopStorage,
-            entries: {
-                post: { single: 'Post', plural: 'Posts' },
-            },
+            entries: [{ type: 'post', single: 'Post', plural: 'Posts' }],
             plugins: [],
         });
         expect(resolved.entryTypes['post']?.fields).toEqual({ main: [], sidebar: [] });
@@ -186,7 +188,7 @@ describe('resolveConfig structural validation', () => {
         resolveConfig({
             db: driver,
             storage: noopStorage,
-            entries: { post: { single: 'Post', plural: 'Posts', fields } },
+            entries: [{ type: 'post', single: 'Post', plural: 'Posts', fields }],
             plugins: [],
         });
 
@@ -195,13 +197,14 @@ describe('resolveConfig structural validation', () => {
             resolveConfig({
                 db: driver,
                 storage: noopStorage,
-                entries: {
-                    post: {
+                entries: [
+                    {
+                        type: 'post',
                         single: 'Post',
                         plural: 'Posts',
                         fields: [{ type: 'tab', label: 'Bad', fields: [] }],
                     },
-                },
+                ],
                 plugins: [],
             })
         ).toThrow(/post.*tab.*must be a direct child of `tabs`/);
@@ -212,8 +215,9 @@ describe('resolveConfig structural validation', () => {
             resolveConfig({
                 db: driver,
                 storage: noopStorage,
-                entries: {
-                    post: {
+                entries: [
+                    {
+                        type: 'post',
                         single: 'Post',
                         plural: 'Posts',
                         fields: [
@@ -223,7 +227,7 @@ describe('resolveConfig structural validation', () => {
                             },
                         ],
                     },
-                },
+                ],
                 plugins: [],
             })
         ).toThrow(/post.*tabs.*may only contain.*tab.*children/);
@@ -234,8 +238,9 @@ describe('resolveConfig structural validation', () => {
             resolveConfig({
                 db: driver,
                 storage: noopStorage,
-                entries: {
-                    post: {
+                entries: [
+                    {
+                        type: 'post',
                         single: 'Post',
                         plural: 'Posts',
                         fields: [
@@ -243,7 +248,7 @@ describe('resolveConfig structural validation', () => {
                             { name: 'title', type: 'textarea' },
                         ],
                     },
-                },
+                ],
                 plugins: [],
             })
         ).toThrow(/post.*duplicate field name "title".*`main.title` and `main.title`/);
@@ -254,8 +259,9 @@ describe('resolveConfig structural validation', () => {
             resolveConfig({
                 db: driver,
                 storage: noopStorage,
-                entries: {
-                    post: {
+                entries: [
+                    {
+                        type: 'post',
                         single: 'Post',
                         plural: 'Posts',
                         fields: [
@@ -272,7 +278,7 @@ describe('resolveConfig structural validation', () => {
                             },
                         ],
                     },
-                },
+                ],
                 plugins: [],
             })
         ).toThrow(
@@ -285,8 +291,9 @@ describe('resolveConfig structural validation', () => {
             resolveConfig({
                 db: driver,
                 storage: noopStorage,
-                entries: {
-                    post: {
+                entries: [
+                    {
+                        type: 'post',
                         single: 'Post',
                         plural: 'Posts',
                         fields: {
@@ -294,7 +301,7 @@ describe('resolveConfig structural validation', () => {
                             sidebar: [{ name: 'title', type: 'text' }],
                         },
                     },
-                },
+                ],
                 plugins: [],
             })
         ).toThrow(/post.*duplicate field name "title".*`main.title` and `sidebar.title`/);
@@ -305,8 +312,9 @@ describe('resolveConfig structural validation', () => {
             resolveConfig({
                 db: driver,
                 storage: noopStorage,
-                entries: {
-                    post: {
+                entries: [
+                    {
+                        type: 'post',
                         single: 'Post',
                         plural: 'Posts',
                         fields: [
@@ -320,7 +328,7 @@ describe('resolveConfig structural validation', () => {
                             },
                         ],
                     },
-                },
+                ],
                 plugins: [],
             })
         ).toThrow(/post.*duplicate field name "title"/);
@@ -482,8 +490,9 @@ describe('resolveConfig structural validation', () => {
             resolveConfig({
                 db: driver,
                 storage: noopStorage,
-                entries: {
-                    post: {
+                entries: [
+                    {
+                        type: 'post',
                         single: 'Post',
                         plural: 'Posts',
                         fields: [
@@ -495,7 +504,7 @@ describe('resolveConfig structural validation', () => {
                             },
                         ],
                     },
-                },
+                ],
                 plugins: [],
             })
         ).not.toThrow();
@@ -519,6 +528,7 @@ describe('resolveConfig timezone', () => {
 
 describe('resolveConfig qualified relationship targets', () => {
     const withTarget = (target: string): EntryType => ({
+        type: 'linker',
         single: 'Linker',
         plural: 'Linkers',
         fields: [{ name: 'ref', type: 'relationship', target }],
@@ -530,10 +540,7 @@ describe('resolveConfig qualified relationship targets', () => {
                 baseConfig([
                     {
                         package: '@astromech/store',
-                        entries: [
-                            { ...entryType('Item'), type: 'item' },
-                            { ...withTarget('store/item'), type: 'linker' },
-                        ],
+                        entries: [entryType('Item'), withTarget('store/item')],
                     },
                 ])
             )
@@ -546,7 +553,7 @@ describe('resolveConfig qualified relationship targets', () => {
                 baseConfig([
                     {
                         package: '@astromech/store',
-                        entries: [{ ...withTarget('store/missing'), type: 'linker' }],
+                        entries: [withTarget('store/missing')],
                     },
                 ])
             )
@@ -555,6 +562,7 @@ describe('resolveConfig qualified relationship targets', () => {
 
     it('crashes when an unknown qualified target sits inside a block', () => {
         const inBlock: EntryType = {
+            type: 'linker',
             single: 'Linker',
             plural: 'Linkers',
             fields: [
@@ -578,7 +586,7 @@ describe('resolveConfig qualified relationship targets', () => {
                 baseConfig([
                     {
                         package: '@astromech/store',
-                        entries: [{ ...inBlock, type: 'linker' }],
+                        entries: [inBlock],
                     },
                 ])
             )

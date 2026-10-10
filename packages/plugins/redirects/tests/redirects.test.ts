@@ -9,7 +9,7 @@ import type { Role } from '@/types/index';
 import type { PluginTestApp } from '@tests/plugin-app';
 import type { QueryResult } from 'astromech';
 import { roleWith } from '@tests/fixtures';
-import { makeTestConfig } from '@tests/harness';
+import { getEntryType, makeTestConfig } from '@tests/harness';
 import { createPluginTestApp } from '@tests/plugin-app';
 import { sql } from 'kysely';
 import { beforeEach, describe, expect, it } from 'vitest';
@@ -26,13 +26,8 @@ const serviceAs = (role: Role | null) => app.as(role);
 
 beforeEach(async () => {
     const base = makeTestConfig();
-    const post = base.entries['post'];
-    if (!post) throw new Error('test harness missing `post` entry type');
-    app = await createPluginTestApp('redirects', {
-        ...base,
-        entries: { ...base.entries, post: { ...post, url: '/{slug}' } },
-        plugins: [redirects()],
-    });
+    getEntryType(base, 'post').url = '/{slug}';
+    app = await createPluginTestApp('redirects', { ...base, plugins: [redirects()] });
 });
 
 /** Every stored rule, straight from the plugin's table. */

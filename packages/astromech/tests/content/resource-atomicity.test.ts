@@ -14,8 +14,10 @@ import {
     createTestDb,
     createTestStorage,
     failWritesTo,
+    getEntryType,
     makeTestConfig,
     setupTestConfig,
+    withEntryTypes,
 } from '@tests/harness';
 import { beforeEach, describe, expect, it } from 'vitest';
 import { currentServices } from '@/app-context/services';
@@ -416,15 +418,12 @@ beforeEach(async () => {
     setupTestConfig({
         ...base,
         storage,
-        entries: {
-            ...base.entries,
-            post: {
-                ...base.entries['post'],
-                single: 'Post',
-                plural: 'Posts',
-                staging: true,
-            },
-        },
+        entries: withEntryTypes(base.entries, {
+            ...getEntryType(base, 'post'),
+            single: 'Post',
+            plural: 'Posts',
+            staging: true,
+        }),
         media: {
             translatable: true,
             fields: [

@@ -26,7 +26,6 @@ function configWith(db: Partial<DatabaseDriver>): AstromechConfig {
             },
             ...db,
         },
-        entries: {},
     } as AstromechConfig;
 }
 
@@ -132,7 +131,6 @@ describe('loadConfig', () => {
             file,
             `export default {
                 db: { name: 'd1', supportsTransactions: false, getInstance: () => ({}) },
-                entries: {},
             };`
         );
 

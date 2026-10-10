@@ -153,7 +153,7 @@ export type SiteConfigOptions = {
     /** The config's `migrationsDir`. */
     migrationsDir?: string;
     /** The config's `entries`, as plain data. */
-    entries?: Record<string, unknown>;
+    entries?: unknown[];
     /** The config's `globals`, as plain data. Left out of the config when absent. */
     globals?: unknown[];
     /** The config's `roles`, as plain data. Left out of the config when absent. */
@@ -212,7 +212,7 @@ export default {
             return instance;
         },
     },
-${optional}    entries: ${JSON.stringify(options.entries ?? {})},
+${optional}    entries: ${JSON.stringify(options.entries ?? [])},
 };
 `
     );

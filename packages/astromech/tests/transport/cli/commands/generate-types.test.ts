@@ -21,8 +21,9 @@ beforeEach(async () => {
     resetRuntime();
     siteDir = await createTempSite();
     configPath = await writeSiteConfig(siteDir, {
-        entries: {
-            recipe: {
+        entries: [
+            {
+                type: 'recipe',
                 single: 'Recipe',
                 plural: 'Recipes',
                 fields: [
@@ -34,7 +35,7 @@ beforeEach(async () => {
                     },
                 ],
             },
-        },
+        ],
         globals: [
             {
                 key: 'site',
