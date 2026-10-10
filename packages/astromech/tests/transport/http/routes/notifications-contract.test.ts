@@ -3,8 +3,8 @@
  *
  * The domain is session-scoped, so the thing worth pinning is that every
  * handler filters on the injected `c.var.user.id` and never on anything the
- * caller sent — plus the two response shapes that are not the plain `{ data }`
- * envelope: `count`'s `{ data: { count } }` and the 204s.
+ * caller sent — plus the response shape that is not the plain `{ data }`
+ * envelope: the 204s.
  */
 
 import type { NotificationsService } from '@/notifications/service-types';
@@ -83,15 +83,15 @@ describe('GET /notifications', () => {
 });
 
 describe('GET /notifications/count', () => {
-    it('wraps the scalar as { data: { count } }', async () => {
+    it('answers the scalar in the { data } envelope', async () => {
         const res = await app(owner).request('/notifications/count');
         expect(res.status).toBe(200);
-        expect(await res.json()).toEqual({ data: { count: 1 } });
+        expect(await res.json()).toEqual({ data: 1 });
     });
 
     it('counts only the caller’s rows', async () => {
         const res = await app(stranger).request('/notifications/count');
-        expect(await res.json()).toEqual({ data: { count: 0 } });
+        expect(await res.json()).toEqual({ data: 0 });
     });
 });
 

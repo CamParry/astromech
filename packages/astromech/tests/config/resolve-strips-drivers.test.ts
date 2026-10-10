@@ -40,12 +40,7 @@ const imageDriver: ImageDriver = {
     },
 };
 
-const schedulerDriver: SchedulerDriver = {
-    name: 'noop',
-    start() {
-        return undefined;
-    },
-};
+const schedulerDriver: SchedulerDriver = { name: 'noop' };
 
 /** Every capability populated, so a missing strip shows up as a present key. */
 function fullConfig(): AstromechConfig {

@@ -46,8 +46,9 @@ boots never stack timers.
 
 ### `cloudflareCron()` — Cloudflare Cron Triggers
 
-`astromech/scheduler/cloudflare`. The driver itself is a no-op declaration:
-the tick comes from the platform, through the Worker's `scheduled()` handler.
+`astromech/scheduler/cloudflare`. The driver has no `start`, so it only
+declares where ticks come from: the platform, through the Worker's
+`scheduled()` handler.
 `createWorkerEntry` selects it for you, so naming it in the config is only
 needed if you write the Worker entry by hand. Without either, boot fails inside
 a Worker rather than falling back to a timer the isolate cannot run. Set up both
@@ -101,7 +102,7 @@ curl -X POST https://example.com/cms/api/cron/run \
 
 ## Writing your own
 
-A driver is two functions: `start(onTick)`, called once at boot, and an
-optional `stop()`. A driver that owns no trigger (like `cloudflareCron()` and
-`webhook()`) makes `start` a no-op — selecting it just declares where ticks
+A driver is a `name` and two optional functions: `start(onTick)`, called once
+at boot, and `stop()`. A driver that owns no trigger (like `cloudflareCron()`
+and `webhook()`) leaves out `start`, so selecting it just declares where ticks
 come from.

@@ -551,7 +551,7 @@ const CASES: Case[] = [
     },
     {
         name: 'notifications.count',
-        payload: { data: { count: 3 } },
+        payload: { data: 3 },
         call: () => client.notifications.count(),
         url: '/cms/api/notifications/count',
         method: 'GET',

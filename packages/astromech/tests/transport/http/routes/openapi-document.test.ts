@@ -268,14 +268,12 @@ describe('the documented responses', () => {
         }
     });
 
-    it('documents what the count route answers, not the method’s scalar', () => {
+    it('documents the count route as the method’s scalar in the { data } envelope', () => {
         const count = responseSchema(
             document().paths['/notifications/count']?.['get'],
             200
         );
-        expect(count?.properties?.['data']?.properties?.['count']).toEqual({
-            type: 'number',
-        });
+        expect(count?.properties?.['data']).toEqual({ type: 'number' });
     });
 
     it('keeps the internal keys out of the public components', () => {

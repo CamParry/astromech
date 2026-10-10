@@ -57,11 +57,13 @@ the repository copies.
 
 ## Copies
 
-- [ ] **Media and users methods.** `versions/{list,get,restore}.ts`, `get.ts`,
+- [x] **Media and users methods.** `versions/{list,get,restore}.ts`, `get.ts`,
       `query.ts`, `update.ts` and `relationships.ts` differ only in names, schema
       and access string. `DECISIONS.md` rejected a `createVersionsMethods`
       factory; revisit that for these two, whose addressing and output shape
-      match.
+      match. Kept apart: a factory shared by two of the four resources is not
+      worth it, since entries and globals already differ from them and the two
+      may drift apart too. `DECISIONS.md` now says so.
 - [x] **Each resource drops its relationship rows on delete in its own place.**
       Media and users do it in their repository's `delete`; entries do it in
       `emptyTrash` (`entries/methods/empty-trash.ts`), `deleteEntryBatch`
@@ -142,7 +144,8 @@ the repository copies.
       `entries/methods/duplicate.ts` writes its copy without either (no field
       parse, no create hooks). Share one derivation.
 - [x] **The admin derives a media extension on its own.** `packages/admin/src/components/media/media-thumb.tsx` keeps a copy of core's `extOf` (`packages/astromech/src/media/internal/keys.ts`), which now lower-cases the extension. Serving reads the extension from the row, so the copy is harmless today; export one from `astromech/shared` and use it. Now `fileExtension` in `media/file-extension.ts`, outside `internal/` so the shared entry may import it.
-- [ ] Smaller: the two no-op cron drivers.
+- [x] Smaller: the two no-op cron drivers. `SchedulerDriver.start` is now
+      optional, so `cloudflareCron()` and `webhook()` return only a `name`.
 
 ## Code in the wrong place
 
@@ -217,8 +220,10 @@ the repository copies.
 
 - [ ] `sortPage` in the admin list controller (see the `sortable` item in
       `backlog.md`).
-- [ ] The `notifications.count` special cases: a bespoke route, a documented
+- [x] The `notifications.count` special cases: a bespoke route, a documented
       override and a client override, all to answer `{ data: { count } }`.
+      All three went: `GET /notifications/count` is a table row and answers
+      `{ data: number }`, as RPC and `POST /entries/count` already did.
 - [x] `globals.get({ staged })`, which only a test uses; the admin calls
       `getStaged`. Superseded: `roadmap/planned/drafts.md` removes staging.
 - [x] `CELL_KINDS`, `badRequest`'s `details`, the

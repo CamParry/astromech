@@ -498,7 +498,7 @@ export const NOTIFICATIONS_ROUTE_SPECS = [
     { verb: 'get', path: '/', id: 'notifications.list' },
     { verb: 'delete', path: '/', id: 'notifications.dismissAll', envelope: 'empty' },
     { verb: 'delete', path: '/:id', id: 'notifications.dismiss', envelope: 'empty' },
-    { verb: 'get', path: '/count', id: 'notifications.count', handler: 'bespoke' },
+    { verb: 'get', path: '/count', id: 'notifications.count' },
 ] as const satisfies readonly HttpRouteSpec[];
 
 export const SECURITY_ROUTE_SPECS = [

@@ -27,7 +27,7 @@ describe('interval', () => {
             ticks.push(now);
         });
 
-        interval().start(onTick);
+        interval().start?.(onTick);
         expect(onTick).not.toHaveBeenCalled();
 
         await vi.advanceTimersByTimeAsync(60_000);
@@ -40,8 +40,8 @@ describe('interval', () => {
     it('calling start() twice does not stack intervals', async () => {
         const onTick = vi.fn(async (_now: Date) => undefined);
 
-        interval().start(onTick);
-        interval().start(onTick);
+        interval().start?.(onTick);
+        interval().start?.(onTick);
 
         await vi.advanceTimersByTimeAsync(60_000);
         expect(onTick).toHaveBeenCalledTimes(1);
@@ -51,7 +51,7 @@ describe('interval', () => {
         const onTick = vi.fn(async (_now: Date) => undefined);
         const driver = interval();
 
-        driver.start(onTick);
+        driver.start?.(onTick);
         driver.stop?.();
 
         await vi.advanceTimersByTimeAsync(120_000);
@@ -65,8 +65,8 @@ describe('webhook', () => {
         expect(webhook().name).toBe('webhook');
     });
 
-    it('start() is a no-op (does not throw)', () => {
-        expect(() => webhook().start(async () => undefined)).not.toThrow();
+    it('has no start(), since the POST /cron/run route drives its ticks', () => {
+        expect(webhook().start).toBeUndefined();
     });
 });
 
@@ -75,7 +75,7 @@ describe('cloudflareCron', () => {
         expect(cloudflareCron().name).toBe('cloudflare');
     });
 
-    it('start() is a no-op (does not throw)', () => {
-        expect(() => cloudflareCron().start(async () => undefined)).not.toThrow();
+    it('has no start(), since the Worker scheduled() event drives its ticks', () => {
+        expect(cloudflareCron().start).toBeUndefined();
     });
 });
