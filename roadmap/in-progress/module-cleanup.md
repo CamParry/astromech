@@ -57,11 +57,13 @@ the repository copies.
 
 ## Copies
 
-- [ ] **Media and users methods.** `versions/{list,get,restore}.ts`, `get.ts`,
+- [x] **Media and users methods.** `versions/{list,get,restore}.ts`, `get.ts`,
       `query.ts`, `update.ts` and `relationships.ts` differ only in names, schema
       and access string. `DECISIONS.md` rejected a `createVersionsMethods`
       factory; revisit that for these two, whose addressing and output shape
-      match.
+      match. Kept apart: a factory shared by two of the four resources is not
+      worth it, since entries and globals already differ from them and the two
+      may drift apart too. `DECISIONS.md` now says so.
 - [x] **Each resource drops its relationship rows on delete in its own place.**
       Media and users do it in their repository's `delete`; entries do it in
       `emptyTrash` (`entries/methods/empty-trash.ts`), `deleteEntryBatch`
