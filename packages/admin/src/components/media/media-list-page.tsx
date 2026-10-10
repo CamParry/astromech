@@ -21,6 +21,7 @@ import { useViewMode } from '../../hooks/use-view-mode';
 import { isSortKey, MEDIA_ACCEPT, TYPE_FILTER_VALUES } from '../../types/media';
 import { formatBytes } from '../../utilities/bytes';
 import { formatDatetime } from '../../utilities/dates';
+import { ForbiddenPage } from '../layout/forbidden-page';
 import { ViewModeToggle } from '../layout/view-mode-toggle';
 import { DataList } from '../ui/data-list';
 import { DropZone } from '../ui/drop-zone';
@@ -67,6 +68,12 @@ export function validateMediaListSearch(
 }
 
 export function MediaListPage(): React.ReactElement {
+    const { canReadMedia } = usePermissions();
+    if (!canReadMedia()) return <ForbiddenPage />;
+    return <MediaListBody />;
+}
+
+function MediaListBody(): React.ReactElement {
     const { t } = useTranslation();
     const navigate = useNavigate();
     const list = useListState({ pageSize: PER_PAGE });

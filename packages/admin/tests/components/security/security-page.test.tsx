@@ -2,8 +2,8 @@
  * @vitest-environment happy-dom
  *
  * The Security screen lists the block list and the allow list, adds an address
- * from a dialog, removes one after a confirmation, and sends a user without
- * `security:manage` to the dashboard.
+ * from a dialog, removes one after a confirmation, and shows a user without
+ * `security:manage` the forbidden message in place, loading neither list.
  */
 
 import type { AllowedAddress, BlockedAddress } from '@/types/index';
@@ -204,7 +204,7 @@ describe('the allowed addresses', () => {
 });
 
 describe('access', () => {
-    it('sends a user without security:manage to the dashboard', async () => {
+    it('shows a user without security:manage the forbidden message in place', async () => {
         const page = renderAdmin(
             [
                 { path: '/security', component: SecurityPage },
@@ -213,6 +213,11 @@ describe('access', () => {
             { url: '/security', permissions: ['users:read'] }
         );
 
-        await waitFor(() => expect(page.pathname()).toBe('/'));
+        expect(
+            await screen.findByText("You don't have permission to view this page.")
+        ).toBeTruthy();
+        expect(page.pathname()).toBe('/security');
+        expect(security.listBlocked).not.toHaveBeenCalled();
+        expect(security.listAllowed).not.toHaveBeenCalled();
     });
 });

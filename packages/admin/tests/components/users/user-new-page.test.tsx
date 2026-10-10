@@ -4,6 +4,7 @@
  * The user create page: a create sends the name, email, role and the declared
  * profile fields, toasts, then returns to the list; a 422 lands on the field it names
  * or in the banner, and the page stays put. A profile input is described by its error.
+ * A user without `users:create` sees the forbidden message in place.
  */
 
 import type { RenderAdminResult } from '../../_support/render-admin';
@@ -42,8 +43,8 @@ afterEach(() => {
 });
 
 /** Mount the page at `/users/new`. */
-function mountPage(): RenderAdminResult {
-    return renderAdmin(<UserNewPage />, { url: '/users/new' });
+function mountPage(permissions: string[] = ['*']): RenderAdminResult {
+    return renderAdmin(<UserNewPage />, { url: '/users/new', permissions });
 }
 
 function inputNamed(name: string): HTMLInputElement {
@@ -122,5 +123,15 @@ describe('UserNewPage', () => {
         const message = await screen.findByText('Name is required');
         expect(name.getAttribute('aria-invalid')).toBe('true');
         expect(name.getAttribute('aria-describedby')?.split(' ')).toContain(message.id);
+    });
+
+    it('shows a user without users:create the forbidden message in place', async () => {
+        const page = mountPage(['users:read']);
+
+        expect(
+            await screen.findByText("You don't have permission to view this page.")
+        ).toBeTruthy();
+        expect(page.pathname()).toBe('/users/new');
+        expect(screen.queryByRole('textbox')).toBeNull();
     });
 });

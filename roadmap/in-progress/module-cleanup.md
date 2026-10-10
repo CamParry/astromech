@@ -130,9 +130,13 @@ the repository copies.
       entry and global update are `create` and `update` rows in `entryMutations`
       and `globalMutations`, whose `update` writes the saved row to its key
       before the invalidation. A create now also refreshes the dashboard counts.
-- [ ] **Admin: three permission-denied behaviours** (redirect in an effect, toast
+- [x] **Admin: three permission-denied behaviours** (redirect in an effect, toast
       then redirect, banner) and none on the media page or entries list. One
-      guard.
+      guard. Every page now returns `ForbiddenPage`
+      (`packages/admin/src/components/layout/forbidden-page.tsx`, beside
+      `NotFoundPage`) in place, above the hooks that fetch, so the URL stays and
+      no request is made; the entry and global edit and versions pages, which
+      had no check either, use it too.
 - [x] **Plugins rebuild the API base URL** from a private build global
       (`@astromech/backups`, `@astromech/assistant`). Add a route helper to the
       plugin context; rename its misnamed `modal` to `confirm`. The helper is

@@ -5,7 +5,8 @@
  * one locale offers it, choosing a locale the user has no row for shows the
  * fallback hint and sends that locale on save, and a non-translatable config
  * renders no switcher at all. A role picked for another user makes the form
- * dirty and is saved.
+ * dirty and is saved. Without `users:read` a user opens only their own account;
+ * anyone else's shows the forbidden message in place.
  */
 
 import type { RenderAdminResult } from '../../_support/render-admin';
@@ -72,7 +73,7 @@ afterEach(() => {
  * By default the signed-in user is the edited one: the role field is shown
  * only to someone else, and would add a second combobox the locale tests don't want.
  */
-function mountPage(sessionId = 'u1'): RenderAdminResult {
+function mountPage(sessionId = 'u1', permissions: string[] = ['*']): RenderAdminResult {
     const user = makeUser();
     users.get.mockImplementation(async (params: { locale?: string }) => {
         requestedLocale.current = params.locale;
@@ -84,6 +85,7 @@ function mountPage(sessionId = 'u1'): RenderAdminResult {
     return renderAdmin(<UserEditPage id="u1" />, {
         url: '/users/u1',
         session: { id: sessionId },
+        permissions,
     });
 }
 
@@ -172,5 +174,26 @@ describe('UserEditPage role', () => {
                 })
             )
         );
+    });
+});
+
+describe('UserEditPage access', () => {
+    it("shows another user's account as forbidden without users:read", async () => {
+        const page = mountPage('u2', ['media:read']);
+
+        expect(
+            await screen.findByText("You don't have permission to view this page.")
+        ).toBeTruthy();
+        expect(page.pathname()).toBe('/users/u1');
+        expect(users.get).not.toHaveBeenCalled();
+    });
+
+    it('opens your own account without users:read', async () => {
+        mountPage('u1', ['media:read']);
+
+        await findPage();
+        expect(
+            screen.queryByText("You don't have permission to view this page.")
+        ).toBeNull();
     });
 });

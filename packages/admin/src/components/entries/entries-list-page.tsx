@@ -29,6 +29,7 @@ import { getCellRenderer } from '../../rendering/cell-registry';
 import { Link } from '../../rendering/cells/link';
 import { fieldTypeOf, resolveTable } from '../../rendering/resolve';
 import { entryEditPath, entryTypeBasePath } from '../../utilities/entry-admin-path';
+import { ForbiddenPage } from '../layout/forbidden-page';
 import { NotFoundPage } from '../layout/not-found-page';
 import { ViewModeToggle } from '../layout/view-mode-toggle';
 import { Button } from '../ui/button';
@@ -48,6 +49,7 @@ const PER_PAGE = 20;
 export function EntriesListPage({ type }: { type: string }): React.ReactElement {
     const entryType = useAdminEntryType(type);
     if (entryType === null) return <NotFoundPage path={entryTypeBasePath(type)} />;
+    if (!entryType.can('read')) return <ForbiddenPage />;
     return <EntriesListBody key={type} entryType={entryType} />;
 }
 

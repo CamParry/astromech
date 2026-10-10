@@ -9,7 +9,7 @@
 import type { JsonObject, User, UserUpdateData } from 'astromech';
 import { useNavigate } from '@tanstack/react-router';
 import { defaultContentLocale } from 'astromech/shared';
-import React, { useEffect, useState } from 'react';
+import React, { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import adminConfig from 'virtual:astromech/admin-config';
 import { useAiContext } from '../../context/ai-context';
@@ -21,6 +21,7 @@ import { userMutations, useUser, useUserVersions } from '../../hooks/users';
 import { labelNamespace, LabelNamespaceProvider } from '../../i18n/label-namespace';
 import { localeOptions } from '../../utilities/content-locale';
 import { FieldColumn, FieldsForm } from '../forms/fields-form';
+import { ForbiddenPage } from '../layout/forbidden-page';
 import { Breadcrumb } from '../ui/breadcrumb';
 import { Button } from '../ui/button';
 import { useConfirm } from '../ui/confirm';
@@ -47,22 +48,19 @@ export type UserEditPageProps = {
 };
 
 export function UserEditPage({ id }: UserEditPageProps): React.ReactElement {
-    const navigate = useNavigate();
     const { user: currentUser } = useAuth();
     const { canReadUsers } = usePermissions();
-
     const isSelf = currentUser?.id === id;
+    if (!canReadUsers() && !isSelf) return <ForbiddenPage />;
+    return <UserEdit id={id} isSelf={isSelf} />;
+}
 
+/** Loads the user in the locale being edited, then renders the form. */
+function UserEdit({ id, isSelf }: { id: string; isSelf: boolean }): React.ReactElement {
     // The page is addressed by `/:id` alone, so the locale being edited is
     // its own state rather than a search param.
     const [locale, setLocale] = useState(() => defaultContentLocale(adminConfig));
     const { data: user, isLoading } = useUser(id, locale);
-
-    useEffect(() => {
-        if (!canReadUsers() && !isSelf) {
-            void navigate({ to: '/' });
-        }
-    }, []);
 
     if (isLoading || user == null) {
         return <PageLoading />;

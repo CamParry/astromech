@@ -5,8 +5,8 @@
  * a publish sends a create with them and opens the new entry, Save creates
  * the status the select holds, a schedule needs a date only when the save
  * sends it, a user without publish can only save unpublished, a 422 lands on
- * the field it names and the page stays put, a user who may not create is sent
- * back to the list, and the title input is described by its error.
+ * the field it names and the page stays put, a user who may not create sees
+ * the forbidden message in place, and the title input is described by its error.
  */
 
 import type { AdminEntryType, Entry } from '@/types/index';
@@ -188,13 +188,14 @@ describe('EntryNewPage', () => {
         expect(page.location()).toBe('/entries/post/new');
     });
 
-    it('sends a user who may not create back to the list, saying why', async () => {
+    it('shows a user who may not create the forbidden message in place', async () => {
         const page = mountPage(['entry:post:read']);
 
-        await waitFor(() => expect(page.location()).toBe('/entries/post'));
         expect(
-            await screen.findByText("You don't have permission to access this page.")
+            await screen.findByText("You don't have permission to view this page.")
         ).not.toBeNull();
+        expect(page.location()).toBe('/entries/post/new');
+        expect(screen.queryByRole('textbox')).toBeNull();
     });
 
     it('describes the title input by its error', async () => {

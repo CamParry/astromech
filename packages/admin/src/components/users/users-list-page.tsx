@@ -8,13 +8,14 @@ import type { DataListColumn } from '../ui/data-list';
 import type { User } from 'astromech';
 import { useNavigate } from '@tanstack/react-router';
 import { Pencil, Trash2 } from 'lucide-react';
-import React, { useEffect } from 'react';
+import React from 'react';
 import { useTranslation } from 'react-i18next';
 import { useAiContext } from '../../context/ai-context';
 import { useAdminMutation } from '../../hooks/use-admin-mutation';
 import { usePermissions } from '../../hooks/use-permissions';
 import { userMutations, useUsersQuery } from '../../hooks/users';
 import { formatDate } from '../../utilities/dates';
+import { ForbiddenPage } from '../layout/forbidden-page';
 import { Avatar } from '../ui/avatar';
 import { Button } from '../ui/button';
 import { useConfirm } from '../ui/confirm';
@@ -26,19 +27,19 @@ import { useListState } from '../ui/use-list-state';
 const PER_PAGE = 20;
 
 export function UsersListPage(): React.ReactElement {
+    const { canReadUsers } = usePermissions();
+    if (!canReadUsers()) return <ForbiddenPage />;
+    return <UsersListBody />;
+}
+
+function UsersListBody(): React.ReactElement {
     const { t } = useTranslation();
     const confirm = useConfirm();
     const navigate = useNavigate();
-    const { canReadUsers, canCreateUsers, canDeleteUsers } = usePermissions();
+    const { canCreateUsers, canDeleteUsers } = usePermissions();
     const list = useListState({ pageSize: PER_PAGE });
 
     useAiContext({ kind: 'users', label: t('users.title') }, { depth: 0 });
-
-    useEffect(() => {
-        if (!canReadUsers()) {
-            void navigate({ to: '/' });
-        }
-    }, []);
 
     const { data: usersResult, isLoading, isError } = useUsersQuery(list.queryParams);
     const deleteMutation = useAdminMutation(userMutations().delete);

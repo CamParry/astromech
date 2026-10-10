@@ -6,9 +6,8 @@
 
 import type { DataListColumn } from '../ui/data-list';
 import type { AllowedAddress, BlockedAddress } from 'astromech';
-import { useNavigate } from '@tanstack/react-router';
 import { Trash2 } from 'lucide-react';
-import React, { useEffect, useState } from 'react';
+import React, { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
     securityMutations,
@@ -18,6 +17,7 @@ import {
 import { useAdminMutation } from '../../hooks/use-admin-mutation';
 import { usePermissions } from '../../hooks/use-permissions';
 import { formatDate, formatDatetime } from '../../utilities/dates';
+import { ForbiddenPage } from '../layout/forbidden-page';
 import { Badge } from '../ui/badge';
 import { Button } from '../ui/button';
 import { useConfirm } from '../ui/confirm';
@@ -44,16 +44,12 @@ const ADDRESS_FORM_ID = 'security-address-form';
 
 export function SecurityPage(): React.ReactElement {
     const { t } = useTranslation();
-    const navigate = useNavigate();
     const { canManageSecurity } = usePermissions();
     const [tab, setTab] = useState<SecurityTab>('blocked');
     const [adding, setAdding] = useState<SecurityTab | null>(null);
 
-    useEffect(() => {
-        if (!canManageSecurity()) {
-            void navigate({ to: '/' });
-        }
-    }, []);
+    // The lists load in the panels, so a refused user's page makes no request.
+    if (!canManageSecurity()) return <ForbiddenPage />;
 
     return (
         <Page>

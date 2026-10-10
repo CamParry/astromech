@@ -20,6 +20,7 @@ import {
 import { useAdminEntryType } from '../../hooks/use-admin-entry-type';
 import { useAdminMutation } from '../../hooks/use-admin-mutation';
 import { entryEditPath, entryTypeBasePath } from '../../utilities/entry-admin-path';
+import { ForbiddenPage } from '../layout/forbidden-page';
 import { NotFoundPage } from '../layout/not-found-page';
 import { VersionHistory } from '../versions/version-history';
 
@@ -35,6 +36,7 @@ export function EntryVersionsPage({
 }): React.ReactElement {
     const entryType = useAdminEntryType(type);
     if (entryType === null) return <NotFoundPage path={entryTypeBasePath(type)} />;
+    if (!entryType.can('read')) return <ForbiddenPage />;
     return <EntryVersionsBody entryType={entryType} id={id} locale={locale} />;
 }
 

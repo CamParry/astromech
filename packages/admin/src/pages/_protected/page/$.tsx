@@ -10,6 +10,7 @@ import React from 'react';
 import { useTranslation } from 'react-i18next';
 import adminConfig from 'virtual:astromech/admin-config';
 import { hostPages } from 'virtual:astromech/plugins/components';
+import { ForbiddenPage } from '../../../components/layout/forbidden-page';
 import { ComponentPageView } from '../../../components/pages/component-page-view';
 import { EmptyState } from '../../../components/ui/empty-state';
 import { Page, PageContent } from '../../../components/ui/page';
@@ -53,15 +54,7 @@ function AppPage(): React.ReactElement {
     // The page's own resolved permission — null (unguarded) unless it declared
     // one.
     if (page.permission !== null && !hasPermission(page.permission)) {
-        return (
-            <Page>
-                <PageContent>
-                    <div className="am-banner am-banner-error" role="alert">
-                        {t('pages.accessDenied')}
-                    </div>
-                </PageContent>
-            </Page>
-        );
+        return <ForbiddenPage />;
     }
 
     const registration = hostPages[page.componentKey];
