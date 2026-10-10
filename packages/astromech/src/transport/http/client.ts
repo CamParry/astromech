@@ -311,15 +311,7 @@ const usersService = restService<UsersService>('users', callRoute, {});
 const notificationsService = restService<NotificationsService>(
     'notifications',
     callRoute,
-    {
-        // The route answers `{ data: { count } }`; the method returns the scalar.
-        count: async () => {
-            const data = (await callRoute('notifications.count', {})) as {
-                count: number;
-            };
-            return data.count;
-        },
-    }
+    {}
 );
 
 const securityService = restService<SecurityService>('security', callRoute, {});

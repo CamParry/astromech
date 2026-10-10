@@ -220,8 +220,10 @@ the repository copies.
 
 - [ ] `sortPage` in the admin list controller (see the `sortable` item in
       `backlog.md`).
-- [ ] The `notifications.count` special cases: a bespoke route, a documented
+- [x] The `notifications.count` special cases: a bespoke route, a documented
       override and a client override, all to answer `{ data: { count } }`.
+      All three went: `GET /notifications/count` is a table row and answers
+      `{ data: number }`, as RPC and `POST /entries/count` already did.
 - [x] `globals.get({ staged })`, which only a test uses; the admin calls
       `getStaged`. Superseded: `roadmap/planned/drafts.md` removes staging.
 - [x] `CELL_KINDS`, `badRequest`'s `details`, the
