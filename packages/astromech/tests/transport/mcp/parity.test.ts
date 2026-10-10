@@ -74,20 +74,22 @@ const testPlugin: PluginDefinition = {
 const resolved = resolveConfig({
     db: driver,
     storage: noopStorage,
-    entries: {
-        posts: {
+    entries: [
+        {
+            type: 'posts',
             single: 'Post',
             plural: 'Posts',
             versioning: true,
             staging: true,
             fields: [{ name: 'title', type: 'text' }],
         },
-        pages: {
+        {
+            type: 'pages',
             single: 'Page',
             plural: 'Pages',
             fields: [{ name: 'title', type: 'text' }],
         },
-    },
+    ],
     plugins: [testPlugin],
 } satisfies AstromechConfig);
 

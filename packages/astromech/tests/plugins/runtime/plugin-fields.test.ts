@@ -77,13 +77,14 @@ describe('generateClientTypes with plugin field types', () => {
 
     beforeEach(() => {
         config = resolveTestConfig({
-            entries: {
-                posts: {
+            entries: [
+                {
+                    type: 'posts',
                     single: 'Post',
                     plural: 'Posts',
                     fields: [{ name: 'seo', type: 'seo-meta' }],
                 },
-            },
+            ],
             plugins: [
                 def({
                     package: '@a/seo',
@@ -145,7 +146,12 @@ describe('generateClientTypes with plugin field types', () => {
 });
 
 describe('generateClientTypes — plugin entry types', () => {
-    const posts: EntryType = { single: 'Post', plural: 'Posts', fields: [] };
+    const posts: EntryType = {
+        type: 'posts',
+        single: 'Post',
+        plural: 'Posts',
+        fields: [],
+    };
 
     const formEntryType: EntryType = {
         type: 'form',
@@ -163,7 +169,7 @@ describe('generateClientTypes — plugin entry types', () => {
     const formsPlugin = def({ package: '@astromech/forms', entries: [formEntryType] });
 
     const configWithPluginEntries = resolveTestConfig({
-        entries: { posts },
+        entries: [posts],
         plugins: [formsPlugin],
     });
 
@@ -191,8 +197,8 @@ describe('generateClientTypes — plugin entry types', () => {
 
     it('resolves a qualified relation target to the plugin Fields type, public shape included', () => {
         const configWithRelation = resolveTestConfig({
-            entries: {
-                posts: {
+            entries: [
+                {
                     ...posts,
                     fields: [
                         {
@@ -203,7 +209,7 @@ describe('generateClientTypes — plugin entry types', () => {
                         },
                     ],
                 },
-            },
+            ],
             plugins: [formsPlugin],
         });
 
@@ -213,7 +219,7 @@ describe('generateClientTypes — plugin entry types', () => {
 
     it('PascalCases hyphenated plugin/type names into the Fields type name', () => {
         const configWithHyphenated = resolveTestConfig({
-            entries: { posts },
+            entries: [posts],
             plugins: [
                 def({
                     package: 'my-plugin',
@@ -235,7 +241,9 @@ describe('generateClientTypes — plugin entry types', () => {
 
     it('throws when two ids generate the same type name', () => {
         const colliding = resolveTestConfig({
-            entries: { forms_form: { single: 'Form', plural: 'Forms', fields: [] } },
+            entries: [
+                { type: 'forms_form', single: 'Form', plural: 'Forms', fields: [] },
+            ],
             plugins: [formsPlugin],
         });
 

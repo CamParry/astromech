@@ -47,14 +47,15 @@ shape only when the person who typed it in is always the person credited.
 A relationship field lets an editor credit someone other than themselves:
 
 ```ts
-entries: {
-    post: {
+entries: [
+    {
+        type: 'post',
         fields: [
             fields.text('title'),
             fields.relationship('author', { target: 'users' }),
         ],
     },
-},
+],
 ```
 
 Read it as you read `createdBy`: the field holds a user id, and
@@ -67,8 +68,9 @@ A guest writer or a newspaper's columnist may never sign in. Declare an entry
 type for them and relate to it:
 
 ```ts
-entries: {
-    author: {
+entries: [
+    {
+        type: 'author',
         fields: [
             fields.text('name'),
             fields.textarea('bio'),
@@ -76,13 +78,14 @@ entries: {
             fields.relationship('user', { target: 'users' }),
         ],
     },
-    post: {
+    {
+        type: 'post',
         fields: [
             fields.text('title'),
             fields.relationship('author', { target: 'author' }),
         ],
     },
-},
+],
 ```
 
 The `user` field is optional and links a writer who does have an account.

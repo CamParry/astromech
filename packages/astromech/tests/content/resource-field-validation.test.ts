@@ -30,10 +30,10 @@ function setupFields(fields: Field[]): void {
     const base = makeTestConfig();
     setupTestConfig({
         ...base,
-        entries: {
+        entries: [
             ...base.entries,
-            item: { single: 'Item', plural: 'Items', statuses: false, fields },
-        },
+            { type: 'item', single: 'Item', plural: 'Items', statuses: false, fields },
+        ],
         globals: [{ key: 'profile', label: 'Profile', statuses: false, fields }],
         users: { fields },
         media: { fields },

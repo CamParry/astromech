@@ -42,7 +42,6 @@ const configWith = (
     return {
         db: dbDriver,
         storage: noopStorage,
-        entries: {},
         ...(resolvedMedia === undefined ? {} : { media: resolvedMedia }),
     };
 };

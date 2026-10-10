@@ -51,7 +51,6 @@ function fullConfig(): AstromechConfig {
         scheduler: schedulerDriver,
         ai: { model: {} as ModelInstance },
         plugins: [],
-        entries: {},
         media: { access: 'public', fields: [], image: { driver: imageDriver } },
     };
 }

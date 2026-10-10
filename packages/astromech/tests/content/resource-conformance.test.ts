@@ -146,16 +146,17 @@ beforeEach(async () => {
     const base = makeTestConfig();
     setupTestConfig({
         ...base,
-        entries: {
+        entries: [
             ...base.entries,
             // Not translatable, so `de` is a locale it cannot hold.
-            page: {
+            {
+                type: 'page',
                 single: 'Page',
                 plural: 'Pages',
                 versioning: true,
                 fields: [...FIELDS],
             },
-        },
+        ],
         globals: [{ key: 'site', label: 'Site', fields: [...FIELDS] }],
         users: { fields: [...FIELDS] },
         media: { fields: [...FIELDS] },

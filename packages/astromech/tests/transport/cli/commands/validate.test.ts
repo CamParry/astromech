@@ -32,8 +32,9 @@ beforeEach(async () => {
     // `servings` is at most 8 here, a rule the stored row predates.
     configPath = await writeSiteConfig(siteDir, {
         database,
-        entries: {
-            recipe: {
+        entries: [
+            {
+                type: 'recipe',
                 single: 'Recipe',
                 plural: 'Recipes',
                 fields: [
@@ -45,8 +46,8 @@ beforeEach(async () => {
                     },
                 ],
             },
-            note: { single: 'Note', plural: 'Notes', fields: [] },
-        },
+            { type: 'note', single: 'Note', plural: 'Notes', fields: [] },
+        ],
     });
 });
 
@@ -60,13 +61,14 @@ async function storeLargeRecipe(): Promise<string> {
     setupTestConfig({
         ...makeTestConfig(),
         db: libsql({ url: `file:${database}` }),
-        entries: {
-            recipe: {
+        entries: [
+            {
+                type: 'recipe',
                 single: 'Recipe',
                 plural: 'Recipes',
                 fields: [{ name: 'servings', type: 'number', label: 'Servings' }],
             },
-        },
+        ],
     });
     const recipe = await currentServices.entries.create({
         type: 'recipe',

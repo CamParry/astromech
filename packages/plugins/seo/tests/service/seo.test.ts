@@ -6,7 +6,12 @@
 
 import type { AstromechConfig, Entry, StorageDriver, StorageList } from '@/types/index';
 import type { PluginTestApp } from '@tests/plugin-app';
-import { makeTestConfig, setupTestConfig } from '@tests/harness';
+import {
+    getEntryType,
+    makeTestConfig,
+    setupTestConfig,
+    withEntryTypes,
+} from '@tests/harness';
 import { createPluginTestApp } from '@tests/plugin-app';
 import { beforeEach, describe, expect, it } from 'vitest';
 import { seo } from '../../src/index';
@@ -49,33 +54,33 @@ const storage: StorageDriver = {
  */
 function configWithSeo(postUrl = '/blog/{slug}'): AstromechConfig {
     const base = makeTestConfig();
-    const { post, note, bookmark } = base.entries;
-    if (!post || !note || !bookmark) {
-        throw new Error('test harness is missing an entry type');
-    }
+    const post = getEntryType(base, 'post');
+    const note = getEntryType(base, 'note');
+    const bookmark = getEntryType(base, 'bookmark');
     if (!Array.isArray(post.fields) || !Array.isArray(note.fields)) {
         throw new Error('test harness post and note fields are not flat lists');
     }
     return {
         ...base,
         storage,
-        entries: {
-            ...base.entries,
-            post: {
+        entries: withEntryTypes(
+            base.entries,
+            {
                 ...post,
                 url: postUrl,
                 fields: [...post.fields, seo.section()],
             },
-            note: { ...note, fields: [...note.fields, seo.section()] },
-            bookmark: { ...bookmark, url: '/bookmarks/{slug}' },
-            page: {
+            { ...note, fields: [...note.fields, seo.section()] },
+            { ...bookmark, url: '/bookmarks/{slug}' },
+            {
+                type: 'page',
                 single: 'Page',
                 plural: 'Pages',
                 statuses: false,
                 url: '/{slug}',
                 fields: [seo.section()],
-            },
-        },
+            }
+        ),
         plugins: [seo()],
     };
 }

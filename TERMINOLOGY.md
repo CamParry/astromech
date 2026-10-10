@@ -62,7 +62,7 @@ column's declared SQL type is its `columnType`. Not "storage", which is blobs.
 
 **Entry type.** A named kind of entry, declared in the site config or by a
 plugin with its fields, slug rules, admin columns and capabilities. Its id is
-its key for the site's, `<namespace>/<type>` for a plugin's.
+its `type` for the site's, `<namespace>/<type>` for a plugin's.
 
 **Field.** One authored input on a resource: a name, a type, and that type's
 options.

@@ -8,7 +8,12 @@
  * which is the path exercised below.
  */
 
-import { createTestDb, makeTestConfig, setupTestConfig } from '@tests/harness';
+import {
+    createTestDb,
+    getEntryType,
+    makeTestConfig,
+    setupTestConfig,
+} from '@tests/harness';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { currentServices } from '@/app-context/services';
 import { DEFAULT_PREVIEW_TOKEN_TTL_MS } from '@/entries/internal/preview';
@@ -22,7 +27,7 @@ const api = currentServices.entries;
 beforeEach(async () => {
     await createTestDb();
     const cfg = makeTestConfig();
-    if (cfg.entries.post) cfg.entries.post.staging = true;
+    getEntryType(cfg, 'post').staging = true;
     setupTestConfig(cfg);
 });
 

@@ -5,8 +5,8 @@ capabilities (statuses, slugs, translations, versioning, trash), its admin
 columns, and its front-end URL template. It is not a piece of content; entries
 are the rows you create against it.
 
-Entry types are declared in the `entries` record of your config, keyed by the
-type name:
+Entry types are declared in the `entries` array of your config, each naming its
+own `type`:
 
 ```ts
 // astromech.config.ts
@@ -14,25 +14,26 @@ import { defineConfig } from 'astromech';
 import * as fields from 'astromech/fields';
 
 export default defineConfig({
-    entries: {
-        tag: {
+    entries: [
+        {
+            type: 'tag',
             single: 'Tag',
             plural: 'Tags',
             icon: 'Tag',
             url: '/blog/tag/{slug}',
             fields: [fields.color('color', { label: 'Color' })],
         },
-    },
+    ],
 });
 ```
 
-The record key (`tag`) is the type name — it is what `Astromech.entries.query({
+The `type` (`tag`) is the type name — it is what `Astromech.entries.query({
 type: 'tag' })`, the admin route `/cms/entries/tag`, and the generated
-`Fields` types all use. Root-config entry types therefore leave the `type`
-property unset. (A plugin's entry types are the exception: they live in an
-array on the plugin definition, so each one self-declares `type`, and is
+`Fields` types all use. Each `type` is unique within the array and may not
+contain `/` or `:`; Astromech refuses to start otherwise. A plugin's entry
+types take the same shape in the plugin definition's `entries` array, and are
 addressed as `<namespace>/<type>` — see
-[plugins/authoring.md](../plugins/authoring.md). A root key may not contain `/`.)
+[plugins/authoring.md](../plugins/authoring.md).
 
 The field builders, and how grouping and layout fields decide where values are
 stored, are in [fields.md](fields.md).
@@ -134,6 +135,7 @@ import { defineEntryType } from 'astromech';
 import * as fields from 'astromech/fields';
 
 export const author = defineEntryType({
+    type: 'author',
     single: 'Author',
     plural: 'Authors',
     icon: 'UserRound',
@@ -154,12 +156,13 @@ export const author = defineEntryType({
 import { author } from './src/entries/author.js';
 
 export default defineConfig({
-    entries: {
+    entries: [
         author,
-        tag: {
+        {
+            type: 'tag',
             /* ... */
         },
-    },
+    ],
 });
 ```
 

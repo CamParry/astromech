@@ -15,8 +15,9 @@ export default defineConfig({
     email: consoleEmail({ from: 'demo@astromech.dev' }),
     // No `scheduler`: `createWorkerEntry` in `src/worker.ts` nominates
     // `cloudflareCron()`, and boot fails loudly in a Worker if it did not.
-    entries: {
-        page: {
+    entries: [
+        {
+            type: 'page',
             single: 'Page',
             plural: 'Pages',
             icon: 'FileText',
@@ -25,5 +26,5 @@ export default defineConfig({
                 main: [fields.richtext('body', { label: 'Body' })],
             },
         },
-    },
+    ],
 });

@@ -15,14 +15,15 @@ import { tab, tabs } from '@/fields/builder';
  */
 function makeConfig(fields: Field[]): ResolvedConfig {
     return resolveTestConfig({
-        entries: {
-            posts: { single: 'Post', plural: 'Posts', fields },
-            categories: {
+        entries: [
+            { type: 'posts', single: 'Post', plural: 'Posts', fields },
+            {
+                type: 'categories',
                 single: 'Category',
                 plural: 'Categories',
                 fields: [{ name: 'name', type: 'text' }],
             },
-        },
+        ],
     });
 }
 

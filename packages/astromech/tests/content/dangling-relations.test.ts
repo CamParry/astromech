@@ -50,16 +50,17 @@ function makeDanglingConfig(): AstromechConfig {
     const base = makeTestConfig();
     return {
         ...base,
-        entries: {
+        entries: [
             ...base.entries,
-            doc: {
+            {
+                type: 'doc',
                 single: 'Doc',
                 plural: 'Docs',
                 trash: true,
                 staging: true,
                 fields: docFields,
             },
-        },
+        ],
     };
 }
 

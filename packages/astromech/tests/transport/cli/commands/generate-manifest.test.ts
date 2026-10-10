@@ -22,13 +22,14 @@ beforeEach(async () => {
     resetRuntime();
     siteDir = await createTempSite();
     configPath = await writeSiteConfig(siteDir, {
-        entries: {
-            recipe: {
+        entries: [
+            {
+                type: 'recipe',
                 single: 'Recipe',
                 plural: 'Recipes',
                 fields: [{ name: 'servings', type: 'number', label: 'Servings' }],
             },
-        },
+        ],
     });
 });
 

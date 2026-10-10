@@ -9,7 +9,12 @@
 import type { EntryAction } from '@/permissions/entry-permission';
 import type { AstromechConfig } from '@/types/index';
 import { roleWith } from '@tests/fixtures';
-import { createTestDb, makeTestConfig, setupTestConfig } from '@tests/harness';
+import {
+    createTestDb,
+    getEntryType,
+    makeTestConfig,
+    setupTestConfig,
+} from '@tests/harness';
 import { mountRouter, seedTestUser } from '@tests/mount-router';
 import { beforeEach, describe, expect, it } from 'vitest';
 import { currentServices } from '@/app-context/services';
@@ -51,7 +56,7 @@ function json(body: unknown): RequestInit {
 /** `makeTestConfig` with staging (and so versioning) on for `post`. */
 function configWithStaging(): AstromechConfig {
     const config = makeTestConfig();
-    if (config.entries['post']) config.entries['post'].staging = true;
+    getEntryType(config, 'post').staging = true;
     return config;
 }
 

@@ -21,14 +21,15 @@ function configWithRating(): AstromechConfig {
     const config = makeTestConfig();
     return {
         ...config,
-        entries: {
+        entries: [
             ...config.entries,
-            review: {
+            {
+                type: 'review',
                 single: 'Review',
                 plural: 'Reviews',
                 fields: [{ name: 'quality', type: 'rating', label: 'Quality' }],
             },
-        },
+        ],
         plugins: [{ package: 'demo-rating', fields: [ratingField] }],
     };
 }

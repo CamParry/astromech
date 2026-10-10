@@ -15,8 +15,9 @@ import * as fields from 'astromech/fields';
 
 export default defineConfig({
     plugins: [seo()],
-    entries: {
-        page: {
+    entries: [
+        {
+            type: 'page',
             single: 'Page',
             plural: 'Pages',
             url: '/{slug}', // lets `getSitemap` / `getMeta` resolve this type's paths
@@ -25,7 +26,7 @@ export default defineConfig({
                 seo.section(), // adds the SEO field group
             ],
         },
-    },
+    ],
 });
 ```
 

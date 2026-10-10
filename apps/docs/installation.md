@@ -108,18 +108,19 @@ import { filesystem } from 'astromech/storage/filesystem';
 export default defineConfig({
     db: libsql({ url: 'file:./database.db' }),
     storage: filesystem({ dir: './uploads' }),
-    entries: {
-        post: {
+    entries: [
+        {
+            type: 'post',
             single: 'Post',
             plural: 'Posts',
             fields: [fields.richtext('body', { label: 'Body' })],
         },
-    },
+    ],
 });
 ```
 
-`db`, `storage` and `entries` are the three keys every config needs. To choose
-them:
+`db` and `storage` are the two keys every config needs, and `entries` declares
+your content. To choose them:
 
 - [configuration/database.md](configuration/database.md) for the database
   drivers.

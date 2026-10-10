@@ -14,7 +14,12 @@
 import type { AuthVariables } from '@/transport/http/middleware/auth';
 import type { Role } from '@/types/index';
 import { OpenAPIHono } from '@hono/zod-openapi';
-import { createTestDb, makeTestConfig, setupTestConfig } from '@tests/harness';
+import {
+    createTestDb,
+    getEntryType,
+    makeTestConfig,
+    setupTestConfig,
+} from '@tests/harness';
 import { seedTestUser, testUser } from '@tests/mount-router';
 import { beforeEach, describe, expect, it } from 'vitest';
 import { createAppContext } from '@/app-context/app-context';
@@ -39,7 +44,7 @@ beforeEach(async () => {
     await seedTestUser(await createTestDb());
 
     const cfg = makeTestConfig();
-    if (cfg.entries.post) cfg.entries.post.staging = true; // versioning on + staging on
+    getEntryType(cfg, 'post').staging = true; // versioning on + staging on
     setupTestConfig(cfg);
 });
 

@@ -8,7 +8,7 @@
 import type { RedirectMatch, RedirectsOptions } from '../../src/index';
 import type { AstromechConfig } from '@/types/index';
 import type { PluginTestApp } from '@tests/plugin-app';
-import { makeTestConfig } from '@tests/harness';
+import { getEntryType, makeTestConfig, withEntryTypes } from '@tests/harness';
 import { createPluginTestApp } from '@tests/plugin-app';
 import { sql } from 'kysely';
 import { beforeEach, describe, expect, it } from 'vitest';
@@ -28,13 +28,8 @@ async function addRule(data: Record<string, unknown>): Promise<void> {
 /** The harness config with `post` given `url`, and the redirects plugin. */
 function configWith(url: string, options?: RedirectsOptions): AstromechConfig {
     const base = makeTestConfig();
-    const post = base.entries['post'];
-    if (!post) throw new Error('test harness missing `post` entry type');
-    return {
-        ...base,
-        entries: { ...base.entries, post: { ...post, url } },
-        plugins: [redirects(options)],
-    };
+    getEntryType(base, 'post').url = url;
+    return { ...base, plugins: [redirects(options)] };
 }
 
 /** Every stored rule as `[from, to]`, in insertion order. */
@@ -277,16 +272,13 @@ describe('slug-change hook on a url template that names a field', () => {
 describe('slug-change hook and what was live', () => {
     beforeEach(async () => {
         const config = configWith('/blog/{slug}');
-        const post = config.entries['post'];
-        const note = config.entries['note'];
-        if (!post || !note) throw new Error('test harness missing `post` or `note`');
         app = await createPluginTestApp('redirects', {
             ...config,
-            entries: {
-                ...config.entries,
-                post: { ...post, staging: true },
-                note: { ...note, url: '/notes/{slug}', statuses: false },
-            },
+            entries: withEntryTypes(
+                config.entries,
+                { ...getEntryType(config, 'post'), staging: true },
+                { ...getEntryType(config, 'note'), url: '/notes/{slug}', statuses: false }
+            ),
         });
     });
 

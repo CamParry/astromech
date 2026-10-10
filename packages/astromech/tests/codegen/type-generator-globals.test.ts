@@ -9,13 +9,14 @@ function makeConfig(
     plugins: PluginDefinition[] = []
 ): ResolvedConfig {
     return resolveTestConfig({
-        entries: {
-            posts: {
+        entries: [
+            {
+                type: 'posts',
                 single: 'Post',
                 plural: 'Posts',
                 fields: [{ name: 'title', type: 'text' }],
             },
-        },
+        ],
         globals,
         plugins,
     });

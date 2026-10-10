@@ -6,7 +6,7 @@ import { generateClientTypes } from '@/codegen/type-generator';
 /** A config whose only entry type is `pages`, holding `fields`. */
 function makeConfig(fields: Field[]): ResolvedConfig {
     return resolveTestConfig({
-        entries: { pages: { single: 'Page', plural: 'Pages', fields } },
+        entries: [{ type: 'pages', single: 'Page', plural: 'Pages', fields }],
     });
 }
 
@@ -108,10 +108,10 @@ describe('type-generator — hoisted names', () => {
 
     it('gives two entry types with the same tree field distinct node types', () => {
         const config = resolveTestConfig({
-            entries: {
-                header: { single: 'Header', plural: 'Headers', fields: [menu] },
-                footer: { single: 'Footer', plural: 'Footers', fields: [menu] },
-            },
+            entries: [
+                { type: 'header', single: 'Header', plural: 'Headers', fields: [menu] },
+                { type: 'footer', single: 'Footer', plural: 'Footers', fields: [menu] },
+            ],
         });
 
         const output = generateClientTypes(config);
@@ -135,13 +135,14 @@ describe('type-generator — hoisted names', () => {
 
     it('quotes an entry-type key that is not an identifier', () => {
         const config = resolveTestConfig({
-            entries: {
-                'case-study': {
+            entries: [
+                {
+                    type: 'case-study',
                     single: 'Case study',
                     plural: 'Case studies',
                     fields: [],
                 },
-            },
+            ],
         });
 
         expect(generateClientTypes(config)).toContain(

@@ -55,13 +55,14 @@ export default {
         list: async () => ({ keys: [] }),
         getPublicUrl: (key: string) => '/' + key,
     },
-    entries: {
-        post: {
+    entries: [
+        {
+            type: 'post',
             single: 'Post',
             plural: 'Posts',
             fields: [{ name: 'body', type: 'text', label: 'Body' }],
         },
-    },
+    ],
 };
 `;
 

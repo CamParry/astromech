@@ -19,6 +19,7 @@ const driver: DatabaseDriver = {
 };
 
 const entryType = (single: string): EntryType => ({
+    type: single.toLowerCase(),
     single,
     plural: `${single}s`,
     fields: [{ name: 'body', type: 'text' }],
@@ -30,7 +31,7 @@ const baseConfig = (
 ): AstromechConfig => ({
     db: driver,
     storage: noopStorage,
-    entries: { post: entryType('Post') },
+    entries: [entryType('Post')],
     plugins,
     ...extra,
 });
@@ -68,9 +69,7 @@ describe('toAdminEntryType', () => {
     it('includes icon when present', () => {
         const resolved = resolveConfig({
             ...baseConfig(),
-            entries: {
-                post: { ...entryType('Post'), icon: 'FileText' },
-            },
+            entries: [{ ...entryType('Post'), icon: 'FileText' }],
         });
         const postEntry = resolved.entryTypes['post'];
         if (!postEntry) throw new Error('post entry not resolved');
@@ -97,8 +96,9 @@ describe('toAdminEntryType — optional members', () => {
     it('carries the optional view settings when the entry type declares them', () => {
         const resolved = resolveConfig({
             ...baseConfig(),
-            entries: {
-                post: {
+            entries: [
+                {
+                    type: 'post',
                     single: 'Post',
                     plural: 'Posts',
                     icon: 'FileText',
@@ -107,7 +107,7 @@ describe('toAdminEntryType — optional members', () => {
                     gridFields: [{ field: 'body' }],
                     fields: [{ name: 'body', type: 'text' }],
                 },
-            },
+            ],
         });
         const postEntry = resolved.entryTypes['post'];
         if (!postEntry) throw new Error('post entry not resolved');
@@ -194,7 +194,7 @@ describe('buildAdminConfig', () => {
         const config = baseConfig([
             {
                 package: '@astromech/seo',
-                entries: [{ ...entryType('Redirect'), type: 'redirect' }],
+                entries: [entryType('Redirect')],
                 admin: {
                     pages: [
                         {

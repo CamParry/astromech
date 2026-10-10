@@ -6,9 +6,9 @@ import { generateClientTypes } from '@/codegen/type-generator';
 /** A config whose only entry type is `posts`, with `main` and `sidebar` fields. */
 function makeConfig(main: Field[], sidebar: Field[] = []): ResolvedConfig {
     return resolveTestConfig({
-        entries: {
-            posts: { single: 'Post', plural: 'Posts', fields: { main, sidebar } },
-        },
+        entries: [
+            { type: 'posts', single: 'Post', plural: 'Posts', fields: { main, sidebar } },
+        ],
     });
 }
 
@@ -191,8 +191,9 @@ describe('type-generator — public relations reference FieldsPublic', () => {
         // The public shape's relations are composed at the TypedEntriesService overload level.
         // Here we just verify the Relations type still references the full Fields.
         const config = resolveTestConfig({
-            entries: {
-                posts: {
+            entries: [
+                {
+                    type: 'posts',
                     single: 'Post',
                     plural: 'Posts',
                     fields: [
@@ -203,12 +204,13 @@ describe('type-generator — public relations reference FieldsPublic', () => {
                         },
                     ],
                 },
-                categories: {
+                {
+                    type: 'categories',
                     single: 'Category',
                     plural: 'Categories',
                     fields: [{ name: 'name', type: 'text' }],
                 },
-            },
+            ],
         });
 
         const output = generateClientTypes(config);

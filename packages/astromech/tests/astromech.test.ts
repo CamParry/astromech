@@ -13,13 +13,14 @@ function makeConfig(): AstromechConfig {
     return {
         ...makeBootConfig(),
         locales: ['en'],
-        entries: {
-            note: {
+        entries: [
+            {
+                type: 'note',
                 single: 'Note',
                 plural: 'Notes',
                 fields: [{ name: 'body', type: 'text', label: 'Body' }],
             },
-        },
+        ],
     };
 }
 

@@ -10,7 +10,12 @@ import type {
     JsonObject,
     PluginFieldType,
 } from '@/types/index';
-import { createTestDb, makeTestConfig, setupTestConfig } from '@tests/harness';
+import {
+    createTestDb,
+    makeTestConfig,
+    setupTestConfig,
+    withEntryTypes,
+} from '@tests/harness';
 import { beforeEach, describe, expect, it } from 'vitest';
 import { currentServices } from '@/app-context/services';
 import { generateClientTypes } from '@/codegen/type-generator';
@@ -69,10 +74,15 @@ function configWithCards(): AstromechConfig {
     const config = makeTestConfig();
     return {
         ...config,
-        entries: {
+        entries: [
             ...config.entries,
-            showcase: { single: 'Showcase', plural: 'Showcases', fields: [cardsField] },
-        },
+            {
+                type: 'showcase',
+                single: 'Showcase',
+                plural: 'Showcases',
+                fields: [cardsField],
+            },
+        ],
         plugins: [{ package: '@acme/cards', fields: [cardList] }],
     };
 }
@@ -152,10 +162,12 @@ describe('a plugin container field type', () => {
         expect(() =>
             resolveConfig({
                 ...config,
-                entries: {
-                    ...config.entries,
-                    showcase: { single: 'S', plural: 'Ss', fields: [misplaced] },
-                },
+                entries: withEntryTypes(config.entries, {
+                    type: 'showcase',
+                    single: 'S',
+                    plural: 'Ss',
+                    fields: [misplaced],
+                }),
             })
         ).toThrow(/`tabs` cannot sit inside a `acme-card-list`/);
     });

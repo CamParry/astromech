@@ -10,7 +10,12 @@
  */
 
 import type { AstromechConfig, Entry } from '@/types/index';
-import { createTestDb, makeTestConfig, setupTestConfig } from '@tests/harness';
+import {
+    createTestDb,
+    makeTestConfig,
+    setupTestConfig,
+    withEntryTypes,
+} from '@tests/harness';
 import { beforeEach, describe, expect, it } from 'vitest';
 import { currentServices } from '@/app-context/services';
 
@@ -286,25 +291,23 @@ function makeRequiredCategoryConfig(): AstromechConfig {
     const base = makeTestConfig();
     return {
         ...base,
-        entries: {
-            ...base.entries,
-            post: {
-                single: 'Post',
-                plural: 'Posts',
-                versioning: true,
-                translatable: true,
-                fields: [
-                    { name: 'body', type: 'text', label: 'Body' },
-                    {
-                        name: 'category',
-                        type: 'text',
-                        label: 'Category',
-                        translatable: false,
-                        required: true,
-                    },
-                ],
-            },
-        },
+        entries: withEntryTypes(base.entries, {
+            type: 'post',
+            single: 'Post',
+            plural: 'Posts',
+            versioning: true,
+            translatable: true,
+            fields: [
+                { name: 'body', type: 'text', label: 'Body' },
+                {
+                    name: 'category',
+                    type: 'text',
+                    label: 'Category',
+                    translatable: false,
+                    required: true,
+                },
+            ],
+        }),
     };
 }
 

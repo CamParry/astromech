@@ -35,9 +35,10 @@ function makeIndexConfig(): AstromechConfig {
     const base = makeTestConfig();
     return {
         ...base,
-        entries: {
+        entries: [
             ...base.entries,
-            article: {
+            {
+                type: 'article',
                 single: 'Article',
                 plural: 'Articles',
                 staging: true,
@@ -70,7 +71,7 @@ function makeIndexConfig(): AstromechConfig {
                     },
                 ],
             },
-        },
+        ],
         users: {
             fields: [{ name: 'avatar', type: 'media', label: 'Avatar' }],
         },
@@ -270,8 +271,11 @@ describe('checkRelationshipIndex', () => {
     it('reads the rows of a type no longer configured as unexpected', async () => {
         const { article } = await seedContent();
         const held = await relationshipRepository.findBySource(article, 'entry');
-        const { article: _dropped, ...entries } = makeIndexConfig().entries ?? {};
-        setupTestConfig({ ...makeIndexConfig(), entries });
+        const config = makeIndexConfig();
+        setupTestConfig({
+            ...config,
+            entries: (config.entries ?? []).filter(({ type }) => type !== 'article'),
+        });
 
         // The write seam has no schema to read, so it leaves the rows alone.
         await syncEntryRelationships(getConfig(), { id: article, type: 'article' });

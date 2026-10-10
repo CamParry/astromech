@@ -48,26 +48,29 @@ describe('buildPermissionCatalogue', () => {
     const resolved = resolveConfig({
         db: driver,
         storage: noopStorage,
-        entries: {
-            posts: {
+        entries: [
+            {
+                type: 'posts',
                 single: 'Post',
                 plural: 'Posts',
                 versioning: true,
                 fields: [{ name: 'title', type: 'text' }],
             },
-            pages: {
+            {
+                type: 'pages',
                 single: 'Page',
                 plural: 'Pages',
                 fields: [{ name: 'title', type: 'text' }],
             },
-            notes: {
+            {
+                type: 'notes',
                 single: 'Note',
                 plural: 'Notes',
                 statuses: false,
                 versioning: true,
                 fields: [{ name: 'title', type: 'text' }],
             },
-        },
+        ],
         globals: [
             {
                 key: 'site',

@@ -18,7 +18,7 @@ const entryType = (type: string, single: string, plural: string): EntryType => (
 });
 
 function nav(def: PluginDefinition): PluginNavItem[] {
-    const declared = { entries: {}, plugins: [def] };
+    const declared = { plugins: [def] };
     return derivePluginNav(resolvePluginIdentity(def), def, {
         entryTypes: resolveEntryTypes(declared),
         globals: resolveGlobals(declared),

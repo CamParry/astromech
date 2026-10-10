@@ -253,6 +253,8 @@ the repository copies.
 
 ## Public API
 
-- [ ] `config.entries` is a keyed record while globals and plugin entry types are
+- [x] `config.entries` is a keyed record while globals and plugin entry types are
       arrays, so `EntryType.type` is optional and checked at runtime for plugins.
       Make it an array of `defineEntryType` objects with a required `type`.
+      Done; `entries` is also optional now, as `globals` is, since a site with
+      no entry types runs.

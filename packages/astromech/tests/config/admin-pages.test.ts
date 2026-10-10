@@ -14,13 +14,14 @@ const driver: DatabaseDriver = {
 const baseConfig = (overrides: Partial<AstromechConfig> = {}): AstromechConfig => ({
     db: driver,
     storage: noopStorage,
-    entries: {
-        post: {
+    entries: [
+        {
+            type: 'post',
             single: 'Post',
             plural: 'Posts',
             fields: [{ name: 'body', type: 'text' }],
         },
-    },
+    ],
     plugins: [],
     ...overrides,
 });

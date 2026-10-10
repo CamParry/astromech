@@ -24,9 +24,7 @@ beforeEach(async () => {
     await copyFile(inject('testDbTemplate'), database);
     configPath = await writeSiteConfig(siteDir, {
         database,
-        entries: {
-            recipe: { single: 'Recipe', plural: 'Recipes', fields: [] },
-        },
+        entries: [{ type: 'recipe', single: 'Recipe', plural: 'Recipes', fields: [] }],
         roles: { reader: { name: 'Reader', permissions: ['entry:recipe:read'] } },
     });
 });

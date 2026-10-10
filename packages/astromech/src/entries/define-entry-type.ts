@@ -18,18 +18,18 @@ import type { EntryType } from '@/types/index';
  * ```ts
  * // src/entries/author.ts
  * export const author = defineEntryType({
+ *     type: 'author',
  *     single: 'Author',
  *     plural: 'Authors',
  *     fields: [fields.richtext('bio', { label: 'Bio' })],
  * });
  *
  * // astromech.config.ts
- * export default defineConfig({ entries: { author } });
+ * export default defineConfig({ entries: [author] });
  * ```
  *
- * Root-config entry types are keyed by the `entries` record and leave `type`
- * unset; a plugin's entry types self-declare `type` so they can be listed in
- * the plugin's `entries` array.
+ * The same shape goes in the `entries` array of a site config or a plugin
+ * definition.
  */
 export function defineEntryType(config: EntryType): EntryType {
     return config;

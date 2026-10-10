@@ -6,7 +6,12 @@
  */
 
 import type { AstromechConfig } from '@/types/index';
-import { createTestDb, makeTestConfig, setupTestConfig } from '@tests/harness';
+import {
+    createTestDb,
+    makeTestConfig,
+    setupTestConfig,
+    withEntryTypes,
+} from '@tests/harness';
 import { beforeEach, describe, expect, it } from 'vitest';
 import { currentServices } from '@/app-context/services';
 
@@ -18,36 +23,34 @@ function makeValidationConfig(): AstromechConfig {
     const base = makeTestConfig();
     return {
         ...base,
-        entries: {
-            ...base.entries,
-            post: {
-                single: 'Post',
-                plural: 'Posts',
-                versioning: true,
-                translatable: true,
-                fields: [
-                    // Required text field
-                    {
-                        name: 'title_text',
-                        type: 'text',
-                        label: 'Title Text',
-                        required: true,
-                    },
-                    // Email field (descriptor-level validate)
-                    { name: 'contact_email', type: 'email', label: 'Contact Email' },
-                    { name: 'code', type: 'text', label: 'Code' },
-                    // Text field with defaultValue
-                    {
-                        name: 'status_label',
-                        type: 'text',
-                        label: 'Status Label',
-                        defaultValue: 'pending',
-                    },
-                    // Slug field (coerces to slugified string)
-                    { name: 'page_slug', type: 'slug', label: 'Page Slug' },
-                ],
-            },
-        },
+        entries: withEntryTypes(base.entries, {
+            type: 'post',
+            single: 'Post',
+            plural: 'Posts',
+            versioning: true,
+            translatable: true,
+            fields: [
+                // Required text field
+                {
+                    name: 'title_text',
+                    type: 'text',
+                    label: 'Title Text',
+                    required: true,
+                },
+                // Email field (descriptor-level validate)
+                { name: 'contact_email', type: 'email', label: 'Contact Email' },
+                { name: 'code', type: 'text', label: 'Code' },
+                // Text field with defaultValue
+                {
+                    name: 'status_label',
+                    type: 'text',
+                    label: 'Status Label',
+                    defaultValue: 'pending',
+                },
+                // Slug field (coerces to slugified string)
+                { name: 'page_slug', type: 'slug', label: 'Page Slug' },
+            ],
+        }),
     };
 }
 

@@ -55,13 +55,14 @@ import { filesystem } from 'astromech/storage/filesystem';
 export default defineConfig({
     db: libsql(),
     storage: filesystem({ dir: './uploads' }),
-    entries: {
-        post: {
+    entries: [
+        {
+            type: 'post',
             single: 'Post',
             plural: 'Posts',
             fields: [fields.richtext('body', { required: true })],
         },
-    },
+    ],
 });
 ```
 
