@@ -30,7 +30,7 @@ vi.mock('virtual:astromech/config', () => ({
 const EMAIL = 'handler@test.dev';
 
 /** Starts nothing, so a boot here leaves no ticker running. */
-const noScheduler: SchedulerDriver = { name: 'none', start: () => undefined };
+const noScheduler: SchedulerDriver = { name: 'none' };
 
 let db: Kysely<DB>;
 

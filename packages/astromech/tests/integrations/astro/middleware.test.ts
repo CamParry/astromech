@@ -38,7 +38,7 @@ vi.mock('virtual:astromech/config', () => ({
 const SECRET = 'middleware-test-0123456789abcdef0123';
 
 /** Starts nothing, so a boot here leaves no ticker running. */
-const noScheduler: SchedulerDriver = { name: 'none', start: () => undefined };
+const noScheduler: SchedulerDriver = { name: 'none' };
 
 beforeEach(async () => {
     await createTestDb();

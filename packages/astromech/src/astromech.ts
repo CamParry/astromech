@@ -167,7 +167,7 @@ async function build(config: AstromechConfig): Promise<Astromech> {
             return tick;
         },
         startScheduler: async (): Promise<void> => {
-            await getSchedulerDriver()?.start((now) => onTick(now, systemAppContext()));
+            await getSchedulerDriver()?.start?.((now) => onTick(now, systemAppContext()));
         },
     };
 }
