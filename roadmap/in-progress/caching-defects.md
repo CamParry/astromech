@@ -55,7 +55,8 @@ fires a `scheduled()` tick); these need a deployed Worker.
       `scripts/check-deployed-cloudflare.mjs`).
 - [ ] Cloudflare's cache honours `Cache-Tag: astromech:media:<id>` with the
       media `Cache-Control`, and a purge by that tag reaches every variant.
-      Fails: see "Left open".
+      Stored and purged since 2026-10-11, but not yet seen on a real variant:
+      see "Left open".
 - [x] With `cacheCloudflare()`, nothing is stored for the admin, the API, a
       media 404 or a preview read (`cache.set(false)`). On 2026-10-11, under a
       route rule storing every page for a minute, each one's second request
@@ -70,19 +71,18 @@ fires a `scheduled()` tick); these need a deployed Worker.
 
 ## Left open
 
-- **With `cacheCloudflare()`, Workers Caching stores no media response.** The
-  middleware's `cache.set(false)` on the media route leaves the response
-  without a `Cloudflare-CDN-Cache-Control` header, and the adapter then sets
-  `Cloudflare-CDN-Cache-Control: no-store` on it
-  (`applyCloudflareResponseHeaders` in `@astrojs/cloudflare`), which outranks
-  `Cache-Control`. On the testing site on 2026-10-11 an original and two
-  variant URLs answered `BYPASS` every time. A one-off build without that
-  default stored all three as `HIT`, kept them through a purge of another tag,
-  and each missed within two seconds of a purge of `astromech:media:<id>`, so
-  the tag and the purge work once the media route sets its own
-  `Cloudflare-CDN-Cache-Control` (or the provider's equivalent). The variants
-  there were the original (`image-metadata-defects.md`, "Left open"), so a
-  real variant is still to be seen.
+- **The media purge is not yet seen on a real variant.** The middleware now
+  repeats a public media response's `Cache-Control` as
+  `Cloudflare-CDN-Cache-Control`, so the adapter's `no-store` default no
+  longer keeps media out of Workers Caching. On the testing site on
+  2026-10-11, after `deploy:testing`, `check:deployed:cloudflare caching`
+  found the original and both variant URLs a `HIT` on the second request, and
+  a media 404 still `BYPASS`, but failed at its next step: the variant URLs
+  served the original, because the zone does not list the site for Image
+  Transformations (`image-metadata-defects.md`, "Left open"). A run with the
+  two transform assertions removed passed: all three stayed `HIT` through a
+  purge of another tag and each missed within a second of a purge of
+  `astromech:media:<id>`. Tick the item once the check passes as written.
 - **Nothing purges a media item's tag.** Every media response carries
   `Cache-Tag: astromech:media:<id>`, but a replace or delete clears nothing;
   the media writes in `page-caching.md` are where a purge would go.

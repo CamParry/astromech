@@ -274,7 +274,36 @@ describe('caching on Astromech routes', () => {
         expect(response.headers.get('Cache-Control')).toBe(
             'public, max-age=31536000, immutable'
         );
+        // Without it, Astro's Cloudflare adapter sends a `no-store` that
+        // outranks `Cache-Control`.
+        expect(response.headers.get('Cloudflare-CDN-Cache-Control')).toBe(
+            'public, max-age=31536000, immutable'
+        );
     });
+
+    it.each([
+        ['a 404', 404, 'no-store'],
+        ['a 500', 500, 'no-store'],
+        ['a private response', 200, 'private, max-age=60'],
+    ])(
+        'leaves Cloudflare-CDN-Cache-Control off %s from the media route',
+        async (_label, status, cacheControl) => {
+            const next = (): Promise<Response> =>
+                Promise.resolve(
+                    new Response('body', {
+                        status,
+                        headers: { 'Cache-Control': cacheControl },
+                    })
+                );
+
+            const response = await responseOf(
+                onRequest(context({ path: '/_media/abc.jpg' }), next)
+            );
+
+            expect(response.headers.get('Cache-Control')).toBe(cacheControl);
+            expect(response.headers.get('Cloudflare-CDN-Cache-Control')).toBeNull();
+        }
+    );
 
     it('leaves a site page to the site', async () => {
         const cache = routeCache();

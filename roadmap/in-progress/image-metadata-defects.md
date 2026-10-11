@@ -88,8 +88,8 @@ need a deployed Worker with Image Resizing on.
   hosts only, and the driver fetches the original from the site's own media
   route. The four checks are in `check:deployed:cloudflare` and run once
   `astromech-testing.paragramagency.com` is on the zone's list. The ETag check
-  also needs media stored at the edge, which `cacheCloudflare()` prevents
-  (`caching-defects.md`, "Left open").
+  also needs media stored at the edge, which the testing site does since
+  2026-10-11 (`caching-defects.md`, "Left open").
 - **An animated WebP uploaded before this work has no `animated` key**, so it
   still gets an AVIF source, a still of its first frame, until its file is
   replaced. An animated GIF is not optimised at all, and an APNG's variants
