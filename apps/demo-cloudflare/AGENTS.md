@@ -1,6 +1,6 @@
 # apps/demo-cloudflare
 
-Astromech on Cloudflare Workers: D1 for the database, R2 for media, Cloudflare Image Resizing for transforms and a Cron Trigger for the scheduler. It proves the platform, not the CMS (`apps/demo` is the showcase), so keep it as small as it can be while touching every Cloudflare-specific path. Everything runs on wrangler's local emulation: no Cloudflare account, no network.
+Astromech on Cloudflare Workers: D1 for the database, R2 for media, Cloudflare Image Resizing for transforms and a Cron Trigger for the scheduler. It proves the platform, not the CMS (`apps/demo` is the showcase), so keep it as small as it can be while touching every Cloudflare-specific path. Everything but the testing deployment below runs on wrangler's local emulation: no Cloudflare account, no network.
 
 ## Running it
 
@@ -22,3 +22,18 @@ pnpm run preview              # wrangler dev over the built Worker
 ## The gate
 
 `pnpm run check:boot:cloudflare` from the repo root builds this app, serves it on workerd and asserts `/`, `/cms`, `/cms/api/entries/post`, a `scheduled()` tick and four sign-ins from one address (three refused passwords, then the rate limit). The sign-ins run last: the script says why. It is too slow for the pre-commit hook, so run it by hand after anything touching the Cloudflare path.
+
+## Testing deployment
+
+A permanent deployment on the Paragram Cloudflare account, for the checks only a real Worker can run: production D1, Cron Triggers, `cf.image` and the Cache API (which needs a custom domain). It is the `testing` environment in `wrangler.jsonc`.
+
+- URL: https://astromech-testing.paragramagency.com (a Workers custom domain on the `paragramagency.com` zone; `workers_dev` is off, so there is no `workers.dev` URL)
+- Worker `astromech-demo-cloudflare-testing`, D1 database `astromech-testing`, R2 bucket `astromech-testing-media`
+
+Redeploy with `pnpm run deploy:testing` in this directory, after `wrangler login` to the account. It migrates the remote database (`CLOUDFLARE_ENV=testing`, `db:init --allow-remote`, as `apps/docs/deployment/cloudflare.md` describes), builds for the `testing` environment and runs `wrangler deploy --env testing`. The build also applies migrations at its start, so with `CLOUDFLARE_ENV=testing` it reaches the remote database too. Never run `wrangler deploy` by itself: it deploys whatever config the last build wrote to `dist/server/wrangler.json` and ignores `--env`, so after a plain `pnpm run build` or `check:boot:cloudflare` it would deploy the local configuration as a Worker named `astromech-demo-cloudflare`.
+
+`wrangler tail --env testing` and `wrangler secret put --env testing` read `wrangler.jsonc` itself, so they reach this Worker whatever the last build was.
+
+The Worker's secrets, `BETTER_AUTH_SECRET` and `ASTROMECH_CRON_SECRET`, are set with `wrangler secret put --env testing` and survive deploys. `BETTER_AUTH_URL` is a plain `vars` entry in the environment. The cron secret, and the email and password of the admin that first-run setup created, are in the gitignored `.env.testing` here. It is not in the repository: ask whoever holds it, or set a new cron secret with `wrangler secret put` and create a new admin with `users:create` under `CLOUDFLARE_ENV=testing` and `--allow-remote`.
+
+The admin was created by first-run setup (`POST /cms/api/setup`) right after the first deploy, since until a user exists anyone who reaches `/cms` can create the admin. Sign in with the values in `.env.testing`. If the database is ever emptied, run setup again at once.

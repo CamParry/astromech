@@ -28,4 +28,41 @@
             "bucket_name": "astromech-demo-media",
         },
     ],
+    "env": {
+        // The deployed test site on the Paragram account (`AGENTS.md`,
+        // "Testing deployment"). An environment inherits no bindings or
+        // triggers, so each is declared again. Build and migrate with
+        // `CLOUDFLARE_ENV=testing`: `pnpm run deploy:testing` does both.
+        "testing": {
+            "workers_dev": false,
+            "routes": [
+                {
+                    "pattern": "astromech-testing.paragramagency.com",
+                    "custom_domain": true,
+                },
+            ],
+            "vars": {
+                "BETTER_AUTH_URL": "https://astromech-testing.paragramagency.com",
+            },
+            "triggers": {
+                "crons": ["* * * * *"],
+            },
+            "d1_databases": [
+                {
+                    "binding": "DB",
+                    "database_name": "astromech-testing",
+                    "database_id": "4aa2aa62-25f2-4784-b461-b117a87d9661",
+                    // So `db:init --allow-remote` migrates this database
+                    // rather than local emulation.
+                    "remote": true,
+                },
+            ],
+            "r2_buckets": [
+                {
+                    "binding": "MEDIA",
+                    "bucket_name": "astromech-testing-media",
+                },
+            ],
+        },
+    },
 }
