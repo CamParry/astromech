@@ -67,15 +67,28 @@ Merged on 2026-10-04 and run on local workerd (`check:boot:cloudflare`, which
 ticks against the new cron columns); these need a deployed Worker or
 production D1.
 
-- [ ] A deployed Worker whose database lacks a migration logs the pending
-      warning on its first request (bundled migration names).
-- [ ] `d1().isRemote()` answers true for a binding marked `"remote": true` and
+- [x] A deployed Worker whose database lacks a migration logs the pending
+      warning on its first request (bundled migration names). Checked
+      2026-10-11: a testing build bundling an extra name, `9999_check_pending`,
+      logged "1 migration has not been applied to this database:
+      9999_check_pending" on the first request in each new isolate
+      (`scripts/check-deployed-cloudflare.mjs` says how).
+- [x] `d1().isRemote()` answers true for a binding marked `"remote": true` and
       under `CLOUDFLARE_ENV=production`, and `db:init --allow-remote` reaches
-      production D1 after `wrangler login`.
-- [ ] The cron secret comparison (`timingSafeEqual` from `hono/utils/buffer`)
-      runs on workerd without `nodejs_compat`.
-- [ ] The `last_result` and `last_error` cron columns and `POST /entries/count`
-      on production D1.
+      production D1 after `wrangler login`. Checked 2026-10-11 with the
+      `testing` environment: `isRemote()` answers false for the local binding
+      and true under `CLOUDFLARE_ENV=testing`, `db:init` refuses that database
+      without `--allow-remote`, and with it migrated the remote D1 (its
+      `kysely_migration` row is from `deploy:testing` at 15:00:24 UTC).
+- [x] The cron secret comparison (`timingSafeEqual` from `hono/utils/buffer`)
+      runs on workerd without `nodejs_compat`. Checked 2026-10-11 on local
+      workerd, in a Worker with no compatibility flags: it answers true for
+      equal values and false for unequal ones, though the demo itself cannot
+      be deployed without the flag (see "Left open").
+- [x] The `last_result` and `last_error` cron columns and `POST /entries/count`
+      on production D1. Checked 2026-10-11: the Cron Trigger records
+      `last_result` `'ok'` and `last_error` null for `scheduled-publish`, and a
+      signed-in `POST /cms/api/entries/count` answers 200 with `{ page: 0 }`.
 
 ## Left open
 
@@ -89,3 +102,23 @@ production D1.
   (`roadmap/planned/site-health.md`).
 - **Undeclared nested keys survive a save** (`projectToSchema`), left to
   `roadmap/planned/field-rename-command.md` as the defect list says.
+- **The documented cron poke is refused in production**: `curl -X POST` with
+  only the `Authorization` header, as `apps/docs/configuration/scheduler.md`
+  shows, answered 403 "Cross-site POST form submissions are forbidden" on the
+  testing deployment (2026-10-11). Astro's `security.checkOrigin` refuses a
+  POST with no `Content-Type` and no matching `Origin` before Astromech sees
+  it; the same request with `Content-Type: application/json` answered 200.
+  Separately, a Vercel Cron Job sends a GET
+  (https://vercel.com/docs/cron-jobs, from the docs, not tested) and the route
+  takes only POST, so the Vercel advice in `apps/docs/deployment/cloudflare.md`
+  cannot work as written either.
+- **A Cloudflare site cannot run without `nodejs_compat`**: a version without
+  it is refused at upload (`No such module "node:events"`, from unenv's
+  `process` polyfill the adapter bundles; Astromech's own chunks import
+  `node:async_hooks`). `apps/docs/deployment/cloudflare.md` sets the flag in
+  its example but never says it is required.
+- **Wrangler prints an error on a remote D1 run that succeeds**: `db:init`
+  with `--allow-remote` printed "Network connection lost." three times, and
+  the testing build once, each marked `[ERROR]`, then exited 0 with the
+  migrations applied. It comes from wrangler's remote proxy; the cause was not
+  found, and it reads as a failure.

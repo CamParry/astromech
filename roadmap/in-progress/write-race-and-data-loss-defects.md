@@ -115,12 +115,16 @@ item 8 proposed, would protect libsql only.
       document covers every mounted route but the internal ones"). The
       cross-type `POST /entries/query` and `POST /entries/count` were already
       table rows.
-- [ ] **Check the OpenAPI document on workerd.** Signed in,
+- [x] **Check the OpenAPI document on workerd.** Signed in,
       `GET /cms/api/openapi.json` on the Cloudflare demo lists the `/auth/*`
       paths: Better Auth's `generateOpenAPISchema()` runs only on that request, and
       `check:boot:cloudflare` cannot make it, having no session. Also confirm
       the `better-auth/plugins` import adds only `openAPI` to the Worker
-      bundle.
+      bundle. Checked 2026-10-11 on the testing deployment: signed in, it
+      answered 200 with 86 paths, 28 of them under `/auth/` and none of them
+      `/auth/sign-up/email`, and of the plugins under
+      `better-auth/dist/plugins` only `open-api` has its `id` in the built
+      Worker.
 - [x] **Refused auth routes in the document.** `auth-document.ts` leaves out
       `/auth/sign-up/email`, which always answers 403, and `/auth/change-email`,
       which is off. `REFUSED_AUTH_PATHS` in `auth/better-auth.ts` names them

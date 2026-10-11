@@ -120,9 +120,13 @@ screen in chromium. These need real keys or a deployed Worker:
 - [ ] On a deployed Worker: `ASTROMECH_CAPTCHA_SECRET` set with
       `wrangler secret put` is read, its absence refuses requests in
       production, and `cf-connecting-ip` reaches siteverify as `remoteip`.
-- [ ] On production D1: the three new tables, the `sign_in_failures` upsert
+- [x] On production D1: the three new tables, the `sign_in_failures` upsert
       with `RETURNING`, and an unblock reaching other isolates within 60
-      seconds.
+      seconds. Checked 2026-10-11 on the testing deployment: the three tables
+      exist, two refused sign-ins for one new email answered 401 twice and
+      left its row at a count of 2, and after an unblock, IPv6 requests were
+      refused for up to 58 seconds by isolates holding the cached list and
+      never after (`check:deployed:cloudflare`).
 
 ## Left open
 
