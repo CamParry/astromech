@@ -309,13 +309,25 @@ describe('date and datetime on a fetched entry', () => {
     });
 
     it('saves a stored date-time the editor leaves alone as it was', async () => {
-        // A date in the old full form fails the date rule until it is set
-        // again, so this one is stored as core stores it now.
         const fields = { startsAt: STORED.startsAt, day: '2026-10-10' };
         const h = await mountLoaded(fields);
 
         expect(await saved(h)).toMatchObject({ fields });
     });
+
+    // The date rule reads a full ISO value as the date it is written with,
+    // which is the date the input shows and the date core stores on save
+    // (`coerceDate`), so an old row saves without the editor touching it.
+    it.each([STORED.day, '2026-10-10T23:30:00-05:00'])(
+        'saves a date stored as %s without a change, as it was',
+        async (day) => {
+            const fields = { startsAt: STORED.startsAt, day };
+            const h = await mountLoaded(fields);
+
+            expect(h.handle().isDirty).toBe(false);
+            expect(await saved(h)).toMatchObject({ fields });
+        }
+    );
 
     it('saves an edited date-time as UTC and an edited date as YYYY-MM-DD', async () => {
         const h = await mountLoaded();

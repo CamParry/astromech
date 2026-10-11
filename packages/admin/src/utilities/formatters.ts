@@ -3,24 +3,6 @@
  * Centralized logic for converting values between database and input formats
  */
 
-import type { FieldTypeName } from 'astromech';
-
-/**
- * Format a date value for date input (YYYY-MM-DD)
- */
-function formatDateForInput(value: unknown): string {
-    if (!value) return '';
-
-    const date = value instanceof Date ? value : new Date(value as string);
-    if (isNaN(date.getTime())) return '';
-
-    const year = date.getFullYear();
-    const month = String(date.getMonth() + 1).padStart(2, '0');
-    const day = String(date.getDate()).padStart(2, '0');
-
-    return `${year}-${month}-${day}`;
-}
-
 /**
  * Format a datetime value for a `datetime-local` input (YYYY-MM-DDTHH:MM) in
  * local time, the zone `new Date(inputValue)` reads it back in.
@@ -85,33 +67,11 @@ export function datetimeFromInput(input: string, zoned: boolean): string {
 
 /**
  * A stored `date` value as a `date` input shows it. Core stores `YYYY-MM-DD`;
- * a full ISO value, from before it did, shows the date it is written with.
+ * a full ISO value, from before it did, shows the date it is written with,
+ * which is the date core stores it as on the next save.
  */
 export function dateInputValue(value: unknown): string {
     if (typeof value !== 'string') return '';
     if (DATE_RE.test(value)) return value;
     return DATE_PREFIX_RE.exec(value)?.[1] ?? '';
-}
-
-/**
- * Format a value for display in an input field
- */
-export function formatValueForInput(value: unknown, fieldType: FieldTypeName): string {
-    if (value == null) return '';
-
-    // eslint-disable-next-line @typescript-eslint/switch-exhaustiveness-check -- every other field type displays as its string form
-    switch (fieldType) {
-        case 'date':
-            return formatDateForInput(value);
-        case 'datetime':
-            return formatDatetimeForInput(value);
-        case 'number':
-            return String(value);
-        case 'boolean':
-            return value ? 'true' : 'false';
-        case 'color':
-            return value ? String(value) : '#000000';
-        default:
-            return String(value);
-    }
 }

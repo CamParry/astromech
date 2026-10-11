@@ -31,8 +31,10 @@ const SEARCH_DEBOUNCE_MS = 250;
 export type DataListColumn<Row> = {
     key: string;
     label: string;
-    /** Offer a sort on this column's `key`; needs the list's `onSort`. */
+    /** Offer a sort on this column's `sortKey`; needs the list's `onSort`. */
     sortable?: boolean;
+    /** The key a sort on this column sends; defaults to `key`. */
+    sortKey?: string;
     /** Render the cell's content as the row link, so the row is reachable by keyboard. */
     link?: boolean;
     /** A class for the header and every cell, such as `am-table-icon` for a narrow column. */
@@ -230,7 +232,7 @@ export function DataList<Row extends { id: string }>({
                                     <Table.SortTh
                                         key={column.key}
                                         className={column.className}
-                                        sortKey={column.key}
+                                        sortKey={column.sortKey ?? column.key}
                                         currentSort={sort}
                                         onSort={onSort}
                                     >

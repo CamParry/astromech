@@ -27,7 +27,7 @@ import { resolveLabel } from '../../i18n/labels';
 import { defaultCellKind } from '../../rendering/cell-kind-map';
 import { getCellRenderer } from '../../rendering/cell-registry';
 import { Link } from '../../rendering/cells/link';
-import { fieldTypeOf, resolveTable } from '../../rendering/resolve';
+import { fieldColumnKey, fieldTypeOf, resolveTable } from '../../rendering/resolve';
 import { entryEditPath, entryTypeBasePath } from '../../utilities/entry-admin-path';
 import { ForbiddenPage } from '../layout/forbidden-page';
 import { NotFoundPage } from '../layout/not-found-page';
@@ -89,7 +89,7 @@ function EntriesListBody({
         (column: TableColumn): string =>
             column.system
                 ? t(typeof column.label === 'string' ? column.label : column.label.$t)
-                : resolveLabel(column.label, column.key, t, namespace),
+                : resolveLabel(column.label, column.name, t, namespace),
         [t, namespace]
     );
     const table = React.useMemo(() => resolveTable(config), [config]);
@@ -111,7 +111,8 @@ function EntriesListBody({
     const tableColumns = shownColumns.filter((column) => visibleColumns.has(column.key));
     // Grid fields render through the cell registry, as the table's do.
     const gridColumns: TableColumn[] = (config.gridFields ?? []).map((gridField) => ({
-        key: gridField.field,
+        key: fieldColumnKey(gridField.field),
+        name: gridField.field,
         label: gridField.label ?? gridField.field,
         kind: defaultCellKind(fieldTypeOf(config, gridField.field)),
         source: 'field',
@@ -245,6 +246,7 @@ function EntriesListBody({
         tableColumns.find((column) => column.kind !== 'translations');
     const dataColumns: DataListColumn<Entry>[] = tableColumns.map((column) => ({
         key: column.key,
+        sortKey: column.name,
         label: columnLabel(column),
         sortable: column.sortable,
         link: column === linkColumn,
@@ -254,8 +256,8 @@ function EntriesListBody({
                 column,
                 value:
                     column.source === 'field'
-                        ? (entry.fields as Record<string, unknown>)[column.key]
-                        : (entry as Record<string, unknown>)[column.key],
+                        ? (entry.fields as Record<string, unknown>)[column.name]
+                        : (entry as Record<string, unknown>)[column.name],
                 ctx: cellContext,
             }),
     }));

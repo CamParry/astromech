@@ -3,10 +3,23 @@ import type { AdminEntryType } from 'astromech';
 import { flattenEntryFields } from 'astromech/shared';
 import { defaultCellKind } from './cell-kind-map';
 
-/** Resolve a field's declared type by scanning the config's field tree. */
+/**
+ * The declared type of a top-level field. Config resolve refuses an admin
+ * column or grid field that names no such field, so one is always found.
+ */
 export function fieldTypeOf(config: AdminEntryType, fieldName: string): string {
     const f = flattenEntryFields(config.fields).find((x) => x.name === fieldName);
-    return f ? f.type : 'text';
+    if (f === undefined) {
+        throw new Error(
+            `[Astromech] ${config.single} declares no top-level field "${fieldName}".`
+        );
+    }
+    return f.type;
+}
+
+/** The `key` of a column over the field `name`, unlike any system column's. */
+export function fieldColumnKey(name: string): string {
+    return `fields.${name}`;
 }
 
 export function resolveTable(config: AdminEntryType): ResolvedTable {
@@ -17,6 +30,7 @@ export function resolveTable(config: AdminEntryType): ResolvedTable {
     if (config.titleField !== false) {
         columns.push({
             key: 'title',
+            name: 'title',
             label: 'entries.columnTitle',
             kind: 'title',
             source: 'entry',
@@ -28,6 +42,7 @@ export function resolveTable(config: AdminEntryType): ResolvedTable {
     if (caps.statuses) {
         columns.push({
             key: 'status',
+            name: 'status',
             label: 'entries.columnStatus',
             kind: 'status',
             source: 'entry',
@@ -39,6 +54,7 @@ export function resolveTable(config: AdminEntryType): ResolvedTable {
     if (caps.slug) {
         columns.push({
             key: 'slug',
+            name: 'slug',
             label: 'entries.columnSlug',
             kind: 'slug',
             source: 'entry',
@@ -50,6 +66,7 @@ export function resolveTable(config: AdminEntryType): ResolvedTable {
     if (caps.translatable) {
         columns.push({
             key: 'locale',
+            name: 'locale',
             label: 'entries.columnLocale',
             kind: 'locale',
             source: 'entry',
@@ -59,6 +76,7 @@ export function resolveTable(config: AdminEntryType): ResolvedTable {
         });
         columns.push({
             key: 'translations',
+            name: 'translations',
             label: 'entries.columnTranslations',
             kind: 'translations',
             source: 'entry',
@@ -71,7 +89,8 @@ export function resolveTable(config: AdminEntryType): ResolvedTable {
     // Configured admin columns (field data).
     for (const col of config.adminColumns) {
         columns.push({
-            key: col.field,
+            key: fieldColumnKey(col.field),
+            name: col.field,
             label: col.label ?? col.field,
             kind: col.kind ?? defaultCellKind(fieldTypeOf(config, col.field)),
             source: 'field',
@@ -84,6 +103,7 @@ export function resolveTable(config: AdminEntryType): ResolvedTable {
     // Updated-at trailing system column.
     columns.push({
         key: 'updatedAt',
+        name: 'updatedAt',
         label: 'entries.columnUpdated',
         kind: 'date',
         source: 'entry',
@@ -93,6 +113,7 @@ export function resolveTable(config: AdminEntryType): ResolvedTable {
     });
     columns.push({
         key: 'updatedBy',
+        name: 'updatedBy',
         label: 'entries.columnUpdatedBy',
         kind: 'author',
         source: 'entry',

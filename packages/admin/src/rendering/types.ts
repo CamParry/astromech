@@ -7,15 +7,22 @@ import type { CellKind, Entry, Field, Label } from 'astromech';
 import type * as React from 'react';
 
 export type TableColumn = {
-    /** Stable key: field name for field columns, system key for system columns. */
+    /**
+     * Unique among a list's columns: a system column's name, or `fields.` and
+     * the field's name, the path its value has in the entry. React keys and the
+     * shown-columns setting use it, so a field named like a system column, such
+     * as `title`, stays a column of its own.
+     */
     key: string;
+    /** The name the value is read under in `source`, and the name a sort sends. */
+    name: string;
     /**
      * System columns carry an i18n key (shell calls `t()`); admin columns carry
      * a `Label` (literal string or a `t()` descriptor), resolved at render.
      */
     label: Label;
     kind: CellKind;
-    /** 'field' reads entry.fields[key]; 'entry' reads (entry as Record)[key]. */
+    /** 'field' reads entry.fields[name]; 'entry' reads (entry as Record)[name]. */
     source: 'field' | 'entry';
     sortable: boolean;
     /** True for the built-in system columns (title/status/slug/locale/translations/updatedAt/updatedBy). */

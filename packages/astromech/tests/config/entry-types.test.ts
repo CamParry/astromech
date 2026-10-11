@@ -293,3 +293,38 @@ describe('resolveEntryTypes', () => {
         );
     });
 });
+
+// The admin columns' check is in `tests/entries/sort-fields.test.ts`.
+describe('a grid field at config resolve', () => {
+    const post = (gridFields: { field: string }[]): EntryType => ({
+        type: 'post',
+        single: 'Post',
+        plural: 'Posts',
+        views: ['list', 'grid'],
+        fields: {
+            main: [{ name: 'excerpt', type: 'textarea' }],
+            sidebar: [{ name: 'cover', type: 'media' }],
+        },
+        gridFields,
+    });
+
+    it('accepts a grid field on a top-level field in either column', () => {
+        expect(() =>
+            resolveEntryTypes({
+                entries: [post([{ field: 'excerpt' }, { field: 'cover' }])],
+            })
+        ).not.toThrow();
+    });
+
+    it.each(['title', 'unknown'])(
+        'refuses a grid field on "%s", which the type does not declare',
+        (field) => {
+            expect(() => resolveEntryTypes({ entries: [post([{ field }])] })).toThrow(
+                new RegExp(
+                    `grid field "${field}" shows a field, but the type declares no ` +
+                        'top-level field by that name.*Fields: "excerpt", "cover"'
+                )
+            );
+        }
+    );
+});

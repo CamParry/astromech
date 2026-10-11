@@ -75,8 +75,8 @@ describe('resolveTable', () => {
             'slug',
             'locale',
             'translations',
-            'featured',
-            'category',
+            'fields.featured',
+            'fields.category',
             'updatedAt',
             'updatedBy',
         ]);
@@ -136,7 +136,8 @@ describe('resolveTable', () => {
         const table = resolveTable(fullConfig);
         const byKey = Object.fromEntries(table.columns.map((c) => [c.key, c]));
 
-        expect(byKey.featured).toMatchObject({
+        expect(byKey['fields.featured']).toMatchObject({
+            name: 'featured',
             kind: 'boolean',
             label: 'Featured',
             source: 'field',
@@ -144,20 +145,23 @@ describe('resolveTable', () => {
             requires: null,
         });
         // select field -> default 'text'
-        expect(byKey.category).toMatchObject({ kind: 'text', label: 'category' });
+        expect(byKey['fields.category']).toMatchObject({
+            kind: 'text',
+            label: 'category',
+        });
     });
 
     it('omits all system columns when titleless and capabilities off', () => {
         const table = resolveTable(titlelessConfig);
         expect(table.columns.map((c) => c.key)).toEqual([
-            'from',
-            'to',
-            'status',
-            'enabled',
+            'fields.from',
+            'fields.to',
+            'fields.status',
+            'fields.enabled',
             'updatedAt',
             'updatedBy',
         ]);
-        const enabled = table.columns.find((c) => c.key === 'enabled');
+        const enabled = table.columns.find((c) => c.name === 'enabled');
         expect(enabled?.kind).toBe('boolean');
     });
 
@@ -167,18 +171,37 @@ describe('resolveTable', () => {
             adminColumns: [{ field: 'featured', kind: 'badge' }],
         };
         const table = resolveTable(config);
-        const featured = table.columns.find((c) => c.key === 'featured');
+        const featured = table.columns.find((c) => c.name === 'featured');
         expect(featured?.kind).toBe('badge');
     });
 
-    it('defaults to text for an admin column not in the field tree (no throw)', () => {
+    // A field may share a system column's name (DECISIONS.md, "An entries list
+    // sorts by a field's bare name"), so a column over it needs its own key.
+    it('keys a column over a field named like a system column apart from it', () => {
         const config: AdminEntryType = {
             ...fullConfig,
-            adminColumns: [{ field: 'orphan' }],
+            adminColumns: [{ field: 'title' }, { field: 'status' }],
+            fields: {
+                main: [
+                    { name: 'title', type: 'text' },
+                    { name: 'status', type: 'select' },
+                ],
+                sidebar: [],
+            },
         };
-        const table = resolveTable(config);
-        const orphan = table.columns.find((c) => c.key === 'orphan');
-        expect(orphan?.kind).toBe('text');
+        const columns = resolveTable(config).columns;
+
+        expect(new Set(columns.map((c) => c.key)).size).toBe(columns.length);
+        expect(
+            columns
+                .filter((c) => c.name === 'title' || c.name === 'status')
+                .map((c) => [c.key, c.source])
+        ).toEqual([
+            ['title', 'entry'],
+            ['status', 'entry'],
+            ['fields.title', 'field'],
+            ['fields.status', 'field'],
+        ]);
     });
 
     it('produces a JSON-serializable table', () => {

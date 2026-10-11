@@ -147,6 +147,7 @@ describe('the entries list', () => {
             post: {
                 ...POST,
                 adminColumns: [{ field: 'review', label: 'Review', kind: 'status' }],
+                fields: { main: [{ name: 'review', type: 'text' }], sidebar: [] },
             },
         };
         query.mockResolvedValue({
@@ -203,6 +204,7 @@ describe('the entries list', () => {
             post: {
                 ...POST,
                 adminColumns: [{ field: 'price', label: 'Price', sortable: true }],
+                fields: { main: [{ name: 'price', type: 'number' }], sidebar: [] },
             },
         };
         // Numeric order, which a sort by text would turn into 10, 9.
@@ -270,6 +272,30 @@ describe('the entries list', () => {
         await userEvent.keyboard('{Enter}');
 
         await waitFor(() => expect(view.pathname()).toBe('/entries/post/e1'));
+    });
+
+    // A field may share the title column's name; its column renders and hides
+    // on its own.
+    it('keeps a column over a field named title apart from the title column', async () => {
+        adminConfig.entryTypes = {
+            post: {
+                ...POST,
+                adminColumns: [{ field: 'title', label: 'Headline' }],
+                fields: { main: [{ name: 'title', type: 'text' }], sidebar: [] },
+            },
+        };
+        query.mockResolvedValue({
+            data: [{ ...makeEntry('e1', 'Hello'), fields: { title: 'Field headline' } }],
+            pagination: { page: 1, pages: 1, total: 1, limit: 20 },
+        });
+        mountList('/entries/post');
+        await screen.findByRole('cell', { name: 'Field headline' });
+
+        await userEvent.click(screen.getByRole('button', { name: 'Toggle columns' }));
+        await userEvent.click(await screen.findByRole('menuitem', { name: 'Headline' }));
+
+        await waitFor(() => expect(screen.queryByText('Field headline')).toBeNull());
+        expect(screen.getByRole('link', { name: 'Hello' })).toBeTruthy();
     });
 
     it.each([

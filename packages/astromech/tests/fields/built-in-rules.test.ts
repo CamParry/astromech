@@ -395,8 +395,22 @@ describe('coerceDate', () => {
         expect(coerceDate(new Date('nope'))).toBeInstanceOf(Date);
     });
 
-    it('passes through strings unchanged', () => {
+    it('keeps a YYYY-MM-DD date', () => {
         expect(coerceDate('2026-01-02')).toBe('2026-01-02');
+    });
+
+    // The form a date was stored in before core kept YYYY-MM-DD only. The date
+    // is the one the value is written with, not the UTC one (2026-10-11 here).
+    it('converts an ISO date-time to the date it is written with', () => {
+        expect(coerceDate('2026-10-10T23:30:00-05:00')).toBe('2026-10-10');
+        expect(coerceDate('2026-10-10T00:00:00.000Z')).toBe('2026-10-10');
+        expect(coerceDate('2026-10-10T10:00')).toBe('2026-10-10');
+    });
+
+    it('leaves any other string for the validator to reject', () => {
+        for (const value of ['Oct 10 2026', '2026-02-30T10:00', '2026-10-10 10:00Z']) {
+            expect(coerceDate(value)).toBe(value);
+        }
     });
 });
 

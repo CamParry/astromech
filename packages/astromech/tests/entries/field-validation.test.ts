@@ -1,7 +1,8 @@
 /**
  * The field pipeline as entries add to it: completeness follows the status the
- * row will hold, an email field is checked, and a refused update writes no
- * version. The rules every resource shares are in
+ * row will hold, an email field is checked, a date stored in an older form is
+ * rewritten when sent again, and a refused update writes no version. The rules
+ * every resource shares are in
  * `tests/content/resource-field-validation.test.ts`.
  */
 
@@ -14,6 +15,8 @@ import {
 } from '@tests/harness';
 import { beforeEach, describe, expect, it } from 'vitest';
 import { currentServices } from '@/app-context/services';
+import { createRepository } from '@/database/repository/create-repository';
+import { entryContentTable } from '@/entries/tables';
 
 const entriesService = currentServices.entries;
 
@@ -49,6 +52,7 @@ function makeValidationConfig(): AstromechConfig {
                 },
                 // Slug field (coerces to slugified string)
                 { name: 'page_slug', type: 'slug', label: 'Page Slug' },
+                { name: 'day', type: 'date', label: 'Day' },
             ],
         }),
     };
@@ -320,6 +324,31 @@ describe('update — email validation', () => {
         });
         const result = Array.isArray(updated) ? updated[0]! : updated;
         expect(result.fields.contact_email).toBe('new@example.com');
+    });
+});
+
+// A date stored before core kept `YYYY-MM-DD` only, written here behind the
+// pipeline's back. The admin sends every field back on save, the old value
+// included, so the save stores it in the form core keeps now.
+describe('update — a date stored as a full ISO date-time', () => {
+    it('stores the date it is written with when the field is sent again', async () => {
+        const entry = await api.create({
+            type: 'post',
+            data: { title: 'T', fields: { title_text: 'Hello' } },
+        });
+        const fields = { title_text: 'Hello', day: '2026-10-10T23:30:00-05:00' };
+        await createRepository(entryContentTable).updateMany(
+            { entryId: entry.id },
+            { fields }
+        );
+
+        const updated = await api.update({
+            type: 'post',
+            id: entry.id,
+            data: { fields },
+        });
+        const result = Array.isArray(updated) ? updated[0]! : updated;
+        expect(result.fields.day).toBe('2026-10-10');
     });
 });
 
