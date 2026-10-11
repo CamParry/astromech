@@ -85,7 +85,8 @@ export function datetimeFromInput(input: string, zoned: boolean): string {
 
 /**
  * A stored `date` value as a `date` input shows it. Core stores `YYYY-MM-DD`;
- * a full ISO value, from before it did, shows the date it is written with.
+ * a full ISO value, from before it did, shows the date it is written with,
+ * which is the date core stores it as on the next save.
  */
 export function dateInputValue(value: unknown): string {
     if (typeof value !== 'string') return '';
