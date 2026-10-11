@@ -55,7 +55,9 @@ export const onRequest: MiddlewareHandler = async (context, next) => {
     // A media file is public and keeps the media route's own lifetime; a page
     // that read with a preview token answers one visitor.
     const set: Record<string, string> =
-        route === 'media' ? {} : { 'Cache-Control': PRIVATE_NO_STORE };
+        route === 'media'
+            ? cloudflareCdnCacheControl(response)
+            : { 'Cache-Control': PRIVATE_NO_STORE };
     const append: Record<string, string> = {};
     if (adminPage) {
         // A header, since a `<meta>` policy cannot carry `frame-ancestors`.
@@ -81,6 +83,22 @@ function assertCaptchaSecret(config: AstromechConfig): void {
         'Astromech requires missing env var: ASTROMECH_CAPTCHA_SECRET. `security.captcha` is set, and the secret is how the server checks a token. ' +
             'Set it in your environment or .env file, or on Cloudflare Workers with `wrangler secret put ASTROMECH_CAPTCHA_SECRET`.'
     );
+}
+
+/**
+ * A public media response's `Cache-Control`, repeated as
+ * `Cloudflare-CDN-Cache-Control`. With a cache provider configured, Astro's
+ * Cloudflare adapter sends `Cloudflare-CDN-Cache-Control: no-store` on every
+ * response that has none, and Cloudflare obeys it over `Cache-Control`, so
+ * without this `cache.set(false)` keeps every media file out of Workers
+ * Caching. A 404 or a 500 is not public, so it keeps that `no-store`.
+ */
+function cloudflareCdnCacheControl(response: Response): Record<string, string> {
+    const cacheControl = response.headers.get('Cache-Control');
+    if (cacheControl === null || !/(?:^|,)\s*public\s*(?:,|$)/i.test(cacheControl)) {
+        return {};
+    }
+    return { 'Cloudflare-CDN-Cache-Control': cacheControl };
 }
 
 /** Set `set` and append `append` on `response`, copying one whose headers are immutable. */

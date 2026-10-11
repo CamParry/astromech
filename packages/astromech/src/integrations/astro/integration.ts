@@ -5,7 +5,7 @@
  */
 
 import type { AstromechConfig, ResolvedConfig } from '@/types/index';
-import type { AstroIntegration } from 'astro';
+import type { AstroIntegration, AstroIntegrationLogger } from 'astro';
 import { fileURLToPath } from 'node:url';
 import { createAdminViteConfig } from '@astromech/admin/vite';
 import { buildAdminConfig } from '@/config/admin-config';
@@ -150,12 +150,7 @@ export function astromech(options: AstromechIntegrationOptions = {}): AstroInteg
             'astro:server:setup': async ({ logger }) => {
                 const { config, resolved } = getLoadedConfig();
                 logger.info('Astromech dev server ready');
-                await runMigrations(
-                    config.db.getInstance(),
-                    logger,
-                    config.plugins ?? [],
-                    resolved.migrationsDir
-                );
+                await migrateLocalDatabase(config, resolved, logger);
             },
 
             // Before Astro prerenders a page. The wrangler proxy a D1 binding
@@ -163,16 +158,38 @@ export function astromech(options: AstromechIntegrationOptions = {}): AstroInteg
             // opens the same local state.
             'astro:build:start': async ({ logger }) => {
                 const { config, resolved } = getLoadedConfig();
-                await runMigrations(
-                    config.db.getInstance(),
-                    logger,
-                    config.plugins ?? [],
-                    resolved.migrationsDir
-                );
+                await migrateLocalDatabase(config, resolved, logger);
                 await disposeBindings();
             },
         },
     };
+}
+
+/**
+ * Apply pending migrations from the build or dev process, to a local database
+ * only. A remote one is left to `astromech db:init --allow-remote`, as the CLI
+ * refuses it without that flag, so the environment of the machine that builds
+ * never decides on its own that production is migrated. A driver with no
+ * `isRemote` reads as local.
+ */
+async function migrateLocalDatabase(
+    config: AstromechConfig,
+    resolved: ResolvedConfig,
+    logger: AstroIntegrationLogger
+): Promise<void> {
+    if ((await config.db.isRemote?.()) === true) {
+        logger.info(
+            'The database is remote, so Astromech did not apply migrations. ' +
+                'Apply them with `astromech db:init --allow-remote`.'
+        );
+        return;
+    }
+    await runMigrations(
+        config.db.getInstance(),
+        logger,
+        config.plugins ?? [],
+        resolved.migrationsDir
+    );
 }
 
 /**

@@ -162,10 +162,63 @@ everyday commands stay local:
 CLOUDFLARE_ENV=production astromech db:init --allow-remote
 ```
 
+`astro build` applies migrations too, but only to a local database: a build
+under `CLOUDFLARE_ENV=production` logs that the database is remote and applies
+none, so run `db:init` first.
+
 A Worker cannot read your migrations folder, so the build bundles the names of
 its migrations. The first request a Worker serves compares them with the
 database and logs a warning when migrations are pending. A Worker woken only by
 a Cron Trigger skips the check.
+
+## Deploying
+
+Run these from the directory that holds `wrangler.jsonc`, naming the wrangler
+environment you deploy (`production` here) in each:
+
+```
+CLOUDFLARE_ENV=production npx astromech db:init --allow-remote
+CLOUDFLARE_ENV=production npx astro build
+npx wrangler deploy --env production
+```
+
+- **The build picks the environment.** Astro's Cloudflare adapter builds
+  through the
+  [Cloudflare Vite plugin](https://developers.cloudflare.com/workers/vite-plugin/reference/cloudflare-environments/),
+  which reads `CLOUDFLARE_ENV` at build time and writes
+  `dist/server/wrangler.json` flattened to that one environment: its name,
+  bindings, routes and `vars`. A build without it carries the top-level config.
+- **`wrangler deploy` deploys what the last build wrote.** The build leaves
+  `.wrangler/deploy/config.json` pointing at `dist/server/wrangler.json`, and
+  `wrangler deploy` follows it
+  ([generated configuration](https://developers.cloudflare.com/workers/wrangler/configuration/#generated-wrangler-configuration)).
+  `--env` does not choose the environment then: after a build for
+  `production`, `--env production` only checks that the build matches and any
+  other name is refused; after a build without `CLOUDFLARE_ENV`, `--env` is
+  ignored and the top-level Worker is deployed. So build for the environment
+  right before you deploy it.
+- **`nodejs_compat` is required.** The adapter bundles a `process` polyfill
+  that imports `node:events`, and Astromech imports `node:async_hooks`. Without
+  the flag, Cloudflare refuses the upload with `No such module "node:events"`.
+- **Turn Astro sessions off.** Unless the Astro config sets `session: false`
+  or names a session driver, the adapter turns on Astro sessions stored in a
+  KV binding named `SESSION`, and `wrangler deploy` creates a KV namespace for
+  it. Astromech does not use Astro
+  sessions (its sign-in sessions live in the database), so unless your own
+  pages do, set `session: false`:
+
+    ```js
+    // astro.config.mjs
+    export default defineConfig({
+        adapter: cloudflare(),
+        session: false,
+        // …
+    });
+    ```
+
+Secrets belong to an environment too: set them with
+`npx wrangler secret put BETTER_AUTH_SECRET --env production`. They survive
+deploys.
 
 ## Running it locally
 
@@ -181,7 +234,8 @@ passed with `--env-file` instead.
 
 The build applies migrations when it starts, before it prerenders anything,
 through wrangler's `getPlatformProxy()`, which writes local state next to your
-wrangler config. `wrangler dev` keeps its own
+wrangler config. It skips a binding marked `"remote": true`, as
+[Migrations](#migrations) says. `wrangler dev` keeps its own
 state beside whichever config file it was given, so pointing it at
 `dist/server/wrangler.json` needs `--persist-to` at the directory the build
 used, or the Worker boots against an empty database.
@@ -197,6 +251,7 @@ curl "http://localhost:8787/cdn-cgi/local/scheduled"
 Node and Vercel need no Astromech code at all, and [node.md](node.md) covers
 running the build on Node. Name `libsql()` or `s3()`, and
 for scheduled work use `interval()` on a long-lived Node host or `webhook()` on
-Vercel, pointing a Vercel Cron entry at `/cms/api/cron/run` with
-`ASTROMECH_CRON_SECRET` set. Cloudflare needs an integration because bindings
+Vercel, pointing a Vercel Cron Job at `/cms/api/cron/run` as
+[../configuration/scheduler.md](../configuration/scheduler.md#webhook--an-external-poke)
+describes. Cloudflare needs an integration because bindings
 and `scheduled()` are both things no other platform has.

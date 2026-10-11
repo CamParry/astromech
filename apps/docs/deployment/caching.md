@@ -55,14 +55,17 @@ purging that tag clears the item's original and every variant from Cloudflare's
 cache. A CDN that reads another header, such as Fastly's `Surrogate-Key`, needs
 the tag copied into it. Astromech purges nothing itself.
 
-On Cloudflare Workers with `cacheCloudflare()`, no media response is stored:
-the adapter sends `Cloudflare-CDN-Cache-Control: no-store` with every
-response that sets no such header of its own, which takes precedence over
-`Cache-Control`, and the media route sets none.
-
 The middleware calls `cache.set(false)` on the media route as on the admin, so
 Astro's route cache never holds a file and a `routeRules` lifetime never
 replaces the ones above.
+
+Each public media response also repeats its `Cache-Control` in a
+`Cloudflare-CDN-Cache-Control` header. With `cacheCloudflare()`, Astro's
+Cloudflare adapter sends `Cloudflare-CDN-Cache-Control: no-store` with every
+response that sets no such header of its own, and Cloudflare obeys it over
+`Cache-Control`, so without the copy Workers Caching would store no media
+file. A 404 and a 500 get no copy, so the adapter's `no-store` keeps them out.
+A cache other than Cloudflare's ignores the header.
 
 ## On Cloudflare Workers
 

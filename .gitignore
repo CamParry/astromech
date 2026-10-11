@@ -13,8 +13,11 @@ dist/
 .env
 .env.local
 .env.*.local
-.env.testing
 .dev.vars
+# The testing deployment's credentials (`apps/demo-cloudflare/AGENTS.md`). Not
+# `.env.testing`: wrangler and Vite load `.env.<name>` files, and a testing
+# build would copy it into `dist/server/.dev.vars`.
+testing-credentials.env
 
 # IDE
 .vscode/
