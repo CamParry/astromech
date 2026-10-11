@@ -53,8 +53,10 @@ const DEFAULT_ORDER = { field: 'createdAt', direction: 'desc' } as const;
  * entry row's, every other system column the content row's: the same split the
  * returned shape makes. A name in `sortableFields` orders by that key of the
  * `fields` JSON, by type: numbers numerically, strings by code point, booleans
- * as 0 and 1. A row without the value sorts as NULL, which SQLite places first
- * ascending and last descending. After the requested order comes the default
+ * as 0 and 1. Date and date-time values are stored in ISO forms whose code
+ * point order is time order (`coerceDatetime` in `fields/built-in-rules.ts`).
+ * A row without the value sorts as NULL, which SQLite places first ascending
+ * and last descending. After the requested order comes the default
  * one, then the content row's id, so rows with equal values keep one order from
  * page to page.
  */

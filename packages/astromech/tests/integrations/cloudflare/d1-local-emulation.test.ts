@@ -172,6 +172,31 @@ describe('d1() against local emulation', () => {
         expect(rows.map((row) => row.id)).toEqual(['c', 'b', 'a', 'd']);
     });
 
+    // The forms a datetime field stores (`coerceDatetime` in
+    // `fields/built-in-rules.ts`): a bare date, UTC to the millisecond, and a
+    // wall time. D1 compares them as text, which is time order.
+    it('orders the stored datetime forms by a JSON key in time order', async () => {
+        await sql`CREATE TABLE json_sort (id TEXT PRIMARY KEY, fields TEXT)`.execute(db);
+        await db
+            .insertInto('json_sort')
+            .values([
+                { id: 'wall', fields: JSON.stringify({ at: '2026-10-10T10:00' }) },
+                { id: 'utc', fields: JSON.stringify({ at: '2026-10-10T09:00:00.000Z' }) },
+                { id: 'date', fields: JSON.stringify({ at: '2026-10-10' }) },
+                {
+                    id: 'early',
+                    fields: JSON.stringify({ at: '2026-10-10T08:30:00.000Z' }),
+                },
+            ])
+            .execute();
+        const rows = await db
+            .selectFrom('json_sort')
+            .select('id')
+            .orderBy(sql`json_extract(${sql.ref('fields')}, ${'$."at"'})`, 'asc')
+            .execute();
+        expect(rows.map((row) => row.id)).toEqual(['date', 'early', 'utc', 'wall']);
+    });
+
     it('maps insertId and affected-row counts from D1 meta', async () => {
         await createRoundTripTable();
         await db

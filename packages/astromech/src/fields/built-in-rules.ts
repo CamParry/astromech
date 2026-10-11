@@ -5,6 +5,7 @@
  */
 
 import type { DataField, FieldValidationContext, FieldValidator } from '@/types/fields';
+import { z } from 'zod';
 import { isRecord } from '@/utilities/is-record';
 import { slugify } from '@/utilities/strings';
 import { isUnsafeHref } from './rich-text/safe-links';
@@ -140,18 +141,59 @@ export const validateBoolean: FieldValidator = async (ctx) =>
     typeof ctx.value === 'boolean' ? true : 'Must be true or false';
 
 // date, datetime
+//
+// Both are stored in ISO 8601 forms that sort as text in time order, so a list
+// sorted by the field needs no per-type SQL: a date as `YYYY-MM-DD`, a
+// date-time with a zone as UTC to the millisecond, and one without a zone as
+// written. A value without a zone sorts as if it were UTC.
+
+const isoDate = z.iso.date();
+const isoDatetime = z.iso.datetime({ offset: true, local: true });
+
+/** The zone a date-time ends with: `Z` or an offset such as `+02:00`. */
+const ZONE_RE = /(?:Z|[+-]\d{2}:\d{2})$/;
+
+/** A fraction of a second past milliseconds, which a `Date` cannot hold. */
+const SUB_MILLISECOND_RE = /(\.\d{3})\d+$/;
+
+const isValidDate = (value: unknown): value is Date =>
+    value instanceof Date && !Number.isNaN(value.getTime());
 
 /**
- * Callers pass a `Date` as often as a string. Both land in a JSON column as an
- * ISO string, so normalise here and let the validator deal only in strings.
+ * Callers pass a `Date` as often as a string. A `Date` becomes its UTC date,
+ * the day `new Date('YYYY-MM-DD')` reads back; a string is left for the
+ * validator.
  */
 export const coerceDate = (value: unknown): unknown =>
-    value instanceof Date && !Number.isNaN(value.getTime()) ? value.toISOString() : value;
+    isValidDate(value) ? value.toISOString().slice(0, 10) : value;
 
-/** Dates are stored as strings, so this checks the string actually parses. */
+/** A date is stored as `YYYY-MM-DD`, so this accepts that form only. */
 export const validateDate: FieldValidator = async (ctx) => {
     if (typeof ctx.value !== 'string') return 'Must be a date';
-    return Number.isNaN(Date.parse(ctx.value)) ? 'Must be a valid date' : true;
+    return isoDate.safeParse(ctx.value).success ? true : 'Must be a date as YYYY-MM-DD';
+};
+
+/**
+ * A `Date`, or a string with a zone, is stored as UTC to the millisecond:
+ * `2026-10-10T10:00:00+02:00` becomes `2026-10-10T08:00:00.000Z`. A string
+ * without a zone keeps its wall time, cut to the millisecond, and a bare date
+ * is kept as it is. Anything else is left for the validator to reject.
+ */
+export const coerceDatetime = (value: unknown): unknown => {
+    if (isValidDate(value)) return value.toISOString();
+    if (typeof value !== 'string' || !isoDatetime.safeParse(value).success) return value;
+    return ZONE_RE.test(value)
+        ? new Date(value).toISOString()
+        : value.replace(SUB_MILLISECOND_RE, '$1');
+};
+
+/** An ISO 8601 date and time, with or without a zone, or a bare date. */
+export const validateDatetime: FieldValidator = async (ctx) => {
+    if (typeof ctx.value !== 'string') return 'Must be a date and time';
+    return isoDatetime.safeParse(ctx.value).success ||
+        isoDate.safeParse(ctx.value).success
+        ? true
+        : 'Must be an ISO 8601 date and time, such as 2026-10-10T14:30';
 };
 
 // reference — media, relationship

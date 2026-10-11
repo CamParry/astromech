@@ -46,6 +46,7 @@ import {
 import { isRecord } from '@/utilities/is-record';
 import {
     coerceDate,
+    coerceDatetime,
     coerceEmail,
     coerceKeyValue,
     coerceNumber,
@@ -54,6 +55,7 @@ import {
     validateChoice,
     validateColor,
     validateDate,
+    validateDatetime,
     validateEmail,
     validateGroup,
     validateItemList,
@@ -303,8 +305,8 @@ const dataFieldTypes: CoreDataFieldType[] = [
         type: 'datetime',
         sortable: true,
         build: datetime,
-        coerce: coerceDate,
-        validate: validateDate,
+        coerce: coerceDatetime,
+        validate: validateDatetime,
         tsType: () => 'string',
     },
     {

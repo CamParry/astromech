@@ -55,8 +55,9 @@ const { data } = await Astromech.entries.query({
 });
 ```
 
-- A number field sorts by value, a date field by date (while its values share
-  one format), and a boolean as `false` then `true`.
+- A number field sorts by value, a `date` or `datetime` field in time order (a
+  `datetime` written without a zone sorts as if it were UTC), and a boolean as
+  `false` then `true`.
 - An entry with no value sorts first ascending and last descending.
 - Entries with equal values keep one order from page to page: newest first.
 - A query over several types sorts by a field only when every type declares it.
