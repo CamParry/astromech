@@ -171,16 +171,6 @@ describe('resolveTable', () => {
         expect(featured?.kind).toBe('badge');
     });
 
-    it('defaults to text for an admin column not in the field tree (no throw)', () => {
-        const config: AdminEntryType = {
-            ...fullConfig,
-            adminColumns: [{ field: 'orphan' }],
-        };
-        const table = resolveTable(config);
-        const orphan = table.columns.find((c) => c.key === 'orphan');
-        expect(orphan?.kind).toBe('text');
-    });
-
     it('produces a JSON-serializable table', () => {
         const table = resolveTable(fullConfig);
         expect(JSON.parse(JSON.stringify(table))).toEqual(table);

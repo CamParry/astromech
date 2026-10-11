@@ -3,10 +3,18 @@ import type { AdminEntryType } from 'astromech';
 import { flattenEntryFields } from 'astromech/shared';
 import { defaultCellKind } from './cell-kind-map';
 
-/** Resolve a field's declared type by scanning the config's field tree. */
+/**
+ * The declared type of a top-level field. Config resolve refuses an admin
+ * column or grid field that names no such field, so one is always found.
+ */
 export function fieldTypeOf(config: AdminEntryType, fieldName: string): string {
     const f = flattenEntryFields(config.fields).find((x) => x.name === fieldName);
-    return f ? f.type : 'text';
+    if (f === undefined) {
+        throw new Error(
+            `[Astromech] ${config.single} declares no top-level field "${fieldName}".`
+        );
+    }
+    return f.type;
 }
 
 export function resolveTable(config: AdminEntryType): ResolvedTable {

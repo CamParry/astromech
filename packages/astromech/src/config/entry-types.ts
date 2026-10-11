@@ -4,7 +4,7 @@
  * array.
  */
 
-import type { EntryFields, ResolvedEntryFields } from '@/types/fields';
+import type { DataField, EntryFields, ResolvedEntryFields } from '@/types/fields';
 import type {
     AdminColumn,
     AstromechConfig,
@@ -132,8 +132,8 @@ export function toResolvedFields(fields: EntryFields | undefined): ResolvedEntry
 }
 
 /**
- * Resolve a single entry type: validate its titleField, field tree and
- * admin columns (crash-loud on mismatch). `typeKey` is stamped onto
+ * Resolve a single entry type: validate its titleField, field tree, admin
+ * columns and grid fields (crash-loud on mismatch). `typeKey` is stamped onto
  * the result as `id`, used in error messages.
  */
 export function toResolvedEntryType(
@@ -150,6 +150,7 @@ export function toResolvedEntryType(
     validateFieldTree(owner, resolvedFields.sidebar);
     assertUniqueDataNames(owner, resolvedFields);
     assertAdminColumns(owner, entryType.adminColumns ?? [], resolvedFields);
+    assertGridFields(owner, entryType.gridFields ?? [], resolvedFields);
 
     const { fields: _fields, type: _type, ...rest } = entryType;
     return {
@@ -178,14 +179,7 @@ export function assertAdminColumns(
     const sortable = sortableFieldNames(fields, 'full');
     for (const column of columns) {
         const prefix = `Astromech ${owner}: admin column "${column.field}"`;
-        const field = declared.find((candidate) => candidate.name === column.field);
-        if (field === undefined) {
-            throw new Error(
-                `${prefix} shows a field, but the type declares no top-level field ` +
-                    "by that name. A column reads the entry's `fields`, not its own " +
-                    `columns such as \`title\` or \`slug\`. Fields: ${quoteNames(declared.map((f) => f.name))}.`
-            );
-        }
+        const field = declaredField(prefix, 'A column', column.field, declared);
         if (column.sortable !== true || sortable.includes(column.field)) continue;
         if (sortableColumns('entry').includes(column.field)) {
             throw new Error(
@@ -199,6 +193,39 @@ export function assertAdminColumns(
                 `a list can order by. Sortable fields: ${quoteNames(sortable)}.`
         );
     }
+}
+
+/**
+ * Throw when a grid field names no top-level field of the type, since the
+ * admin's grid view reads its value from the entry's `fields`, as a column
+ * does, and would show nothing. `owner` names the type in the message.
+ */
+function assertGridFields(
+    owner: string,
+    gridFields: readonly { field: string }[],
+    fields: ResolvedEntryFields
+): void {
+    const declared = flattenEntryFields(fields);
+    for (const gridField of gridFields) {
+        const prefix = `Astromech ${owner}: grid field "${gridField.field}"`;
+        declaredField(prefix, 'A grid field', gridField.field, declared);
+    }
+}
+
+/** The top-level field `name` names, or a throw that says the type has none. */
+function declaredField(
+    prefix: string,
+    reader: string,
+    name: string,
+    declared: readonly DataField[]
+): DataField {
+    const field = declared.find((candidate) => candidate.name === name);
+    if (field !== undefined) return field;
+    throw new Error(
+        `${prefix} shows a field, but the type declares no top-level field ` +
+            `by that name. ${reader} reads the entry's \`fields\`, not its own ` +
+            `columns such as \`title\` or \`slug\`. Fields: ${quoteNames(declared.map((f) => f.name))}.`
+    );
 }
 
 function quoteNames(names: readonly string[]): string {

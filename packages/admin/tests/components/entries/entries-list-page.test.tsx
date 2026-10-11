@@ -147,6 +147,7 @@ describe('the entries list', () => {
             post: {
                 ...POST,
                 adminColumns: [{ field: 'review', label: 'Review', kind: 'status' }],
+                fields: { main: [{ name: 'review', type: 'text' }], sidebar: [] },
             },
         };
         query.mockResolvedValue({
@@ -203,6 +204,7 @@ describe('the entries list', () => {
             post: {
                 ...POST,
                 adminColumns: [{ field: 'price', label: 'Price', sortable: true }],
+                fields: { main: [{ name: 'price', type: 'number' }], sidebar: [] },
             },
         };
         // Numeric order, which a sort by text would turn into 10, 9.
