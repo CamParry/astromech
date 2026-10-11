@@ -101,7 +101,7 @@ this is the editorial model; `roadmap/planned/autosave.md` and
 and `roadmap/planned/field-value-query-indexing.md` (staged-row predicates),
 `roadmap/planned/naming-conventions.md` and
 `roadmap/planned/derive-from-one-source.md` (staging names and sites), and
-`roadmap/in-progress/module-cleanup.md` (the two merge rules).
+`roadmap/completed/module-cleanup.md` (the two merge rules).
 
 ## Testing
 

@@ -102,7 +102,7 @@ Groups 1 to 4 change no behaviour.
     - [ ] Private media requires `media:read`.
     - [ ] The admin sidebar filters site entry types by read, as the server's
           `/entry-types` does (with the `useAdminNav()` item in
-          `in-progress/module-cleanup.md`).
+          `completed/module-cleanup.md`).
     - [ ] Anyone with `admin:access` sees who created and updated an entry:
           a `users.names({ ids })` method returning `{ id, name }` replaces
           `useAuthorNames`' fetch of every user
