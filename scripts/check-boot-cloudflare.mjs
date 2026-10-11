@@ -105,8 +105,8 @@ async function main() {
     const base = `http://127.0.0.1:${port}`;
     await waitForServer(base);
 
-    await expectStatus(`${base}/`, 200, 'the site renders');
-    await expectStatus(`${base}/cms`, 200, 'the admin route is mounted');
+    await expectHtml(`${base}/`, 'the site renders');
+    await expectHtml(`${base}/cms`, 'the admin route is mounted');
     // 401 rather than 500 proves the API is mounted and rejecting an anonymous
     // caller, not that the runtime never booted against its D1 binding.
     await expectStatus(
@@ -130,6 +130,22 @@ async function main() {
     // closed for it, and that request fails with a 500 "Network connection
     // lost." without reaching the Worker. A loaded machine makes it likely.
     await expectSignInLimited(base);
+}
+
+/**
+ * Fail unless `url` answers 200 with an HTML document. Under a compatibility
+ * date before 2026-02-19, workerd turns the async iterable Astro streams a page
+ * as into the text "[object Object]", and every page still answers 200.
+ */
+async function expectHtml(url, description) {
+    const response = await request(url);
+    const body = await response.text();
+    if (response.status !== 200 || !/^<!doctype html>/i.test(body.trimStart())) {
+        throw new Error(
+            `${url} returned ${response.status} with ${JSON.stringify(body.slice(0, 200))}, expected an HTML document — ${description}`
+        );
+    }
+    console.log(`  ok  200 ${url} — ${description}`);
 }
 
 /**

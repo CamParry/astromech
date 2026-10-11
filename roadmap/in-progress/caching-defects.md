@@ -48,17 +48,41 @@ The class: a response or a job that assumed no cache and no build step.
 Merged on 2026-10-04 and run on local workerd (`check:boot:cloudflare`, which
 fires a `scheduled()` tick); these need a deployed Worker.
 
-- [ ] `ctx.waitUntil` holds a tick started by a real Cron Trigger.
+- [x] `ctx.waitUntil` holds a tick started by a real Cron Trigger. On
+      2026-10-11 a testing build whose `scheduled` did not await the tick ran
+      a real trigger to "ok": the tick settled after the handler returned and
+      `scheduled-publish` recorded the trigger's `scheduledTime` (run by hand,
+      `scripts/check-deployed-cloudflare.mjs`).
 - [ ] Cloudflare's cache honours `Cache-Tag: astromech:media:<id>` with the
       media `Cache-Control`, and a purge by that tag reaches every variant.
-- [ ] With `cacheCloudflare()`, nothing is stored for the admin, the API, a
-      media 404 or a preview read (`cache.set(false)`).
-- [ ] `astro build` migrates at build start and `disposeBindings()` releases
+      Fails: see "Left open".
+- [x] With `cacheCloudflare()`, nothing is stored for the admin, the API, a
+      media 404 or a preview read (`cache.set(false)`). On 2026-10-11, under a
+      route rule storing every page for a minute, each one's second request
+      was `BYPASS` while `/` was a `HIT` (`check:deployed:cloudflare`).
+- [x] `astro build` migrates at build start and `disposeBindings()` releases
       the local D1 before the prerenderer opens it, on a site with prerendered
-      pages (neither demo has one).
+      pages (neither demo has one). On 2026-10-11 a copy of
+      `apps/demo-cloudflare` with one prerendered page, built from empty local
+      state, applied its migration before the server build, and the page read
+      that row through `env.DB` while prerendering (run by hand, as the
+      script's header says).
 
 ## Left open
 
+- **With `cacheCloudflare()`, Workers Caching stores no media response.** The
+  middleware's `cache.set(false)` on the media route leaves the response
+  without a `Cloudflare-CDN-Cache-Control` header, and the adapter then sets
+  `Cloudflare-CDN-Cache-Control: no-store` on it
+  (`applyCloudflareResponseHeaders` in `@astrojs/cloudflare`), which outranks
+  `Cache-Control`. On the testing site on 2026-10-11 an original and two
+  variant URLs answered `BYPASS` every time. A one-off build without that
+  default stored all three as `HIT`, kept them through a purge of another tag,
+  and each missed within two seconds of a purge of `astromech:media:<id>`, so
+  the tag and the purge work once the media route sets its own
+  `Cloudflare-CDN-Cache-Control` (or the provider's equivalent). The variants
+  there were the original (`image-metadata-defects.md`, "Left open"), so a
+  real variant is still to be seen.
 - **Nothing purges a media item's tag.** Every media response carries
   `Cache-Tag: astromech:media:<id>`, but a replace or delete clears nothing;
   the media writes in `page-caching.md` are where a purge would go.

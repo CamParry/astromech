@@ -28,6 +28,13 @@ export default defineConfig({
 });
 ```
 
+`cloudflareImages()` transforms through Cloudflare Image Transformations, so
+turn them on for the zone. The driver fetches each original from your site's
+media route, so if the zone allows transformations only from listed origins,
+list your site's hostname. Otherwise every variant request is served the
+original, and the Worker logs `Cloudflare image transform failed: 403`
+(Cloudflare's error 9401).
+
 Drivers name a **binding**, not an object, because the same config file is also
 loaded by plain Node when the CLI runs. The binding is looked up lazily, on the
 first query rather than at construction.
@@ -62,7 +69,7 @@ same entry works under any framework whose server entry exports `fetch`.
 {
     "name": "my-site",
     "main": "src/worker.ts",
-    "compatibility_date": "2026-02-14",
+    "compatibility_date": "2026-08-27",
     "compatibility_flags": ["nodejs_compat"],
     "assets": { "directory": "./dist/client" },
     // Only the poke. Each job's own `schedule` decides whether a tick runs it.
@@ -71,6 +78,10 @@ same entry works under any framework whose server entry exports `fetch`.
     "r2_buckets": [{ "binding": "MEDIA", "bucket_name": "my-site-media" }],
 }
 ```
+
+Use a `compatibility_date` of 2026-02-19 or later. With `nodejs_compat`, Astro
+streams a page as an async iterable, which a Worker accepts as a response body
+only from that date; before it, every page renders as `[object Object]`.
 
 `main` points at your entry file, not at
 `@astrojs/cloudflare/entrypoints/server`. The Astro build compiles it into

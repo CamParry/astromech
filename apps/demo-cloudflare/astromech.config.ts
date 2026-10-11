@@ -22,6 +22,8 @@ export default defineConfig({
             plural: 'Pages',
             icon: 'FileText',
             url: '/{slug}',
+            // For preview tokens, which `src/pages/[slug].astro` reads with.
+            staging: true,
             fields: {
                 main: [fields.richtext('body', { label: 'Body' })],
             },
