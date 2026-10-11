@@ -1,7 +1,8 @@
 /**
- * The `form` entry type's own schema, validated through core's pipeline.
+ * The `form` entry type's own schema, validated through core's pipeline, and
+ * its admin columns, checked as config resolve checks them.
  *
- * The only rule under test is the `name` pattern on every field block: a stored
+ * The schema rule under test is the `name` pattern on every field block: a stored
  * `name` becomes a compiled field's name at submit time (`src/fields/
  * compile.ts`), and a submission error is keyed by the field-path grammar,
  * which cannot address a name containing `.`, `[` or `]`. The rule is only
@@ -11,6 +12,7 @@
 
 import type { Field } from '@/types/fields';
 import { describe, expect, it } from 'vitest';
+import { assertAdminColumns, toResolvedFields } from '@/config/entry-types';
 import { safeParseFields } from '@/fields/parse-fields';
 import { formEntryType } from '../src/entries/form';
 
@@ -58,5 +60,19 @@ describe("form builder's `name` rule", () => {
 
     it('reports a missing name as required, not as a pattern failure', async () => {
         expect(await nameErrors(undefined)).toEqual(['This field is required']);
+    });
+});
+
+describe("the form type's admin columns", () => {
+    // The list adds the entry's own title and slug columns, so a column here
+    // names a field the type declares.
+    it('each name a declared field', () => {
+        expect(() =>
+            assertAdminColumns(
+                'entry type "form"',
+                formEntryType.adminColumns ?? [],
+                toResolvedFields(formEntryType.fields)
+            )
+        ).not.toThrow();
     });
 });

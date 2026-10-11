@@ -1,8 +1,8 @@
 /**
  * Which fields an entries list orders by: the field types that sort, the names
  * a list over several types shares, `entries.query` passing them to the
- * repository, and config resolve refusing a sortable admin column the list
- * would refuse.
+ * repository, and config resolve refusing an admin column on no declared
+ * field, or a sortable one the list would refuse.
  */
 
 import type { AdminColumn } from '@/types/index';
@@ -217,7 +217,7 @@ describe('entries.query sorted by a field', () => {
     });
 });
 
-describe('a sortable admin column at config resolve', () => {
+describe('an admin column at config resolve', () => {
     function resolveWith(adminColumns: AdminColumn[]): () => void {
         const config = makeTestConfig();
         config.entries = withEntryTypes(config.entries, {
@@ -240,13 +240,24 @@ describe('a sortable admin column at config resolve', () => {
             resolveWith([
                 columns.number('price', { sortable: true }),
                 columns.text('items'),
-                columns.text('unknown'),
+                columns.text('title'),
             ])
         ).not.toThrow();
     });
 
     it.each([
-        ['unknown', /admin column "unknown" is sortable.*declares no top-level field/],
+        ['an unsorted', columns.text('slug')],
+        ['a sortable', columns.text('unknown', { sortable: true })],
+    ])('refuses %s column on a field the type does not declare', (_, column) => {
+        expect(resolveWith([column])).toThrow(
+            new RegExp(
+                `admin column "${column.field}" shows a field, but the type declares no ` +
+                    'top-level field by that name.*Fields: "price", "title", "items", "related"'
+            )
+        );
+    });
+
+    it.each([
         [
             'items',
             /admin column "items" is sortable.*`repeater` field holds no single value/,

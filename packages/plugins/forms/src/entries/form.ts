@@ -30,12 +30,9 @@ export const formEntryType: EntryType = {
     type: FORM_TYPE,
     single: 'Form',
     plural: 'Forms',
-    // Slug is on by default, which is how a form is addressed.
-    adminColumns: [
-        columns.text('title', { label: 'Title' }),
-        columns.slug('slug', { label: 'Slug' }),
-        columns.boolean('enabled', { label: 'Enabled' }),
-    ],
+    // Slug is on by default, which is how a form is addressed. The list shows
+    // the entry's own title and slug columns, so only fields are added here.
+    adminColumns: [columns.boolean('enabled', { label: 'Enabled' })],
     fields: [
         fields.tabs({
             fields: [

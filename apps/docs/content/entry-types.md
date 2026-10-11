@@ -76,8 +76,11 @@ import * as columns from 'astromech/columns';
 adminColumns: [columns.number('price', { sortable: true })],
 ```
 
-Config loading fails when a `sortable` column names a field the list cannot
-sort by, so the admin never offers a sort the API refuses.
+A column reads one of the type's top-level fields, so config loading fails when
+a column names no field the type declares. The list shows the entry's own
+title, status and slug already. Config loading also fails when a `sortable`
+column names a field the list cannot sort by, so the admin never offers a sort
+the API refuses.
 
 ## Updating entries
 
