@@ -102,21 +102,6 @@ production D1.
   (`roadmap/planned/site-health.md`).
 - **Undeclared nested keys survive a save** (`projectToSchema`), left to
   `roadmap/planned/field-rename-command.md` as the defect list says.
-- **The documented cron poke is refused in production**: `curl -X POST` with
-  only the `Authorization` header, as `apps/docs/configuration/scheduler.md`
-  shows, answered 403 "Cross-site POST form submissions are forbidden" on the
-  testing deployment (2026-10-11). Astro's `security.checkOrigin` refuses a
-  POST with no `Content-Type` and no matching `Origin` before Astromech sees
-  it; the same request with `Content-Type: application/json` answered 200.
-  Separately, a Vercel Cron Job sends a GET
-  (https://vercel.com/docs/cron-jobs, from the docs, not tested) and the route
-  takes only POST, so the Vercel advice in `apps/docs/deployment/cloudflare.md`
-  cannot work as written either.
-- **A Cloudflare site cannot run without `nodejs_compat`**: a version without
-  it is refused at upload (`No such module "node:events"`, from unenv's
-  `process` polyfill the adapter bundles; Astromech's own chunks import
-  `node:async_hooks`). `apps/docs/deployment/cloudflare.md` sets the flag in
-  its example but never says it is required.
 - **Wrangler prints an error on a remote D1 run that succeeds**: `db:init`
   with `--allow-remote` printed "Network connection lost." three times, and
   the testing build once, each marked `[ERROR]`, then exited 0 with the
