@@ -335,6 +335,8 @@ export default tseslint.config(
                 console: 'readonly',
                 process: 'readonly',
                 fetch: 'readonly',
+                FormData: 'readonly',
+                Response: 'readonly',
                 setTimeout: 'readonly',
                 clearTimeout: 'readonly',
                 AbortSignal: 'readonly',

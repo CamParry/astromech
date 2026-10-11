@@ -6,8 +6,15 @@
 //
 // Never part of `pnpm run verify` or CI: it needs the Cloudflare account and
 // the credentials below, and it writes to the testing site (a cron tick, two
-// refused sign-ins, a block it removes again). Run it by hand with
-// `pnpm run check:deployed:cloudflare` after `wrangler login`.
+// refused sign-ins, a block it removes again, test images it uploads and
+// deletes again, cache purges, and a draft page named `check-preview` it keeps
+// and issues a new preview token for). Run it by hand with
+// `pnpm run check:deployed:cloudflare` after `wrangler login`. Texts after it
+// run only the checks whose item contains one, such as `caching-defects`.
+//
+// The test images are made with core's `sharp`, and the HEIC is core's test
+// fixture. Image checks need the zone to allow Image Transformations from the
+// site's own hostname (`apps/docs/deployment/cloudflare.md`).
 //
 // The site URL and credentials come from `apps/demo-cloudflare/.env.testing`
 // in the main checkout, which is gitignored: `SITE_URL`, `OWNER_EMAIL`,
@@ -22,7 +29,7 @@
 // To add a check, add an entry to `CHECKS`: the roadmap item it answers and a
 // function that returns a line of evidence or throws.
 //
-// Three checks need a special build or deploy, so they are run once by hand,
+// Five checks need a special build or deploy, so they are run once by hand,
 // not here. Each leaves the deployment and the database as they were. In
 // `apps/demo-cloudflare`:
 //
@@ -57,10 +64,32 @@
 //    (`write-race-and-data-loss-defects.md`). After any build, search
 //    `dist/server` for each plugin's `id: "<name>"` (the plugin folders under
 //    `better-auth/dist/plugins`): only `open-api` is found.
+// 4. `ctx.waitUntil` holds a tick a real Cron Trigger starts
+//    (`caching-defects.md`). The handler awaits the tick too, so a normal run
+//    cannot tell the two apart. Build for the environment as in 1. In
+//    `dist/server/entry.mjs`, make `scheduled` call `app.scheduled(...)`
+//    without awaiting it, log `typeof ctx?.waitUntil`, log "returns" before
+//    the handler returns and "settled" from a `.then` on the tick. Upload and
+//    deploy as in 1, start a tail, and wait for the next trigger. Its event
+//    ends "ok" with the logs in the order function, returns, settled, and
+//    `_astromech_cron.last_run` for `scheduled-publish` equals the event's
+//    `scheduledTime`. Deploy the noted version again.
+// 5. `astro build` migrates at build start and releases the local D1 before
+//    the prerenderer opens it (`caching-defects.md`). Neither demo has a
+//    prerendered page, so copy this app without `node_modules`, `dist`,
+//    `.wrangler` and `.astro` to a scratch directory, link its
+//    `node_modules` to this app's, and add a page with `export const
+//    prerender = true` that reads `select count(*) from kysely_migration`
+//    through `env.DB` from `cloudflare:workers`. Run `astro build` there: the
+//    log shows the migrations applied before the server build, and the
+//    prerendered page counts the applied migrations, read from the same
+//    `.wrangler/state` while the build's own handle is closed.
+import { Buffer, File } from 'node:buffer';
 import { execFileSync, spawn } from 'node:child_process';
 import { createHash, randomBytes } from 'node:crypto';
 import { readFile } from 'node:fs/promises';
 import { request as httpsRequest } from 'node:https';
+import { createRequire } from 'node:module';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath, URL } from 'node:url';
 import { parseEnv } from 'node:util';
@@ -68,6 +97,17 @@ import { REQUEST_TIMEOUT_MS, sleep } from './check-helpers.mjs';
 
 const repoRoot = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const demoDir = join(repoRoot, 'apps', 'demo-cloudflare');
+const coreDir = join(repoRoot, 'packages', 'astromech');
+
+// Core's own sharp (a dev dependency there), to make the test images and read
+// the variants back.
+const sharp = createRequire(join(coreDir, 'package.json'))('sharp');
+
+/** A 1200×800 HEIC, core's test fixture. */
+const HEIC_FIXTURE = join(
+    coreDir,
+    'tests/media/serving/image/fixtures/grid-1200x800.heic'
+);
 
 /** The wrangler environment the testing deployment is. */
 const WRANGLER_ENV = 'testing';
@@ -83,6 +123,18 @@ const BLOCK_POLL_INTERVAL_MS = 3000;
 const OPERATIONS = 'operations-defects.md';
 const WRITE_RACE = 'write-race-and-data-loss-defects.md';
 const SECURITY = 'core-security.md';
+const CACHING = 'caching-defects.md';
+const IMAGES = 'image-metadata-defects.md';
+
+/** The media route, `mediaRoute` in `packages/astromech/src/config/resolve.ts`. */
+const MEDIA_ROUTE = '/_media';
+/** The `Cache-Control` of a variant and of an original (`media/serving/handler.ts`). */
+const VARIANT_CACHE_CONTROL = 'public, max-age=31536000, immutable';
+const SHORT_CACHE_CONTROL = 'public, max-age=300, must-revalidate';
+/** How long a purge gets to reach the edge before the check fails. */
+const PURGE_WAIT_MS = 15_000;
+/** The draft page the preview read uses, kept between runs. */
+const PREVIEW_SLUG = 'check-preview';
 
 /**
  * Every check, in the order it runs. `item` names the roadmap file under
@@ -247,10 +299,398 @@ const CHECKS = [
         },
     },
     {
+        item: `${CACHING}: Cache-Tag astromech:media:<id> with the media Cache-Control, and a purge by it`,
+        run: checkMediaPurge,
+    },
+    {
+        item: `${CACHING}: with cacheCloudflare(), nothing stored for the admin, the API, a media 404 or a preview read`,
+        run: checkNothingStored,
+    },
+    {
+        item: `${IMAGES}: a replaced image gets new variants`,
+        run: (context) =>
+            withMedia(
+                context,
+                { name: 'check-replace.jpg', bytes: () => jpeg(640, 320) },
+                async (media) => {
+                    const before = await variantSize(context, media, 320);
+                    const replaced = await context.http(
+                        'POST',
+                        `/cms/api/media/${media.id}/replace`,
+                        {
+                            cookie: await context.session(),
+                            form: fileForm('check-replace.jpg', await jpeg(640, 480)),
+                        }
+                    );
+                    const after = replaced.json?.data;
+                    if (replaced.status !== 200 || after === undefined) {
+                        throw new Error(
+                            `the replace answered ${replaced.status}: ${replaced.text.slice(0, 300)}`
+                        );
+                    }
+                    const now = await variantSize(context, after, 320);
+                    // The old variant is 320×160 and the new one 320×240, so
+                    // an old transform served under the new URL shows here.
+                    if (
+                        after.metadata.version === media.metadata.version ||
+                        before.height !== 160 ||
+                        now.height !== 240
+                    ) {
+                        throw new Error(
+                            `version ${media.metadata.version} gave 320×${before.height} and version ${after.metadata.version} gave 320×${now.height}, expected 160 then 240`
+                        );
+                    }
+                    return `the 320px WebP variant was 320×160 at version ${media.metadata.version} and 320×240 at ${after.metadata.version} after the replace`;
+                }
+            ),
+    },
+    {
+        item: `${IMAGES}: cf.image keeps an animated WebP animated for format webp`,
+        run: (context) =>
+            withMedia(
+                context,
+                { name: 'check-animated.webp', bytes: () => animatedWebp(400, 200) },
+                async (media) => {
+                    const response = await fetchVariant(context, media, 320, 'webp');
+                    const meta = await sharp(response.body, {
+                        animated: true,
+                    }).metadata();
+                    if (
+                        response.headers['content-type'] !== 'image/webp' ||
+                        meta.pages !== 3 ||
+                        meta.width !== 320
+                    ) {
+                        throw new Error(
+                            `the variant is ${response.headers['content-type']}, ${meta.width}px wide with ${meta.pages ?? 1} frame(s), expected image/webp, 320px and 3 frames`
+                        );
+                    }
+                    return `a three-frame WebP gave a 320px image/webp variant of ${meta.pages} frames`;
+                }
+            ),
+    },
+    {
+        item: `${IMAGES}: HEIC input transforms`,
+        run: (context) =>
+            withMedia(
+                context,
+                { name: 'check-heic.heic', bytes: () => readFile(HEIC_FIXTURE) },
+                async (media) => {
+                    const response = await fetchVariant(context, media, 320, 'webp');
+                    const type = response.headers['content-type'];
+                    const meta =
+                        type === 'image/webp'
+                            ? await sharp(response.body).metadata()
+                            : {};
+                    // 800 × 320 / 1200 is 213.3, rounded either way.
+                    if (meta.width !== 320 || Math.abs(meta.height - 213) > 1) {
+                        throw new Error(
+                            `the 320px WebP variant of a 1200×800 HEIC answered ${response.status} ${type}${meta.width === undefined ? '' : `, ${meta.width}×${meta.height}`}, cf-resized: ${response.headers['cf-resized'] ?? 'none'}`
+                        );
+                    }
+                    return `a 1200×800 HEIC gave a 320×${meta.height} image/webp variant`;
+                }
+            ),
+    },
+    {
+        item: `${IMAGES}: the variant ETag gives 304s through the edge cache`,
+        run: (context) =>
+            withMedia(
+                context,
+                { name: 'check-etag.jpg', bytes: () => jpeg(640, 320) },
+                async (media) => {
+                    const first = await fetchVariant(context, media, 320, 'webp');
+                    const etag = first.headers.etag;
+                    const path = variantPath(media, 320, 'webp');
+                    const again = await context.http('GET', path, {
+                        headers: { 'If-None-Match': etag },
+                    });
+                    const status = again.headers['cf-cache-status'];
+                    if (
+                        !etag?.endsWith('-cloudflare-images"') ||
+                        again.status !== 304 ||
+                        status !== 'HIT'
+                    ) {
+                        throw new Error(
+                            `ETag ${etag}; If-None-Match answered ${again.status}, cf-cache-status ${status}, expected 304 from a HIT`
+                        );
+                    }
+                    return `ETag ${etag.replace(media.metadata.version, '<version>')}; If-None-Match answered 304 with cf-cache-status HIT`;
+                }
+            ),
+    },
+    {
         item: `${SECURITY}: an unblock reaches other isolates within 60 seconds`,
         run: checkUnblock,
     },
 ];
+
+/**
+ * Upload a test image, fill the edge cache with its original and two
+ * variants, purge an unrelated tag (each stays a HIT), then the item's own tag
+ * (each misses). The demo purges through its `/api/invalidate` route: a
+ * Worker's cache is purged from inside the Worker only.
+ */
+function checkMediaPurge(context) {
+    return withMedia(
+        context,
+        { name: 'check-purge.jpg', bytes: () => jpeg(1000, 500) },
+        async (media) => {
+            const urls = [
+                [originalPath(media), SHORT_CACHE_CONTROL],
+                [variantPath(media, 320, 'webp'), VARIANT_CACHE_CONTROL],
+                [variantPath(media, 640, 'avif'), VARIANT_CACHE_CONTROL],
+            ];
+            const fetchAll = () =>
+                Promise.all(
+                    urls.map(async ([path]) => {
+                        const response = await context.http('GET', path);
+                        if (response.status !== 200) {
+                            throw new Error(`${path} answered ${response.status}`);
+                        }
+                        return response;
+                    })
+                );
+            const statuses = async () =>
+                (await fetchAll()).map((response) => response.headers['cf-cache-status']);
+            const first = await fetchAll();
+            const filled = await statuses();
+            if (filled.some((status) => status !== 'HIT')) {
+                throw new Error(
+                    `never stored: the second requests were ${filled.join(', ')}`
+                );
+            }
+            urls.forEach(([path, cacheControl], index) => {
+                const response = first[index];
+                if (path.includes('&f=')) assertTransformed(response, media, path);
+                if (response.headers['cache-control'] !== cacheControl) {
+                    throw new Error(
+                        `${path} sent Cache-Control ${response.headers['cache-control']}, expected ${cacheControl}`
+                    );
+                }
+            });
+            await purge(
+                context,
+                `astromech:media:check-${randomBytes(4).toString('hex')}`
+            );
+            const control = await statuses();
+            if (control.some((status) => status !== 'HIT')) {
+                throw new Error(`a purge of another tag left ${control.join(', ')}`);
+            }
+            await purge(context, `astromech:media:${media.id}`);
+            // The purge reaches each data center in turn, and a miss stores
+            // the URL again, so each one is watched until it misses once.
+            const start = Date.now();
+            const missedAfter = new Map();
+            while (missedAfter.size < urls.length && Date.now() - start < PURGE_WAIT_MS) {
+                const after = await statuses();
+                after.forEach((status, index) => {
+                    if (status !== 'HIT' && !missedAfter.has(index)) {
+                        missedAfter.set(index, Date.now() - start);
+                    }
+                });
+                if (missedAfter.size < urls.length) await sleep(500);
+            }
+            const stored = urls.filter((_, index) => !missedAfter.has(index));
+            if (stored.length > 0) {
+                throw new Error(
+                    `${seconds(PURGE_WAIT_MS)} after the item's purge, still a HIT every time: ${stored.map(([path]) => path).join(', ')}`
+                );
+            }
+            return `the original and two variants were HIT with their Cache-Control, stayed HIT after another tag's purge, and each missed within ${seconds(Math.max(...missedAfter.values()))} of the item's`;
+        }
+    );
+}
+
+/**
+ * Two requests each to the admin, the API (signed in), a media 404 and a
+ * preview read: the second must not be a HIT. The site's route rule stores
+ * every page for a minute (`apps/demo-cloudflare/astro.config.mjs`), so `/`
+ * is the control that is stored.
+ */
+async function checkNothingStored(context) {
+    const cookie = await context.session();
+    const token = await previewToken(context);
+    const probes = [
+        ['the admin', '/cms', 200, cookie],
+        ['the API', '/cms/api/entries/page', 200, cookie],
+        ['a media 404', `${MEDIA_ROUTE}/check-missing.jpg`, 404],
+        ['a preview read', `/${PREVIEW_SLUG}?preview=${token}`, 200],
+    ];
+    const seen = [];
+    for (const [name, path, expected, probeCookie] of probes) {
+        const statuses = [];
+        for (let attempt = 0; attempt < 2; attempt++) {
+            const response = await context.http('GET', path, { cookie: probeCookie });
+            if (response.status !== expected) {
+                throw new Error(
+                    `${name} answered ${response.status}, expected ${expected}`
+                );
+            }
+            statuses.push(response.headers['cf-cache-status'] ?? 'none');
+        }
+        if (statuses.includes('HIT')) {
+            throw new Error(`${name} was stored: ${statuses.join(', ')}`);
+        }
+        seen.push(`${name} ${statuses[1]}`);
+    }
+    await context.http('GET', '/');
+    const control = (await context.http('GET', '/')).headers['cf-cache-status'];
+    if (control !== 'HIT') throw new Error(`the control, /, was ${control}, not HIT`);
+    return `${seen.join(', ')} on the second request; the control, /, HIT`;
+}
+
+/** Purge one tag through the demo's route. */
+async function purge(context, tag) {
+    const response = await context.http('POST', '/api/invalidate', {
+        cookie: await context.session(),
+        json: { tags: [tag] },
+    });
+    if (response.status !== 200) {
+        throw new Error(
+            `the purge of ${tag} answered ${response.status}: ${response.text}`
+        );
+    }
+}
+
+/**
+ * A preview token for the draft page at `PREVIEW_SLUG`, created on the first
+ * run and kept. Each token replaces the one before.
+ */
+async function previewToken(context) {
+    const cookie = await context.session();
+    const found = await context.http('POST', '/cms/api/entries/page/query', {
+        cookie,
+        json: { where: { slug: PREVIEW_SLUG }, full: true, limit: 1 },
+    });
+    let id = found.json?.data?.[0]?.id;
+    if (id === undefined) {
+        const created = await context.http('POST', '/cms/api/entries/page', {
+            cookie,
+            json: { title: 'Preview check', slug: PREVIEW_SLUG },
+        });
+        id = created.json?.data?.id;
+        if (created.status !== 201 || id === undefined) {
+            throw new Error(
+                `creating the preview page answered ${created.status}: ${created.text.slice(0, 300)}`
+            );
+        }
+    }
+    const issued = await context.http(
+        'POST',
+        `/cms/api/entries/page/${id}/preview-token`,
+        {
+            cookie,
+            json: {},
+        }
+    );
+    const token = issued.json?.data?.token;
+    if (issued.status !== 201 || token === undefined) {
+        throw new Error(
+            `issuing a preview token answered ${issued.status}: ${issued.text.slice(0, 300)}`
+        );
+    }
+    return token;
+}
+
+/**
+ * Upload a test image, run `fn` with the media item, and delete the item
+ * after, whether `fn` passed or not. Each run uploads afresh, so its URLs are
+ * new to the edge cache.
+ */
+async function withMedia(context, { name, bytes }, fn) {
+    const cookie = await context.session();
+    const uploaded = await context.http('POST', '/cms/api/media', {
+        cookie,
+        form: fileForm(name, await bytes()),
+    });
+    const media = uploaded.json?.data;
+    if (uploaded.status !== 201 || media === undefined) {
+        throw new Error(
+            `the upload of ${name} answered ${uploaded.status}: ${uploaded.text.slice(0, 300)}`
+        );
+    }
+    try {
+        return await fn(media);
+    } finally {
+        await context.http('DELETE', `/cms/api/media/${media.id}`, { cookie });
+    }
+}
+
+function fileForm(name, bytes) {
+    const form = new FormData();
+    form.append('file', new File([bytes], name, { type: imageType(name) }));
+    return form;
+}
+
+function imageType(name) {
+    const ext = name.slice(name.lastIndexOf('.') + 1);
+    return { jpg: 'image/jpeg', webp: 'image/webp', heic: 'image/heic' }[ext];
+}
+
+function mediaExt(media) {
+    return media.filename.slice(media.filename.lastIndexOf('.') + 1);
+}
+
+function originalPath(media) {
+    return `${MEDIA_ROUTE}/${media.id}.${mediaExt(media)}?v=${media.metadata.version}`;
+}
+
+/** The canonical variant URL (`buildVariantUrl` in `media/serving/image/url.ts`). */
+function variantPath(media, width, format) {
+    return `${MEDIA_ROUTE}/${media.id}.${mediaExt(media)}?w=${width}&f=${format}&v=${media.metadata.version}`;
+}
+
+async function fetchVariant(context, media, width, format) {
+    const path = variantPath(media, width, format);
+    const response = await context.http('GET', path);
+    if (response.status !== 200) {
+        throw new Error(
+            `${path} answered ${response.status}: ${response.text.slice(0, 300)}`
+        );
+    }
+    assertTransformed(response, media, path);
+    return response;
+}
+
+/**
+ * A variant URL answered with the original's ETag: the transform failed and
+ * the media route served the original instead, logging why.
+ */
+function assertTransformed(response, media, path) {
+    if (response.headers.etag === `"${media.metadata.version}"`) {
+        throw new Error(
+            `${path} served the original, so the transform failed (the Worker logs why: \`wrangler tail --env testing\`)`
+        );
+    }
+}
+
+/** The pixel size of a WebP variant. */
+async function variantSize(context, media, width) {
+    const response = await fetchVariant(context, media, width, 'webp');
+    const { width: w, height } = await sharp(response.body).metadata();
+    return { width: w, height };
+}
+
+/** A plain JPEG of one colour. */
+function jpeg(width, height) {
+    return sharp({
+        create: { width, height, channels: 3, background: { r: 200, g: 60, b: 40 } },
+    })
+        .jpeg()
+        .toBuffer();
+}
+
+/** A WebP of three frames, red, green and blue, as core's sharp driver test makes. */
+function animatedWebp(width, height) {
+    const frame = (r, g, b) =>
+        Buffer.alloc(width * height * 4, Buffer.from([r, g, b, 255]));
+    const pixels = Buffer.concat([frame(255, 0, 0), frame(0, 255, 0), frame(0, 0, 255)]);
+    return sharp(pixels, {
+        raw: { width, height: height * 3, channels: 4, pageHeight: height },
+    })
+        .webp({ loop: 0, delay: [100, 100, 100] })
+        .toBuffer();
+}
 
 /**
  * Block this machine's IPv6 address in a request over IPv4, wait for the block
@@ -428,19 +868,29 @@ function createContext(env) {
 
     /**
      * A request to the site. `family` pins IPv4 or IPv6, which `fetch` cannot;
-     * `json` is sent as the body, and a JSON answer is parsed into `json`.
+     * `json` is sent as the body, or `form` (a `FormData`) as multipart. The
+     * answer's bytes are in `body`, and a JSON answer is parsed into `json`.
      * `origin: false` leaves out the `Origin` a write otherwise sends.
      */
-    function http(method, path, options = {}) {
+    async function http(method, path, options = {}) {
         const url = new URL(path, siteUrl);
-        const body =
-            options.json === undefined ? undefined : JSON.stringify(options.json);
+        let body;
+        let contentType;
+        if (options.json !== undefined) {
+            body = JSON.stringify(options.json);
+            contentType = 'application/json';
+        } else if (options.form !== undefined) {
+            // `Response` writes the multipart body and its boundary.
+            const encoded = new Response(options.form);
+            body = Buffer.from(await encoded.arrayBuffer());
+            contentType = encoded.headers.get('content-type');
+        }
         // A write carries the site's `Origin`, as the admin's does: Astro's
         // `checkOrigin` and Better Auth refuse one from elsewhere.
         const sendOrigin = method !== 'GET' && options.origin !== false;
         const headers = {
             ...(sendOrigin ? { Origin: siteUrl } : {}),
-            ...(body === undefined ? {} : { 'Content-Type': 'application/json' }),
+            ...(contentType === undefined ? {} : { 'Content-Type': contentType }),
             ...(options.cookie === undefined ? {} : { Cookie: options.cookie }),
             ...options.headers,
         };
@@ -449,10 +899,11 @@ function createContext(env) {
                 url,
                 { method, headers, family: options.family, timeout: REQUEST_TIMEOUT_MS },
                 (res) => {
-                    let text = '';
-                    res.setEncoding('utf8');
-                    res.on('data', (chunk) => (text += chunk));
+                    const chunks = [];
+                    res.on('data', (chunk) => chunks.push(chunk));
                     res.on('end', () => {
+                        const bytes = Buffer.concat(chunks);
+                        const text = bytes.toString('utf8');
                         let json;
                         try {
                             json = JSON.parse(text);
@@ -462,6 +913,7 @@ function createContext(env) {
                         fulfil({
                             status: res.statusCode,
                             headers: res.headers,
+                            body: bytes,
                             text,
                             json,
                         });
@@ -531,6 +983,13 @@ function createContext(env) {
     return { env, siteUrl, http, session, d1 };
 }
 
+// `pnpm run check:deployed:cloudflare <text>…` runs only the checks whose item
+// contains one of the texts, such as a roadmap file's name.
+const filters = process.argv.slice(2).filter((arg) => arg !== '--');
+const selected = CHECKS.filter(
+    (check) => filters.length === 0 || filters.some((text) => check.item.includes(text))
+);
+
 let failures = 0;
 try {
     const path = envFilePath();
@@ -538,7 +997,7 @@ try {
     console.log(
         `check:deployed:cloudflare: ${context.siteUrl}, credentials from ${path}\n`
     );
-    for (const check of CHECKS) {
+    for (const check of selected) {
         try {
             const evidence = await check.run(context);
             console.log(`pass  ${check.item} — ${evidence}`);
@@ -553,7 +1012,7 @@ try {
 }
 console.log(
     failures === 0
-        ? `\ncheck:deployed:cloudflare passed (${CHECKS.length} checks)`
-        : `\ncheck:deployed:cloudflare: ${failures} of ${CHECKS.length} checks failed`
+        ? `\ncheck:deployed:cloudflare passed (${selected.length} checks)`
+        : `\ncheck:deployed:cloudflare: ${failures} of ${selected.length} checks failed`
 );
 process.exitCode = failures === 0 ? 0 : 1;

@@ -1,0 +1,27 @@
+---
+// A page entry at its `url`. `?preview=<token>` reads past the publish gate,
+// and that read keeps the response out of every cache (`cache.set(false)`).
+import { getAstromech } from 'astromech';
+
+const previewToken = Astro.url.searchParams.get('preview') ?? undefined;
+const app = await getAstromech();
+const { data } = await app.entries.query({
+    type: 'page',
+    where: { slug: Astro.params.slug },
+    limit: 1,
+    ...(previewToken === undefined ? {} : { previewToken }),
+});
+const page = data[0];
+if (page === undefined) return new Response(null, { status: 404 });
+---
+
+<html lang="en">
+    <head>
+        <meta charset="utf-8" />
+        <meta name="viewport" content="width=device-width" />
+        <title>{page.title}</title>
+    </head>
+    <body>
+        <h1>{page.title}</h1>
+    </body>
+</html>

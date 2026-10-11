@@ -18,6 +18,8 @@ pnpm run preview              # wrangler dev over the built Worker
 - `src/worker.ts`: `createWorkerEntry(astro, { config })` exports `fetch` and `scheduled` and registers the Worker's `env`. `main` in `wrangler.jsonc` points at it.
 - `wrangler.jsonc`: the D1 and R2 bindings the config names, and a `* * * * *` trigger. Each job's own `schedule`, synced into `_astromech_cron` every tick, decides whether a tick runs it.
 - `astromech.config.ts` names no `scheduler`: `createWorkerEntry` supplies `cloudflareCron()`.
+- Workers Caching (`cache` in `wrangler.jsonc`) with Astro's `cacheCloudflare()` provider and a route rule storing every page for a minute (`astro.config.mjs`), so Astromech's `cache.set(false)` on its own routes is what keeps them out. `src/pages/api/invalidate.ts` purges cache tags for a signed-in user: a Worker's cache is purged only from inside the Worker.
+- `src/pages/[slug].astro` renders a page entry, and with `?preview=<token>` makes the preview read no cache may store.
 
 ## The gate
 
@@ -28,6 +30,7 @@ pnpm run preview              # wrangler dev over the built Worker
 A permanent deployment on the Paragram Cloudflare account, for the checks only a real Worker can run: production D1, Cron Triggers, `cf.image` and the Cache API (which needs a custom domain). It is the `testing` environment in `wrangler.jsonc`.
 
 - URL: https://astromech-testing.paragramagency.com (a Workers custom domain on the `paragramagency.com` zone; `workers_dev` is off, so there is no `workers.dev` URL)
+- The zone limits Image Transformations to listed source origins, and `cloudflareImages()` transforms only when this hostname is on that list (the zone's `transformations_allowed_origins` setting). Off it, every variant request is served the original.
 - Worker `astromech-demo-cloudflare-testing`, D1 database `astromech-testing`, R2 bucket `astromech-testing-media`
 
 Redeploy with `pnpm run deploy:testing` in this directory, after `wrangler login` to the account. It migrates the remote database (`CLOUDFLARE_ENV=testing`, `db:init --allow-remote`, as `apps/docs/deployment/cloudflare.md` describes), builds for the `testing` environment and runs `wrangler deploy --env testing`. The build also applies migrations at its start, so with `CLOUDFLARE_ENV=testing` it reaches the remote database too. Never run `wrangler deploy` by itself: it deploys whatever config the last build wrote to `dist/server/wrangler.json` and ignores `--env`, so after a plain `pnpm run build` or `check:boot:cloudflare` it would deploy the local configuration as a Worker named `astromech-demo-cloudflare`.
@@ -38,4 +41,4 @@ The Worker's secrets, `BETTER_AUTH_SECRET` and `ASTROMECH_CRON_SECRET`, are set 
 
 The admin was created by first-run setup (`POST /cms/api/setup`) right after the first deploy, since until a user exists anyone who reaches `/cms` can create the admin. Sign in with the values in `.env.testing`. If the database is ever emptied, run setup again at once.
 
-`pnpm run check:deployed:cloudflare` from the repo root runs the checks that need this deployment against it (production D1, the real Cron Trigger, the block list across isolates) and prints one pass or fail line per roadmap item. It reads `.env.testing` from the main checkout, so it runs from a worktree too. It writes to the site (a cron tick, two refused sign-ins, a block it removes again), so it never runs in `verify` or CI. The checks that need a special deploy are run by hand; its header says how, each leaving the deployment as it was.
+`pnpm run check:deployed:cloudflare` from the repo root runs the checks that need this deployment against it (production D1, the real Cron Trigger, the block list across isolates) and prints one pass or fail line per roadmap item. It reads `.env.testing` from the main checkout, so it runs from a worktree too. It writes to the site (a cron tick, two refused sign-ins, a block it removes again, test images it deletes again, cache purges, a draft page it keeps), so it never runs in `verify` or CI. The checks that need a special deploy are run by hand; its header says how, each leaving the deployment as it was.

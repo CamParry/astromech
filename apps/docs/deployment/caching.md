@@ -13,7 +13,7 @@ put the session cookie in their cache key, so a stored copy would reach
 everyone. The admin also varies on its theme cookie.
 
 Astromech's middleware also calls `cache.set(false)` on these routes after the
-route has rendered, so a broad `routeRules` pattern such as `'/**'` cannot
+route has rendered, so a broad `routeRules` pattern such as `'/[...path]'` cannot
 cache them. It makes no cache call when your Astro config names no cache
 provider.
 
@@ -55,9 +55,33 @@ purging that tag clears the item's original and every variant from Cloudflare's
 cache. A CDN that reads another header, such as Fastly's `Surrogate-Key`, needs
 the tag copied into it. Astromech purges nothing itself.
 
+On Cloudflare Workers with `cacheCloudflare()`, no media response is stored:
+the adapter sends `Cloudflare-CDN-Cache-Control: no-store` with every
+response that sets no such header of its own, which takes precedence over
+`Cache-Control`, and the media route sets none.
+
 The middleware calls `cache.set(false)` on the media route as on the admin, so
 Astro's route cache never holds a file and a `routeRules` lifetime never
 replaces the ones above.
+
+## On Cloudflare Workers
+
+Cloudflare stores a Worker's responses only with Workers Caching turned on in
+the wrangler config:
+
+```jsonc
+"cache": { "enabled": true },
+```
+
+Name the adapter's provider in your Astro config as well, as
+`cache: { provider: cacheCloudflare() }` from `@astrojs/cloudflare/cache`.
+Workers Caching stores a response that sends no `Cache-Control` for two hours,
+and with the provider named, the adapter marks every response that Astro's
+route cache gives no lifetime as `no-store`.
+
+A purge through the Cloudflare API or dashboard does not reach a Worker's
+cache. Purge from inside the Worker, for example in an endpoint that calls
+`context.cache.invalidate({ tags: ['astromech:media:<id>'] })`.
 
 ## Prerendered pages
 
