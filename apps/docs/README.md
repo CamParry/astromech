@@ -34,8 +34,8 @@ This is a living reference; it grows as the project does.
 - [deployment/cloudflare.md](deployment/cloudflare.md) — deploying to Cloudflare
   Workers: the drivers that name bindings, the `createWorkerEntry` entry file
   that supplies the Worker's environment and its `scheduled()` handler, the
-  wrangler config, migrations against D1, and why Node and Vercel need no
-  equivalent.
+  wrangler config, migrations against D1, the deploy steps for a wrangler
+  environment, and why Node and Vercel need no equivalent.
 - [deployment/caching.md](deployment/caching.md): what Astromech's own
   routes tell Astro's route cache and a CDN: the admin and API responses no
   cache stores, why a preview is never stored, each media response's lifetime
