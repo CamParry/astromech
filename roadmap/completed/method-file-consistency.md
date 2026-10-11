@@ -24,7 +24,7 @@ reference: the shape is reviewed there before the rest follow it.
       `used-by`, `preview/`.
 - [x] Entry staging and versions, with the catalogue: building each type's
       input from the method's own `input` removes the 22 `*Input` builders
-      (the catalogue item in `in-progress/module-cleanup.md`). `get` and
+      (the catalogue item in `completed/module-cleanup.md`). `get` and
       `query` repeat the read-shape keys (`locale`, `full`, `previewToken`,
       `staged`), which `report:drift` lists; share them as `listKeys` is.
 - [x] Plugin service methods (`packages/plugins/*/src/service/`). A plugin

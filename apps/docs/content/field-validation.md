@@ -112,7 +112,8 @@ validator is the only thing standing between the input and the database.
 | `multiselect`, `checkbox-group` | A non-list, or a list holding an undeclared option                                                   |
 | `number`, `range`               | A non-number (a numeric string is parsed first), `NaN`, `Infinity`                                   |
 | `boolean`                       | Anything that is not `true` or `false`                                                               |
-| `date`, `datetime`              | A string that does not parse as a date (a `Date` is converted first)                                 |
+| `date`                          | Anything but a `YYYY-MM-DD` date (a `Date` is converted to its UTC date first)                       |
+| `datetime`                      | Anything but an ISO 8601 date and time or a `YYYY-MM-DD` date (a `Date` is converted first)          |
 | `media`, `relationship`         | Anything that is not an id, or a list of ids when `multiple`                                         |
 | `email`, `url`                  | A malformed address or URL                                                                           |
 | `json`                          | A value that is not JSON-serializable                                                                |

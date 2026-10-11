@@ -160,4 +160,12 @@ describe('resolveGlobals', () => {
             /plugin "@astromech\/seo" declares the global key "settings" twice/
         );
     });
+
+    // Assigned by id into a plain object, `__proto__` would set the map's
+    // prototype rather than add a key, and the global would vanish from it.
+    it('rejects a key named "__proto__"', () => {
+        expect(() => resolveGlobals({ globals: [site({ key: '__proto__' })] })).toThrow(
+            /"__proto__": key must not be "__proto__"/
+        );
+    });
 });

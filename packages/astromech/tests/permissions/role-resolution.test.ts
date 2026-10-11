@@ -39,6 +39,20 @@ describe('resolveRole', () => {
     });
 });
 
+describe('resolveRoles', () => {
+    // A computed key or a parsed JSON object can hold `__proto__` as an own
+    // key. Assigned into the plain result object, it would set its prototype.
+    it('rejects a role slug "__proto__"', () => {
+        const roles = JSON.parse(
+            '{"__proto__": {"name": "Odd", "permissions": ["media:read"]}}'
+        ) as Record<string, { name: string; permissions: string[] }>;
+
+        expect(() => resolveRoles({ roles })).toThrow(
+            /role slug must not be "__proto__"/
+        );
+    });
+});
+
 describe('getRole', () => {
     it('returns a configured role', () => {
         expect(getRole(config, 'admin').permissions).toEqual(['*']);

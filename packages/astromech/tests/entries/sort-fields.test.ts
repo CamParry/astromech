@@ -124,6 +124,54 @@ describe('entries.query sorted by a field', () => {
         ]);
     });
 
+    // Written with an offset, in UTC, as a bare date and as a wall time, the
+    // values sort as text only once each is stored in one ISO form.
+    it('orders a datetime field in time order, whatever form each value was written in', async () => {
+        const config = makeTestConfig();
+        getEntryType(config, 'note').fields = [fields.datetime('startsAt')];
+        setupTestConfig(config);
+        for (const [title, startsAt] of [
+            ['offset', '2026-10-10T11:00:00+02:00'],
+            ['utc', '2026-10-10T08:30:00Z'],
+            ['date only', '2026-10-10'],
+            ['wall time', '2026-10-10T10:00'],
+        ] as const) {
+            await api.create({ type: 'note', data: { title, fields: { startsAt } } });
+        }
+
+        const rows = await api.query({
+            type: 'note',
+            full: true,
+            sort: { startsAt: 'asc' },
+        });
+
+        expect(rows.data.map((entry) => [entry.title, entry.fields['startsAt']])).toEqual(
+            [
+                ['date only', '2026-10-10'],
+                ['utc', '2026-10-10T08:30:00.000Z'],
+                ['offset', '2026-10-10T09:00:00.000Z'],
+                ['wall time', '2026-10-10T10:00'],
+            ]
+        );
+    });
+
+    it('orders a date field in time order', async () => {
+        const config = makeTestConfig();
+        getEntryType(config, 'note').fields = [fields.date('day')];
+        setupTestConfig(config);
+        for (const day of ['2026-10-10', '2025-12-31', '2026-01-02']) {
+            await api.create({ type: 'note', data: { title: day, fields: { day } } });
+        }
+
+        const rows = await api.query({ type: 'note', full: true, sort: { day: 'desc' } });
+
+        expect(rows.data.map((entry) => entry.fields['day'])).toEqual([
+            '2026-10-10',
+            '2026-01-02',
+            '2025-12-31',
+        ]);
+    });
+
     it('orders a list over several types by a field every type declares', async () => {
         await api.create({ type: 'post', data: { title: 'P', fields: { body: 'b' } } });
         await api.create({ type: 'note', data: { title: 'N', fields: { body: 'a' } } });

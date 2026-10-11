@@ -29,8 +29,9 @@ export default defineConfig({
 
 The `type` (`tag`) is the type name — it is what `Astromech.entries.query({
 type: 'tag' })`, the admin route `/cms/entries/tag`, and the generated
-`Fields` types all use. Each `type` is unique within the array and may not
-contain `/` or `:`; Astromech refuses to start otherwise. A plugin's entry
+`Fields` types all use. Each `type` is unique within the array, may not
+contain `/` or `:` and may not be `__proto__`; Astromech refuses to start
+otherwise. A plugin's entry
 types take the same shape in the plugin definition's `entries` array, and are
 addressed as `<namespace>/<type>` — see
 [plugins/authoring.md](../plugins/authoring.md).
@@ -54,8 +55,9 @@ const { data } = await Astromech.entries.query({
 });
 ```
 
-- A number field sorts by value, a date field by date (while its values share
-  one format), and a boolean as `false` then `true`.
+- A number field sorts by value, a `date` or `datetime` field in time order (a
+  `datetime` written without a zone sorts as if it were UTC), and a boolean as
+  `false` then `true`.
 - An entry with no value sorts first ascending and last descending.
 - Entries with equal values keep one order from page to page: newest first.
 - A query over several types sorts by a field only when every type declares it.

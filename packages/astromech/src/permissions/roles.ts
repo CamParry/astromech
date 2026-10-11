@@ -11,6 +11,7 @@ import type { AstromechConfig, ResolvedConfig } from '@/types/config';
 import type { Permission, Role } from '@/types/domain';
 import { z } from '@hono/zod-openapi';
 import { getConfig } from '@/config/registry';
+import { PROTOTYPE_KEY } from '@/entries/entry-types';
 import { ValidationError } from '@/errors/validation';
 import { corePermissions } from '@/permissions/core-permissions';
 import { hasPermission } from '@/utilities/permission-match';
@@ -70,6 +71,12 @@ export function resolveRoles(config: ConfigWithRoles): Record<string, Role> {
     // Config-defined roles override / add to built-ins
     if (config.roles) {
         for (const [slug, roleConfig] of Object.entries(config.roles)) {
+            if (slug === PROTOTYPE_KEY) {
+                throw new Error(
+                    `Astromech role "${slug}": a role slug must not be "${PROTOTYPE_KEY}", ` +
+                        `which names an object's prototype rather than a key.`
+                );
+            }
             result[slug] = {
                 slug,
                 name: roleConfig.name,

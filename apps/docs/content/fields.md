@@ -35,7 +35,8 @@ given a name stores its fields under that name too.
 | `richtext(name)`                           | ProseMirror JSON                          | `allow`. See [rich-text.md](rich-text.md)                          |
 | `email(name)`, `url(name)`, `slug(name)`   | a string                                  |                                                                    |
 | `color(name)`                              | a colour string (hex, `rgb()` or `hsl()`) |                                                                    |
-| `date(name)`, `datetime(name)`             | an ISO date string                        |                                                                    |
+| `date(name)`                               | a `YYYY-MM-DD` string                     |                                                                    |
+| `datetime(name)`                           | an ISO 8601 date-time string              |                                                                    |
 | `number(name)`, `range(name)`              | a number                                  | `min`, `max`, `step`                                               |
 | `boolean(name)`                            | `true` or `false`                         |                                                                    |
 | `select(name)`, `radioGroup(name)`         | one option value                          | `options`                                                          |
@@ -45,6 +46,12 @@ given a name stores its fields under that name too.
 | `json(name)`                               | any JSON value                            |                                                                    |
 | `media(name)`                              | a media id, or a list                     | `multiple`, `accept`                                               |
 | `relationship(name)`                       | an id, or a list of ids                   | `target`, `multiple`. See [relationships.md](relationships.md)     |
+
+A `datetime` written with a zone is stored in UTC:
+`2026-10-10T10:00:00+02:00` is stored and read back as
+`2026-10-10T08:00:00.000Z`. One written without a zone, as the admin's input
+sends it, keeps its wall time: `2026-10-10T10:00` stays `2026-10-10T10:00`.
+Either sorts in time order.
 
 ## Nested fields
 

@@ -43,19 +43,19 @@ export default defineConfig({
 the object where you write it, so a global authored in its own module reports an
 error at the mistake rather than at the spread site.
 
-| option         | default | what it does                                                       |
-| -------------- | ------- | ------------------------------------------------------------------ |
-| `key`          | —       | the identifier, unique across the site. No `/` or `:`.             |
-| `label`        | —       | the sidebar label and page title.                                  |
-| `icon`         | a globe | a Lucide icon name for the sidebar.                                |
-| `fields`       | —       | a flat array, or `{ main, sidebar }`, exactly as on an entry type. |
-| `translatable` | `false` | one content row per locale, rather than one row.                   |
-| `statuses`     | `true`  | draft / published / scheduled. `false` means every save is live.   |
-| `versioning`   | `true`  | snapshot the previous state on every change to the fields.         |
-| `staging`      | `false` | allow a staged change alongside the live one. Requires `statuses`. |
-| `public`       | `false` | an unauthenticated `get` returns the published content.            |
-| `nav`          | `true`  | show the global in the admin sidebar.                              |
-| `validate`     | —       | a whole-resource validator, as on an entry type.                   |
+| option         | default | what it does                                                                |
+| -------------- | ------- | --------------------------------------------------------------------------- |
+| `key`          | —       | the identifier, unique across the site. No `/` or `:`, and not `__proto__`. |
+| `label`        | —       | the sidebar label and page title.                                           |
+| `icon`         | a globe | a Lucide icon name for the sidebar.                                         |
+| `fields`       | —       | a flat array, or `{ main, sidebar }`, exactly as on an entry type.          |
+| `translatable` | `false` | one content row per locale, rather than one row.                            |
+| `statuses`     | `true`  | draft / published / scheduled. `false` means every save is live.            |
+| `versioning`   | `true`  | snapshot the previous state on every change to the fields.                  |
+| `staging`      | `false` | allow a staged change alongside the live one. Requires `statuses`.          |
+| `public`       | `false` | an unauthenticated `get` returns the published content.                     |
+| `nav`          | `true`  | show the global in the admin sidebar.                                       |
+| `validate`     | —       | a whole-resource validator, as on an entry type.                            |
 
 A key is developer-written and locale-invariant. It never appears in a
 front-end URL, so it is a `key`, not a `slug`.

@@ -2,6 +2,7 @@ import type { Field, FieldValidationContext } from '@/types/fields';
 import { describe, expect, it } from 'vitest';
 import {
     coerceDate,
+    coerceDatetime,
     coerceEmail,
     coerceKeyValue,
     coerceNumber,
@@ -11,6 +12,7 @@ import {
     validateChoice,
     validateColor,
     validateDate,
+    validateDatetime,
     validateEmail,
     validateGroup,
     validateItemList,
@@ -385,10 +387,8 @@ describe('validateBoolean', () => {
 });
 
 describe('coerceDate', () => {
-    it('converts a Date to an ISO string', () => {
-        expect(coerceDate(new Date('2026-01-02T03:04:05.000Z'))).toBe(
-            '2026-01-02T03:04:05.000Z'
-        );
+    it('converts a Date to its UTC date', () => {
+        expect(coerceDate(new Date('2026-01-02T23:04:05.000-05:00'))).toBe('2026-01-03');
     });
 
     it('leaves an invalid Date for the validator to reject', () => {
@@ -401,17 +401,94 @@ describe('coerceDate', () => {
 });
 
 describe('validateDate', () => {
-    it('accepts a parseable date string', async () => {
+    it('accepts a calendar date as YYYY-MM-DD', async () => {
         expect(await validateDate(ctx('2026-01-02'))).toBe(true);
-        expect(await validateDate(ctx('2026-01-02T03:04:05.000Z'))).toBe(true);
+        expect(await validateDate(ctx('2028-02-29'))).toBe(true);
     });
 
-    it('rejects an unparseable string', async () => {
-        expect(await validateDate(ctx('not a date'))).toBe('Must be a valid date');
+    it('rejects any other form, including ones Date.parse reads', async () => {
+        for (const value of [
+            'not a date',
+            'Oct 10 2026',
+            '2026-01-02T03:04:05.000Z',
+            '2026-02-30',
+        ]) {
+            expect(await validateDate(ctx(value))).toBe('Must be a date as YYYY-MM-DD');
+        }
     });
 
     it('rejects a non-string', async () => {
         expect(await validateDate(ctx(1735689600000))).toBe('Must be a date');
+    });
+});
+
+describe('coerceDatetime', () => {
+    it('converts a Date to UTC', () => {
+        expect(coerceDatetime(new Date('2026-01-02T03:04:05.000Z'))).toBe(
+            '2026-01-02T03:04:05.000Z'
+        );
+    });
+
+    it('stores a value with a zone as UTC to the millisecond', () => {
+        expect(coerceDatetime('2026-10-10T10:00:00+02:00')).toBe(
+            '2026-10-10T08:00:00.000Z'
+        );
+        expect(coerceDatetime('2026-10-10T10:00Z')).toBe('2026-10-10T10:00:00.000Z');
+        expect(coerceDatetime('2026-10-10T10:00:00.123456-01:30')).toBe(
+            '2026-10-10T11:30:00.123Z'
+        );
+    });
+
+    // Read as UTC it would move by the server's offset; read in the server's
+    // zone it would move by the server's zone. Neither is the author's.
+    it('keeps the wall time of a value without a zone, to the millisecond', () => {
+        expect(coerceDatetime('2026-10-10T10:00')).toBe('2026-10-10T10:00');
+        expect(coerceDatetime('2026-10-10T10:00:30.5')).toBe('2026-10-10T10:00:30.5');
+        expect(coerceDatetime('2026-10-10T10:00:30.123456')).toBe(
+            '2026-10-10T10:00:30.123'
+        );
+    });
+
+    it('keeps a bare date', () => {
+        expect(coerceDatetime('2026-10-10')).toBe('2026-10-10');
+    });
+
+    it('leaves what it cannot read for the validator to reject', () => {
+        expect(coerceDatetime('Oct 10 2026')).toBe('Oct 10 2026');
+        expect(coerceDatetime(new Date('nope'))).toBeInstanceOf(Date);
+    });
+});
+
+describe('validateDatetime', () => {
+    it('accepts an ISO 8601 date and time, with or without a zone, and a bare date', async () => {
+        for (const value of [
+            '2026-10-10T10:00',
+            '2026-10-10T10:00:00.000Z',
+            '2026-10-10T10:00:00+02:00',
+            '2026-10-10',
+        ]) {
+            expect(await validateDatetime(ctx(value))).toBe(true);
+        }
+    });
+
+    it('rejects any other form, including ones Date.parse reads', async () => {
+        for (const value of [
+            'not a date',
+            'Oct 10 2026',
+            '2026-10-10 10:00:00Z',
+            '2026-10-10T10:00:00+0200',
+            '2026-02-30T10:00',
+        ]) {
+            expect(await validateDatetime(ctx(value))).toBe(
+                'Must be an ISO 8601 date and time, such as 2026-10-10T14:30'
+            );
+        }
+    });
+
+    it('rejects a non-string', async () => {
+        expect(await validateDatetime(ctx(1735689600000))).toBe(
+            'Must be a date and time'
+        );
     });
 });
 

@@ -103,7 +103,7 @@ as forms does.
 - [ ] **Globals.** The same payload, the staged events, `mergeStaged` and
       `restoreVersion`.
 - [ ] **Scheduler.** Publish through the update path (the item in
-      `in-progress/module-cleanup.md`).
+      `completed/module-cleanup.md`).
 - [ ] **Users.** `create`, setup, `update`, `restoreVersion`, `delete`.
 - [ ] **Media.** `upload`, `update`, `replace`, `restoreVersion`, `delete`, with
       the storage I/O moved around the hooks.

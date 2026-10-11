@@ -284,4 +284,12 @@ describe('resolveEntryTypes', () => {
             /"forms\/forms\/form": type must not contain "\/" or ":"/
         );
     });
+
+    // Assigned by id into a plain object, `__proto__` would set the map's
+    // prototype rather than add a key, and the type would vanish from it.
+    it('rejects a type named "__proto__"', () => {
+        expect(() => resolveEntryTypes({ entries: [item('__proto__')] })).toThrow(
+            /"__proto__": type must not be "__proto__"/
+        );
+    });
 });
