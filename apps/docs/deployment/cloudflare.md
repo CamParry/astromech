@@ -202,6 +202,7 @@ curl "http://localhost:8787/cdn-cgi/local/scheduled"
 Node and Vercel need no Astromech code at all, and [node.md](node.md) covers
 running the build on Node. Name `libsql()` or `s3()`, and
 for scheduled work use `interval()` on a long-lived Node host or `webhook()` on
-Vercel, pointing a Vercel Cron entry at `/cms/api/cron/run` with
-`ASTROMECH_CRON_SECRET` set. Cloudflare needs an integration because bindings
+Vercel, pointing a Vercel Cron Job at `/cms/api/cron/run` as
+[../configuration/scheduler.md](../configuration/scheduler.md#webhook--an-external-poke)
+describes. Cloudflare needs an integration because bindings
 and `scheduled()` are both things no other platform has.

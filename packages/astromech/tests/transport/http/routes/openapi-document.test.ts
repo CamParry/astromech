@@ -822,6 +822,7 @@ describe('the document’s coverage', () => {
         'GET /setup/check',
         'POST /setup',
         'POST /cron/run',
+        'GET /cron/run',
         'GET /openapi.json',
         'POST /plugins/{name}/{method}',
         'GET /auth/*',

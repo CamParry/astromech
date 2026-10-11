@@ -1,5 +1,5 @@
 /**
- * POST /cron/run — auth-branch coverage.
+ * POST and GET /cron/run — auth-branch coverage.
  *
  * Mounts cronRouter on a minimal Hono app over the test database.
  * Registers a due job whose handler flips a flag so a 200 also proves
@@ -202,5 +202,51 @@ describe('POST /cron/run — auth branches', () => {
         expect(ref.ran).toBe(true);
         // Bearer path must NOT have resolved a session.
         expect(scope.user).toBeUndefined();
+    });
+});
+
+describe('GET /cron/run — bearer only, for Vercel Cron', () => {
+    /** GET /cron/run as `identity`, with an optional Authorization header. */
+    function get(
+        app: OpenAPIHono,
+        identity: { user: User | null; role: Role | null },
+        authHeader?: string
+    ): Promise<Response> {
+        const headers: Record<string, string> = {};
+        if (authHeader) headers['Authorization'] = authHeader;
+        return requestAs(app, identity, '/cron/run', { method: 'GET', headers });
+    }
+
+    it('200 with the correct bearer token — due handler RUNS', async () => {
+        process.env.ASTROMECH_CRON_SECRET = SECRET;
+        const ref = await seedDueJob();
+
+        const res = await get(makeApp(), signedOut, `Bearer ${SECRET}`);
+
+        expect(res.status).toBe(200);
+        expect(ref.ran).toBe(true);
+    });
+
+    it('401 with a wrong token — handler does NOT run', async () => {
+        process.env.ASTROMECH_CRON_SECRET = SECRET;
+        const ref = await seedDueJob();
+
+        const res = await get(makeApp(), signedOut, 'Bearer wrong-secret');
+
+        expect(res.status).toBe(401);
+        expect(ref.ran).toBe(false);
+    });
+
+    it('401 with an admin session and no bearer — handler does NOT run', async () => {
+        process.env.ASTROMECH_CRON_SECRET = SECRET;
+        const admin = await currentServices.users.create({
+            data: { email: 'admin@test.dev', name: 'Admin', role: 'admin' },
+        });
+        const ref = await seedDueJob();
+
+        const res = await get(makeApp(), { user: admin, role: adminRole });
+
+        expect(res.status).toBe(401);
+        expect(ref.ran).toBe(false);
     });
 });

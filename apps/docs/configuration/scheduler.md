@@ -97,8 +97,30 @@ shared-secret bearer token for sessionless pokes:
 export ASTROMECH_CRON_SECRET=…   # on the server; the route is off until set
 
 curl -X POST https://example.com/cms/api/cron/run \
-    -H "Authorization: Bearer $ASTROMECH_CRON_SECRET"
+    -H "Authorization: Bearer $ASTROMECH_CRON_SECRET" \
+    -H "Content-Type: application/json"
 ```
+
+Send the `Content-Type` header. Astro's `security.checkOrigin`, on by default,
+refuses a POST with no `Content-Type` and no matching `Origin` header as a
+cross-site form submission, with a 403, before Astromech sees it.
+
+The route also answers a GET carrying the bearer token, for a scheduler that
+sends only a GET. A GET never counts an admin session, since a browser sends
+the session cookie with a GET that a link on another site starts.
+
+A [Vercel Cron Job](https://vercel.com/docs/cron-jobs) sends a GET with
+`Authorization: Bearer <CRON_SECRET>`, where `CRON_SECRET` is an environment
+variable you set on the project. Set `CRON_SECRET` and `ASTROMECH_CRON_SECRET`
+to the same value, and point the job at the route:
+
+```json
+{
+    "crons": [{ "path": "/cms/api/cron/run", "schedule": "* * * * *" }]
+}
+```
+
+A schedule more often than once a day needs a paid Vercel plan.
 
 ## Writing your own
 
