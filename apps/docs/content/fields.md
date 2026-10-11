@@ -49,9 +49,12 @@ given a name stores its fields under that name too.
 
 A `datetime` written with a zone is stored in UTC:
 `2026-10-10T10:00:00+02:00` is stored and read back as
-`2026-10-10T08:00:00.000Z`. One written without a zone, as the admin's input
-sends it, keeps its wall time: `2026-10-10T10:00` stays `2026-10-10T10:00`.
-Either sorts in time order.
+`2026-10-10T08:00:00.000Z`. One written without a zone keeps its wall time:
+`2026-10-10T10:00` stays `2026-10-10T10:00`. Either sorts in time order.
+
+The admin's input shows a UTC value in the editor's local time and saves an
+edit to it in UTC. It sends a new value, or an edit to a wall time, without a
+zone.
 
 ## Nested fields
 

@@ -6,14 +6,17 @@
 
 import type { EntryFields, ResolvedEntryFields } from '@/types/fields';
 import type {
+    AdminColumn,
     AstromechConfig,
     EntryType,
     ResolvedEntryCapabilities,
     ResolvedEntryType,
 } from '@/types/index';
+import { sortableColumns } from '@/content/resources';
 import { ID_SEPARATORS, PROTOTYPE_KEY, qualifyEntryType } from '@/entries/entry-types';
-import { assertSortableColumns } from '@/entries/sort-fields';
+import { sortableFieldNames } from '@/entries/sort-fields';
 import { assertUniqueDataNames, validateFieldTree } from '@/fields/field-tree';
+import { flattenEntryFields } from '@/fields/flatten';
 import { resolvePluginIdentity } from '@/plugins/runtime/plugin-identity';
 
 /**
@@ -130,7 +133,7 @@ export function toResolvedFields(fields: EntryFields | undefined): ResolvedEntry
 
 /**
  * Resolve a single entry type: validate its titleField, field tree and
- * sortable admin columns (crash-loud on mismatch). `typeKey` is stamped onto
+ * admin columns (crash-loud on mismatch). `typeKey` is stamped onto
  * the result as `id`, used in error messages.
  */
 export function toResolvedEntryType(
@@ -146,7 +149,7 @@ export function toResolvedEntryType(
     validateFieldTree(owner, resolvedFields.main);
     validateFieldTree(owner, resolvedFields.sidebar);
     assertUniqueDataNames(owner, resolvedFields);
-    assertSortableColumns(owner, entryType.adminColumns ?? [], resolvedFields);
+    assertAdminColumns(owner, entryType.adminColumns ?? [], resolvedFields);
 
     const { fields: _fields, type: _type, ...rest } = entryType;
     return {
@@ -157,4 +160,47 @@ export function toResolvedEntryType(
         capabilities,
         titleField: entryType.titleField ?? 'title',
     };
+}
+
+/**
+ * Throw when an admin column names no top-level field of the type, since the
+ * admin reads a column's value from the entry's `fields` and would show
+ * nothing. Throw too when a column asks for a sort the entries list would
+ * refuse, or would apply to the system column rather than the field the column
+ * shows, so the admin never offers one. `owner` names the type in the message.
+ */
+export function assertAdminColumns(
+    owner: string,
+    columns: readonly AdminColumn[],
+    fields: ResolvedEntryFields
+): void {
+    const declared = flattenEntryFields(fields);
+    const sortable = sortableFieldNames(fields, 'full');
+    for (const column of columns) {
+        const prefix = `Astromech ${owner}: admin column "${column.field}"`;
+        const field = declared.find((candidate) => candidate.name === column.field);
+        if (field === undefined) {
+            throw new Error(
+                `${prefix} shows a field, but the type declares no top-level field ` +
+                    "by that name. A column reads the entry's `fields`, not its own " +
+                    `columns such as \`title\` or \`slug\`. Fields: ${quoteNames(declared.map((f) => f.name))}.`
+            );
+        }
+        if (column.sortable !== true || sortable.includes(column.field)) continue;
+        if (sortableColumns('entry').includes(column.field)) {
+            throw new Error(
+                `${prefix} is sortable, but a sort by "${column.field}" orders by the entry's own ` +
+                    `\`${column.field}\` column, not the field the column shows. ` +
+                    'Rename the field, or drop `sortable`.'
+            );
+        }
+        throw new Error(
+            `${prefix} is sortable, but a \`${field.type}\` field holds no single value ` +
+                `a list can order by. Sortable fields: ${quoteNames(sortable)}.`
+        );
+    }
+}
+
+function quoteNames(names: readonly string[]): string {
+    return names.length > 0 ? names.map((name) => `"${name}"`).join(', ') : 'none';
 }

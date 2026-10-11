@@ -2,12 +2,13 @@
  * The fields an entries list may order by besides its system columns: each
  * top-level field whose type is `sortable`, by its bare name, the name an admin
  * column reads. `entries.query` passes them to the repository, and config
- * resolve checks a `sortable` admin column against them.
+ * resolve checks a `sortable` admin column against them
+ * (`config/entry-types.ts`).
  */
 
 import type { VisibilityShape } from '@/content/visibility';
 import type { ResolvedEntryFields } from '@/types/fields';
-import type { AdminColumn, ResolvedConfig } from '@/types/index';
+import type { ResolvedConfig } from '@/types/index';
 import { sortableColumns } from '@/content/resources';
 import { resolveEntryType } from '@/entries/entry-types';
 import { getFieldType } from '@/fields/field-type-registry';
@@ -51,38 +52,4 @@ export function sharedSortableFields(
     });
     const [first = [], ...rest] = perType;
     return first.filter((name) => rest.every((names) => names.includes(name)));
-}
-
-/**
- * Throw when an admin column asks for a sort the entries list would refuse, or
- * would apply to the system column rather than the field the column shows, so
- * the admin never offers one. `owner` names the type in the message.
- */
-export function assertSortableColumns(
-    owner: string,
-    columns: readonly AdminColumn[],
-    fields: ResolvedEntryFields
-): void {
-    const sortable = sortableFieldNames(fields, 'full');
-    for (const column of columns) {
-        if (column.sortable !== true || sortable.includes(column.field)) continue;
-        const prefix = `Astromech ${owner}: admin column "${column.field}" is sortable, but`;
-        if (sortableColumns('entry').includes(column.field)) {
-            throw new Error(
-                `${prefix} a sort by "${column.field}" orders by the entry's own ` +
-                    `\`${column.field}\` column, not the field the column shows. ` +
-                    'Rename the field, or drop `sortable`.'
-            );
-        }
-        const declared = flattenEntryFields(fields).find(
-            (field) => field.name === column.field
-        );
-        throw new Error(
-            `${prefix} ` +
-                (declared === undefined
-                    ? 'the type declares no top-level field by that name.'
-                    : `a \`${declared.type}\` field holds no single value a list can order by.`) +
-                ` Sortable fields: ${sortable.length > 0 ? sortable.map((name) => `"${name}"`).join(', ') : 'none'}.`
-        );
-    }
 }

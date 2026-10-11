@@ -14,10 +14,14 @@
  * therefore seeded from nothing, and then destroys the stored value the moment
  * the author touches it. That is why `useBlocksField`, `useTreeField`,
  * `RepeaterField` and `KeyValueEditor` all carry a re-seed guard.
+ *
+ * The date and date-time inputs keep no state, but show a stored value in a
+ * form the input accepts, so the last block checks that a save sends the
+ * stored value back untouched and an edit in the input's own form.
  */
 
 import type { Entry, Field } from '@/types/index';
-import { act, screen, waitFor } from '@testing-library/react';
+import { act, fireEvent, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import React from 'react';
 import { describe, expect, it, vi } from 'vitest';
@@ -260,5 +264,86 @@ describe('group on a fetched entry', () => {
                 seo: { title: 'Edited', description: 'Stored description' },
             },
         });
+    });
+});
+
+// date and datetime, whose inputs take another form than the stored one
+
+describe('date and datetime on a fetched entry', () => {
+    const DATES: Field[] = [
+        { name: 'startsAt', type: 'datetime', label: 'Starts at' },
+        { name: 'day', type: 'date', label: 'Day' },
+    ];
+    // As core stores a date-time written with a zone, and as a date was stored
+    // before core kept `YYYY-MM-DD` only.
+    const STORED = {
+        startsAt: '2026-10-10T09:00:00.000Z',
+        day: '2026-10-10T00:00:00.000Z',
+    };
+
+    async function mountLoaded(
+        fields: Record<string, unknown> = STORED
+    ): Promise<Harness> {
+        const h = await mountEditPage({ main: DATES, fields });
+        h.load();
+        await waitFor(() => {
+            expect(control('input[name="day"]')).toHaveProperty('value', '2026-10-10');
+        });
+        return h;
+    }
+
+    async function saved(h: Harness): Promise<unknown> {
+        act(() => h.handle().handleSave());
+        await waitFor(() => {
+            expect(h.saveFn).toHaveBeenCalledTimes(1);
+        });
+        return h.saveFn.mock.calls[0]?.[0];
+    }
+
+    it('shows a UTC date-time as the same instant in local time', async () => {
+        await mountLoaded();
+
+        const shown = (control('input[name="startsAt"]') as HTMLInputElement).value;
+        expect(shown).toMatch(/^2026-10-\d{2}T\d{2}:\d{2}$/);
+        expect(new Date(shown).getTime()).toBe(Date.parse(STORED.startsAt));
+    });
+
+    it('saves a stored date-time the editor leaves alone as it was', async () => {
+        // A date in the old full form fails the date rule until it is set
+        // again, so this one is stored as core stores it now.
+        const fields = { startsAt: STORED.startsAt, day: '2026-10-10' };
+        const h = await mountLoaded(fields);
+
+        expect(await saved(h)).toMatchObject({ fields });
+    });
+
+    it('saves an edited date-time as UTC and an edited date as YYYY-MM-DD', async () => {
+        const h = await mountLoaded();
+
+        fireEvent.change(control('input[name="startsAt"]'), {
+            target: { value: '2026-10-11T08:30' },
+        });
+        fireEvent.change(control('input[name="day"]'), {
+            target: { value: '2026-10-12' },
+        });
+
+        expect(await saved(h)).toMatchObject({
+            fields: {
+                startsAt: new Date('2026-10-11T08:30').toISOString(),
+                day: '2026-10-12',
+            },
+        });
+    });
+
+    it('keeps an edit UTC after the editor clears the input', async () => {
+        const h = await mountLoaded();
+        const input = control('input[name="startsAt"]');
+
+        fireEvent.change(input, { target: { value: '' } });
+        fireEvent.change(input, { target: { value: '2026-10-11T08:30' } });
+
+        expect(h.handle().form.state.values.fields.startsAt).toBe(
+            new Date('2026-10-11T08:30').toISOString()
+        );
     });
 });
