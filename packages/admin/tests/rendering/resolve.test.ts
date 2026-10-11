@@ -95,13 +95,13 @@ describe('resolveTable', () => {
         });
         expect(byKey.status).toMatchObject({
             kind: 'status',
-            sortable: false,
+            sortable: true,
             system: true,
             requires: 'statuses',
         });
         expect(byKey.slug).toMatchObject({
             kind: 'slug',
-            sortable: false,
+            sortable: true,
             system: true,
             requires: 'slug',
         });

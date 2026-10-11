@@ -31,7 +31,7 @@ export function resolveTable(config: AdminEntryType): ResolvedTable {
             label: 'entries.columnStatus',
             kind: 'status',
             source: 'entry',
-            sortable: false,
+            sortable: true,
             system: true,
             requires: 'statuses',
         });
@@ -42,7 +42,7 @@ export function resolveTable(config: AdminEntryType): ResolvedTable {
             label: 'entries.columnSlug',
             kind: 'slug',
             source: 'entry',
-            sortable: false,
+            sortable: true,
             system: true,
             requires: 'slug',
         });
