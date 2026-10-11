@@ -5,6 +5,7 @@
  */
 
 import { useState } from 'react';
+import { fieldColumnKey } from '../rendering/resolve';
 
 const SYSTEM_COLUMNS = [
     'title',
@@ -65,5 +66,5 @@ function readColumns(
     const system = hasTitle
         ? SYSTEM_COLUMNS
         : SYSTEM_COLUMNS.filter((c) => c !== 'title');
-    return new Set([...system, ...adminColumns.map((c) => c.field)]);
+    return new Set([...system, ...adminColumns.map((c) => fieldColumnKey(c.field))]);
 }

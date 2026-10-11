@@ -13,6 +13,7 @@ import { AuthorCell } from '@/admin/rendering/cells/author-cell';
 
 const COLUMN: TableColumn = {
     key: 'updatedBy',
+    name: 'updatedBy',
     label: 'entries.columnUpdatedBy',
     kind: 'author',
     source: 'entry',

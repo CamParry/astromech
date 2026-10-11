@@ -179,7 +179,9 @@ export function EntryCard(props: EntryCardProps): React.ReactElement {
                             {getCellRenderer(col.kind)({
                                 row: entry,
                                 column: col,
-                                value: (entry.fields as Record<string, unknown>)[col.key],
+                                value: (entry.fields as Record<string, unknown>)[
+                                    col.name
+                                ],
                                 ctx,
                             })}
                         </span>
