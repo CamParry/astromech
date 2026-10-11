@@ -10,7 +10,7 @@ import type {
     ResolvedGlobalCapabilities,
 } from '@/types/index';
 import { toResolvedFields } from '@/config/entry-types';
-import { qualifyEntryType } from '@/entries/entry-types';
+import { ID_SEPARATORS, PROTOTYPE_KEY, qualifyEntryType } from '@/entries/entry-types';
 import { assertUniqueDataNames, validateFieldTree } from '@/fields/field-tree';
 import { resolvePluginIdentity } from '@/plugins/runtime/plugin-identity';
 
@@ -39,9 +39,6 @@ export function resolveGlobals(
     return resolved;
 }
 
-/** Characters a global key may not contain: both are id separators. */
-const GLOBAL_KEY_FORBIDDEN = /[/:]/;
-
 /**
  * Resolve a global's capability set. Globals have one repository, so unlike
  * entry types nothing narrows the defaults.
@@ -63,10 +60,17 @@ function assertGlobalValid(id: string, config: GlobalConfig): void {
         );
     }
 
-    if (GLOBAL_KEY_FORBIDDEN.test(config.key)) {
+    if (ID_SEPARATORS.test(config.key)) {
         throw new Error(
             `Astromech global "${id}": key must not contain "/" or ":" (got "${config.key}"). ` +
                 `A plugin's global is qualified as "<namespace>/<key>" by Astromech.`
+        );
+    }
+
+    if (config.key === PROTOTYPE_KEY) {
+        throw new Error(
+            `Astromech global "${id}": key must not be "${PROTOTYPE_KEY}", which names ` +
+                `an object's prototype rather than a key.`
         );
     }
 

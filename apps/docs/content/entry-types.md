@@ -29,8 +29,9 @@ export default defineConfig({
 
 The `type` (`tag`) is the type name — it is what `Astromech.entries.query({
 type: 'tag' })`, the admin route `/cms/entries/tag`, and the generated
-`Fields` types all use. Each `type` is unique within the array and may not
-contain `/` or `:`; Astromech refuses to start otherwise. A plugin's entry
+`Fields` types all use. Each `type` is unique within the array, may not
+contain `/` or `:` and may not be `__proto__`; Astromech refuses to start
+otherwise. A plugin's entry
 types take the same shape in the plugin definition's `entries` array, and are
 addressed as `<namespace>/<type>` — see
 [plugins/authoring.md](../plugins/authoring.md).

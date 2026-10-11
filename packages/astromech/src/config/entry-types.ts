@@ -11,7 +11,7 @@ import type {
     ResolvedEntryCapabilities,
     ResolvedEntryType,
 } from '@/types/index';
-import { qualifyEntryType } from '@/entries/entry-types';
+import { ID_SEPARATORS, PROTOTYPE_KEY, qualifyEntryType } from '@/entries/entry-types';
 import { assertSortableColumns } from '@/entries/sort-fields';
 import { assertUniqueDataNames, validateFieldTree } from '@/fields/field-tree';
 import { resolvePluginIdentity } from '@/plugins/runtime/plugin-identity';
@@ -68,9 +68,6 @@ export function assertUniqueEntryTypes(owner: string, entryTypes: EntryType[]): 
     }
 }
 
-/** Characters an entry type may not contain: both are id separators. */
-const ENTRY_TYPE_FORBIDDEN = /[/:]/;
-
 /** Resolve the capability set for an entry type: each option or its default. */
 export function toResolvedEntryCapabilities(
     entryType: EntryType
@@ -86,8 +83,8 @@ export function toResolvedEntryCapabilities(
 }
 
 /**
- * Crash-loud validation of an entry type's `type` (non-empty, no separator)
- * and its `titleField` (`'title'` or `false`, nothing else).
+ * Crash-loud validation of an entry type's `type` (non-empty, no separator,
+ * not `__proto__`) and its `titleField` (`'title'` or `false`, nothing else).
  */
 export function assertEntryTypeValid(typeKey: string, entryType: EntryType): void {
     if (entryType.type === undefined || entryType.type === '') {
@@ -96,11 +93,18 @@ export function assertEntryTypeValid(typeKey: string, entryType: EntryType): voi
         );
     }
 
-    if (ENTRY_TYPE_FORBIDDEN.test(entryType.type)) {
+    if (ID_SEPARATORS.test(entryType.type)) {
         throw new Error(
             `Astromech entry type "${typeKey}": type must not contain "/" or ":" ` +
                 `(got "${entryType.type}"). A plugin's entry type is qualified as ` +
                 `"<namespace>/<type>" by Astromech.`
+        );
+    }
+
+    if (entryType.type === PROTOTYPE_KEY) {
+        throw new Error(
+            `Astromech entry type "${typeKey}": type must not be "${PROTOTYPE_KEY}", ` +
+                `which names an object's prototype rather than a key.`
         );
     }
 
