@@ -16,9 +16,10 @@
 // fixture. Image checks need the zone to allow Image Transformations from the
 // site's own hostname (`apps/docs/deployment/cloudflare.md`).
 //
-// The site URL and credentials come from `apps/demo-cloudflare/.env.testing`
-// in the main checkout, which is gitignored: `SITE_URL`, `OWNER_EMAIL`,
-// `OWNER_PASSWORD` and `ASTROMECH_CRON_SECRET`. Set
+// The site URL and credentials come from
+// `apps/demo-cloudflare/testing-credentials.env` in the main checkout, which is
+// gitignored: `SITE_URL`, `OWNER_EMAIL`, `OWNER_PASSWORD` and
+// `ASTROMECH_CRON_SECRET`. Set
 // `ASTROMECH_TESTING_ENV_FILE` to read another file.
 //
 // Leave a minute between runs. A run makes three sign-ins from one address,
@@ -842,7 +843,7 @@ function envFilePath() {
         ['rev-parse', '--path-format=absolute', '--git-common-dir'],
         { cwd: repoRoot, encoding: 'utf8' }
     ).trim();
-    return join(dirname(commonDir), 'apps', 'demo-cloudflare', '.env.testing');
+    return join(dirname(commonDir), 'apps', 'demo-cloudflare', 'testing-credentials.env');
 }
 
 async function readEnvFile(path) {
