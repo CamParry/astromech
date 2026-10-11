@@ -23,6 +23,7 @@ type Recorded = {
     injectRoute: { pattern: string; entrypoint: string; prerender: boolean }[];
     addMiddleware: { entrypoint: string; order: string }[];
     injectTypes: { filename: string; content: string }[];
+    infos: string[];
     warnings: string[];
 };
 
@@ -245,6 +246,27 @@ describe('astromech()', () => {
             }
         });
     });
+
+    describe.each(['astro:build:start', 'astro:server:setup'] as const)('%s', (hook) => {
+        it('leaves a remote database to db:init --allow-remote', async () => {
+            await writeFile(
+                join(root, 'astromech.config.ts'),
+                configSource.replace(
+                    "db: { name: 'test', getInstance: unused },",
+                    "db: { name: 'test', getInstance: unused, isRemote: async () => true },"
+                )
+            );
+            const { integration, recorded, logger } = await runSetup();
+
+            // Both hooks read only `logger`.
+            await integration.hooks[hook]?.({ logger } as never);
+
+            expect(recorded.infos).toContain(
+                'The database is remote, so Astromech did not apply migrations. ' +
+                    'Apply them with `astromech db:init --allow-remote`.'
+            );
+        });
+    });
 });
 
 async function runSetup(integrations?: { name: string }[], site: Site = {}) {
@@ -267,10 +289,11 @@ function createFakes(
         injectRoute: [],
         addMiddleware: [],
         injectTypes: [],
+        infos: [],
         warnings: [],
     };
     const logger = {
-        info: () => undefined,
+        info: (message: string) => recorded.infos.push(message),
         warn: (message: string) => recorded.warnings.push(message),
         error: () => undefined,
         debug: () => undefined,

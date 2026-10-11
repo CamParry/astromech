@@ -35,8 +35,8 @@
 //
 // 1. Pending migrations on a deployed Worker (`operations-defects.md`). The
 //    Worker has to bundle a migration the database lacks. Build for the
-//    environment (`CLOUDFLARE_ENV=testing pnpm exec astro build`) while the
-//    database is current, so the build's own migration step changes nothing.
+//    environment (`CLOUDFLARE_ENV=testing pnpm exec astro build`), which
+//    applies no migrations to the remote database.
 //    In the built chunk holding `migrationNames = ["0000_migration"]` (grep
 //    `dist/server`), add a name such as "9999_check_pending". Note the
 //    deployed version (`wrangler deployments status --env testing`), upload

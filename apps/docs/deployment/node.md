@@ -20,11 +20,10 @@ The build writes the server to `dist/server/entry.mjs` and the static files to
 with the project's `node_modules` installed.
 
 When the build starts, before it compiles or prerenders anything, it applies
-any pending migrations to the database your config names, so a build that then
-fails has still migrated it. Unlike the CLI, it does not refuse a remote
-database, so the environment of the machine that builds decides which database
-is migrated. If `DATABASE_URL` points at production there, the build migrates
-production.
+any pending migrations to a local database your config names, so a build that
+then fails has still migrated it. Like the CLI, it leaves a remote database
+alone: when `DATABASE_URL` names a libSQL server, such as Turso's, the build
+logs that it applied no migrations, and you apply them with `db:init`, below.
 
 ## Set the environment
 

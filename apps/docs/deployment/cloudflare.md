@@ -162,6 +162,10 @@ everyday commands stay local:
 CLOUDFLARE_ENV=production astromech db:init --allow-remote
 ```
 
+`astro build` applies migrations too, but only to a local database: a build
+under `CLOUDFLARE_ENV=production` logs that the database is remote and applies
+none, so run `db:init` first.
+
 A Worker cannot read your migrations folder, so the build bundles the names of
 its migrations. The first request a Worker serves compares them with the
 database and logs a warning when migrations are pending. A Worker woken only by
@@ -181,7 +185,8 @@ passed with `--env-file` instead.
 
 The build applies migrations when it starts, before it prerenders anything,
 through wrangler's `getPlatformProxy()`, which writes local state next to your
-wrangler config. `wrangler dev` keeps its own
+wrangler config. It skips a binding marked `"remote": true`, as
+[Migrations](#migrations) says. `wrangler dev` keeps its own
 state beside whichever config file it was given, so pointing it at
 `dist/server/wrangler.json` needs `--persist-to` at the directory the build
 used, or the Worker boots against an empty database.
