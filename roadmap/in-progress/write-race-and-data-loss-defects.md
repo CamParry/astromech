@@ -101,16 +101,26 @@ item 8 proposed, would protect libsql only.
       (`backlog.md`).
 - [ ] **Caller errors.** The bulk `slug` 422 in `update-batch.ts`; typed errors
       for `entries/methods/preview/issue-token.ts` and the `missing` (404) and
-      `noStaged` (409) `AstromechError`s in
-      `content/repository/content-table.ts`; `onError` unwraps any `ApiError`
-      inside a `BulkOperationError` (`transport/http/middleware/errors.ts`).
-      Grep `throw new Error` under `methods/` and `internal/` for the rest of
-      the class. A user or media update whose row is deleted after the read,
-      sending unchanged fields, answers 500 (`it.fails` in
-      `packages/astromech/tests/users/last-admin.test.ts`). `users.create` with an
-      email that already exists answers 500 `INTERNAL_ERROR`
-      (`SQLITE_CONSTRAINT: UNIQUE constraint failed: users.email`) rather than
-      a 409 or 422 naming `email`.
+      `noStaged` (404, not 409: a missing staged change is
+      `ResourceNotFoundError` with `staged`, as `content/staging.ts` throws it)
+      `AstromechError`s in `content/repository/content-table.ts`; `onError`
+      unwraps any `ApiError` inside a `BulkOperationError`
+      (`transport/http/middleware/errors.ts`). Grep `throw new Error` under
+      `methods/` and `internal/` for the rest of the class. A user or media
+      update whose row is deleted after the read, sending unchanged fields,
+      answers 500. `users.create` with an email that already exists answers
+      500 `INTERNAL_ERROR` (`SQLITE_CONSTRAINT: UNIQUE constraint failed:
+    users.email`) rather than a 409 or 422 naming `email`. Done 2026-10-13:
+      the bulk `slug` 422, the repository's 404s, the deleted-row 404 for
+      users and media, and a 422 naming `email` on `users.create` and
+      `users.update`. The issue-token errors and the `BulkOperationError`
+      unwrap were already in place. The `throw new Error` sites left are
+      broken invariants, not caller errors: the staged read in
+      `issue-token.ts` (`findAnyLocale` reads canonical rows only), the block
+      read back after its own upsert in `security/methods/block.ts`, and
+      `notifications/internal/subject.ts` (the transports refuse a
+      session-scoped call with no user first). Left unticked only because the
+      item said 409 for `noStaged`.
 - [x] **OpenAPI coverage** as decided above (`DECISIONS.md`, "The OpenAPI
       document covers every mounted route but the internal ones"). The
       cross-type `POST /entries/query` and `POST /entries/count` were already
