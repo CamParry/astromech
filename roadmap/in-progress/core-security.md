@@ -179,6 +179,13 @@ screen in chromium. These need real keys or a deployed Worker:
 
 ## Left open
 
+- **The rich-text editor breaks Astro's default `security.csp`.** With
+  `csp: true`, `check:boot` in chromium logged a `style-src` violation
+  ("Applying inline style") from the TipTap/ProseMirror chunk, likely on an
+  entry edit page, so the admin needs more than the captcha sources
+  `apps/docs/configuration/security.md` lists. Found 2026-10-13; the shell's
+  hash check runs in `check:boot:cloudflare`, which has no browser step, for
+  that reason.
 - **`cf-connecting-ip` is trusted on workerd unchecked**
   (`roadmap/completed/auth-rate-limit-defects.md`), so a forged value could
   dodge a block there.
