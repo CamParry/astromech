@@ -71,25 +71,25 @@ decoded image, which is what the variants are made from.
 Merged on 2026-10-04 and run on local workerd (`check:boot:cloudflare`); these
 need a deployed Worker with Image Resizing on.
 
-- [ ] A replaced image gets new variants: Image Resizing fetches
+- [x] A replaced image gets new variants: Image Resizing fetches
       `<id>.<ext>?v=<version>` from the media route and caches per version.
-- [ ] `cf.image` keeps an animated WebP animated for `format: 'webp'`.
-- [ ] HEIC input transforms (the Cloudflare driver leaves `canTransform` unset).
-- [ ] The variant ETag, which now ends in the driver's cache key
-      (`-cloudflare-images`), gives 304s through the edge cache.
+      On 2026-10-12 the 320px WebP variant was 320×160 before a replace and
+      320×240 after it.
+- [x] `cf.image` keeps an animated WebP animated for `format: 'webp'`. On
+      2026-10-12 a three-frame WebP gave a 320px `image/webp` variant of three
+      frames.
+- [x] HEIC input transforms (the Cloudflare driver leaves `canTransform` unset).
+      On 2026-10-12 a 1200×800 HEIC gave a 320×213 `image/webp` variant.
+- [x] The variant ETag, which now ends in the driver's cache key
+      (`-cloudflare-images`), gives 304s through the edge cache. On 2026-10-12
+      `If-None-Match` answered 304 with `cf-cache-status: HIT`.
+
+Each was run on the testing site with `check:deployed:cloudflare
+image-metadata`, after `astromech-testing.paragramagency.com` was added to the
+`paragramagency.com` zone's Image Transformations allowed origins.
 
 ## Left open
 
-- **The Cloudflare checks are not yet answered: the zone refuses the
-  transform.** On 2026-10-11 every `cf.image` fetch on the testing site
-  answered 403 with `Cf-Resized: err=9401` ("Transformation origin is not in
-  allowed origins list"), and each variant request was served the original.
-  The `paragramagency.com` zone allows Image Transformations from two other
-  hosts only, and the driver fetches the original from the site's own media
-  route. The four checks are in `check:deployed:cloudflare` and run once
-  `astromech-testing.paragramagency.com` is on the zone's list. The ETag check
-  also needs media stored at the edge, which the testing site does since
-  2026-10-11 (`caching-defects.md`, "Left open").
 - **An animated WebP uploaded before this work has no `animated` key**, so it
   still gets an AVIF source, a still of its first frame, until its file is
   replaced. An animated GIF is not optimised at all, and an APNG's variants
