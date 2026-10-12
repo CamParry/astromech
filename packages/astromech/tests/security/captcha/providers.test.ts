@@ -221,6 +221,54 @@ describe('Turnstile', () => {
             reason: 'Token was issued for another action',
         });
     });
+
+    /** The answer Cloudflare's test secret gives, as it was on 2026-10-13. */
+    const testingKeyAnswer = {
+        success: true,
+        challenge_ts: '2026-10-13T00:00:00.000Z',
+        hostname: 'example.com',
+        'error-codes': [],
+        metadata: { result_with_testing_key: true },
+    };
+
+    it('accepts a test secret answer, which names no action, on an allowed hostname', async () => {
+        turnstile({ hostnames: ['example.com'] });
+        stubFetch(() => jsonResponse(testingKeyAnswer));
+
+        const verdict = await verifyCaptcha({ token: 'a-token', action: 'sign_in' });
+
+        expect(verdict).toEqual({ ok: true });
+    });
+
+    it('still checks the hostname of a test secret answer', async () => {
+        turnstile();
+        stubFetch(() => jsonResponse(testingKeyAnswer));
+
+        const verdict = await verifyCaptcha({
+            token: 'a-token',
+            action: 'sign_in',
+            hostname: 'example.test',
+        });
+
+        expect(verdict).toEqual({
+            ok: false,
+            reason: 'Hostname example.com is not allowed',
+        });
+    });
+
+    it('refuses a real answer that names no action', async () => {
+        turnstile({ hostnames: ['example.com'] });
+        stubFetch(() =>
+            jsonResponse({ ...testingKeyAnswer, metadata: { interactive: false } })
+        );
+
+        const verdict = await verifyCaptcha({ token: 'a-token', action: 'sign_in' });
+
+        expect(verdict).toEqual({
+            ok: false,
+            reason: 'Token was issued for another action',
+        });
+    });
 });
 
 describe('reCAPTCHA', () => {
