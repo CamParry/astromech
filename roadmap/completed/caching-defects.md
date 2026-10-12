@@ -53,10 +53,12 @@ fires a `scheduled()` tick); these need a deployed Worker.
       a real trigger to "ok": the tick settled after the handler returned and
       `scheduled-publish` recorded the trigger's `scheduledTime` (run by hand,
       `scripts/check-deployed-cloudflare.mjs`).
-- [ ] Cloudflare's cache honours `Cache-Tag: astromech:media:<id>` with the
-      media `Cache-Control`, and a purge by that tag reaches every variant.
-      Stored and purged since 2026-10-11, but not yet seen on a real variant:
-      see "Left open".
+- [x] Cloudflare's cache honours `Cache-Tag: astromech:media:<id>` with the
+      media `Cache-Control`, and a purge by that tag reaches every variant. On
+      2026-10-12 the original and two variants were a `HIT` with their
+      `Cache-Control`, stayed a `HIT` through a purge of another tag, and each
+      missed within a second of a purge of the item's tag
+      (`check:deployed:cloudflare caching`).
 - [x] With `cacheCloudflare()`, nothing is stored for the admin, the API, a
       media 404 or a preview read (`cache.set(false)`). On 2026-10-11, under a
       route rule storing every page for a minute, each one's second request
@@ -71,18 +73,6 @@ fires a `scheduled()` tick); these need a deployed Worker.
 
 ## Left open
 
-- **The media purge is not yet seen on a real variant.** The middleware now
-  repeats a public media response's `Cache-Control` as
-  `Cloudflare-CDN-Cache-Control`, so the adapter's `no-store` default no
-  longer keeps media out of Workers Caching. On the testing site on
-  2026-10-11, after `deploy:testing`, `check:deployed:cloudflare caching`
-  found the original and both variant URLs a `HIT` on the second request, and
-  a media 404 still `BYPASS`, but failed at its next step: the variant URLs
-  served the original, because the zone does not list the site for Image
-  Transformations (`image-metadata-defects.md`, "Left open"). A run with the
-  two transform assertions removed passed: all three stayed `HIT` through a
-  purge of another tag and each missed within a second of a purge of
-  `astromech:media:<id>`. Tick the item once the check passes as written.
 - **Nothing purges a media item's tag.** Every media response carries
   `Cache-Tag: astromech:media:<id>`, but a replace or delete clears nothing;
   the media writes in `page-caching.md` are where a purge would go.
