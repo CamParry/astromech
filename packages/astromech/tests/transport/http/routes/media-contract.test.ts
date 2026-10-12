@@ -9,7 +9,7 @@ import type { Media, MediaVersion, Role, VersionMetadata } from '@/types/index';
 import { adminRole, roleWith } from '@tests/fixtures';
 import { createTestDb, makeTestConfig, setupTestConfig } from '@tests/harness';
 import { mountRouter, seedTestUser } from '@tests/mount-router';
-import { beforeEach, describe, expect, it } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { currentServices } from '@/app-context/services';
 import { mediaRepository } from '@/media/repository';
 import { mediaRouter } from '@/transport/http/routes/media';
@@ -247,6 +247,25 @@ describe('PUT /media/:id', () => {
     it('403s with media:read but not media:update', async () => {
         const res = await put(roleWith(['media:read']), { alt: 'nope' });
         expect(res.status).toBe(403);
+    });
+
+    // Unchanged columns write no version, so the content write is the first to
+    // meet the deleted row.
+    it('404s an item deleted after the update reads it, sending unchanged columns', async () => {
+        await mediaService.update({ id: pngId, data: { alt: 'Old' } });
+        const findOne = mediaRepository.findOne;
+        vi.spyOn(mediaRepository, 'findOne').mockImplementationOnce(async (...args) => {
+            const found = await findOne(...args);
+            await mediaRepository.delete(pngId);
+            return found;
+        });
+
+        const res = await put(adminRole, { alt: 'Old' });
+
+        expect(res.status).toBe(404);
+        expect(((await res.json()) as { error: { code: string } }).error.code).toBe(
+            'NOT_FOUND'
+        );
     });
 
     it('422s a body whose alt is not a string', async () => {

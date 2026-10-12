@@ -44,6 +44,7 @@ function decode(
 function createRepository() {
     return createContentRepository(
         {
+            kind: 'global',
             table: globalsTable,
             contentTable: globalContentTable,
             versionsTable: globalVersionsTable,
@@ -137,8 +138,12 @@ describe('update', () => {
         expect(de.contentId).not.toBe(created.contentId);
     });
 
-    it('throws when the resource row is gone', async () => {
-        await expect(repository.update({ id: 'nope' }, {})).rejects.toThrow(/not found/);
+    it('is not found when the resource row is gone', async () => {
+        await expect(repository.update({ id: 'nope' }, {})).rejects.toMatchObject({
+            name: 'ResourceNotFoundError',
+            status: 404,
+            message: "Global 'nope' not found",
+        });
     });
 });
 
@@ -324,9 +329,13 @@ describe('staging', () => {
 
     it('refuses to write a staged row that does not exist', async () => {
         const site = await createSite();
-        await expect(repository.staging.update({ id: site.id }, {})).rejects.toThrow(
-            /No staged change/
-        );
+        await expect(
+            repository.staging.update({ id: site.id }, {})
+        ).rejects.toMatchObject({
+            name: 'ResourceNotFoundError',
+            status: 404,
+            message: `Global '${site.id}' has no staged change in locale 'en'`,
+        });
     });
 
     it('rejects a second canonical row for one locale', async () => {
