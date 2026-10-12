@@ -7,7 +7,7 @@
         "dev": "astro dev",
         "build": "astro build",
         "preview": "wrangler dev",
-        "deploy:testing": "CLOUDFLARE_ENV=testing pnpm run db:init --allow-remote && CLOUDFLARE_ENV=testing astro build && wrangler deploy --env testing",
+        "deploy:testing": "node ../../scripts/run-at-lower-priority.mjs --lock pnpm -F \"astromech-demo-cloudflare^...\" build && CLOUDFLARE_ENV=testing pnpm run db:init --allow-remote && CLOUDFLARE_ENV=testing astro build && wrangler deploy --env testing",
         "deploy:testing:captcha": ": \"${CAPTCHA_PROVIDER:?}\" \"${CAPTCHA_SITE_KEY:?}\" && pnpm run deploy:testing --var CAPTCHA_PROVIDER:$CAPTCHA_PROVIDER --var CAPTCHA_SITE_KEY:$CAPTCHA_SITE_KEY",
         "typecheck": "astro sync && tsc --noEmit",
         "check:config": "tsx astromech.config.ts",
