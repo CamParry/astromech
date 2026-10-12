@@ -4,9 +4,51 @@ import react from '@astrojs/react';
 import { defineConfig } from 'astro/config';
 import { astromech } from 'astromech/astro';
 
+/**
+ * The sources `apps/docs/configuration/security.md` ("Content security
+ * policy") lists for each captcha provider. `'self'` is the site's own.
+ */
+const CAPTCHA_CSP = {
+    turnstile: {
+        scriptDirective: {
+            resources: ["'self'", 'https://challenges.cloudflare.com'],
+        },
+        directives: ['frame-src https://challenges.cloudflare.com'],
+    },
+    recaptcha: {
+        scriptDirective: {
+            resources: [
+                "'self'",
+                'https://www.google.com/recaptcha/',
+                'https://www.gstatic.com/recaptcha/',
+            ],
+        },
+        directives: [
+            'frame-src https://www.google.com/recaptcha/ https://recaptcha.google.com/recaptcha/',
+        ],
+    },
+    hcaptcha: {
+        scriptDirective: {
+            resources: ["'self'", 'https://hcaptcha.com', 'https://*.hcaptcha.com'],
+        },
+        styleDirective: {
+            resources: ["'self'", 'https://hcaptcha.com', 'https://*.hcaptcha.com'],
+        },
+        directives: [
+            'frame-src https://hcaptcha.com https://*.hcaptcha.com',
+            "connect-src 'self' https://hcaptcha.com https://*.hcaptcha.com",
+        ],
+    },
+};
+
+// With a captcha on (`astromech.config.ts`), the site sends the policy the
+// docs give for it, so a captcha run checks those sources too.
+const captchaProvider = process.env.CAPTCHA_PROVIDER;
+
 export default defineConfig({
     site: 'https://demo-cloudflare.astromech.dev',
     output: 'server',
+    ...(captchaProvider ? { security: { csp: CAPTCHA_CSP[captchaProvider] } } : {}),
     adapter: cloudflare(),
     // Astromech does not use Astro sessions. Left on, the adapter adds a
     // `SESSION` KV binding, and `wrangler deploy` creates a namespace for it.
