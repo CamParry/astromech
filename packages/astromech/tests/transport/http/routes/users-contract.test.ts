@@ -178,6 +178,14 @@ describe('POST /users', () => {
         await seedTestUser(db);
     });
 
+    function post(body: unknown): Promise<Response> | Response {
+        return app().request('/users', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(body),
+        });
+    }
+
     it('creates and returns { data: user } with 201', async () => {
         const res = await app().request('/users', {
             method: 'POST',
@@ -223,6 +231,45 @@ describe('POST /users', () => {
         };
         expect(body.error.code).toBe('VALIDATION_FAILED');
         expect(body.error.details.fields['email']).toBeDefined();
+    });
+
+    it('422s an email another user holds, naming `email`', async () => {
+        await makeUser('taken@test.dev', 'First');
+
+        const res = await post({ email: 'taken@test.dev', name: 'Second' });
+
+        expect(res.status).toBe(422);
+        const body = (await res.json()) as {
+            error: { code: string; details: { fields: Record<string, string[]> } };
+        };
+        expect(body.error.code).toBe('VALIDATION_FAILED');
+        expect(body.error.details.fields).toEqual({
+            email: ['A user with this email already exists'],
+        });
+        expect((await usersService.query({ search: 'taken' })).data).toHaveLength(1);
+    });
+
+    // The check before the insert races: another create can take the email
+    // between them, and the unique index refuses the insert instead.
+    it('422s an email another create takes between the check and the insert', async () => {
+        const findIdByEmail = userRepository.findIdByEmail;
+        vi.spyOn(userRepository, 'findIdByEmail').mockImplementationOnce(
+            async (email) => {
+                const found = await findIdByEmail(email);
+                await makeUser(email, 'First');
+                return found;
+            }
+        );
+
+        const res = await post({ email: 'raced@test.dev', name: 'Second' });
+
+        expect(res.status).toBe(422);
+        const body = (await res.json()) as {
+            error: { details: { fields: Record<string, string[]> } };
+        };
+        expect(body.error.details.fields).toEqual({
+            email: ['A user with this email already exists'],
+        });
     });
 
     it('403s without users:create', async () => {
@@ -310,6 +357,69 @@ describe('PUT /users/:id', () => {
         );
         expect(res.status).toBe(200);
         expect(((await res.json()) as { data: User }).data.email).toBe('moved@test.dev');
+    });
+
+    it('422s an email another user holds, naming `email`, and keeps the email', async () => {
+        await makeUser('taken@test.dev', 'First');
+        const user = await makeUser('a@test.dev', 'Ann');
+
+        const res = await app().request(`/users/${user.id}`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ email: 'taken@test.dev' }),
+        });
+
+        expect(res.status).toBe(422);
+        const body = (await res.json()) as {
+            error: { code: string; details: { fields: Record<string, string[]> } };
+        };
+        expect(body.error.code).toBe('VALIDATION_FAILED');
+        expect(body.error.details.fields).toEqual({
+            email: ['A user with this email already exists'],
+        });
+        expect((await usersService.get({ id: user.id }))?.email).toBe('a@test.dev');
+    });
+
+    it('422s an email another create takes between the check and the write', async () => {
+        // The create runs inside the request, stamped with its user.
+        await seedTestUser(db);
+        const user = await makeUser('a@test.dev', 'Ann');
+        const findIdByEmail = userRepository.findIdByEmail;
+        vi.spyOn(userRepository, 'findIdByEmail').mockImplementationOnce(
+            async (email) => {
+                const found = await findIdByEmail(email);
+                await makeUser(email, 'First');
+                return found;
+            }
+        );
+
+        const res = await app().request(`/users/${user.id}`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ email: 'raced@test.dev' }),
+        });
+
+        expect(res.status).toBe(422);
+        const body = (await res.json()) as {
+            error: { details: { fields: Record<string, string[]> } };
+        };
+        expect(body.error.details.fields).toEqual({
+            email: ['A user with this email already exists'],
+        });
+        expect((await usersService.get({ id: user.id }))?.email).toBe('a@test.dev');
+    });
+
+    it('keeps a user’s own email through an update that sends it', async () => {
+        const user = await makeUser('a@test.dev', 'Ann');
+
+        const res = await app().request(`/users/${user.id}`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ email: 'a@test.dev', name: 'Annabel' }),
+        });
+
+        expect(res.status).toBe(200);
+        expect(((await res.json()) as { data: User }).data.name).toBe('Annabel');
     });
 
     it('422s an invalid body', async () => {
