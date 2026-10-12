@@ -141,8 +141,10 @@ unreachable provider and a malformed answer all refuse the request.
 
 The hostname defaults to the one the request arrived on. Behind a proxy that can
 be an internal name, so list the public ones in `hostnames`. Turnstile's
-documented test secrets always answer the hostname `example.com`, so a site
-tested with them needs `hostnames: ['example.com']`.
+documented test secrets answer no action and always the hostname
+`example.com`. When the answer says it came from a test secret, the action is
+not checked, but the hostname still is, so a site tested with them needs
+`hostnames: ['example.com']`.
 
 A refused sign-in or reset request answers 403 with the code `CAPTCHA_FAILED`.
 The check runs before the sign-in limits count the attempt, so it costs one
@@ -184,7 +186,9 @@ own server code, call `verifyCaptcha({ token, action })` from `astromech`.
 ### Content security policy
 
 A site that sets Astro's `security.csp` must allow the provider's script and
-frames, on its own pages and on the admin, which the policy covers too:
+frames, on its own pages and on the admin, which the policy covers too. The
+admin needs nothing more: it adds the hash of its one inline script to its own
+page's policy.
 
 | Provider    | Directives                                                                                                                                                                     |
 | ----------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |

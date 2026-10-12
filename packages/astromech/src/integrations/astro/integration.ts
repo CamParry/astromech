@@ -18,6 +18,14 @@ import { registerRoutes } from '@/integrations/astro/routes';
 import { collectIconNames, createViteConfig } from '@/integrations/astro/vite';
 import { disposeBindings } from '@/integrations/cloudflare/bindings';
 
+/** What the served code needs to know of Astro's config, known once it is done. */
+type AstroFacts = {
+    /** `security.allowedDomains` is set, so Astro reads `x-forwarded-for`. */
+    readsForwardedFor: boolean;
+    /** `security.csp` is set, so Astro sends a content security policy. */
+    sendsCsp: boolean;
+};
+
 export type AstromechIntegrationOptions = {
     /** Path to the site's astromech.config.ts, resolved against the Astro project root. */
     configFile?: string;
@@ -29,7 +37,7 @@ export function astromech(options: AstromechIntegrationOptions = {}): AstroInteg
     const packageSource = fileURLToPath(new URL('../../../src', import.meta.url));
 
     let loaded: { config: AstromechConfig; resolved: ResolvedConfig } | undefined;
-    let astroReadsForwardedFor: boolean | undefined;
+    let astroFacts: AstroFacts | undefined;
 
     function getLoadedConfig(): { config: AstromechConfig; resolved: ResolvedConfig } {
         if (loaded === undefined) {
@@ -40,13 +48,13 @@ export function astromech(options: AstromechIntegrationOptions = {}): AstroInteg
         return loaded;
     }
 
-    function getAstroReadsForwardedFor(): boolean {
-        if (astroReadsForwardedFor === undefined) {
+    function getAstroFacts(): AstroFacts {
+        if (astroFacts === undefined) {
             throw new AstromechError(
                 'Astro config not known — the astro:config:done hook has not run.'
             );
         }
-        return astroReadsForwardedFor;
+        return astroFacts;
     }
 
     return {
@@ -86,7 +94,8 @@ export function astromech(options: AstromechIntegrationOptions = {}): AstroInteg
                         configFile: options.configFile,
                         config,
                         resolvedConfig,
-                        astroReadsForwardedFor: getAstroReadsForwardedFor,
+                        astroReadsForwardedFor: () => getAstroFacts().readsForwardedFor,
+                        astroSendsCsp: () => getAstroFacts().sendsCsp,
                         migrationNames,
                     }),
                 });
@@ -110,7 +119,11 @@ export function astromech(options: AstromechIntegrationOptions = {}): AstroInteg
                 const { config, resolved: resolvedConfig } = getLoadedConfig();
                 const plugins = config.plugins ?? [];
 
-                astroReadsForwardedFor = astroConfig.security.allowedDomains.length > 0;
+                const { allowedDomains, csp } = astroConfig.security;
+                astroFacts = {
+                    readsForwardedFor: allowedDomains.length > 0,
+                    sendsCsp: csp === true || typeof csp === 'object',
+                };
 
                 const { generateClientTypes } = await import('@/codegen/type-generator');
                 injectTypes({

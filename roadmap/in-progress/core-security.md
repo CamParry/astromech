@@ -110,11 +110,18 @@ screen in chromium. These need real keys or a deployed Worker:
 
 - [ ] Each provider's real siteverify answer with a real site key and secret:
       Turnstile's `action` and `hostname`, reCAPTCHA v3's `action`, `score` and
-      `hostname`, hCaptcha's `hostname`. Tried for Turnstile on 2026-10-13: the
-      managed widget `astromech-testing` asks automated chromium to tick a
-      box, so no real token was taken. Left: Turnstile in a real browser
-      (`scripts/check-deployed-cloudflare.mjs` header, 7), reCAPTCHA v3 and
-      hCaptcha.
+      `hostname`, hCaptcha's `hostname`. Checked for Turnstile on 2026-10-13:
+      the managed widget `astromech-testing` asks automated chromium to tick a
+      box, so it was run in a real Chrome against the testing deployment with
+      the captcha on (`scripts/check-deployed-cloudflare.mjs` header, 7). The
+      widget passed without a challenge on `/cms/login` and
+      `/cms/forgot-password`. The forgot-password page's token sent to
+      `POST /cms/api/auth/request-password-reset` answered 200, and the
+      sign-in page's (action `sign_in`) answered 403 `CAPTCHA_FAILED`. With
+      the default `hostnames`, the 200 means siteverify answered the action
+      `password_reset` and the hostname `astromech-testing.paragramagency.com`.
+      The accepted token sent a second time answered 403. Left: reCAPTCHA v3
+      and hCaptcha, which wait for keys.
 - [ ] The widgets in a browser: two Turnstile widgets on one page with
       `render=explicit`, token expiry and reset, reCAPTCHA v3's `execute`; the
       admin sign-in, setup and forgot-password pages with a captcha on and
@@ -126,17 +133,29 @@ screen in chromium. These need real keys or a deployed Worker:
       deployment the real widget renders on the sign-in and forgot-password
       pages under the documented policy, which blocks nothing of Turnstile's;
       on a local Worker with the test keys, so does setup, and all three send
-      the token in `x-captcha-response`. Left: token expiry (a test key's token
-      did not expire in six minutes, so it needs the real widget in a real
-      browser), reCAPTCHA v3's `execute`, and the policy blocking the admin's
-      theme script (below).
-- [ ] The hostname check behind a real proxy or CDN, and `hostnames` with
+      the token in `x-captcha-response`. The policy also blocked the admin's
+      theme script, an `is:inline` script Astro does not hash; the shell now
+      adds its hash to its own page's policy when `security.csp` is set, and
+      `check:boot:cloudflare` builds with Astro's default policy and finds the
+      hash of every inline script on `/cms` in its `script-src` (2026-10-13).
+      Token expiry was checked in a real Chrome the same day (a test key's
+      token did not expire in six minutes): a solved real widget left for 379
+      seconds had renewed its own token (the response field changed and
+      `turnstile.isExpired()` was false), its first token sent then answered
+      403, and the page's form submitted then succeeded ("Check your email").
+      Left: reCAPTCHA v3's `execute`.
+- [x] The hostname check behind a real proxy or CDN, and `hostnames` with
       Turnstile's test secret, which answers `example.com`. Checked
-      2026-10-13: the test secret answers `success` and the hostname
-      `example.com`, but no `action`, so `verifyCaptcha` refuses its token
-      with or without `hostnames: ['example.com']` (below). Left: the hostname
-      behind Cloudflare, which needs a real token from a real browser, and the
-      test-secret part once that is fixed.
+      2026-10-13: the test secret answers `success`, the hostname
+      `example.com` and `metadata.result_with_testing_key: true`, but no
+      `action`, so `verifyTurnstile` skips the action for such an answer and
+      checks only the hostname. Rerun the same day
+      (`check:deployed:cloudflare --captcha turnstile "test secret"`):
+      `verifyCaptcha` passed the token with `hostnames: ['example.com']` and
+      refused it with the default, naming `example.com`. Behind Cloudflare,
+      a real token from a real Chrome passed with the default `hostnames`, the
+      request's own host `astromech-testing.paragramagency.com` (the first
+      item above).
 - [x] On a deployed Worker: `ASTROMECH_CAPTCHA_SECRET` set with
       `wrangler secret put` is read, its absence refuses requests in
       production, and `cf-connecting-ip` reaches siteverify as `remoteip`.
@@ -160,18 +179,13 @@ screen in chromium. These need real keys or a deployed Worker:
 
 ## Left open
 
-- **Turnstile's test secret fails every captcha check.** Its siteverify
-  answer has `success`, `hostname` (`example.com`), `challenge_ts`,
-  `error-codes` and `metadata`, but no `action`, so `verifyTurnstile` refuses
-  it as "Token was issued for another action". A site on the test keys can
-  neither sign in nor request a reset, and setting `hostnames`, as
-  `apps/docs/configuration/security.md` advises for the test keys, does not
-  help. Found 2026-10-13 by `check:deployed:cloudflare --captcha turnstile`.
-- **Astro's `security.csp` blocks the admin's theme script.** The `is:inline`
-  script in `packages/admin/src/shell.astro` gets no hash in the policy, so
-  every admin page logs a violation and the script that sets the system theme
-  before paint does not run. Found 2026-10-13 on the sign-in, setup and
-  forgot-password pages.
+- **The rich-text editor breaks Astro's default `security.csp`.** With
+  `csp: true`, `check:boot` in chromium logged a `style-src` violation
+  ("Applying inline style") from the TipTap/ProseMirror chunk, likely on an
+  entry edit page, so the admin needs more than the captcha sources
+  `apps/docs/configuration/security.md` lists. Found 2026-10-13; the shell's
+  hash check runs in `check:boot:cloudflare`, which has no browser step, for
+  that reason.
 - **`cf-connecting-ip` is trusted on workerd unchecked**
   (`roadmap/completed/auth-rate-limit-defects.md`), so a forged value could
   dodge a block there.

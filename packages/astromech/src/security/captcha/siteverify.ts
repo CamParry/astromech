@@ -11,6 +11,7 @@ export type SiteverifyBody = {
     action?: unknown;
     hostname?: unknown;
     'error-codes'?: unknown;
+    metadata?: unknown;
 };
 
 /** A verified token, carrying the body so a provider can apply extra checks. */

@@ -36,6 +36,9 @@ type ViteUpdate = {
 /** Astro's `security.allowedDomains`, as a site writes it. */
 type AllowedDomains = { hostname?: string; protocol?: string; port?: string }[];
 
+/** Astro's `security.csp`, as a site writes it. */
+type Csp = boolean | { scriptDirective?: { resources?: string[] } };
+
 const packageSource = fileURLToPath(new URL('../../../src', import.meta.url));
 
 // No imports, so jiti can load it from a directory outside the package.
@@ -161,6 +164,24 @@ describe('astromech()', () => {
             }
         );
 
+        it.each([
+            [false, false],
+            [true, true],
+            [{ scriptDirective: { resources: ["'self'"] } }, true],
+        ] satisfies [Csp, boolean][])(
+            'serves astroSendsCsp for security.csp %j as %s',
+            async (csp, expected) => {
+                const { integration, recorded, done } = await runSetup(undefined, {
+                    csp,
+                });
+                await integration.hooks['astro:config:done']?.(done);
+
+                expect(loadConfigModule(recorded)).toContain(
+                    `export const astroSendsCsp = ${String(expected)};`
+                );
+            }
+        );
+
         it('serves the names of the migrations in migrationsDir, so a Worker can check them', async () => {
             await mkdir(join(root, 'migrations'));
             await writeFile(
@@ -277,7 +298,7 @@ async function runSetup(integrations?: { name: string }[], site: Site = {}) {
 }
 
 /** The Astro config a fake site sets beyond its integrations. */
-type Site = { allowedDomains?: AllowedDomains };
+type Site = { allowedDomains?: AllowedDomains; csp?: Csp };
 
 /** Recording fakes for both hooks, for a site whose integrations are `integrations`. */
 function createFakes(
@@ -301,7 +322,7 @@ function createFakes(
     const config = {
         root: pathToFileURL(`${root}/`),
         integrations,
-        security: { allowedDomains: site.allowedDomains ?? [] },
+        security: { allowedDomains: site.allowedDomains ?? [], csp: site.csp ?? false },
     };
 
     const setup = {

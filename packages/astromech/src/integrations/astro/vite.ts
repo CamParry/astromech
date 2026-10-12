@@ -36,6 +36,8 @@ export type ViteConfigOptions = {
     resolvedConfig: ResolvedConfig;
     /** Whether Astro takes `clientAddress` from `x-forwarded-for`, known once its config is done. */
     astroReadsForwardedFor: () => boolean;
+    /** Whether Astro sends a content security policy (`security.csp`), known once its config is done. */
+    astroSendsCsp: () => boolean;
     /** The app's migration names, bundled for a runtime with no file system; null with no chain. */
     migrationNames: readonly string[] | null;
 };
@@ -49,6 +51,7 @@ export function createViteConfig({
     config,
     resolvedConfig,
     astroReadsForwardedFor,
+    astroSendsCsp,
     migrationNames,
 }: ViteConfigOptions): ViteConfig {
     const rootDir = fileURLToPath(root);
@@ -106,6 +109,7 @@ export function createViteConfig({
                 liveConfigModule(
                     resolveConfigPath(rootDir, configFile),
                     astroReadsForwardedFor(),
+                    astroSendsCsp(),
                     migrationNames
                 )
             ),
@@ -165,12 +169,14 @@ function pluginOptimizeDeps(def: PluginDefinition): string[] {
 function liveConfigModule(
     configPath: string,
     astroReadsForwardedFor: boolean,
+    astroSendsCsp: boolean,
     migrationNames: readonly string[] | null
 ): string {
     return [
         `import rawConfig from ${specifier(configPath)};`,
         `export { rawConfig };`,
         `export const astroReadsForwardedFor = ${String(astroReadsForwardedFor)};`,
+        `export const astroSendsCsp = ${String(astroSendsCsp)};`,
         `export const migrationNames = ${JSON.stringify(migrationNames)};`,
     ].join('\n');
 }

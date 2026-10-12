@@ -42,13 +42,18 @@ const CAPTCHA_CSP = {
 };
 
 // With a captcha on (`astromech.config.ts`), the site sends the policy the
-// docs give for it, so a captcha run checks those sources too.
+// docs give for it, so a captcha run checks those sources too. Without one,
+// `SECURITY_CSP=1` sends Astro's default policy, which `check:boot:cloudflare`
+// builds with to check the admin's inline scripts are hashed.
 const captchaProvider = process.env.CAPTCHA_PROVIDER;
+const csp = captchaProvider
+    ? CAPTCHA_CSP[captchaProvider]
+    : process.env.SECURITY_CSP === '1' || undefined;
 
 export default defineConfig({
     site: 'https://demo-cloudflare.astromech.dev',
     output: 'server',
-    ...(captchaProvider ? { security: { csp: CAPTCHA_CSP[captchaProvider] } } : {}),
+    ...(csp ? { security: { csp } } : {}),
     adapter: cloudflare(),
     // Astromech does not use Astro sessions. Left on, the adapter adds a
     // `SESSION` KV binding, and `wrangler deploy` creates a namespace for it.
