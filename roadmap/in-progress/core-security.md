@@ -126,10 +126,14 @@ screen in chromium. These need real keys or a deployed Worker:
       deployment the real widget renders on the sign-in and forgot-password
       pages under the documented policy, which blocks nothing of Turnstile's;
       on a local Worker with the test keys, so does setup, and all three send
-      the token in `x-captcha-response`. Left: token expiry (a test key's token
-      did not expire in six minutes, so it needs the real widget in a real
-      browser), reCAPTCHA v3's `execute`, and the policy blocking the admin's
-      theme script (below).
+      the token in `x-captcha-response`. The policy also blocked the admin's
+      theme script, an `is:inline` script Astro does not hash; the shell now
+      adds its hash to its own page's policy when `security.csp` is set, and
+      `check:boot:cloudflare` builds with Astro's default policy and finds the
+      hash of every inline script on `/cms` in its `script-src` (2026-10-13).
+      Left: token expiry (a test key's token did not expire in six minutes, so
+      it needs the real widget in a real browser) and reCAPTCHA v3's
+      `execute`.
 - [ ] The hostname check behind a real proxy or CDN, and `hostnames` with
       Turnstile's test secret, which answers `example.com`. Checked
       2026-10-13: the test secret answers `success`, the hostname
@@ -163,11 +167,6 @@ screen in chromium. These need real keys or a deployed Worker:
 
 ## Left open
 
-- **Astro's `security.csp` blocks the admin's theme script.** The `is:inline`
-  script in `packages/admin/src/shell.astro` gets no hash in the policy, so
-  every admin page logs a violation and the script that sets the system theme
-  before paint does not run. Found 2026-10-13 on the sign-in, setup and
-  forgot-password pages.
 - **`cf-connecting-ip` is trusted on workerd unchecked**
   (`roadmap/completed/auth-rate-limit-defects.md`), so a forged value could
   dodge a block there.

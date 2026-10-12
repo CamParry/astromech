@@ -8,6 +8,12 @@ declare module 'virtual:astromech/config' {
      * rather than the connection.
      */
     export const astroReadsForwardedFor: boolean;
+    /**
+     * Whether Astro's `security.csp` is set, so Astro sends a content security
+     * policy. `Astro.csp` is undefined without one, and reading it then logs a
+     * warning in production.
+     */
+    export const astroSendsCsp: boolean;
     /** The app's migration names when the site was built, or null with no chain. */
     export const migrationNames: readonly string[] | null;
 }

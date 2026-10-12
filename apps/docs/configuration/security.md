@@ -186,7 +186,9 @@ own server code, call `verifyCaptcha({ token, action })` from `astromech`.
 ### Content security policy
 
 A site that sets Astro's `security.csp` must allow the provider's script and
-frames, on its own pages and on the admin, which the policy covers too:
+frames, on its own pages and on the admin, which the policy covers too. The
+admin needs nothing more: it adds the hash of its one inline script to its own
+page's policy.
 
 | Provider    | Directives                                                                                                                                                                     |
 | ----------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |

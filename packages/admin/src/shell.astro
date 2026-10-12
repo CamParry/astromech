@@ -7,6 +7,7 @@
  *
  * Registered at `${basePath}/[...path]` by Astromech's route registration.
  */
+import { astroSendsCsp } from 'virtual:astromech/config';
 import AdminApp from './main.tsx';
 
 export const prerender = false;
@@ -18,6 +19,27 @@ export const prerender = false;
 const cookieTheme = Astro.cookies.get('am-theme')?.value;
 const initialTheme =
     cookieTheme === 'light' || cookieTheme === 'dark' ? cookieTheme : undefined;
+
+// Rendered as is, so its hash below matches what the browser hashes. No-ops
+// when the server already stamped a cookie-driven theme.
+const themeScript = `if (!document.documentElement.hasAttribute('data-theme')) {
+    document.documentElement.dataset.theme = window.matchMedia('(prefers-color-scheme: dark)').matches
+        ? 'dark'
+        : 'light';
+}`;
+
+// Astro hashes the scripts it bundles, not an inline one, so with
+// `security.csp` set this page adds the script's hash to its own policy.
+// `Astro.csp` is read only then: without a policy, a read logs a warning in
+// production.
+if (astroSendsCsp) {
+    const digest = await crypto.subtle.digest(
+        'SHA-256',
+        new TextEncoder().encode(themeScript)
+    );
+    const hash = btoa(String.fromCharCode(...new Uint8Array(digest)));
+    Astro.csp?.insertScriptHash(`sha256-${hash}`);
+}
 ---
 
 <!doctype html>
@@ -29,18 +51,9 @@ const initialTheme =
         <title>Astromech CMS</title>
         {
             /* First-time visitors have no cookie, so the server left data-theme
-            unset — resolve it from the system preference before paint. No-ops
-            when the server already stamped a cookie-driven theme. */
+            unset: resolve it from the system preference before paint. */
         }
-        <script is:inline>
-            if (!document.documentElement.hasAttribute('data-theme')) {
-                document.documentElement.dataset.theme = window.matchMedia(
-                    '(prefers-color-scheme: dark)'
-                ).matches
-                    ? 'dark'
-                    : 'light';
-            }
-        </script>
+        <script is:inline set:html={themeScript} />
     </head>
     <body>
         <AdminApp client:only="react" />

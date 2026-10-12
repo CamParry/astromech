@@ -12,6 +12,9 @@
 // No browser step. `check:boot` already loads the admin in chromium, and the
 // admin bundle is the same one either platform serves.
 //
+// The app is built with Astro's `security.csp` on, and every inline script
+// `/cms` serves must have its hash in the policy it sends.
+//
 // D1 and R2 come from wrangler's local emulation, so this needs no Cloudflare
 // account and no network. Both the build (which applies migrations through
 // `getPlatformProxy()`) and the served Worker must be pointed at the same
@@ -25,6 +28,7 @@
 // passed with `--env-file`, so no value is written into the app or committed.
 // Without one the Worker refuses every request and `/` answers 500.
 import { spawn } from 'node:child_process';
+import { createHash } from 'node:crypto';
 import { mkdtemp, rm, writeFile } from 'node:fs/promises';
 import { constants, tmpdir } from 'node:os';
 import { dirname, join, resolve } from 'node:path';
@@ -84,6 +88,8 @@ async function main() {
         CI: 'true',
         // The check needs no network, so wrangler sends no usage data.
         WRANGLER_SEND_METRICS: 'false',
+        // Builds with Astro's `security.csp` on (`apps/demo-cloudflare/astro.config.mjs`).
+        SECURITY_CSP: '1',
     };
 
     step('building apps/demo-cloudflare');
@@ -107,6 +113,7 @@ async function main() {
 
     await expectHtml(`${base}/`, 'the site renders');
     await expectHtml(`${base}/cms`, 'the admin route is mounted');
+    await expectInlineScriptsHashed(`${base}/cms`);
     // 401 rather than 500 proves the API is mounted and rejecting an anonymous
     // caller, not that the runtime never booted against its D1 binding.
     await expectStatus(
@@ -146,6 +153,42 @@ async function expectHtml(url, description) {
         );
     }
     console.log(`  ok  200 ${url} — ${description}`);
+}
+
+/**
+ * Every inline script `url` serves has its hash in the `script-src` of the
+ * policy Astro sends, the admin's theme script among them: Astro hashes only
+ * the scripts it bundles, and the admin's shell adds its own.
+ */
+async function expectInlineScriptsHashed(url) {
+    const response = await request(url);
+    const policy = response.headers.get('content-security-policy') ?? '';
+    const scriptSrc = policy
+        .split(';')
+        .map((directive) => directive.trim())
+        .find((directive) => directive.startsWith('script-src '));
+    if (scriptSrc === undefined) {
+        throw new Error(`${url} sent no script-src in its policy: "${policy}"`);
+    }
+    const html = await response.text();
+    const inline = [
+        ...html.matchAll(/<script(?![^>]*\ssrc=)[^>]*>([\s\S]*?)<\/script>/g),
+    ];
+    const missing = inline.filter(
+        ([, source]) =>
+            !scriptSrc.includes(
+                `'sha256-${createHash('sha256').update(source).digest('base64')}'`
+            )
+    );
+    if (inline.length === 0 || missing.length > 0) {
+        throw new Error(
+            `${url}: ${missing.length} of ${inline.length} inline scripts have no hash in "${scriptSrc}":\n` +
+                missing.map(([tag]) => tag.slice(0, 200)).join('\n')
+        );
+    }
+    console.log(
+        `  ok  ${url} — its ${inline.length} inline scripts are hashed in its script-src`
+    );
 }
 
 /**

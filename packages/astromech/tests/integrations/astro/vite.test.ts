@@ -40,6 +40,7 @@ describe('createViteConfig()', () => {
         config,
         resolvedConfig,
         astroReadsForwardedFor: () => false,
+        astroSendsCsp: () => false,
         migrationNames: ['0000_baseline'],
     });
 
@@ -68,7 +69,7 @@ describe('createViteConfig()', () => {
 
     it('serves virtual:astromech/config as a re-export of the config file', () => {
         expect(loadVirtualModule(vite, 'virtual:astromech/config')).toBe(
-            'import rawConfig from "/site/site.config.ts";\nexport { rawConfig };\nexport const astroReadsForwardedFor = false;\nexport const migrationNames = ["0000_baseline"];'
+            'import rawConfig from "/site/site.config.ts";\nexport { rawConfig };\nexport const astroReadsForwardedFor = false;\nexport const astroSendsCsp = false;\nexport const migrationNames = ["0000_baseline"];'
         );
     });
 
@@ -236,6 +237,7 @@ function includeWith(plugins: PluginDefinition[]): string[] {
         config,
         resolvedConfig: resolveConfig(config),
         astroReadsForwardedFor: () => false,
+        astroSendsCsp: () => false,
         migrationNames: null,
     });
     return (vite.optimizeDeps?.include ?? []).filter((entry) => entry !== undefined);

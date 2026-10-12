@@ -23,7 +23,7 @@ pnpm run preview              # wrangler dev over the built Worker
 
 ## The gate
 
-`pnpm run check:boot:cloudflare` from the repo root builds this app, serves it on workerd and asserts `/`, `/cms`, `/cms/api/entries/post`, a `scheduled()` tick and four sign-ins from one address (three refused passwords, then the rate limit). The sign-ins run last: the script says why. It is too slow for the pre-commit hook, so run it by hand after anything touching the Cloudflare path.
+`pnpm run check:boot:cloudflare` from the repo root builds this app with Astro's `security.csp` on (`SECURITY_CSP=1`), serves it on workerd and asserts `/`, `/cms` and the hashes of its inline scripts in its policy, `/cms/api/entries/post`, a `scheduled()` tick and four sign-ins from one address (three refused passwords, then the rate limit). The sign-ins run last: the script says why. It is too slow for the pre-commit hook, so run it by hand after anything touching the Cloudflare path.
 
 ## Testing deployment
 
