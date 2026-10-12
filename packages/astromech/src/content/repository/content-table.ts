@@ -774,12 +774,9 @@ export function createContentRepository<
         guard?: WriteGuard
     ): Promise<R | null> {
         if (guard === undefined) {
-            const canonical = await findCanonical(
-                ref.id,
-                ref.locale ?? defaultLocale(),
-                false
-            );
-            if (!canonical) throw missing(ref.id, ref.locale ?? defaultLocale());
+            const locale = ref.locale ?? defaultLocale();
+            const canonical = await findCanonical(ref.id, locale, false);
+            if (!canonical) throw missing(ref.id, locale);
             const { contentRow } = split(canonical);
             const contentId = String(contentRow['id']) as ContentRowId;
             return required(await createStagedRow(ref, data, { contentId }), ref.id);
