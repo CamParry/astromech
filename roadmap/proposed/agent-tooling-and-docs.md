@@ -30,9 +30,9 @@ this file to `planned/`.
       three commit types), and the `api` skill still describes `safeParse`
       routes. `.claude/settings.local.json` repeats both project hooks.
 - [ ] **Turn repeated-mistake memories into hooks and checks.** Give
-      `scripts/check-boot.mjs` and `scripts/check-boot-cloudflare.mjs` a
+      `scripts/check-boot.ts` and `scripts/check-boot-cloudflare.ts` a
       throwaway `BETTER_AUTH_SECRET` and an unset `NODE_ENV`, as
-      `scripts/check-install.mjs:122` does. The Bash hook
+      `siteEnvironment` in `scripts/check-install.ts` does. The Bash hook
       (`.claude/hooks/guard-bash-commands.mjs`) covers `stash`; make it
       cover `--no-verify` and `npm install` too. Deny `isolation: "worktree"` on the Agent tool. Add a
       drift test over `apps/demo-cloudflare/migrations/snapshot.json`. Retire

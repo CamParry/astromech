@@ -5,9 +5,16 @@
  *
  *     node scripts/turbo.ts [--lock] [--no-dts] [--filter <pattern>]… <task>…
  *
- * The root `build`, `build:js`, `typecheck`, `lint` and `test:run` scripts and
- * the Cloudflare demo's `deploy:testing` run through it, as does the
+ * The root `build`, `build:js`, `typecheck`, `typecheck:apps`, `lint`,
+ * `test:run`, `check:boot`, `check:boot:cloudflare`, `check:install` and
+ * `check:install:pnpm` scripts
+ * and the Cloudflare demo's `deploy:testing` run through it, as does the
  * worktree's post-create build (`.config/wt.toml`, through `pnpm run build`).
+ *
+ * It passes no arguments to the tasks: Turborepo gives arguments after its
+ * `--` to every task it runs, the builds a check waits for included, and they
+ * change each one's hash. A check that takes an argument has a script for
+ * each value, as `check:install` and `check:install:pnpm` do.
  *
  * Exit codes: Turborepo's, or this process is stopped by the signal that
  * stopped Turborepo; 2 on a usage error.
@@ -21,18 +28,22 @@
  *   `--affected`.
  * - `--lock` waits for the run lock first (`scripts/lib/run-lock.ts`), so the
  *   run never goes beside a gate, build, test run or boot check in any
- *   worktree. `build`, `build:js` and `test:run` pass it. `typecheck` and
- *   `lint` do not: they are the quick checks run between edits, they need a
- *   fraction of a test suite's memory, and waiting behind a whole gate for
- *   them would cost more than they save.
+ *   worktree. `build`, `build:js`, `test:run`, the checks and the builds
+ *   `typecheck:apps` runs pass it. `typecheck` and `lint` do not: they are the
+ *   quick checks run between edits, they need a fraction of a test suite's
+ *   memory, and waiting behind a whole gate for them would cost more than
+ *   they save. A check that takes the lock itself, as the boot checks do, goes
+ *   ahead under it.
  * - `--no-dts` sets `ASTROMECH_NO_DTS`, which `build` lists in its `env`, so
  *   the builds write no declarations, as the gate's runtime mode does.
  * - `--filter` is passed to Turborepo, as `turbo run --filter` takes it. The
  *   root `typecheck` leaves out the apps (`--filter='!./apps/*'`), whose
- *   typecheck waits for their boot checks, and type-checks them after, against
- *   the `dist` already built (`typecheck:apps`). Turborepo's `--only` would
- *   skip the boot checks too, but it leaves the tasks it skips out of each
- *   hash, so a pass could be restored after a package it reads had changed.
+ *   typecheck waits for their boot checks, and type-checks them after
+ *   (`typecheck:apps`), once this has built the packages they read
+ *   (`--filter='astromech-demo^...'`) and written the admin's route tree,
+ *   which git ignores. Turborepo's `--only` would skip the boot checks too, but
+ *   it leaves the tasks it skips out of each hash, so a pass could be restored
+ *   after a package it reads had changed.
  *
  * A failed task does not stop the others (`--continue=dependencies-successful`).
  */

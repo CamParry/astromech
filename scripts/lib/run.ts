@@ -3,9 +3,10 @@ import { execFileSync, spawn } from 'node:child_process';
 
 /**
  * Runs a command as a child process: `run` with its output on this process's
- * terminal, `capture` for its standard output. Every script starts its
- * commands through these, over `node:child_process`, rather than through a
- * library such as `execa` or `zx`.
+ * terminal, `capture` for its standard output, and `start` with its output
+ * kept, for a server or a command whose output is printed only on a failure.
+ * Every script starts its commands through these, over `node:child_process`,
+ * rather than through a library such as `execa` or `zx`.
  */
 
 export type RunOptions = SpawnOptions & {
@@ -37,6 +38,73 @@ export function run(
                 );
         });
     });
+}
+
+/** A process `start` began: its output so far, and how it ended once it has. */
+export type StartedProcess = {
+    readonly child: ChildProcess;
+    /** Its standard output and standard error so far, as they arrived. */
+    output: string;
+    /** Its exit code, or the signal that stopped it, once it has exited. */
+    exited?: number | NodeJS.Signals;
+    /**
+     * Fulfils when it exits with 0, and rejects when it exits with any other
+     * code, is stopped by a signal, or cannot start.
+     */
+    readonly done: Promise<void>;
+};
+
+export type StartOptions = SpawnOptions & {
+    /** Written to its standard input, which is then closed. */
+    input?: string;
+};
+
+/**
+ * Starts `command` with its standard output and standard error captured into
+ * `output` rather than printed, for a server a check serves from or a command
+ * whose output is printed only when the check fails. Its standard input gets
+ * `options.input`, or nothing. Await `done` to wait for its end.
+ */
+export function start(
+    command: string,
+    args: readonly string[],
+    { input, ...options }: StartOptions = {}
+): StartedProcess {
+    const child = spawn(command, args, {
+        ...options,
+        stdio: [input === undefined ? 'ignore' : 'pipe', 'pipe', 'pipe'],
+    });
+    if (input !== undefined) child.stdin?.end(input);
+    const started: StartedProcess = {
+        child,
+        output: '',
+        done: new Promise((fulfil, reject) => {
+            child.on('error', reject);
+            // `close` comes once its output is all read, which can be after
+            // `exit` when a process it started still holds the pipes.
+            child.on('close', (code, signal) => {
+                if (code === 0) fulfil();
+                else
+                    reject(
+                        new Error(
+                            `${command} ${args.join(' ')} exited with ${code ?? signal}`
+                        )
+                    );
+            });
+        }),
+    };
+    // A server stopped at the end of a check exits with a signal, and nothing
+    // awaits its end, so that rejection is not an unhandled one.
+    started.done.catch(() => undefined);
+    child.on('exit', (code, signal) => {
+        started.exited = code ?? signal ?? undefined;
+    });
+    const record = (chunk: Buffer): void => {
+        started.output += chunk.toString();
+    };
+    child.stdout?.on('data', record);
+    child.stderr?.on('data', record);
+    return started;
 }
 
 /**

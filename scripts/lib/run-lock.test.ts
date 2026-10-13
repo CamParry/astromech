@@ -218,3 +218,33 @@ test('runCommand with the lock passes Ctrl-C on to its command and releases the 
     assert.equal(signalGroup(group, 0), false, 'the command has stopped');
     assert.equal(existsSync(lockPath), false);
 });
+
+test('runCommand with the lock lets a run its command starts go ahead without it', async () => {
+    const { env } = lockDirectory();
+    // As `scripts/turbo.ts --lock` runs a boot check, which takes the lock
+    // too: with a copy of the environment made before the lock was taken.
+    const nested = `import { waitForRunLock } from '${runLockUrl}';
+console.log('nested run took the lock:', await waitForRunLock('nested'));`;
+    const wrapper = start(
+        [
+            '--input-type=module',
+            '-e',
+            `import { endAs, runCommand } from '${runLockUrl}';
+const env = { ...process.env };
+endAs(await runCommand(process.execPath, ['--input-type=module', '-e', ${JSON.stringify(nested)}], { env, lock: 'test' }));`,
+        ],
+        env
+    );
+    const { code, output } = await Promise.race([
+        wrapper.exited,
+        new Promise<never>((_, reject) =>
+            setTimeout(
+                () => reject(new Error(`the nested run waited: ${wrapper.output()}`)),
+                10_000
+            )
+        ),
+    ]);
+
+    assert.equal(code, 0, output);
+    assert.match(output, /nested run took the lock: false/);
+});

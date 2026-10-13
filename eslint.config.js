@@ -429,7 +429,7 @@ export default tseslint.config(
         files: [
             'packages/astromech/scripts/seed.ts',
             'packages/plugins/assistant/scripts/**',
-            'scripts/check-deployed-cloudflare.mjs',
+            'scripts/check-deployed-cloudflare.ts',
         ],
         rules: { 'turbo/no-undeclared-env-vars': 'off' },
     },

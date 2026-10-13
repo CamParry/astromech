@@ -1,7 +1,7 @@
 {
-    // The scripts package's own tasks read only its own files, and wait for
-    // nothing: no script imports a package's source or `dist`. The tests also
-    // read the workspace's manifests and the root `turbo.json`
+    // The scripts package's typecheck, lint and tests read only its own files,
+    // and wait for nothing: no script imports a package's source or `dist`.
+    // The tests also read the workspace's manifests and the root `turbo.json`
     // (`lib/gate.test.ts`, `lib/workspace-packages.test.ts`). The package has
     // no build and no coverage run, so it leaves out those tasks, which would
     // otherwise wait for `//#routes:generate`.
@@ -17,6 +17,45 @@
         "lint": {
             "dependsOn": [],
             "inputs": ["$TURBO_DEFAULT$", "!**/*.md"]
+        },
+        // `check-install.ts`, with npm and with pnpm, run by the root
+        // `check:install` and `check:install:pnpm` scripts. It packs the
+        // published packages and runs publint on each, so it waits for every
+        // one's build, and its `dist` is the one their sources make.
+        // Turborepo has no `dependsOn` form for every package's build, and
+        // this package depends on none, so the builds are listed by hand;
+        // `lib/gate.test.ts` fails when one is missing. Never cached: it
+        // installs unpinned packages from the npm registry, so a run can fail
+        // with nothing here changed.
+        "check:install": {
+            "dependsOn": [
+                "@astromech/schema-engine#build",
+                "@astromech/admin#build",
+                "astromech#build",
+                "@astromech/assistant#build",
+                "@astromech/backups#build",
+                "@astromech/forms#build",
+                "@astromech/menus#build",
+                "@astromech/redirects#build",
+                "@astromech/seo#build"
+            ],
+            "cache": false,
+            "env": ["BETTER_AUTH_SECRET"]
+        },
+        "check:install:pnpm": {
+            "dependsOn": [
+                "@astromech/schema-engine#build",
+                "@astromech/admin#build",
+                "astromech#build",
+                "@astromech/assistant#build",
+                "@astromech/backups#build",
+                "@astromech/forms#build",
+                "@astromech/menus#build",
+                "@astromech/redirects#build",
+                "@astromech/seo#build"
+            ],
+            "cache": false,
+            "env": ["BETTER_AUTH_SECRET"]
         },
         "test": {
             "inputs": [

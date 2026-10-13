@@ -3,11 +3,20 @@
  * from the first `/cms` load through first-run setup to a post's edit page and
  * the Security screen.
  */
+import type { Browser, Locator } from 'playwright';
+import console from 'node:console';
 import { URL } from 'node:url';
-import { REQUEST_TIMEOUT_MS, step } from './lib/check-helpers.ts';
+import { REQUEST_TIMEOUT_MS, step } from './check-helpers.ts';
 
-// The policy check passes a function to chromium, which runs in the page.
-/* global window, document */
+/** The function the page calls with each policy violation (`exposeFunction` below). */
+type PageWithReporter = typeof globalThis & { reportCspViolation(line: string): void };
+
+/** Which optional screens `expectAdminWorks` opens, and whether a warning fails it. */
+export type AdminCheckOptions = {
+    pluginPage?: boolean;
+    adminResource?: boolean;
+    failOnWarnings?: boolean;
+};
 
 // The admin fetches its session before it can decide which screen to show, so
 // the mounted-app selector arrives a round trip after navigation, not with it.
@@ -35,7 +44,7 @@ const FIRST_ADMIN = {
 
 const POST_TITLE = 'Check boot post';
 
-let browser = null;
+let browser: Browser | null = null;
 
 /**
  * Load `/cms` in headless chromium, assert the React app rendered and landed on
@@ -49,9 +58,13 @@ let browser = null;
  * outlives a failure, so the caller runs `closeAdminBrowser` on every exit path.
  */
 export async function expectAdminWorks(
-    admin,
-    { pluginPage = false, adminResource = false, failOnWarnings = false } = {}
-) {
+    admin: string,
+    {
+        pluginPage = false,
+        adminResource = false,
+        failOnWarnings = false,
+    }: AdminCheckOptions = {}
+): Promise<void> {
     step('loading /cms in headless chromium');
     const { chromium } = await import('playwright');
 
@@ -60,7 +73,7 @@ export async function expectAdminWorks(
     } catch (error) {
         // The npm install brings the driver, not the browser binary.
         throw new Error(
-            `could not launch chromium: run \`pnpm exec playwright install chromium\` (${error.message})`,
+            `could not launch chromium: run \`pnpm exec playwright install chromium\` (${(error as Error).message})`,
             { cause: error }
         );
     }
@@ -84,8 +97,8 @@ export async function expectAdminWorks(
     // `astro dev`, Vite forwards the browser's warnings to the terminal only
     // when it detects an AI agent, so the dev output cannot be relied on to
     // show them.
-    const errors = [];
-    const notes = [];
+    const errors: string[] = [];
+    const notes: string[] = [];
     let signedIn = false;
     page.on('console', (message) => {
         if (failOnWarnings && message.type() === 'warning') {
@@ -104,23 +117,27 @@ export async function expectAdminWorks(
     // screen. Chromium logs a violation as an argument-less console error,
     // which before sign-in is only a note, so the page's
     // `securitypolicyviolation` events are collected on their own.
-    await page.exposeFunction('reportCspViolation', (line) => errors.push(line));
+    await page.exposeFunction('reportCspViolation', (line: string) => errors.push(line));
     await page.addInitScript(() => {
         document.addEventListener('securitypolicyviolation', (event) => {
-            window.reportCspViolation(
+            (globalThis as PageWithReporter).reportCspViolation(
                 `csp: ${event.effectiveDirective} blocked ${event.blockedURI} at ${event.sourceFile || event.documentURI}:${event.lineNumber}:${event.columnNumber}`
             );
         });
     });
 
     /** Wait for `locator` to be visible, naming what it stands for if that fails. */
-    async function waitFor(locator, description, timeout = SCREEN_TIMEOUT_MS) {
+    async function waitFor(
+        locator: Locator,
+        description: string,
+        timeout = SCREEN_TIMEOUT_MS
+    ): Promise<void> {
         try {
             await locator.waitFor({ state: 'visible', timeout });
         } catch (error) {
             // Playwright's first line says what went wrong: a timeout, or
             // something else such as a strict-mode violation.
-            const reason = error.message.split('\n')[0];
+            const reason = (error as Error).message.split('\n')[0];
             throw new Error(
                 `waiting for ${description} at ${page.url()} failed: ${reason}${formatLines([...errors, ...notes])}`,
                 { cause: error }
@@ -176,7 +193,9 @@ export async function expectAdminWorks(
             `GET ${meUrl} returned ${me.status()}, expected 200: ${await me.text()}`
         );
     }
-    const { data: session } = await me.json();
+    const { data: session } = (await me.json()) as {
+        data: { role: { slug: string } };
+    };
     if (session.role.slug !== 'admin') {
         throw new Error(
             `the first account holds role "${session.role.slug}", expected "admin"`
@@ -202,7 +221,7 @@ export async function expectAdminWorks(
         }),
         signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
     });
-    const refusal = await signUp.json().catch(() => ({}));
+    const refusal = (await signUp.json().catch(() => ({}))) as { code?: string };
     if (signUp.status !== 403 || refusal.code !== 'SIGN_UP_CLOSED') {
         throw new Error(
             `POST ${signUpUrl} returned ${signUp.status} ${JSON.stringify(refusal)}, expected 403 SIGN_UP_CLOSED`
@@ -237,7 +256,7 @@ export async function expectAdminWorks(
             `POST ${createUrl} returned ${response.status()}, expected 201: ${await response.text()}`
         );
     }
-    const { data: post } = await response.json();
+    const { data: post } = (await response.json()) as { data: { id: string } };
     console.log(`  ok  201 POST ${createUrl} (the session cookie authorises a write)`);
 
     await page.goto(`${admin}/entries/post/${post.id}`, {
@@ -341,7 +360,7 @@ export async function expectAdminWorks(
                 `POST ${createUrl} returned ${created.status()}, expected 200: ${await created.text()}`
             );
         }
-        const rule = await created.json();
+        const rule = (await created.json()) as { id: string };
         console.log(`  ok  200 POST ${createUrl} (the plugin create method answers)`);
 
         // One resource under the plugin flattens to a single sidebar link.
@@ -386,14 +405,14 @@ export async function expectAdminWorks(
 }
 
 /** Close the browser `expectAdminWorks` launched, if it is still open. */
-export async function closeAdminBrowser() {
+export async function closeAdminBrowser(): Promise<void> {
     if (browser === null) return;
     const open = browser;
     browser = null;
     await open.close();
 }
 
-function formatLines(lines) {
+function formatLines(lines: string[]): string {
     if (lines.length === 0) return '';
     return `\n${lines.map((line) => `      ${line}`).join('\n')}`;
 }

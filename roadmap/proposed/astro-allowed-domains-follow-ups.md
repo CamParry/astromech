@@ -8,7 +8,7 @@ Astro 7.3.6 changed how its Node adapter builds a request's URL: it trusts the
 `Host` header only when it matches `security.allowedDomains`, and otherwise
 uses `localhost` and the server's port. The
 [installation guide](../../apps/docs/installation.md#2-add-the-integration-to-astro)
-sets `allowedDomains` for this reason, and `scripts/check-install.mjs` follows
+sets `allowedDomains` for this reason, and `scripts/check-install.ts` follows
 it. These gaps are left.
 
 ## Gaps

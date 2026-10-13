@@ -15,7 +15,7 @@ allowBuilds:
     workerd: true
 
 # Never prompt before removing node_modules when the layout changes. The prompt
-# reads stdin, and scripts/check-boot.mjs spawns pnpm with `stdio: 'inherit'`,
+# reads stdin, and scripts/check-boot.ts spawns pnpm with `stdio: 'inherit'`,
 # so a prompt there waits on a terminal that isn't attached and hangs the gate.
 confirmModulesPurge: false
 
