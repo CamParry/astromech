@@ -1,7 +1,8 @@
 /**
  * One config per resource type: what the shared helpers in `content/` read to treat an
  * entry, a global, a user and a media item alike. What the four do not share
- * stays in each module; `DECISIONS.md` says why the config holds no repository.
+ * stays in each module; `decisions/resources-share-helpers-by-name.md` says why the
+ * config holds no repository.
  */
 
 import type {

@@ -150,9 +150,10 @@ describe('libsql restore', () => {
         return rows;
     }
 
-    // Column order is not part of the schema contract (`DECISIONS.md`): a
-    // migrated table and a fresh build can hold the same columns in another
-    // order, so the copy matches columns by name.
+    // Column order is not part of the schema contract
+    // (`decisions/column-order-is-not-schema.md`): a migrated table and a fresh
+    // build can hold the same columns in another order, so the copy matches
+    // columns by name.
     it('restores each value into its column when the live table orders them differently', async () => {
         const db = await createTestDb();
         const { dump, restore } = dumpAndRestore();

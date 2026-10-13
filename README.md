@@ -93,7 +93,8 @@ Three files at the root answer the questions the code does not:
 
 - [ARCHITECTURE.md](ARCHITECTURE.md): where code lives and what it may import.
 - [TERMINOLOGY.md](TERMINOLOGY.md): what a term means today.
-- [DECISIONS.md](DECISIONS.md): why a choice beat its alternatives.
+- [DECISIONS.md](DECISIONS.md): why a choice beat its alternatives, as an index
+  of one file per decision in `decisions/`.
 
 ## Developing
 

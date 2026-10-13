@@ -91,7 +91,8 @@ The CLI does not read `astro.config.mjs`, so give it the same path with
 npx astromech db:init --config ./cms/astromech.config.ts
 ```
 
-[DECISIONS.md](../../DECISIONS.md) records why the integration takes a path
+[The server loads the config as a module](../../decisions/server-loads-the-config-as-a-module.md)
+records why the integration takes a path
 rather than the config itself.
 
 ## 3. Write the config
@@ -233,5 +234,6 @@ them. Install one when you use the driver or command that needs it.
 | `wrangler`                                   | `d1()` and `r2()` outside a Worker: the CLI, `astro dev`, `astro build` | The first database query or file access fails, saying it needs wrangler. Install it as a dev dependency. |
 | `@modelcontextprotocol/sdk`                  | the `astromech mcp` command                                             | The command prints `Install @modelcontextprotocol/sdk to use the MCP server.` and exits with code 1.     |
 
-[DECISIONS.md](../../DECISIONS.md) records which dependencies are optional peers
+[Driver packages are optional peers](../../decisions/driver-packages-are-optional-peers.md)
+records which dependencies are optional peers
 and why.

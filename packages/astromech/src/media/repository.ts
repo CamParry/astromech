@@ -213,8 +213,8 @@ function createMediaRepository() {
         await content.delete(id);
     }
 
-    // Hand-picked, never spread (`DECISIONS.md`, "Resource repositories do not
-    // extend a base"), so a content-repository change reaches no resource unasked.
+    // Hand-picked, never spread (`decisions/repositories-do-not-extend-a-base.md`),
+    // so a content-repository change reaches no resource unasked.
     return {
         findOne,
         findAnyLocale: content.findAnyLocale,

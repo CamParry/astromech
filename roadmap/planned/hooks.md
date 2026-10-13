@@ -25,8 +25,8 @@ Strapi v5, Directus, Keystone 6, Craft 5 and Medusa v2.
 - **An after-hook is an action.** It runs after commit, and its return is
   ignored. A throw is logged naming the plugin and event, the remaining
   handlers and batch items still run, and the call succeeds, since the write
-  committed. This reverses "One hook runner, and a throw always propagates" in
-  `DECISIONS.md`.
+  committed. This reverses
+  [A hook's throw always propagates](../../decisions/hook-throws-propagate.md).
 - **Payload keys, for every resource:** the address (`type` for entries, `key`
   for globals), `operation` (the service method key, e.g. `publish`,
   `mergeStaged`), `locale` (resolved), `original` (the stored row when the
@@ -36,7 +36,8 @@ Strapi v5, Directus, Keystone 6, Craft 5 and Medusa v2.
   carry no `data`; entry delete carries `permanent`. `user` is dropped:
   handlers read `ctx.user`. `original` beat `previous`, `current` and `before`.
 - **A new locale is an update** with `original: null`, for every resource
-  (`DECISIONS.md` already models a translation as an update with a locale).
+  (a translation is already an update with a locale: [`update` with a new locale
+  creates it](../../decisions/update-creates-a-missing-locale.md)).
 - **Batches:** one hook call per item, each with its own copy of `data`.
 - **Staged changes fire their own events**, not the canonical ones:
   `before|afterCreateStaged`, `before|afterUpdateStaged` (an update with
@@ -108,6 +109,7 @@ as forms does.
 - [ ] **Media.** `upload`, `update`, `replace`, `restoreVersion`, `delete`, with
       the storage I/O moved around the hooks.
 - [ ] **After-hook errors and docs.** The log-and-continue rule, a hooks
-      reference page in `apps/docs/plugins/`, and the `DECISIONS.md` entries
-      this changes (the propagate rule, the create re-parse, the stale `hooks`
-      mention).
+      reference page in `apps/docs/plugins/`, and the decisions this
+      changes ([the propagate rule](../../decisions/hook-throws-propagate.md),
+      [the re-parse](../../decisions/bad-hook-output-is-a-500.md), and the stale
+      `hooks` mention in `DECISIONS.md`).

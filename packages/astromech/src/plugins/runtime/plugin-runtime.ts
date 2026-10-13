@@ -1,7 +1,7 @@
 /**
  * Plugin runtime: holds the registry of installed plugins, builds the
  * unified PluginContext, and registers each plugin's hooks with the `hooks/`
- * leaf — a caller like any other (`DECISIONS.md`).
+ * leaf — a caller like any other (`decisions/hook-throws-propagate.md`).
  */
 
 import type { TypedEntriesService } from '@/entries/typed-entries';

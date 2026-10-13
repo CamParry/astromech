@@ -7,8 +7,8 @@
  * the README promises: build `a` in SQLite, apply the ops `diffSnapshots(a, b)`
  * returns, and the schema and the rows seeded into `a` match `b` built fresh
  * with the same rows. Column order is not part of that contract
- * (`DECISIONS.md`), so the schemas are compared without it. The defects it
- * found are kept as cases at the end.
+ * (`decisions/column-order-is-not-schema.md`), so the schemas are compared
+ * without it. The defects it found are kept as cases at the end.
  */
 import type { TableOp } from '../src/diff';
 import type { Snapshot, SnapshotColumn, SnapshotTable } from '../src/model';
@@ -554,7 +554,8 @@ describe('diffSnapshots properties', () => {
     // takes the `ALTER TABLE ADD COLUMN` fast path wherever it sits in the
     // snapshot, and SQLite appends it; a column moved with no other change
     // makes no op at all. Column order is not part of the schema contract
-    // (`DECISIONS.md`), so both migrate to a schema the oracle calls equal.
+    // (`decisions/column-order-is-not-schema.md`), so both migrate to a schema
+    // the oracle calls equal.
     const reorders = [
         {
             change: 'a column is added mid-list',

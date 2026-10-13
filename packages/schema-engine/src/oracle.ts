@@ -118,9 +118,10 @@ function columnName(definition: string): string | null {
 /**
  * A table's normalized `CREATE TABLE` text with its column definitions sorted by name,
  * table constraints after them in their own order, and one `, ` between each.
- * Column order is not part of the schema contract (`DECISIONS.md`): SQLite
- * appends a column that `ALTER TABLE ADD COLUMN` adds, with its own spacing,
- * where a fresh build places it in snapshot order.
+ * Column order is not part of the schema contract
+ * (`decisions/column-order-is-not-schema.md`): SQLite appends a column that
+ * `ALTER TABLE ADD COLUMN` adds, with its own spacing, where a fresh build
+ * places it in snapshot order.
  */
 function canonicalTable(statement: string): string {
     const table = splitCreateTable(statement);

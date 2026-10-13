@@ -35,9 +35,9 @@ export function getTransactionScope(): Db | undefined {
 /**
  * Run `fn` as one transaction; `getDb()` resolves to the open handle for `fn`
  * and everything it awaits. Nesting joins: a call inside an already-open scope
- * just runs `fn` there, on the same handle — no savepoint (`DECISIONS.md`, "A
- * transaction is a scope"). Runs `fn` once with no transaction when the driver
- * has no interactive transactions (D1): see "D1 degrades to sequential writes".
+ * just runs `fn` there, on the same handle — no savepoint. Runs `fn` once with no
+ * transaction when the driver has no interactive transactions (D1). Both are in
+ * `decisions/transaction-is-a-scope.md`.
  */
 export async function transaction<T>(fn: () => Promise<T>): Promise<T> {
     if (getTransactionScope() !== undefined) return fn();

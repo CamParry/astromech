@@ -6,8 +6,8 @@ milestone: 1.0
 
 Replace staged changes with drafts: every edit to a published entry or global
 goes into one draft per locale, and the live content changes only when the
-draft is published. Decided 2026-10-03 (`DECISIONS.md`, "Published content
-changes through a draft").
+draft is published. Decided 2026-10-03 ([Published content changes through a
+draft](../../decisions/published-content-changes-through-a-draft.md)).
 
 Together with `roadmap/planned/history.md` and `roadmap/planned/schedules.md`,
 this is the editorial model; `roadmap/planned/autosave.md` and

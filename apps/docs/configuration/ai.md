@@ -65,7 +65,7 @@ const anthropic = createAnthropic({ apiKey: mySecret });
 ```
 
 Either way the key has to be readable at config load, because that is when the
-provider is constructed. `DECISIONS.md` records why the `ai` block holds a live
+provider is constructed. [Core AI hands out a model](../../../decisions/ai-hands-out-a-model.md) records why the `ai` block holds a live
 model instance rather than something resolved later.
 
 **`model` takes a model instance, not a string.** A bare string is an AI SDK
@@ -124,7 +124,8 @@ render something.
 
 Generation itself is the AI SDK's: import `generateText`, `streamText` or
 `Output.object` from `ai` and pass the model you were given. Astromech doesn't
-wrap those — `DECISIONS.md` records why.
+wrap those; [Core AI hands out a model](../../../decisions/ai-hands-out-a-model.md)
+records why.
 
 Every model handed out this way logs one line per completed call to stderr — the
 name, the provider and model id, the duration and the token usage.

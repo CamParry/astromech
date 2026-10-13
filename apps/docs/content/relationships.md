@@ -137,4 +137,4 @@ configured entry type.
 
 Why it is built this way — and the alternatives rejected, including declared
 reverse fields, `onDelete` cascades, and filtering into a target's own fields —
-is recorded in `DECISIONS.md`.
+is recorded in [`relationships` is a derived index](../../../decisions/relationships-is-a-derived-index.md).

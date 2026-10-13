@@ -924,9 +924,9 @@ describe('transaction', () => {
         expect(after?.title).toBe('After');
     });
 
-    // Nesting joins the outer transaction (`DECISIONS.md`): a `transaction()`
-    // call while a scope is open runs its body on the same handle, so the inner
-    // write is part of the outer commit.
+    // Nesting joins the outer transaction (`decisions/transaction-is-a-scope.md`):
+    // a `transaction()` call while a scope is open runs its body on the same
+    // handle, so the inner write is part of the outer commit.
     it('joins an already-open scope rather than opening a nested transaction', async () => {
         const created = await transaction(async () => {
             const outer = await entryRepository.create({

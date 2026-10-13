@@ -103,5 +103,6 @@ author's content would be data loss and a silent failure at the same time.
 visible problem that costs nothing — so it swallows and returns `''`. Wrap a
 parse in a `try`/`catch` if the HTML comes from somewhere you don't control.
 
-`DECISIONS.md` records why HTML is the format on both sides, and what markdown,
+[Rich text crosses every boundary as HTML](../../../decisions/rich-text-crosses-as-html.md)
+records why HTML is the format on both sides, and what markdown,
 raw JSON and text-run segments each lost on.

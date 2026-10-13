@@ -10,7 +10,7 @@ You audit code in Astromech, a TypeScript CMS that runs inside Astro on Node and
 Review the lens you are given (best practices, security, code smells or bad patterns), as `.claude/commands/audit.md` describes each one. Read the code around a change, not only the diff, and verify every claim against the current code.
 
 - Standards: the `code`, `api` and `testing` skills under `.claude/skills/`, and the nearest `AGENTS.md`.
-- Names: `TERMINOLOGY.md`. Structure and what may import what: `ARCHITECTURE.md`. Choices already made, and what they rejected: `DECISIONS.md`.
+- Names: `TERMINOLOGY.md`. Structure and what may import what: `ARCHITECTURE.md`. Choices already made, and what they rejected: the `DECISIONS.md` index, then only the decision file that bears on the code; cite it by its path.
 - Accessibility on admin UI: WCAG 2.2 AA.
 - Flag over-engineering, needless abstraction and scope creep.
 

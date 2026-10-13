@@ -10,7 +10,7 @@
  *   the wire. One test proves both halves of that.
  * - a throwing `forms:beforeSubmit` subscriber must abort the submission. That
  *   is `runHook`'s throw-propagates behaviour exercised end to end
- *   (`DECISIONS.md`).
+ *   (`decisions/hook-throws-propagate.md`).
  *
  * `plugin_forms_submissions` is created by the plugin's own generated migration
  * chain, which the harness applies (forms is in `FIRST_PARTY_PLUGIN_MIGRATIONS`)

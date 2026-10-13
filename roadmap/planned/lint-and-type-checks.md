@@ -12,16 +12,18 @@ unless they start with a top-level folder; line numbers were taken on
 
 ## Decided (2026-10-02)
 
-- **The `no-unsafe-*` rules are turned on one by one**, amending "Type-aware
-  lint catches defects, not style" in `DECISIONS.md` rather than reversing it:
+- **The `no-unsafe-*` rules are turned on one by one**, amending
+  [Type-aware lint catches defects, not style](../../decisions/lint-catches-defects-not-style.md)
+  rather than reversing it:
   each hit is untyped data reaching typed code, which is a defect. The
   `recommendedTypeChecked` and `strictTypeChecked` presets stay rejected.
 - **Break both import cycles, then allow none.** A test fails on any cycle, so
-  there is no exemption list, which is what "Nothing enforces the layer model"
-  in `DECISIONS.md` rejected dependency-cruiser for. Amend that entry, and
+  there is no exemption list, which is what
+  [Only the browser boundary is checked](../../decisions/only-browser-boundary-is-checked.md)
+  rejected dependency-cruiser for. Amend that entry, and
   correct the layer list in `ARCHITECTURE.md`.
-- **No scheduled architecture review.** "Drift is reported, not enforced" in
-  `DECISIONS.md` rejects periodic passes; `report:drift` runs before each merge.
+- **No scheduled architecture review.** [Drift is reported, not enforced](../../decisions/drift-is-reported-not-enforced.md)
+  rejects periodic passes; `report:drift` runs before each merge.
 
 ## The work
 

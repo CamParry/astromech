@@ -13,9 +13,10 @@ otherwise.
 
 - [x] Decide whether a lookup that throws is `get*` or `require*`. Decided
       2026-10-02: `get*` stays, and a guard is an `assert*` returning `void`
-      (`DECISIONS.md`, "A lookup's result is used; a guard is an `assert*`").
-- [ ] Write the local lint rule (`DECISIONS.md`, "A discarded return value is a
-      lint error"), turn on `@typescript-eslint/no-meaningless-void-operator`,
+      ([A guard is an `assert*`](../../decisions/guards-are-assert-functions.md)).
+- [ ] Write the local lint rule
+      ([A discarded return value is a lint error](../../decisions/discarded-return-is-a-lint-error.md)),
+      turn on `@typescript-eslint/no-meaningless-void-operator`,
       and fix what it finds: 62 call statements in core's sources on
       2026-10-02, about 28 of them repository writes.
     - [ ] Replace the guard calls with `assert*` functions: `getEntryResource`
@@ -41,7 +42,7 @@ otherwise.
 - [ ] Audit the other verbs across `packages/` against the result, and rename
       what disagrees.
 - [ ] Call a resource's category its type, not its kind, everywhere
-      (`DECISIONS.md`, "A resource's category is its type"). In one commit,
+      ([Index rows name a type and a subtype](../../decisions/relationship-rows-name-type-and-subtype.md)). In one commit,
       since the first rename frees the name the second takes: the index's
       `sourceType` column (the entry type or global key) becomes
       `sourceSubtype`, then `sourceKind` and `targetKind` become `sourceType`

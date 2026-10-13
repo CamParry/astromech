@@ -5,7 +5,7 @@ milestone: later
 # Trashing one locale
 
 An entry's translation cannot be removed: trashing or deleting an entry takes
-every locale (`DECISIONS.md`, "Trash is resource-level"). Raised on 2026-10-03;
+every locale ([Trash is a timestamp, at two levels](../../decisions/trash-is-a-timestamp.md)). Raised on 2026-10-03;
 decided the same day.
 
 Builds on `roadmap/planned/drafts.md`, `roadmap/planned/history.md`,
@@ -61,8 +61,8 @@ Builds on `roadmap/planned/drafts.md`, `roadmap/planned/history.md`,
 - [ ] Relationships, schedules and search on trash and restore.
 - [ ] The admin: the action in the locale switcher, trashed locales in the
       trash view.
-- [ ] Revise `DECISIONS.md`'s copied-flag entry ("`type` is copied onto
-      `entry_content`") when it lands.
+- [ ] Revise [`type` is copied onto `entry_content`](../../decisions/type-is-copied-onto-entry-content.md)
+      when it lands.
 
 ## Testing
 

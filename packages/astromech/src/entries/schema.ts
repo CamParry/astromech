@@ -105,7 +105,7 @@ export const entryReadKeys = {
 /**
  * One locale of an entry of any type, as every read answers it: the public
  * `Entry`. `fields` is not walked, and a nullable value that fails falls back
- * to null; see `DECISIONS.md` for the three tiers.
+ * to null; see `decisions/bad-output-fails-in-three-tiers.md`.
  */
 export const entrySchema = z
     .object({

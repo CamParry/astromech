@@ -6,8 +6,7 @@ milestone: later
 
 > **Follows `roadmap/planned/drafts.md`** (decided 2026-10-03): staged changes become drafts in their own table, so revise the staging parts of this file before building it.
 
-**Direction, decided 2026-10-02** (`DECISIONS.md`, "Search is a derived text
-column searched by the database's own engine"): Craft's shape. Each content row
+**Direction, decided 2026-10-02** ([Search is a derived text column](../../decisions/search-is-a-derived-text-column.md)): Craft's shape. Each content row
 carries the plain text of its searchable fields, and the database's own
 full-text engine searches it: an FTS5 external-content index on SQLite and D1,
 a `tsvector` GIN index on Postgres when that driver comes. Search today is
@@ -106,7 +105,7 @@ Settled in the same pass:
 5. [ ] `astromech entries:reindex [--check]`: recompute `searchText`, run
        `'rebuild'`; `--check` runs `integrity-check` and compares `searchText`.
 6. [ ] D1 export and restore in the `astromech` CLI, as above.
-7. [ ] Docs: a `DECISIONS.md` entry for the design as built, `ARCHITECTURE.md`, `apps/docs`.
+7. [ ] Docs: [the search decision](../../decisions/search-is-a-derived-text-column.md) rewritten for the design as built, `ARCHITECTURE.md`, `apps/docs`.
 
 Search changes from substring to token and prefix matching: "ogr" stops
 finding "blogroll".

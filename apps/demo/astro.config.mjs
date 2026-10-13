@@ -11,7 +11,7 @@ import { astromech } from 'astromech/astro';
 export default defineConfig({
     // The deployment's own origin: canonical URLs, `og:url` and the sitemap all
     // read it via `Astro.site`. A deployment fact, so it lives in config/env and
-    // never in settings (see DECISIONS.md).
+    // never in settings (`decisions/globals-are-content-config-is-code.md`).
     site: process.env.SITE_URL ?? 'https://astromech.dev',
     output: 'server',
     // `SECURITY_CSP=1` sends Astro's default policy, which `check:boot` builds

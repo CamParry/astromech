@@ -70,7 +70,7 @@ export type AppContext = {
     /**
      * Run `event`'s handlers in registration order, each as this context,
      * replacing the payload with any non-`undefined` return; a handler throw
-     * propagates to the caller (`DECISIONS.md`).
+     * propagates to the caller (`decisions/hook-throws-propagate.md`).
      */
     runHook: <E extends HookEvent>(
         event: E,

@@ -292,7 +292,8 @@ const OPEN_API_PATHS = ['/open-api/generate-schema', '/reference'] as const;
 
 /**
  * Per-address limits stricter than Better Auth's defaults, with windows of at
- * most 60 seconds (`DECISIONS.md` says why). `/get-session` is not counted.
+ * most 60 seconds (`decisions/rate-limits-count-in-the-database.md` says
+ * why). `/get-session` is not counted.
  */
 const RATE_LIMIT_RULES = {
     '/sign-in/*': { window: 60, max: 3 },

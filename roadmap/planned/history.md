@@ -5,8 +5,7 @@ milestone: 1.0
 # History
 
 Replace versions with history: a record of each published state, kept in its own
-table per resource. Decided 2026-10-03 (`DECISIONS.md`, "History records
-published states, in its own table"). Builds on `roadmap/planned/drafts.md`.
+table per resource. Decided 2026-10-03 ([History records published states](../../decisions/history-records-published-states.md)). Builds on `roadmap/planned/drafts.md`.
 
 ## What exists
 

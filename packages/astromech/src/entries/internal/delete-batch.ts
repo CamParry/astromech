@@ -73,7 +73,7 @@ async function removeEntryBatch(
     await writeBatch(entries, write);
 
     for (const entry of entries) {
-        // A throw here propagates; the write above stays (`DECISIONS.md`).
+        // A throw here propagates; the write above stays (`decisions/hook-throws-propagate.md`).
         await ctx.runHook('entry:afterDelete', {
             type,
             entry: parseOutput(entrySchema, entry, 'The entry in entry:afterDelete'),

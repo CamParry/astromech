@@ -5,7 +5,7 @@
  * here is the manifest projection and what each transport does with it: a
  * `sessionScoped` method is refused by the trusted transports (no signed-in user
  * to act as) and reachable through the scoped handle, which supplies the subject
- * itself. `DECISIONS.md` is the design.
+ * itself (`decisions/one-function-builds-service-handles.md`).
  */
 
 import type { DB } from '@/database/types';

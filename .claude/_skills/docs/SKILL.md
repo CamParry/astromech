@@ -8,15 +8,15 @@ user-invocable: false
 
 Every document answers one question. A fact lives in exactly one file; everywhere else links to it. Restating is how the four-versus-five plugin count happened.
 
-| File                   | Answers                  | Tense          | Lifetime                  |
-| ---------------------- | ------------------------ | -------------- | ------------------------- |
-| `AGENTS.md` (+ nested) | what must I do           | imperative     | edited in place           |
-| `ARCHITECTURE.md`      | where does code live     | present        | edited in place           |
-| `TERMINOLOGY.md`       | what does this word mean | present        | edited in place           |
-| `DECISIONS.md`         | why is it this way       | present        | edited in place           |
-| `roadmap/`             | what are we building     | future/present | moves between directories |
-| `specs/`               | how will we build this   | future         | deleted on ship           |
-| `apps/docs/`           | how do I use Astromech   | present        | edited in place           |
+| File                   | Answers                  | Tense          | Lifetime                                   |
+| ---------------------- | ------------------------ | -------------- | ------------------------------------------ |
+| `AGENTS.md` (+ nested) | what must I do           | imperative     | edited in place                            |
+| `ARCHITECTURE.md`      | where does code live     | present        | edited in place                            |
+| `TERMINOLOGY.md`       | what does this word mean | present        | edited in place                            |
+| `decisions/<slug>.md`  | why is it this way       | present        | edited in place; `DECISIONS.md` indexes it |
+| `roadmap/`             | what are we building     | future/present | moves between directories                  |
+| `specs/`               | how will we build this   | future         | deleted on ship                            |
+| `apps/docs/`           | how do I use Astromech   | present        | edited in place                            |
 
 If you can't say which question a paragraph answers, it doesn't have a home yet. Work that out before writing it.
 
@@ -24,24 +24,36 @@ If you can't say which question a paragraph answers, it doesn't have a home yet.
 
 `ARCHITECTURE.md` and `TERMINOLOGY.md` describe what is true now, and nothing else. No history, no rationale, no plans.
 
-The test is mechanical: **if a sentence needs "was", "used to", "no longer", "renamed from", "were dissolved", "as of", or a date, it is history.** Delete it; if the reasoning still has value, put it in `DECISIONS.md` in the present tense. A reader who needs to know that `core/` used to exist is reading archaeology; a reader who needs to know what exists now is reading the map, and history in the way costs them.
+The test is mechanical: **if a sentence needs "was", "used to", "no longer", "renamed from", "were dissolved", "as of", or a date, it is history.** Delete it; if the reasoning still has value, put it in a decision file in the present tense. A reader who needs to know that `core/` used to exist is reading archaeology; a reader who needs to know what exists now is reading the map, and history in the way costs them.
 
 Two consequences worth stating because they get missed:
 
-- **A term's entry says what it means, not what it replaced.** "Why X and not Y" is a decision record. `TERMINOLOGY.md` may carry a one-line pointer to it, which several entries already do well.
+- **A term's entry says what it means, in one or two lines, not what it replaced.** "Why X and not Y" is a decision. The names a reserved word beat are in [`decisions/reserved-words.md`](../../../decisions/reserved-words.md).
 - **Removed things are not documented as removed.** "There is no populate mechanism" earns its place only because callers actively look for one; "`populate` was deleted in the relationships rework" does not.
 
 ## Decisions
 
-`DECISIONS.md` is one file of live choices, grouped by subject. An entry is a bolded claim, then what it beat, in as few words as carry the point.
+Each decision is its own file, `decisions/<slug>.md`, where the slug is the claim in a few words. `DECISIONS.md` is an index of them grouped by area, which `pnpm run decisions` writes (`scripts/decisions-index.mjs`); `check:docs` fails when it is stale, so never edit the index by hand.
 
-**An entry has to earn its place.** Write one only when the losing option is invisible in the code and attractive enough that someone would reach for it again. A landed rename, a file that moved, a rule the linter enforces: the code already says it, so it does not go here. A rule you apply while writing code goes in the `code` skill instead; what a word means goes in `TERMINOLOGY.md`.
+A decision file holds, in this order:
 
-**Write what it beat, not just what won.** An entry with no rejected alternative is a description, and descriptions belong in `ARCHITECTURE.md`.
+- frontmatter with an `area`, one of the keys the index script lists;
+- a title stating the claim in at most eight words;
+- the decision: what holds, and where in the code;
+- **Why:** the reason, left out when the rejected options already carry it;
+- **Rejected:** what it beat, each with why it lost.
 
-**It is current state, so edit it.** When a choice is reversed, rewrite the entry — never add a second one saying the first is wrong. The history is `git log -p DECISIONS.md`, and the argument as originally written is in the commit that made the change. Say what changed in that commit message.
+Keep it to 60 to 90 words.
 
-Nothing in it is binding. It is evidence, so a settled question is not re-argued from scratch, never so a better option can be refused.
+**A decision has to earn its place.** Write one only when the losing option is invisible in the code and attractive enough that someone would reach for it again. A landed rename, a file that moved, a rule the linter enforces: the code already says it, so it does not go here. A rule you apply while writing code goes in the `code` skill instead; what a word means goes in `TERMINOLOGY.md`.
+
+**Write what it beat, not just what won.** A decision with no rejected alternative is a description, and descriptions belong in `ARCHITECTURE.md`.
+
+**It is current state, so edit it in place.** When a choice is reversed, rewrite the file; never add a second one saying the first is wrong. If the claim changes, retitle it, rename the file to match, fix the links `check:docs` reports, and run `pnpm run decisions`. The history is `git log -p` on the file. Say what changed in that commit message.
+
+**Read the index, then one file.** To find a choice, read `DECISIONS.md` and open only the decision whose title matches. Cite a decision by a link to its file, never by a quoted title, so `check:docs` catches a citation that stops resolving.
+
+Nothing in a decision is binding. It is evidence, so a settled question is not re-argued from scratch, never so a better option can be refused.
 
 ## Roadmap
 

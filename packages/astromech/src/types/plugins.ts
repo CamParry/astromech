@@ -73,11 +73,7 @@ export type PluginDatabase = {
 
 /** The method manifest as a plugin reaches it: a dispatch table, already scoped. */
 export type PluginMethods = {
-    /**
-     * Every manifest method the acting role may call, dispatch-ready and already
-     * scoped. Plugin-source methods are absent: their declared `access` is
-     * enforced by the HTTP RPC route, so there is nothing to scope them with.
-     */
+    /** Every manifest method the acting role may call, dispatch-ready and already scoped. */
     tools(options?: { readOnly?: boolean }): ToolDefinition[];
 };
 

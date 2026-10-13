@@ -48,8 +48,7 @@ former scheduled-unpublishing proposal.
 - **A future `publishedAt` no longer hides a published row** (decided
   2026-10-04). Going live later is a publish schedule; `publishedAt` is the
   date shown. Today such a row goes live with no write, so nothing clears the
-  page cache. Revise `DECISIONS.md`, "One rule decides the `publishedAt` a
-  write stores", when this lands.
+  page cache. Revise [One rule sets `publishedAt`](../../decisions/one-rule-for-published-at.md) when this lands.
 - The page cache is cleared when a schedule runs
   (`roadmap/planned/page-caching.md`).
 

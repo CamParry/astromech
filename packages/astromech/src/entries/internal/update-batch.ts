@@ -175,7 +175,7 @@ export async function updateEntryBatch(
     );
 
     for (const [index, plan] of plans.entries()) {
-        // A throw here propagates; the write above stays (`DECISIONS.md`).
+        // A throw here propagates; the write above stays (`decisions/hook-throws-propagate.md`).
         if (plan.kind === 'update') {
             await ctx.runHook('entry:afterUpdate', {
                 type: entryType.id,

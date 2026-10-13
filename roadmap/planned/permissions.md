@@ -21,7 +21,7 @@ Paths are under `packages/astromech/src/` unless they name a package.
   different thing in Laravel, Strapi and Directus and `policies/` is none of
   them; "gate" has seven meanings here. "Guard" stays for admin route guards
   only. "Capability" stays for entry-type features, with the WordPress
-  collision (where it means a permission) recorded under "Reserved words".
+  collision (where it means a permission) recorded in [reserved words](../../decisions/reserved-words.md).
 - **Check verbs:** `allows`/`allowsAccess` on the server, `can(action)` in the
   admin, `hasPermission` for the bare matcher.
 - **Layout:** `permissions/` keeps what no resource owns (the grammar and
@@ -66,7 +66,7 @@ Groups 1 to 4 change no behaviour.
       `hasAdminAccess` and `isAdmin` (`packages/admin/src/hooks/use-permissions.ts`)
       and `defineAbsolutePermissions`; add Role, Access and Action to
       `TERMINOLOGY.md` and rewrite Permission and Policy; record "capability",
-      "guard" and "policy" under "Reserved words".
+      "guard" and "policy" in [reserved words](../../decisions/reserved-words.md).
 - [ ] **One home and one type.** `utilities/permission-match.ts`,
       `permissions/define.ts` and the `Permission` type into
       `permissions/permission.ts`; one `AccessRule` in `permissions/access.ts`;

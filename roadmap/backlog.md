@@ -15,7 +15,7 @@ Finished items are deleted rather than ticked; the record of what shipped is in
 - [ ] `useAuthorNames` fetches every user (`limit: 'all'`); replace it with a batched, `users:read`-gated `users.names({ ids })` when user counts warrant it.
 - [ ] Unsaved-changes guard follow-ups (from `completed/unsaved-changes-guard.md`): restoring a media or user version (`components/media/media-detail-modal.tsx`, `components/users/user-edit-page.tsx`) does not reset a dirty form, so a later save overwrites the restore; a dirty page form plus a dirty dialog form ask twice on one Back; `isDirty` stays true after an edit is reverted (`form.state.isDefaultValue` exists, switch the Save button with it); TanStack Router's popstate blocker restores with `history.go(1)`, wrong after Forward or a multi-step go.
 - [ ] `ConfirmProvider` (`components/ui/confirm.tsx`) runs `handleCancel` twice on Close (its `onClick` and `onOpenChange`), and a second `confirm()` replaces an open one and drops its callbacks. The user menu reads "Logout" (`topbar.logout`) where `nav.logout` says "Log out".
-- [ ] Deleting a user lists the entries whose `relationship` fields name them before it confirms, as `entries/methods/used-by.ts` does for an entry, since the delete empties those fields (`DECISIONS.md`, "Users are deleted, not archived").
+- [ ] Deleting a user lists the entries whose `relationship` fields name them before it confirms, as `entries/methods/used-by.ts` does for an entry, since the delete empties those fields ([Users are deleted or suspended, not archived](../decisions/users-are-deleted-or-suspended.md)).
 
 - [ ] The admin's login, forgot-password and reset-password pages hard-code "Sign in", "Email address", "Password" and "Signing in…" although i18n keys exist for them. A session that ends mid-use (`onUnauthorized` in `main.tsx`) lands on `/login` with no message; it could reuse the `error` search param that `access_denied` uses.
 
@@ -48,7 +48,7 @@ Finished items are deleted rather than ticked; the record of what shipped is in
 - [ ] Under the gate, `check:boot:cloudflare` starts the build and wrangler in process groups of their own, which no lock record lists (`scripts/run-lock.mjs` keeps one owner's record). If the gate and the check are both killed outright, wrangler keeps running. Fixing it needs the lock to accept groups from more than one process. `check:boot`'s Chromium is not recorded either, since playwright does not expose its pid.
 - [ ] `check:install` builds and installs a scratch site but does not take the run lock.
 - [ ] Bash hook gaps left after `roadmap/completed/agent-workflow.md`: a `cd` inside `if`, `while` or `for` counts as done, so `if x; then cd <worktree>; fi; git reset --hard` is silent in the main checkout (the same class as the `&&` gap the hook's header notes); unquoted glob operands (`curl https://x?y=1`), attached short forms (`rg -g*.ts`) and `fd -g *.ts` are not refused; zsh glob qualifiers (`*(.)`) and extglob patterns in `case` do not parse, so the hook asks.
-- [ ] Re-evaluate a dependency lint (dependency-cruiser or similar) as a QA hardening layer once development shifts from building to hardening — dropped while building, `DECISIONS.md`
+- [ ] Re-evaluate a dependency lint (dependency-cruiser or similar) as a QA hardening layer once development shifts from building to hardening — dropped while building, [Only the browser boundary is checked](../decisions/only-browser-boundary-is-checked.md)
 - [ ] Wrangler 4.125.0 prints `[ERROR] Network connection lost.` on remote D1 runs that succeed: `db:init --allow-remote` printed it three times and `deploy:testing` once, then each exited 0 with the migrations applied (2026-10, astromech-testing). It comes from wrangler's remote proxy, not our code; no upstream issue was found. Before reporting it to `cloudflare/workers-sdk`, retry on the latest wrangler and capture `WRANGLER_LOG=debug` output. Until then a reader can mistake a successful run for a failure, so the deployment docs could say the message is harmless when the exit code is 0.
 
 ### Schema engine
@@ -59,10 +59,10 @@ Finished items are deleted rather than ticked; the record of what shipped is in
 ### Relationships follow-ups (from `completed/relationships-model.md`)
 
 The model shipped whole; these are the deliberate deferrals and the sharp edges found building it.
-The rationale for the first two is in `DECISIONS.md` and should
+The rationale for the first two is in [`relationships` is a derived index](../decisions/relationships-is-a-derived-index.md) and should
 not be re-derived.
 
-- [ ] **A declared reverse field** — deferred, not refused (`DECISIONS.md`). Reverse lookup needs no
+- [ ] **A declared reverse field** — deferred, not refused ([`relationships` is a derived index](../decisions/relationships-is-a-derived-index.md)). Reverse lookup needs no
       declaration: it is an indexed read, and `where: { references }` already covers the delete modal,
       media "used by" and filter-by-relation. A declared virtual field would be sugar compiling to
       that same query and can be added without touching the repository. **If it comes back it must be keyed

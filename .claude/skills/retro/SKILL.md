@@ -8,7 +8,7 @@ The user has asked for a **retrospective**. You are suggesting improvements to t
 
 ## Steps
 
-1. Write in plain English, as `AGENTS.md` ("Documentation") and the user's own instructions ask: short sentences, the established word, no em dashes.
+1. Write in plain English, as `AGENTS.md` ("Naming") and the user's own instructions ask: short sentences, the established word, no em dashes.
 
 2. Read the primary sources for the session the user specifies. Session logs are the `.jsonl` files under `~/.claude/projects/-Users-cam-Documents-Projects-Astromech/`; the memory notes beside them record lessons already learned. If the user doesn't specify a session, default to the current one.
 
@@ -40,6 +40,6 @@ You have access to several files in the repo:
 
 - `AGENTS.md` and the nested `AGENTS.md` files: these are pushed to the context window of any agent working in this repo. Use them sparingly, mostly for **navigation pointers** to other files.
 - The standards skills (`code`, `api`, `testing` under `.claude/skills/`): read by the review as well as during implementation. The `css`, `docs` and `ui` skills are parked under `.claude/_skills/` on purpose; revive one only as goals with reasons, never as a list of rules.
-- Docs: `ARCHITECTURE.md`, `TERMINOLOGY.md`, `DECISIONS.md` and `roadmap/`, pointed to by other files. A fact lives in one file. Look for an existing doc before writing a new one.
+- Docs: `ARCHITECTURE.md`, `TERMINOLOGY.md`, one file per decision in `decisions/` (indexed by `DECISIONS.md`) and `roadmap/`, pointed to by other files. A fact lives in one file. Look for an existing doc before writing a new one.
 - Skills: use a skill for reference docs (its description goes into the agent's context window) or for a user-invoked command.
 - Memory notes: a lesson that keeps recurring there is a candidate for a check or a hook instead.

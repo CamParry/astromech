@@ -40,7 +40,6 @@ const PATHS_UNCHECKED_TREES = [
     join('roadmap', 'proposed', ''),
     join('roadmap', 'planned', ''),
     join('roadmap', 'completed', ''),
-    join('decisions', ''),
 ];
 
 // Build output — present after a build, absent in a clean checkout.

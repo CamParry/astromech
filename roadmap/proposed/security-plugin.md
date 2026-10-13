@@ -6,7 +6,7 @@ milestone: later
 
 Policies a site opts into on top of core's security mechanisms
 (`roadmap/completed/core-security.md`). The line between them is
-`DECISIONS.md`, "Security in core is defaults and shared mechanisms". Raised on 2026-10-03 from WPMU DEV Defender, Wordfence and Solid
+[Core security is defaults; policies are a plugin](../../decisions/security-policies-are-a-plugin.md). Raised on 2026-10-03 from WPMU DEV Defender, Wordfence and Solid
 Security.
 
 ## Candidates

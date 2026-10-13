@@ -6,8 +6,8 @@ milestone: 1.0
 
 On D1, a migration that rebuilds a table other rows point at fails at its
 `DROP TABLE`. On libsql the same migration works, because the driver runs the
-migration chain in one transaction (`DECISIONS.md`, "A libsql migration run is
-one transaction"). D1 has no interactive transactions, so Kysely's `Migrator`
+migration chain in one transaction ([A libsql migration run is one
+transaction](../../decisions/libsql-migration-run-is-one-transaction.md)). D1 has no interactive transactions, so Kysely's `Migrator`
 runs each statement of `up(db)` on its own, and `PRAGMA defer_foreign_keys`
 ends with the statement that set it. The D1 item in
 [schema-engine-defects](../completed/schema-engine-defects.md) has the history.
