@@ -57,9 +57,13 @@ function GlobalVersionsBody({
 
     // A locale never saved has no row and no versions, and the versions read
     // answers 404 for it, so it is asked for only once the row exists.
-    const { data: row, isLoading: isRowLoading } = useGlobal(key, locale);
+    const {
+        data: row,
+        isLoading: isRowLoading,
+        isError: isRowError,
+    } = useGlobal(key, locale);
     const hasRow = row !== null && row !== undefined;
-    const { data: versions, isLoading } = useGlobalVersions(key, locale, hasRow);
+    const { data: versions, isLoading, isError } = useGlobalVersions(key, locale, hasRow);
 
     const restoreMutation = useAdminMutation(globalMutations(key).restoreVersion, {
         onSuccess: () => void navigate({ to: editPath }),
@@ -69,6 +73,7 @@ function GlobalVersionsBody({
         <VersionHistory
             versions={versions}
             isLoading={isRowLoading || isLoading}
+            isError={isRowError || isError}
             versionQuery={(version) => globalVersionQueryOptions(key, locale, version)}
             onRestore={(version) => restoreMutation.mutate({ locale, version })}
             isRestoring={restoreMutation.isPending}

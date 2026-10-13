@@ -5,7 +5,8 @@
  * row, so the list is that locale's history newest first. The list carries no
  * content, so the page reads the selected version and the one before it to
  * diff them. Restoring names the global by key, locale and version number,
- * never by a row id. A locale never saved has no versions to ask for.
+ * never by a row id. A locale never saved has no versions to ask for, and a
+ * failed read shows an error rather than an empty history.
  */
 
 import type {
@@ -77,16 +78,33 @@ function version(n: number): GlobalVersion {
     return { ...metadata(n), snapshot: { fields: { tagline: `Tagline ${n}` } } };
 }
 
-/** Mount the page over a global whose locale `saved` says has a row or not. */
-function mountPage({ saved = true }: { saved?: boolean } = {}) {
+/**
+ * Mount the page over a global whose locale `saved` says has a row or not,
+ * with `history` as its versions. `fails` names a read that rejects.
+ */
+function mountPage({
+    saved = true,
+    history = [metadata(1), metadata(2), metadata(3)],
+    fails,
+}: {
+    saved?: boolean;
+    history?: VersionMetadata[];
+    fails?: 'row' | 'versions';
+} = {}) {
     const restoreVersion = vi.fn(async () => null);
     const getVersion = vi.fn(async ({ version: n }: { version: number }) => version(n));
-    const versions = vi.fn(async () => [metadata(1), metadata(2), metadata(3)]);
+    const versions = vi.fn(async () => {
+        if (fails === 'versions') throw new Error('versions read failed');
+        return history;
+    });
     const api = {
         versions,
         getVersion,
         restoreVersion,
-        get: vi.fn(async () => (saved ? { key: KEY, locale: 'en', fields: {} } : null)),
+        get: vi.fn(async () => {
+            if (fails === 'row') throw new Error('row read failed');
+            return saved ? { key: KEY, locale: 'en', fields: {} } : null;
+        }),
     } as unknown as GlobalsService;
 
     client.globals = api;
@@ -161,5 +179,27 @@ describe('the global versions page', () => {
 
         expect(await screen.findByText('No versions recorded yet.')).toBeTruthy();
         expect(versions).not.toHaveBeenCalled();
+    });
+
+    it('shows the empty state for a saved locale with no versions', async () => {
+        mountPage({ history: [] });
+
+        expect(await screen.findByText('No versions recorded yet.')).toBeTruthy();
+    });
+
+    it('shows an error, not the empty state, when the versions read fails', async () => {
+        const { versions } = mountPage({ fails: 'versions' });
+
+        expect(await screen.findByText('The versions could not be loaded.')).toBeTruthy();
+        expect(versions).toHaveBeenCalled();
+        expect(screen.queryByText('No versions recorded yet.')).toBeNull();
+    });
+
+    it('shows an error, not the empty state, when the row read fails', async () => {
+        const { versions } = mountPage({ fails: 'row' });
+
+        expect(await screen.findByText('The versions could not be loaded.')).toBeTruthy();
+        expect(versions).not.toHaveBeenCalled();
+        expect(screen.queryByText('No versions recorded yet.')).toBeNull();
     });
 });

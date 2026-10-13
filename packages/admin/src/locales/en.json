@@ -530,6 +530,7 @@
         "noChanges": "No changes compared to the previous version.",
         "selectVersion": "Select a version to compare.",
         "noVersions": "No versions recorded yet.",
+        "loadFailed": "The versions could not be loaded.",
         "restored": "Version restored.",
         "restoreFailed": "Restore failed.",
         "confirmRestoreTitle": "Restore version #{{number}}?",
