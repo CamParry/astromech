@@ -489,7 +489,7 @@ harness and eight test files and every later stage runs faster for it.
       them. Core's thresholds rose to what the new tests measure.
 - [x] Property tests where they pay: `capIdentifier`, `renderLiteral`,
       `diffSnapshots`, `readChatRequest`, slug handling. Defects found:
-      [schema-engine-defects](../in-progress/schema-engine-defects.md) and
+      [schema-engine-defects](../completed/schema-engine-defects.md) and
       [trashed-entry-slug-collision](trashed-entry-slug-collision.md).
 - [x] Try mutation testing (Stryker, incremental) on one core directory, and
       keep it as an occasional check only if it finds assertions that miss.

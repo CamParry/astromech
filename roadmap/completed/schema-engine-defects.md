@@ -45,7 +45,7 @@ fixed.
       dropped table between them. A dropped table now goes after the tables
       that point at it, and one that waits for a rebuild holds back every
       dropped table it points at, directly or through others.
-- [ ] **Rebuilding a referenced table fails with foreign keys on.** Fixed on
+- [x] **Rebuilding a referenced table fails with foreign keys on.** Fixed on
       libsql, open on D1. Core runs with foreign keys on, and Kysely's
       `SqliteAdapter` reports no transactional DDL, so `Migrator` ran each
       statement on its own, `defer_foreign_keys` had no effect, and the rebuild
@@ -60,7 +60,7 @@ fixed.
       transactions and ignores `PRAGMA foreign_keys = OFF`:
       [d1-migrations-run-as-one-batch](../proposed/d1-migrations-run-as-one-batch.md).
       Found by seeding the parity property.
-- [ ] **A parent's rebuild fires a key's delete action on a child rebuilt in
+- [x] **A parent's rebuild fires a key's delete action on a child rebuilt in
       the same migration.** `cascadeRebuildErrors` in
       `packages/schema-engine/src/diff.ts` refuses a rebuild whose child keeps
       an `ON DELETE cascade` or `set null` key in the next snapshot, but not
@@ -71,18 +71,17 @@ fixed.
       rebuilds so a child whose old key points at a rebuilt table goes first,
       as `dropTableOps` orders drops. Found by seeding the parity property once
       it seeds rows that point at a rebuilt table; the property skips the case,
-      and `packages/schema-engine/tests/diff.property.test.ts` keeps it as an
-      expected failure.
+      and `packages/schema-engine/tests/diff.property.test.ts` kept it as an
+      expected failure. Rebuilds and the drops that wait for them now run in
+      one children-first order, since a chain through a dropped table needs
+      the drops among the rebuilds. The refusal also covers `set default`
+      and a table's key to itself; `restrict` acts as `no action` under
+      `defer_foreign_keys`, so it needs none.
 - [x] **A moved column produces no ops.** Reordering a table's columns with no
       other change diffs as nothing, so the migrated table keeps the old order
       while a fresh build has the new one (the same contract as the
       added-column case above). No ops is now correct: column order is not
       part of the contract.
-- [ ] Seeding the parity property also hit an SQLite 3.45.1 bug: on a populated
-      table, adding a `real NOT NULL DEFAULT 1.5` column and then a column with
-      a CHECK fails with "NOT NULL constraint failed". The property skips that
-      case. It is a false positive in `PRAGMA integrity_check` from 3.42.0
-      ([forum post ee4f6fa5ab](https://sqlite.org/forum/forumpost/ee4f6fa5ab)),
-      fixed in 3.45.2 (check-in `60dccb23b1`); `@libsql/client` 0.18.0
-      (`libsql` 0.5.29) still bundles 3.45.1, so sites on libsql hit it too,
-      while `node:sqlite` 3.50.4 and the `sqlite3` CLI 3.51.0 run the case cleanly.
+- [x] Seeding the parity property also hit an SQLite 3.45.1 bug, fixed in
+      3.45.2 but still bundled by libsql. It is in `roadmap/backlog.md`
+      ("Schema engine").

@@ -49,6 +49,11 @@ Finished items are deleted rather than ticked; the record of what shipped is in
 - [ ] Re-evaluate a dependency lint (dependency-cruiser or similar) as a QA hardening layer once development shifts from building to hardening — dropped while building, `DECISIONS.md`
 - [ ] Wrangler 4.125.0 prints `[ERROR] Network connection lost.` on remote D1 runs that succeed: `db:init --allow-remote` printed it three times and `deploy:testing` once, then each exited 0 with the migrations applied (2026-10, astromech-testing). It comes from wrangler's remote proxy, not our code; no upstream issue was found. Before reporting it to `cloudflare/workers-sdk`, retry on the latest wrangler and capture `WRANGLER_LOG=debug` output. Until then a reader can mistake a successful run for a failure, so the deployment docs could say the message is harmless when the exit code is 0.
 
+### Schema engine
+
+- [ ] The parity property skips one case for an SQLite 3.45.1 bug: on a populated table, adding a `real NOT NULL DEFAULT 1.5` column and then a column with a CHECK fails with "NOT NULL constraint failed" ([forum post ee4f6fa5ab](https://sqlite.org/forum/forumpost/ee4f6fa5ab)). Fixed in SQLite 3.45.2; `@libsql/client` 0.18.0 (`libsql` 0.5.29) still bundles 3.45.1 on 2026-10-13. Drop the skip once libsql bundles 3.45.2 or later.
+- [ ] A cycle of keys between a rebuilt table and a dropped table that waits for it keeps snapshot order (`childrenFirst` in `packages/schema-engine/src/diff.ts`), so a `set null` key on a NOT NULL column in that cycle can still fail the migration. It fails loudly and loses no rows.
+
 ### Relationships follow-ups (from `completed/relationships-model.md`)
 
 The model shipped whole; these are the deliberate deferrals and the sharp edges found building it.
