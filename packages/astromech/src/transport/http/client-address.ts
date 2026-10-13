@@ -111,13 +111,14 @@ const CONNECTING_IP_ADVICE =
     'It came from `cf-connecting-ip`, which Cloudflare sets on a deployed Worker.';
 
 /**
- * The IP address in `value`, without a port (`1.2.3.4:80`) or IPv6 brackets
- * (`[::1]`, `[::1]:443`), or undefined when it holds none. A value that is
- * dropped is logged with `advice`, once per process.
+ * The IP address in `value`, without a port (`1.2.3.4:80`), IPv6 brackets
+ * (`[::1]`, `[::1]:443`) or an IPv6 zone id (`fe80::1%eth0`), or undefined
+ * when it holds none. A value that is dropped is logged with `advice`, once per
+ * process.
  */
 function parseAddress(value: string, advice = TRUST_PROXY_ADVICE): string | undefined {
     const address = stripPort(value);
-    if (address !== undefined && isIP(address) !== 0) return address;
+    if (address !== undefined && isIP(address) !== 0) return stripZone(address);
 
     const state = globals();
     if (state.clientAddressDropLogged !== true) {
@@ -144,4 +145,13 @@ function stripPort(value: string): string | undefined {
         return /^\d+$/.test(value.slice(colon + 1)) ? value.slice(0, colon) : undefined;
     }
     return value;
+}
+
+/**
+ * `address` without an IPv6 zone id. `isIP` accepts one, Better Auth's address
+ * check does not, and it names the server's interface, not the client.
+ */
+function stripZone(address: string): string {
+    const percent = address.indexOf('%');
+    return percent === -1 ? address : address.slice(0, percent);
 }

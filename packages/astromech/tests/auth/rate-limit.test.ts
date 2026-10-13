@@ -86,6 +86,20 @@ describe('the sign-in rate limit', () => {
         expect(otherAddress.status).toBe(200);
     });
 
+    // Better Auth rejects an address with a zone id, so kept, it would count
+    // against the one count every client with no address shares.
+    it('counts an IPv6 address with a zone id apart from the clients with no address', async () => {
+        const app = appWith({ trustProxy: true });
+        await signInTestUser(db, EMAIL);
+
+        for (let attempt = 0; attempt < 3; attempt++) await signIn(app);
+        const noAddress = await signIn(app);
+        const zoned = await signIn(app, { 'x-forwarded-for': 'fe80::1%eth0' });
+
+        expect(noAddress.status).toBe(429);
+        expect(zoned.status).toBe(200);
+    });
+
     it('keeps the count in the database, shared by every app instance on it', async () => {
         const client = { 'x-forwarded-for': '203.0.113.1' };
         const first = appWith({ trustProxy: true });
