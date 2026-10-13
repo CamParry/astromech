@@ -334,3 +334,56 @@ describe('inherited value is validated', () => {
         expect(de.status).toBe('published');
     });
 });
+
+/** `post` with a configured default and two fields whose type has one. */
+function makeDefaultsConfig(): AstromechConfig {
+    const base = makeTestConfig();
+    return {
+        ...base,
+        entries: withEntryTypes(base.entries, {
+            type: 'post',
+            single: 'Post',
+            plural: 'Posts',
+            translatable: true,
+            fields: [
+                { name: 'body', type: 'text', label: 'Body' },
+                { name: 'tone', type: 'text', label: 'Tone', defaultValue: 'plain' },
+                { name: 'featured', type: 'boolean', label: 'Featured' },
+                {
+                    name: 'items',
+                    type: 'repeater',
+                    label: 'Items',
+                    fields: [{ name: 'label', type: 'text', label: 'Label' }],
+                },
+            ],
+        }),
+    };
+}
+
+describe('a new locale fills the field defaults', () => {
+    it('gives the new row the configured and built-in defaults', async () => {
+        setupTestConfig(makeDefaultsConfig());
+        const en = await api.create({
+            type: 'post',
+            data: {
+                title: 'EN',
+                locale: 'en',
+                fields: { body: 'enbody', tone: 'warm', featured: true },
+            },
+        });
+
+        const de = await api.update({
+            type: 'post',
+            id: en.id,
+            locale: 'de',
+            data: { title: 'DE', fields: { body: 'debody' } },
+        });
+
+        expect(de.fields).toEqual({
+            body: 'debody',
+            tone: 'plain',
+            featured: false,
+            items: [],
+        });
+    });
+});

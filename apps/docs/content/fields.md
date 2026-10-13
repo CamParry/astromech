@@ -15,6 +15,10 @@ A field builder takes the field's name first and its options second. **A name
 is always a data key**: the value is stored under it, and a structural field
 given a name stores its fields under that name too.
 
+Renaming or removing a top-level field leaves its stored values in place: a save
+keeps them, and public reads leave them out until a migration moves them.
+Restoring the old name makes them readable again.
+
 ## Options every data field takes
 
 | Option         | Meaning                                                                                                                                    |

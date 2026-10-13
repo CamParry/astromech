@@ -339,6 +339,25 @@ describe('performBackup — failure', () => {
             error: 'Error: storage refused the write',
         });
     });
+
+    it('removes the stored artifact when the success row write fails', async () => {
+        expectConsole('error', 'Backup failed');
+        const ctx = app.context();
+        // Refuses only the write that records success, so the failure is still recorded.
+        await sql
+            .raw(
+                `CREATE TRIGGER refuse_success BEFORE UPDATE ON plugin_backups_runs
+                 WHEN NEW.status = 'success'
+                 BEGIN SELECT RAISE(ABORT, 'the success row write was refused'); END`
+            )
+            .execute(app.db);
+
+        const row = await performBackup(ctx, 'manual', { keep: 10 });
+
+        expect(row.status).toBe('failed');
+        expect(row.error).toMatch(/success row write was refused/);
+        expect(await ctx.storage.list('')).toHaveLength(0);
+    });
 });
 
 describe('rotate', () => {

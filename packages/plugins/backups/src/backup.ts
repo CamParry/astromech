@@ -68,16 +68,24 @@ export async function performBackup(
                 ctx.storage.put(key, gzipped, { contentType: 'application/gzip' })
             );
 
-            // Determine artifact size cheaply — get() returns size without reading body.
-            const obj = await ctx.storage.get(key);
-            const sizeBytes = obj?.size ?? null;
+            // The artifact is stored before the row that records it, so a failed
+            // row write removes the artifact rather than leave it orphaned.
+            let success: BackupRunRow | null;
+            try {
+                // Determine artifact size cheaply — get() returns size without reading body.
+                const obj = await ctx.storage.get(key);
+                const sizeBytes = obj?.size ?? null;
 
-            const success = await runs.update(id, {
-                status: 'success',
-                key,
-                sizeBytes,
-                finishedAt: new Date(),
-            });
+                success = await runs.update(id, {
+                    status: 'success',
+                    key,
+                    sizeBytes,
+                    finishedAt: new Date(),
+                });
+            } catch (error) {
+                await removeArtifact(ctx, key);
+                throw error;
+            }
 
             const successRow = success ?? row;
 
@@ -97,6 +105,21 @@ export async function performBackup(
         return failed ?? row;
     } finally {
         globalThis.__astromechBackupRunning = false;
+    }
+}
+
+/**
+ * Remove an artifact no run row records. Runs once the row write has failed, so
+ * a failure is logged rather than thrown and leaves at worst an orphaned file.
+ */
+async function removeArtifact(ctx: PluginContext, key: string): Promise<void> {
+    try {
+        await ctx.storage.delete(key);
+    } catch (error) {
+        ctx.logger.warn(
+            `[backups] Could not remove the artifact ${key}, which is now orphaned: ` +
+                `${error instanceof Error ? error.message : String(error)}`
+        );
     }
 }
 
