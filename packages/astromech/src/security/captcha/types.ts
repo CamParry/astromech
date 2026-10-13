@@ -4,7 +4,7 @@
  */
 
 /** The captcha services core can check. */
-export const CAPTCHA_PROVIDERS = ['turnstile', 'recaptcha', 'hcaptcha'] as const;
+export const CAPTCHA_PROVIDERS = ['turnstile', 'recaptcha'] as const;
 
 export type CaptchaProviderName = (typeof CAPTCHA_PROVIDERS)[number];
 

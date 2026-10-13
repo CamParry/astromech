@@ -16,7 +16,7 @@ function resolveWith(captcha: CaptchaConfig): unknown {
 describe('resolveConfig security.captcha', () => {
     it.each<CaptchaConfig>([
         { provider: 'turnstile', siteKey: 'k' },
-        { provider: 'hcaptcha', siteKey: 'k', hostnames: ['example.test'] },
+        { provider: 'turnstile', siteKey: 'k', hostnames: ['example.test'] },
         { provider: 'recaptcha', siteKey: 'k', minScore: 0 },
         { provider: 'recaptcha', siteKey: 'k', minScore: 1, hostnames: [] },
     ])('accepts %j', (captcha) => {
@@ -30,7 +30,7 @@ describe('resolveConfig security.captcha', () => {
                 siteKey: 'k',
             })
         ).toThrow(
-            '`security.captcha.provider` must be one of turnstile, recaptcha, hcaptcha'
+            '`security.captcha.provider` must be one of turnstile, recaptcha, not "altcha".'
         );
     });
 

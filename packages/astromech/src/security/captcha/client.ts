@@ -13,17 +13,17 @@ export type CaptchaHandle = {
     remove(): void;
 };
 
-type ChallengeOptions = {
+type TurnstileOptions = {
     sitekey: string;
-    action?: string;
+    action: string;
     callback: (token: string) => void;
     'expired-callback': () => void;
     'error-callback': () => void;
 };
 
-/** The part of Turnstile's and hCaptcha's browser API this module calls. */
-type ChallengeApi = {
-    render(container: HTMLElement, options: ChallengeOptions): string;
+/** The part of Turnstile's browser API this module calls. */
+type TurnstileApi = {
+    render(container: HTMLElement, options: TurnstileOptions): string;
     reset(id: string): void;
     remove(id: string): void;
 };
@@ -35,15 +35,13 @@ type RecaptchaApi = {
 };
 
 type CaptchaGlobals = {
-    turnstile?: ChallengeApi;
-    hcaptcha?: ChallengeApi;
+    turnstile?: TurnstileApi;
     grecaptcha?: RecaptchaApi;
 };
 
 const SCRIPTS: Record<CaptchaProviderName, (siteKey: string) => string> = {
     turnstile: () =>
         'https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit',
-    hcaptcha: () => 'https://js.hcaptcha.com/1/api.js?render=explicit',
     recaptcha: (siteKey) =>
         `https://www.google.com/recaptcha/api.js?render=${encodeURIComponent(siteKey)}`,
 };
@@ -67,14 +65,14 @@ export async function renderCaptcha(
         return recaptchaHandle(api, options.siteKey, options.action);
     }
 
-    const api = options.provider === 'turnstile' ? globals.turnstile : globals.hcaptcha;
-    if (api === undefined) throw new Error(`${options.provider} did not load.`);
-    return challengeHandle(api, container, options);
+    const api = globals.turnstile;
+    if (api === undefined) throw new Error('Turnstile did not load.');
+    return turnstileHandle(api, container, options);
 }
 
 /** A widget the visitor sees: the token arrives through its callback. */
-function challengeHandle(
-    api: ChallengeApi,
+function turnstileHandle(
+    api: TurnstileApi,
     container: HTMLElement,
     options: CaptchaWidget & { action: string }
 ): CaptchaHandle {
@@ -83,8 +81,7 @@ function challengeHandle(
 
     const id = api.render(container, {
         sitekey: options.siteKey,
-        // hCaptcha has no action.
-        ...(options.provider === 'turnstile' ? { action: options.action } : {}),
+        action: options.action,
         callback: (value) => {
             token = value;
             for (const waiter of waiting) waiter.resolve(value);

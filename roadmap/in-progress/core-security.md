@@ -58,7 +58,7 @@ is `DECISIONS.md`, "Security in core is defaults and shared mechanisms".
   Each Workers isolate caches the list for 60 seconds, so an unblock takes up to
   a minute to apply.
 - **Captcha is Astromech's own check.** One setting (provider, site key, secret
-  from env) for Turnstile, reCAPTCHA and hCaptcha. The script loads once, each
+  from env) for Turnstile and reCAPTCHA v3. The script loads once, each
   form renders its own widget with its own action name, and the server verifies
   `success`, `action` and `hostname`. It runs as middleware in front of Better
   Auth's sign-in and reset-request routes, and `@astromech/forms` uses it by
@@ -85,8 +85,8 @@ is `DECISIONS.md`, "Security in core is defaults and shared mechanisms".
       Cloudflare baseline hand-applied; the middleware and its cache; automatic
       blocks.
 - [x] The captcha service: config, providers moved from `@astromech/forms`,
-      hCaptcha, the server check, the middleware on Better Auth's routes, a
-      client renderer, and the admin sign-in and reset forms sending the token.
+      the server check, the middleware on Better Auth's routes, a client
+      renderer, and the admin sign-in and reset forms sending the token.
 - [x] Opt-in HSTS, and `frame-ancestors 'self'` on the admin page.
 - [ ] Security events written to the audit trail. Waits for the table in
       `roadmap/planned/audit-trail.md`, which lists each event's call site; the
@@ -114,8 +114,8 @@ Merged on 2026-10-05. The tests stub `fetch` for siteverify, and
 screen in chromium. These need real keys or a deployed Worker:
 
 - [ ] Each provider's real siteverify answer with a real site key and secret:
-      Turnstile's `action` and `hostname`, reCAPTCHA v3's `action`, `score` and
-      `hostname`, hCaptcha's `hostname`. Checked for Turnstile on 2026-10-13:
+      Turnstile's `action` and `hostname`, and reCAPTCHA v3's `action`, `score`
+      and `hostname`. Checked for Turnstile on 2026-10-13:
       the managed widget `astromech-testing` asks automated chromium to tick a
       box, so it was run in a real Chrome against the testing deployment with
       the captcha on (`scripts/check-deployed-cloudflare.mjs` header, 7). The
@@ -125,8 +125,8 @@ screen in chromium. These need real keys or a deployed Worker:
       sign-in page's (action `sign_in`) answered 403 `CAPTCHA_FAILED`. With
       the default `hostnames`, the 200 means siteverify answered the action
       `password_reset` and the hostname `astromech-testing.paragramagency.com`.
-      The accepted token sent a second time answered 403. Left: reCAPTCHA v3
-      and hCaptcha, which wait for keys.
+      The accepted token sent a second time answered 403. Left: reCAPTCHA v3,
+      which waits for keys.
 - [ ] The widgets in a browser: two Turnstile widgets on one page with
       `render=explicit`, token expiry and reset, reCAPTCHA v3's `execute`; the
       admin sign-in, setup and forgot-password pages with a captcha on and

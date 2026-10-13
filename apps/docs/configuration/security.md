@@ -117,7 +117,7 @@ secret refuses every request with a 500, as it does without `BETTER_AUTH_SECRET`
 
 | Option      | Default           | What it does                                                  |
 | ----------- | ----------------- | ------------------------------------------------------------- |
-| `provider`  | none, required    | `turnstile`, `recaptcha` or `hcaptcha`.                       |
+| `provider`  | none, required    | `turnstile` or `recaptcha`.                                   |
 | `siteKey`   | none, required    | The provider's public key, sent to the browser.               |
 | `minScore`  | `0.5`             | `recaptcha` only: the lowest score (0 to 1) a token may have. |
 | `hostnames` | the request's own | The hostnames a token may come from. Set it behind a proxy.   |
@@ -131,13 +131,12 @@ checks what the provider reports back:
 | ----------- | ----------------------------------------------------------------------------------------- |
 | `turnstile` | The token, its action, and its hostname.                                                  |
 | `recaptcha` | reCAPTCHA v3 only: the token, its action, its hostname, and its score against `minScore`. |
-| `hcaptcha`  | The token, the site key it was solved on, and its hostname. hCaptcha reports no action.   |
 
 Each form asks for its own action name (`sign_in`, `password_reset` and
-`form_submit`), so a token solved on one form is refused on another, except with
-hCaptcha, which cannot tell them apart. A reCAPTCHA v2 token carries no action
-and is refused: create a v3 key. Every check fails closed: a missing token, an
-unreachable provider and a malformed answer all refuse the request.
+`form_submit`), so a token solved on one form is refused on another. A
+reCAPTCHA v2 token carries no action and is refused: create a v3 key. Every
+check fails closed: a missing token, an unreachable provider and a malformed
+answer all refuse the request.
 
 The hostname defaults to the one the request arrived on. Behind a proxy that can
 be an internal name, so list the public ones in `hostnames`. Turnstile's
@@ -194,7 +193,6 @@ page's policy.
 | ----------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
 | `turnstile` | `script-src` and `frame-src`: `https://challenges.cloudflare.com`                                                                                                              |
 | `recaptcha` | `script-src`: `https://www.google.com/recaptcha/ https://www.gstatic.com/recaptcha/`; `frame-src`: `https://www.google.com/recaptcha/ https://recaptcha.google.com/recaptcha/` |
-| `hcaptcha`  | `script-src`, `frame-src`, `style-src` and `connect-src`: `https://hcaptcha.com https://*.hcaptcha.com`                                                                        |
 
 ```ts
 // astro.config.mjs
