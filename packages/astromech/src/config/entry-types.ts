@@ -133,7 +133,7 @@ export function toResolvedFields(fields: EntryFields | undefined): ResolvedEntry
 
 /**
  * Resolve a single entry type: validate its titleField, field tree, admin
- * columns and grid fields (crash-loud on mismatch). `typeKey` is stamped onto
+ * columns, views and grid fields (crash-loud on mismatch). `typeKey` is stamped onto
  * the result as `id`, used in error messages.
  */
 export function toResolvedEntryType(
@@ -150,6 +150,7 @@ export function toResolvedEntryType(
     validateFieldTree(owner, resolvedFields.sidebar);
     assertUniqueDataNames(owner, resolvedFields);
     assertAdminColumns(owner, entryType.adminColumns ?? [], resolvedFields);
+    assertViews(owner, entryType);
     assertGridFields(owner, entryType.gridFields ?? [], resolvedFields);
 
     const { fields: _fields, type: _type, ...rest } = entryType;
@@ -191,6 +192,29 @@ export function assertAdminColumns(
         throw new Error(
             `${prefix} is sortable, but a \`${field.type}\` field holds no single value ` +
                 `a list can order by. Sortable fields: ${quoteNames(sortable)}.`
+        );
+    }
+}
+
+/**
+ * Throw when `views` is empty or `defaultView` is not one of them, since the
+ * admin's entries list opens in one of the type's views and would have none
+ * to open in. `owner` names the type in the message.
+ */
+function assertViews(owner: string, entryType: EntryType): void {
+    const views = entryType.views ?? ['list'];
+    if (views.length === 0) {
+        throw new Error(
+            `Astromech ${owner}: \`views\` is empty. List at least one of 'list' and 'grid', ` +
+                "or leave it out for ['list']."
+        );
+    }
+    const { defaultView } = entryType;
+    if (defaultView !== undefined && !views.includes(defaultView)) {
+        throw new Error(
+            `Astromech ${owner}: \`defaultView\` is '${defaultView}', which is not one of ` +
+                `its views (${views.map((view) => `'${view}'`).join(', ')}). ` +
+                `Add '${defaultView}' to \`views\`, or drop \`defaultView\`.`
         );
     }
 }

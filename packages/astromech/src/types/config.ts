@@ -96,8 +96,9 @@ export type EntryType = {
      */
     views?: ('list' | 'grid')[];
     /**
-     * The view the entries list opens in until the editor picks one. Default
-     * `'list'`. Below 768px wide the grid opens instead when `views` has it.
+     * The view the entries list opens in until the editor picks one: one of
+     * `views`, which config loading checks. Default the first of `views`.
+     * Below 768px wide the grid opens instead when `views` has it.
      */
     defaultView?: 'list' | 'grid';
     /**

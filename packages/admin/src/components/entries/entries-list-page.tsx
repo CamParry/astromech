@@ -77,12 +77,14 @@ function EntriesListBody({
         hasTitle
     );
     const views = config.views ?? ['list'];
-    const defaultView = config.defaultView ?? 'list';
     const isMobile = useIsMobile();
-    const [viewMode, setViewMode] = useViewMode(`entry:${type}`, defaultView, {
-        storageKey: isMobile ? `entry:${type}:mobile` : `entry:${type}`,
-        defaultView: isMobile && views.includes('grid') ? 'grid' : defaultView,
-    });
+    const [viewMode, setViewMode] = useViewMode(
+        isMobile ? `entry:${type}:mobile` : `entry:${type}`,
+        {
+            views,
+            defaultView: isMobile && views.includes('grid') ? 'grid' : config.defaultView,
+        }
+    );
 
     // System columns label through an i18n key, the type's own through its label.
     const columnLabel = useCallback(

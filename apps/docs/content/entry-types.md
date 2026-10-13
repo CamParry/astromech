@@ -104,8 +104,10 @@ status:
   It defaults to `['list']`. With both, a toggle above the list switches
   between them, and the editor's browser remembers the choice.
 - `defaultView` is the view the list opens in until the editor picks one. It
-  defaults to `'list'`. On a screen narrower than 768px the list opens in the
-  grid whenever `views` includes it.
+  defaults to the first of `views`, and config loading fails when it is not
+  one of them. On a screen narrower than 768px the list opens in the grid
+  whenever `views` includes it. A view the browser remembers that `views` no
+  longer offers gives way to the default.
 - `gridFields` names top-level fields of the type, each with an optional
   `label` (the field's name when absent). A card shows a field's value the way
   a table column over that field shows it. As with an admin column, config
