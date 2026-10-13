@@ -283,6 +283,10 @@ export function RichTextEditor({
         editable: !disabled,
         immediatelyRender: false as const,
         shouldRerenderOnTransaction: true,
+        // TipTap's base CSS ships in `rich-text-editor.css` instead of the
+        // `<style>` element TipTap would add, which Astro's `security.csp`
+        // refuses.
+        injectCSS: false,
         editorProps: {
             attributes: {
                 class: 'am-richtext-content',

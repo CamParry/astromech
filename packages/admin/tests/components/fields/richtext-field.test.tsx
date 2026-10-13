@@ -92,6 +92,13 @@ describe('RichtextField', () => {
         expect(commits).toEqual([]);
     });
 
+    it('adds no style element to the page, which a content security policy refuses', async () => {
+        mount(paragraphDoc('Stored prose'));
+        await editable();
+
+        expect(document.querySelector('style')).toBeNull();
+    });
+
     it('renders a legacy string as a paragraph', async () => {
         mount('Legacy text');
 
