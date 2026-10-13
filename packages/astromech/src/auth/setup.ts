@@ -10,6 +10,7 @@ import { getConfig } from '@/config/registry';
 import { jsonObject } from '@/services/json';
 import { createUserRows } from '@/users/create-user-rows';
 import { userRepository } from '@/users/repository';
+import { emailInput } from '@/users/schema';
 
 /** The refusal every closed sign-up path answers with. */
 export const SIGN_UP_CLOSED = {
@@ -27,7 +28,7 @@ export const ACCOUNT_LOCKED = {
 /** The body `POST /setup` takes. Eight characters is Better Auth's own floor. */
 export const firstAdminSchema = z.object({
     name: z.string().min(1, 'Name is required'),
-    email: z.string().email('Must be a valid email address'),
+    email: emailInput,
     password: z.string().min(8, 'Password must be at least 8 characters'),
     data: z.strictObject({ fields: jsonObject.optional() }).optional(),
 });

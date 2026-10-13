@@ -13,9 +13,16 @@ export const queryUsersSchema = z.strictObject({
     ...listKeys,
 });
 
+/**
+ * A user's email, stored and looked up lower-cased as Better Auth does on every
+ * write and lookup, so an address names one account in any casing. Not trimmed,
+ * as Better Auth does not trim: the email check refuses surrounding spaces.
+ */
+export const emailInput = z.string().email('Must be a valid email address').toLowerCase();
+
 export const createUserSchema = z
     .strictObject({
-        email: z.string().email('Must be a valid email address'),
+        email: emailInput,
         name: z.string().min(1, 'Name is required'),
         fields: jsonObject.optional(),
         // Defaulted here, not by the column: a create that names no role gets
@@ -29,7 +36,7 @@ export const createUserSchema = z
 
 export const updateUserSchema = z
     .strictObject({
-        email: z.string().email('Must be a valid email address').optional(),
+        email: emailInput.optional(),
         name: z.string().min(1, 'Name cannot be empty').optional(),
         fields: jsonObject.optional(),
         role: roleSlugSchema.optional(),
