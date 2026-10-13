@@ -41,5 +41,9 @@ holds the history.
 - [ ] `ARCHITECTURE.md` is bullets under its current headings: where code
       lives and what may import what. Reasons move to a decision or go.
 - [ ] `TERMINOLOGY.md` gives each term one or two lines.
+- [ ] `AGENTS.md` and the nested `AGENTS.md` files are cut to what an agent
+      needs in every session. The root one loads into every session (5.1k
+      tokens on 2026-10-13); detail only some tasks need moves to the skill or
+      script header that covers that task.
 - [ ] The `docs` skill, the `code` skill, the agent briefs in `.claude/_agents/`
       and `AGENTS.md` describe the new layout.
