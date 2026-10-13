@@ -53,8 +53,9 @@ This is a living reference; it grows as the project does.
   provider checks, rendering the widget on your own form, and the content
   security policy sources each provider needs.
 - [content/entry-types.md](content/entry-types.md) — declaring entry types: the
-  `entries` array, sorting a list by a column or a field, and
-  `defineEntryType` for splitting a type into its own module.
+  `entries` array, sorting a list by a column or a field, the admin's grid view
+  (`views`, `defaultView`, `gridFields`), and `defineEntryType` for splitting a
+  type into its own module.
 - [content/fields.md](content/fields.md) — every field builder: the options
   each field takes, the data, nested and layout fields, and how a name on
   `group`, `accordion` or `tab` decides whether its fields store under that name.

@@ -89,8 +89,22 @@ export type EntryType = {
      */
     icon?: string;
     adminColumns?: AdminColumn[];
+    /**
+     * The views the admin's entries list offers: `'list'` (a table) and
+     * `'grid'` (cards). Default `['list']`. With both, a toggle switches
+     * between them.
+     */
     views?: ('list' | 'grid')[];
+    /**
+     * The view the entries list opens in until the editor picks one. Default
+     * `'list'`. Below 768px wide the grid opens instead when `views` has it.
+     */
     defaultView?: 'list' | 'grid';
+    /**
+     * The fields each card in the grid view shows under the entry's title and
+     * status. Each names a top-level field of the type; `label` defaults to the
+     * field's name.
+     */
     gridFields?: { field: string; label?: string }[];
     /**
      * Front-end URL template for an entry, e.g. `/blog/{slug}`. Tokens: `{slug}`
