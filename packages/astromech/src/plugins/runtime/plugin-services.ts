@@ -68,6 +68,8 @@ export function createPluginServices(
                         if (typeof methodProp !== 'string' || methodProp === 'then') {
                             return undefined;
                         }
+                        // Own keys only: `toString` or `constructor` is not a method.
+                        if (!Object.hasOwn(methods, methodProp)) return undefined;
                         const method = methods[methodProp];
                         return method ? call(resolved, method, methodProp) : undefined;
                     },

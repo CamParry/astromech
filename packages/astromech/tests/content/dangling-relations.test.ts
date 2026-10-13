@@ -25,7 +25,10 @@ import { userRepository } from '@/users/repository';
 const api = currentServices.entries;
 const usersService = currentServices.users;
 
-/** One relation per target kind, plus one nested inside a repeater. */
+/**
+ * One relation per target kind (media twice, by field type and by `target`),
+ * plus one nested inside a repeater.
+ */
 const docFields: Field[] = [
     { name: 'plain', type: 'text', label: 'Plain' },
     { name: 'author', type: 'relationship', label: 'Author', target: 'post' },
@@ -37,6 +40,7 @@ const docFields: Field[] = [
         multiple: true,
     },
     { name: 'avatar', type: 'media', label: 'Avatar' },
+    { name: 'photo', type: 'relationship', label: 'Photo', target: 'media' },
     { name: 'owner', type: 'relationship', label: 'Owner', target: 'users' },
     {
         name: 'sections',
@@ -139,14 +143,17 @@ describe('pruneDanglingRelations (through the entry write path)', () => {
         expect(updated.fields.author).toBe(target.id);
     });
 
-    it('drops a dead media id and a dead user id', async () => {
+    it('drops a dead media id, from a media field or a relationship, and a dead user id', async () => {
         const mediaId = await createMedia();
         const user = await usersService.create({
             data: { email: 'gone@test.dev', name: 'Gone' },
         });
         const doc = await api.create({
             type: 'doc',
-            data: { title: 'Doc', fields: { avatar: mediaId, owner: user.id } },
+            data: {
+                title: 'Doc',
+                fields: { avatar: mediaId, photo: mediaId, owner: user.id },
+            },
         });
 
         await mediaRepository.delete(mediaId);
@@ -154,6 +161,7 @@ describe('pruneDanglingRelations (through the entry write path)', () => {
         const updated = await touch(doc.id);
 
         expect(updated.fields.avatar).toBeNull();
+        expect(updated.fields.photo).toBeNull();
         expect(updated.fields.owner).toBeNull();
     });
 

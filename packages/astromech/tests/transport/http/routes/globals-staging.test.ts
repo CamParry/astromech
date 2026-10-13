@@ -77,6 +77,15 @@ describe('GET /globals/:key/staged', () => {
         expect((await data(present)).staged).toBe(true);
     });
 
+    // As `GET /globals/:key` answers for a declared global with no row.
+    it('answers null for a global that has never been saved, and 404 for an undeclared key', async () => {
+        const unsaved = await app().request('/globals/announcement/staged');
+        expect(unsaved.status).toBe(200);
+        expect(await data(unsaved)).toBeNull();
+
+        expect((await app().request('/globals/nope/staged')).status).toBe(404);
+    });
+
     it('is also reachable as ?staged=true on the read route', async () => {
         await stageNext();
 

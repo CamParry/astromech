@@ -41,6 +41,11 @@ describe('findReferences — top-level fields', () => {
         expect(findReferences(defs, { owner: 'u1' })[0]?.targetKind).toBe('user');
     });
 
+    it("maps target: 'media' to the media kind", () => {
+        const defs: Field[] = [{ name: 'photo', type: 'relationship', target: 'media' }];
+        expect(findReferences(defs, { photo: 'm1' })[0]?.targetKind).toBe('media');
+    });
+
     it('yields one reference per id in a multi-relation', () => {
         const defs: Field[] = [
             { name: 'tags', type: 'relationship', target: 'tag', multiple: true },

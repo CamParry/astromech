@@ -23,10 +23,11 @@ export type FieldReference = {
 
 /**
  * What a relation field points at. `media` fields are relations too, so a media
- * field writes a relationship row like any other.
+ * field writes a relationship row like any other, as does a `relationship`
+ * whose `target` is `media`.
  */
 function targetKindOf(field: DataField): TargetKind {
-    if (field.type === 'media') return 'media';
+    if (field.type === 'media' || field.target === 'media') return 'media';
     return field.target === 'users' ? 'user' : 'entry';
 }
 

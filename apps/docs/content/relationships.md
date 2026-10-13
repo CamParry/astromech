@@ -9,13 +9,16 @@ page to its parent, a block to a gallery of images.
 fields.relationship('author', { target: 'author' });
 fields.relationship('tags', { target: 'tag', multiple: true });
 fields.relationship('owner', { target: 'users' });
+fields.relationship('photo', { target: 'media' });
 ```
 
 `target` names the entry type being pointed at (a plugin's by its qualified id,
-such as `forms/form`), or the literal `'users'` to point at a user. A
+such as `forms/form`), the literal `'users'` to point at a user, or the literal
+`'media'` to point at a media item. A
 target that names no entry type fails when the config loads. `multiple: true` stores a list instead of a single id. A
 `media` field is a relation too, and is indexed like one — you do not declare
-it differently.
+it differently. It and a relationship with `target: 'media'` are indexed the
+same way, so either appears in a media item's `usedBy`.
 
 There is no `inverse`, no `ordered` and no `onDelete`. Order is array position
 in the field data, which is the only place it lives. The reverse direction is

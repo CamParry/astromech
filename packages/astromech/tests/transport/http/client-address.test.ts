@@ -81,6 +81,29 @@ describe('getClientAddress', () => {
         ).toBe('203.0.113.4');
     });
 
+    it.each(['unknown', 'not an address', '999.1.1.1', '[::1'])(
+        'drops %s from cf-connecting-ip on Workers, which is not an IP address',
+        async (value) => {
+            pretendWorkers();
+            expectConsole('error', 'It came from `cf-connecting-ip`');
+
+            expect(await addressFor({ 'cf-connecting-ip': value })).toBe('absent');
+        }
+    );
+
+    it('does not fall back to x-forwarded-for when cf-connecting-ip is malformed', async () => {
+        pretendWorkers();
+        trustProxy(true);
+        expectConsole('error', 'is not an IP address');
+
+        expect(
+            await addressFor({
+                'cf-connecting-ip': 'unknown',
+                'x-forwarded-for': '198.51.100.9',
+            })
+        ).toBe('absent');
+    });
+
     it('ignores cf-connecting-ip off Workers', async () => {
         expectConsole('error', PROXY_WARNING);
 
