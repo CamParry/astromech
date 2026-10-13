@@ -66,18 +66,20 @@ with `node:util` `parseArgs` and 9 read `process.argv` by hand; some shared
 
 ## Known defects
 
-- `land`'s CI watch crashes on a transient GitHub error: on 2026-10-13 a
-  502 from `gh run watch` threw out of `watchCi` after the merge was pushed
-  and cleaned up. It should retry, and say the merge is already on `main`.
-- A task that reads a generated, gitignored file without `dependsOn` on its
-  generator passes locally, where an earlier run left the file, and fails
-  on CI's fresh checkout. On 2026-10-13 the plugins' typecheck read the
-  admin's `routeTree.gen.ts` without `//#routes:generate`. Find the other
-  generated files tasks read (`.astro/`, `dist`, `worker-configuration.d.ts`)
-  and check each reader declares its generator.
-- `check:boot:cloudflare` boots against the checkout's lasting
-  `.wrangler/state` in the app, so it can fail because of what
-  earlier runs left there. On 2026-10-13 the main checkout's database
-  predated `blocked_addresses`: the baseline migration was edited by hand,
-  and an applied baseline never runs again. The sign-in 429 flake had the
-  same cause. Each run could boot against a fresh `--persist-to` directory.
+- [x] `land`'s CI watch crashed on a transient GitHub error (a 502 from
+      `gh run watch` on 2026-10-13). It retries each `gh` call, and says
+      the merge is already on `main` when it cannot watch.
+- [x] A task read a generated, gitignored file without `dependsOn` on its
+      generator: on 2026-10-13 the plugins' typecheck read the admin's
+      `routeTree.gen.ts` without `//#routes:generate`. Every reader of a
+      generated file now declares its generator, checked by type-checking
+      a clean clone, which also found `typecheck:apps` reading `dist`
+      without the builds.
+- [x] `check:boot:cloudflare` served from the app's lasting
+      `.wrangler/state`, so leftover state failed it (a database that
+      predated `blocked_addresses`, and the sign-in 429 flake). Each run now
+      serves from a fresh `--persist-to` directory.
+- [ ] The Cloudflare demo's `astro build` still applies pending migrations
+      into the app's own `.wrangler/state` (`astro:build:start`), so a
+      broken local state can still fail the boot check's build step. It
+      needs core's `resolveBinding()` to pass `getPlatformProxy({ persist })`.
