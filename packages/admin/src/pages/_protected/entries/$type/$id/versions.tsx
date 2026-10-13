@@ -1,6 +1,7 @@
 /**
  * Entry version history route for the site's types; the loader prefetches the
- * entry and its versions, and a plugin's type id redirects to the plugin route.
+ * entry and, once it has a row in the locale, its versions. A plugin's type id
+ * redirects to the plugin route.
  */
 
 import { createFileRoute, redirect } from '@tanstack/react-router';
@@ -36,16 +37,17 @@ export const Route = createFileRoute('/_protected/entries/$type/$id/versions')({
         }
     },
     loaderDeps: ({ search }) => ({ locale: search.locale }),
-    loader: ({ context, params, deps }) => {
+    loader: async ({ context, params, deps }) => {
         const locale = deps.locale ?? defaultContentLocale(adminConfig);
-        return Promise.all([
-            context.queryClient.ensureQueryData(
-                entryQueryOptions(params.type, params.id, locale)
-            ),
-            context.queryClient.ensureQueryData(
-                entryVersionsQueryOptions(params.type, params.id, locale)
-            ),
-        ]);
+        const entry = await context.queryClient.ensureQueryData(
+            entryQueryOptions(params.type, params.id, locale)
+        );
+        // A locale with no row has no versions, and the versions read answers
+        // 404 for it; the page shows its empty state instead.
+        if (entry === null) return;
+        await context.queryClient.ensureQueryData(
+            entryVersionsQueryOptions(params.type, params.id, locale)
+        );
     },
     component: EntryVersionsRoutePage,
 });

@@ -37,6 +37,10 @@ export function globalVersionQueryOptions(key: string, locale: string, version: 
     });
 }
 
+export function useGlobal(key: string, locale: string) {
+    return useQuery(globalQueryOptions(key, locale));
+}
+
 export function useGlobalVersions(key: string, locale: string, enabled = true) {
     return useQuery({ ...globalVersionsQueryOptions(key, locale), enabled });
 }

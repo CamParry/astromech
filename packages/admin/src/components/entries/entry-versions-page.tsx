@@ -59,8 +59,11 @@ function EntryVersionsBody({
     const plural = config.plural;
     const hasTitle = config.titleField !== false;
 
-    const { data: entry } = useEntry(type, id, locale);
-    const { data: versions, isLoading } = useEntryVersions(type, id, locale, true);
+    // A locale with no row has no versions, and the versions read answers 404
+    // for it, so it is asked for only once the row exists.
+    const { data: entry, isLoading: isEntryLoading } = useEntry(type, id, locale);
+    const hasRow = entry !== null && entry !== undefined;
+    const { data: versions, isLoading } = useEntryVersions(type, id, locale, hasRow);
 
     const restoreMutation = useAdminMutation(entryMutations(type).restoreVersion, {
         onSuccess: () => void navigate({ to: editPath }),
@@ -69,7 +72,7 @@ function EntryVersionsBody({
     return (
         <VersionHistory
             versions={versions}
-            isLoading={isLoading}
+            isLoading={isEntryLoading || isLoading}
             versionQuery={(version) =>
                 entryVersionQueryOptions(type, id, locale, version)
             }

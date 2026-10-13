@@ -5,7 +5,7 @@
  * row, so the list is that locale's history newest first. The list carries no
  * content, so the page reads the selected version and the one before it to
  * diff them. Restoring names the global by key, locale and version number,
- * never by a row id.
+ * never by a row id. A locale never saved has no versions to ask for.
  */
 
 import type {
@@ -77,14 +77,16 @@ function version(n: number): GlobalVersion {
     return { ...metadata(n), snapshot: { fields: { tagline: `Tagline ${n}` } } };
 }
 
-function mountPage() {
+/** Mount the page over a global whose locale `saved` says has a row or not. */
+function mountPage({ saved = true }: { saved?: boolean } = {}) {
     const restoreVersion = vi.fn(async () => null);
     const getVersion = vi.fn(async ({ version: n }: { version: number }) => version(n));
+    const versions = vi.fn(async () => [metadata(1), metadata(2), metadata(3)]);
     const api = {
-        versions: vi.fn(async () => [metadata(1), metadata(2), metadata(3)]),
+        versions,
         getVersion,
         restoreVersion,
-        get: vi.fn(async () => null),
+        get: vi.fn(async () => (saved ? { key: KEY, locale: 'en', fields: {} } : null)),
     } as unknown as GlobalsService;
 
     client.globals = api;
@@ -102,7 +104,7 @@ function mountPage() {
         queryClient,
     });
 
-    return { restoreVersion, getVersion, page };
+    return { restoreVersion, getVersion, versions, page };
 }
 
 describe('the global versions page', () => {
@@ -152,5 +154,12 @@ describe('the global versions page', () => {
                 version: 3,
             });
         });
+    });
+
+    it('shows the empty state for a locale never saved, without asking for versions', async () => {
+        const { versions } = mountPage({ saved: false });
+
+        expect(await screen.findByText('No versions recorded yet.')).toBeTruthy();
+        expect(versions).not.toHaveBeenCalled();
     });
 });
