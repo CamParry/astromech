@@ -19,14 +19,17 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { FormField } from '@/admin/components/fields/form-field';
 import { renderWithProviders } from '../../_support/render-admin';
 
-const { mediaGet, entriesQuery } = vi.hoisted(() => ({
+const { mediaGet, mediaQuery, usersQuery, entriesQuery } = vi.hoisted(() => ({
     mediaGet: vi.fn(),
+    mediaQuery: vi.fn(),
+    usersQuery: vi.fn(),
     entriesQuery: vi.fn(),
 }));
 
 vi.mock('astromech/fetch', () => ({
     astromechUntypedClient: {
-        media: { get: mediaGet, query: vi.fn() },
+        media: { get: mediaGet, query: mediaQuery },
+        users: { query: usersQuery },
         entries: { query: entriesQuery },
     },
 }));
@@ -41,6 +44,8 @@ vi.mock('virtual:astromech/admin-config', () => ({
 
 beforeEach(() => {
     mediaGet.mockReset();
+    mediaQuery.mockReset();
+    usersQuery.mockReset();
     entriesQuery.mockReset();
 });
 
@@ -85,10 +90,8 @@ function mountField(field: DataField, value: unknown): Mounted {
  * Await, inside `act`, the option lookup the field started on mount. Called
  * before any other await, so the field's own handler runs in the same scope.
  */
-async function waitForOptions(): Promise<void> {
-    const lookup = entriesQuery.mock.results.at(-1)?.value as
-        | Promise<unknown>
-        | undefined;
+async function waitForOptions(query = entriesQuery): Promise<void> {
+    const lookup = query.mock.results.at(-1)?.value as Promise<unknown> | undefined;
     if (lookup === undefined) throw new Error('the field never looked its options up');
     await act(async () => {
         await lookup.catch(() => undefined);
@@ -221,5 +224,46 @@ describe('relationship on a fetched entry', () => {
 
         expect(selectionLabel()).toBe('');
         expect(f.commits).toEqual([]);
+    });
+});
+
+// `users` and `media` are resources with their own API; the entries API has
+// no such type and answers 404.
+describe('relationship to a resource', () => {
+    function selectionLabel(): string {
+        return screen.getByRole<HTMLInputElement>('combobox').value;
+    }
+
+    it('lists users through the users API', async () => {
+        usersQuery.mockResolvedValue({
+            data: [{ id: 'u1', name: 'Ada Lovelace', email: 'ada@example.com' }],
+        });
+        mountField({ name: 'owner', type: 'relationship', target: 'users' }, 'u1');
+        await waitForOptions(usersQuery);
+
+        expect(usersQuery).toHaveBeenCalledWith({ limit: 'all' });
+        expect(entriesQuery).not.toHaveBeenCalled();
+        expect(selectionLabel()).toBe('Ada Lovelace');
+    });
+
+    it('lists media through the media API, by title or else file name', async () => {
+        mediaQuery.mockResolvedValue({
+            data: [
+                { id: 'm1', title: null, filename: 'portrait.png' },
+                { id: 'm2', title: 'Team photo', filename: 'team.jpg' },
+            ],
+        });
+        const f = mountField(
+            { name: 'avatar', type: 'relationship', target: 'media' },
+            'm1'
+        );
+        await waitForOptions(mediaQuery);
+
+        expect(mediaQuery).toHaveBeenCalledWith({ limit: 'all' });
+        expect(entriesQuery).not.toHaveBeenCalled();
+        expect(selectionLabel()).toBe('portrait.png');
+
+        f.rerender('m2');
+        expect(selectionLabel()).toBe('Team photo');
     });
 });

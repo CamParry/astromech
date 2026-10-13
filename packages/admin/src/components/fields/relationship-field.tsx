@@ -5,11 +5,35 @@ import adminConfig from 'virtual:astromech/admin-config';
 import { MultiSelect } from '../ui/multi-select';
 import { useFieldControl } from './field-control-context';
 
-type EntryOption = {
+type TargetOption = {
     id: string;
     title: string;
     slug: string | null;
 };
+
+/**
+ * Every record `target` names, as options. `users` and `media` are resources
+ * with their own API, not entry types the entries API knows.
+ */
+async function fetchOptions(target: string): Promise<TargetOption[]> {
+    if (target === 'users') {
+        const result = await astromechUntypedClient.users.query({ limit: 'all' });
+        return result.data.map((u) => ({ id: u.id, title: u.name, slug: null }));
+    }
+    if (target === 'media') {
+        const result = await astromechUntypedClient.media.query({ limit: 'all' });
+        return result.data.map((m) => ({
+            id: m.id,
+            title: m.title ?? m.filename,
+            slug: null,
+        }));
+    }
+    const result = await astromechUntypedClient.entries.query({
+        type: target,
+        limit: 'all',
+    });
+    return result.data.map((e) => ({ id: e.id, title: e.title, slug: e.slug }));
+}
 
 export function RelationshipField({
     name,
@@ -25,17 +49,12 @@ export function RelationshipField({
     // When the target is a titleless entry type, never fall back to a field
     // value for the label (data-leak rule) — show the entry id instead.
     const targetTitleless = adminConfig.entryTypes[target]?.titleField === false;
-    const [options, setOptions] = useState<EntryOption[]>([]);
+    const [options, setOptions] = useState<TargetOption[]>([]);
 
     useEffect(() => {
         if (!target) return;
-        astromechUntypedClient.entries
-            .query({ type: target, limit: 'all' })
-            .then((result) => {
-                setOptions(
-                    result.data.map((e) => ({ id: e.id, title: e.title, slug: e.slug }))
-                );
-            })
+        fetchOptions(target)
+            .then(setOptions)
             .catch(() => undefined);
     }, [target]);
 
@@ -47,7 +66,7 @@ export function RelationshipField({
     const currentValue = options.filter((o) => selectedIds.includes(o.id));
 
     return (
-        <MultiSelect<EntryOption>
+        <MultiSelect<TargetOption>
             options={options}
             value={currentValue}
             itemToStringValue={(e) => e.id}
