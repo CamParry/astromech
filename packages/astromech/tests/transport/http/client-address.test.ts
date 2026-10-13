@@ -191,6 +191,11 @@ describe('getClientAddress', () => {
         expect(await addressFor({}, '203.0.113.4')).toBe('203.0.113.4');
     });
 
+    // Node reports a link-local peer with the zone of the interface it came in on.
+    it('reads a remote address without its IPv6 zone id', async () => {
+        expect(await addressFor({}, 'fe80::1%en0')).toBe('fe80::1');
+    });
+
     it('reads the remote address, not a forged x-forwarded-for', async () => {
         expectConsole('error', PROXY_WARNING);
 
@@ -246,6 +251,8 @@ describe('getClientAddress', () => {
         ['[::1]', '::1'],
         ['[2001:db8::1]:443', '2001:db8::1'],
         ['2001:db8::1', '2001:db8::1'],
+        ['fe80::1%eth0', 'fe80::1'],
+        ['[fe80::1%25eth0]:443', 'fe80::1'],
     ])('reads %s from x-forwarded-for as %s', async (entry, address) => {
         trustProxy(true);
 

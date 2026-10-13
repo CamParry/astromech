@@ -407,6 +407,10 @@ describe('coerceDate', () => {
         expect(coerceDate('2026-10-10T10:00')).toBe('2026-10-10');
     });
 
+    it('reads a date-time with a basic-format offset the same way', () => {
+        expect(coerceDate('2026-10-10T23:30:00-0500')).toBe('2026-10-10');
+    });
+
     it('leaves any other string for the validator to reject', () => {
         for (const value of ['Oct 10 2026', '2026-02-30T10:00', '2026-10-10 10:00Z']) {
             expect(coerceDate(value)).toBe(value);
@@ -425,6 +429,7 @@ describe('validateDate', () => {
     it('accepts an ISO date-time', async () => {
         expect(await validateDate(ctx('2026-01-02T03:04:05.000Z'))).toBe(true);
         expect(await validateDate(ctx('2026-10-10T23:30:00-05:00'))).toBe(true);
+        expect(await validateDate(ctx('2026-10-10T23:30:00-0500'))).toBe(true);
     });
 
     it('rejects any other form, including ones Date.parse reads', async () => {
@@ -460,6 +465,13 @@ describe('coerceDatetime', () => {
         );
     });
 
+    it('reads a basic-format offset as the same zone', () => {
+        expect(coerceDatetime('2026-10-10T10:00:00+0200')).toBe(
+            '2026-10-10T08:00:00.000Z'
+        );
+        expect(coerceDatetime('2026-10-10T10:00-0130')).toBe('2026-10-10T11:30:00.000Z');
+    });
+
     // Read as UTC it would move by the server's offset; read in the server's
     // zone it would move by the server's zone. Neither is the author's.
     it('keeps the wall time of a value without a zone, to the millisecond', () => {
@@ -492,12 +504,19 @@ describe('validateDatetime', () => {
         }
     });
 
+    // Stored before core kept these forms. A sent one is coerced to UTC first,
+    // so the rule sees it only as a stored value a patch left out.
+    it('accepts a basic-format offset', async () => {
+        expect(await validateDatetime(ctx('2026-10-10T10:00:00+0200'))).toBe(true);
+        expect(await validateDatetime(ctx('2026-10-10T10:00-0130'))).toBe(true);
+    });
+
     it('rejects any other form, including ones Date.parse reads', async () => {
         for (const value of [
             'not a date',
             'Oct 10 2026',
             '2026-10-10 10:00:00Z',
-            '2026-10-10T10:00:00+0200',
+            '2026-10-10T10:00:00+2400',
             '2026-02-30T10:00',
         ]) {
             expect(await validateDatetime(ctx(value))).toBe(

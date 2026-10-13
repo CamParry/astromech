@@ -184,8 +184,10 @@ await app.globals.restoreVersion({ key: 'site', locale: 'en', version: 2 });
 ```
 
 `versions` returns newest first, and each item carries only `version`,
-`locale`, `createdAt` and `createdBy`. `getVersion` adds `snapshot`, the fields
-the version holds. A number the locale has no version for is a 404. Restoring
+`locale`, `createdAt` and `createdBy`. A locale nothing has saved yet returns an
+empty list, as `get` returns `null` for it; an undeclared key is a 404.
+`getVersion` adds `snapshot`, the fields the version holds. A number the locale
+has no version for is a 404. Restoring
 snapshots the current state first, so a restore is itself undoable.
 Declare `versioning: false` to turn history off for a global.
 

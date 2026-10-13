@@ -45,10 +45,13 @@ Better Auth and the forms limit did not use it.
 - [x] Tests: a forged `x-forwarded-for` on Node without a trusted proxy does
       not change the counted address; the limiter runs with `NODE_ENV` unset;
       two app instances share one count.
+- [x] An IPv6 zone id (`fe80::1%eth0`) passed the address check but Better
+      Auth rejected it, so such a client shared the no-address count for
+      sign-in. Done 2026-10-13: `parseAddress` in
+      `packages/astromech/src/transport/http/client-address.ts` strips the zone
+      id, so the client gets its own count.
 
 ## Left open
 
-- An IPv6 zone id (`fe80::1%eth0`) passes the check but Better Auth rejects it,
-  so such a client shares the no-address count for sign-in.
 - The forms upsert was run by hand on local D1 only; `apps/demo-cloudflare`
   installs no forms plugin, so no check covers it.
