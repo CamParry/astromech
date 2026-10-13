@@ -1,7 +1,8 @@
 /**
  * The one path from what a caller sent to the fields a resource row stores:
- * merge or inherit, parse, project, prune. Every create and update of an entry,
- * a global, a user and a media item goes through it.
+ * merge or inherit, parse, prune, then keep the stored row's undeclared keys.
+ * Every create and update of an entry, a global, a user and a media item goes
+ * through it.
  */
 
 import type { DataField } from '@/types/fields';
@@ -15,14 +16,17 @@ import type {
 import { resourceExistenceRepository } from '@/content/repository/resource-existence';
 import { flattenFieldNodes } from '@/fields/flatten';
 import { parseFields } from '@/fields/parse-fields';
-import { mergePatch, projectToSchema } from '@/fields/values';
+import { keepUndeclaredKeys, mergePatch } from '@/fields/values';
 import { parseOutput } from '@/services/parse-method-output';
 import { pruneDanglingRelations } from './dangling-relations';
 import { RESOURCE_CONFIG } from './resources';
 import { resolveValidationMode } from './validation-mode';
 
-/** What the field parse needs to know about the write, beyond the values. */
-export type FieldWrite = {
+/**
+ * What the field parse needs to know about the write, beyond the values.
+ * `Existing` is the stored row an update reads.
+ */
+type FieldWriteOf<Existing> = {
     resource: ResourceType;
     config: ResolvedConfig;
     /** The entry type or global key; users and media have none. */
@@ -32,9 +36,15 @@ export type FieldWrite = {
     status?: EntryStatus | undefined;
 } & (
     | { operation: 'create' }
-    /** `existing` is the row as it stands, handed to validators. */
-    | { operation: 'update'; existing: unknown }
+    /**
+     * `existing` is the row as it stands, handed to validators. The root keys
+     * of its `fields` the schema does not declare are kept in the row written.
+     */
+    | { operation: 'update'; existing: Existing }
 );
+
+/** A write that stores fields: an update reads the stored row's `fields`. */
+export type FieldWrite = FieldWriteOf<{ fields: JsonObject }>;
 
 /** Where the values come from before the parse. */
 export type FieldSource =
@@ -43,8 +53,8 @@ export type FieldSource =
     /**
      * A patch over a stored row: an omitted field keeps its stored value, an
      * explicit `null` stores null, and an array or container replaces wholesale.
-     * Only the patched fields are coerced, and keys the schema no longer
-     * declares are dropped.
+     * Only the patched fields are coerced, and a patched key the schema does not
+     * declare is dropped.
      */
     | {
           base: JsonObject;
@@ -70,6 +80,12 @@ export type PrepareFieldsInput = FieldWrite & FieldSource;
  * The fields a write stores. Throws a 422 when a field or the resource's own
  * validator reports. The prune runs after the parse, whose minted item ids the
  * traversal needs, and before the write, so the index derives from its result.
+ *
+ * The parse and the validators see only declared fields. An update then carries
+ * over the root keys of the stored row that the schema no longer declares, so a
+ * renamed or removed field's values survive the save
+ * (`decisions/saves-keep-undeclared-field-values.md`); an undeclared key the
+ * caller sent is not stored.
  */
 export async function prepareFields(input: PrepareFieldsInput): Promise<JsonObject> {
     const { resource, config, target } = input;
@@ -105,11 +121,15 @@ export async function prepareFields(input: PrepareFieldsInput): Promise<JsonObje
     const pruned = await pruneDanglingRelations(
         config,
         definitions,
-        (patch !== undefined
-            ? projectToSchema(parsed, definitions)
-            : parsed) as JsonObject
+        parsed as JsonObject
     );
-    return pruned.values;
+    return input.operation === 'update'
+        ? (keepUndeclaredKeys(
+              pruned.values,
+              input.existing.fields,
+              definitions
+          ) as JsonObject)
+        : pruned.values;
 }
 
 /**
@@ -118,7 +138,7 @@ export async function prepareFields(input: PrepareFieldsInput): Promise<JsonObje
  * `coerceOnly` names the root fields new in this write; absent coerces every field.
  */
 export function fieldParseContext(
-    write: FieldWrite & { coerceOnly?: ReadonlySet<string> | undefined }
+    write: FieldWriteOf<unknown> & { coerceOnly?: ReadonlySet<string> | undefined }
 ): Parameters<typeof parseFields>[2] {
     const { resource, config, target } = write;
     const resourceConfig = RESOURCE_CONFIG[resource];

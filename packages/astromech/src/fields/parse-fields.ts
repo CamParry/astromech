@@ -397,8 +397,9 @@ export async function parseFields(
  * coerced values plus blocking `errors`, advisory `warnings` and form-level
  * `form` messages.
  *
- * The returned values are projected through the schema first, so a key matching
- * no declared field is dropped rather than written back. Empty `definitions`
+ * The values are projected through the schema first, so the fields and the
+ * resource validator see only declared keys and none is returned. A save keeps
+ * the stored row's undeclared keys itself (`keepUndeclaredKeys`). Empty `definitions`
  * means the schema is unknown here, not that there are no fields, so nothing is
  * dropped in that case.
  */

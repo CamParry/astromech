@@ -1,7 +1,8 @@
 /**
  * Root-level operations on a record of field values. Used by the update
- * paths of entries, users and media, which patch a stored `fields` object
- * rather than replacing it, then drop any key the schema no longer declares.
+ * paths, which patch a stored `fields` object rather than replacing it, parse
+ * only the keys the schema declares, and carry the stored row's other keys
+ * over into the row they write.
  */
 
 import type { Field } from '@/types/fields';
@@ -41,4 +42,25 @@ export function projectToSchema(
         if (names.has(key)) projected[key] = value;
     }
     return projected;
+}
+
+/**
+ * `values` with the root keys of `stored` that the schema does not declare
+ * carried over, so a value whose field was renamed or removed survives a save.
+ * Only stored keys are carried: an undeclared key in `values` itself is the
+ * caller's, and is dropped. Empty `definitions` means the schema is unknown
+ * here, so `values` is returned as it is.
+ */
+export function keepUndeclaredKeys(
+    values: Record<string, unknown>,
+    stored: Record<string, unknown>,
+    definitions: Field[]
+): Record<string, unknown> {
+    if (definitions.length === 0) return values;
+    const kept = projectToSchema(values, definitions);
+    const names = new Set(definitions.map((field) => field.name));
+    for (const [key, value] of Object.entries(stored)) {
+        if (!names.has(key)) kept[key] = value;
+    }
+    return kept;
 }

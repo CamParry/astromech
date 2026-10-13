@@ -122,3 +122,51 @@ describe('a non-translatable global', () => {
         expect(saved.locale).toBe('en');
     });
 });
+
+describe('a new locale of a global', () => {
+    it('fills the configured and built-in field defaults', async () => {
+        setupTestConfig({
+            ...makeGlobalsConfig(),
+            globals: [
+                {
+                    key: 'site',
+                    label: 'Site',
+                    translatable: true,
+                    fields: [
+                        { name: 'title', type: 'text', label: 'Title' },
+                        {
+                            name: 'tone',
+                            type: 'text',
+                            label: 'Tone',
+                            defaultValue: 'plain',
+                        },
+                        { name: 'featured', type: 'boolean', label: 'Featured' },
+                        {
+                            name: 'items',
+                            type: 'repeater',
+                            label: 'Items',
+                            fields: [{ name: 'label', type: 'text', label: 'Label' }],
+                        },
+                    ],
+                },
+            ],
+        });
+        await api.update({
+            key: 'site',
+            data: { fields: { title: 'EN', tone: 'warm', featured: true } },
+        });
+
+        const de = await api.update({
+            key: 'site',
+            locale: 'de',
+            data: { fields: { title: 'DE' } },
+        });
+
+        expect(de.fields).toEqual({
+            title: 'DE',
+            tone: 'plain',
+            featured: false,
+            items: [],
+        });
+    });
+});
