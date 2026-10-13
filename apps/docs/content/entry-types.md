@@ -82,6 +82,35 @@ title, status and slug already. Config loading also fails when a `sortable`
 column names a field the list cannot sort by, so the admin never offers a sort
 the API refuses.
 
+## Showing entries as a grid
+
+The admin lists a type's entries in a table. `views` adds a grid of cards, and
+`gridFields` picks the fields each card shows under the entry's title and
+status:
+
+```ts
+{
+    type: 'post',
+    single: 'Post',
+    plural: 'Posts',
+    views: ['list', 'grid'],
+    defaultView: 'grid',
+    gridFields: [{ field: 'excerpt', label: 'Excerpt' }],
+    fields: [fields.textarea('excerpt')],
+}
+```
+
+- `views` lists the views the list offers: `'list'` (the table) and `'grid'`.
+  It defaults to `['list']`. With both, a toggle above the list switches
+  between them, and the editor's browser remembers the choice.
+- `defaultView` is the view the list opens in until the editor picks one. It
+  defaults to `'list'`. On a screen narrower than 768px the list opens in the
+  grid whenever `views` includes it.
+- `gridFields` names top-level fields of the type, each with an optional
+  `label` (the field's name when absent). A card shows a field's value the way
+  a table column over that field shows it. As with an admin column, config
+  loading fails when a grid field names no field the type declares.
+
 ## Updating entries
 
 `Astromech.entries.update()` takes a **patch**, not a replacement. A field the

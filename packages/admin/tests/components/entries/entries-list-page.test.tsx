@@ -58,7 +58,7 @@ afterEach(() => {
     query.mockReset();
     adminConfig.entryTypes = {};
     adminConfig.locales = ['en'];
-    localStorage.removeItem('am-cols-post');
+    localStorage.removeItem('am-hidden-cols-post');
 });
 
 function makeEntry(id: string, title: string): Entry {
