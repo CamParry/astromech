@@ -117,8 +117,12 @@ const mode = process.argv.includes('--fast')
       : 'full';
 
 // Locally, as many tasks at once as pnpm ran packages at once before; at full
-// speed, one per core.
-const concurrency = cpuLimitsApply ? WORKSPACE_CONCURRENCY : availableParallelism();
+// speed, one per two cores. Each test suite already runs a vitest worker per
+// core, so one task per core put four suites beside each other on a 4-core CI
+// runner and slowed the crafted-file GPS tests past their 3 s limit.
+const concurrency = cpuLimitsApply
+    ? WORKSPACE_CONCURRENCY
+    : Math.max(2, Math.floor(availableParallelism() / 2));
 
 const verifyDirectory = prepareVerifyDirectory(repoRoot);
 const scope = gateScope(repoRoot, { all: process.argv.includes('--all') });
