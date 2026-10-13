@@ -173,28 +173,30 @@ const isValidDate = (value: unknown): value is Date =>
  * Callers pass a `Date` as often as a string. A `Date` becomes its UTC date,
  * the day `new Date('YYYY-MM-DD')` reads back. An ISO date-time string, the
  * form a date was stored in before core kept `YYYY-MM-DD` only, becomes the
- * date it is written with: `2026-10-10T23:30:00-05:00` is 2026-10-10 where it
- * was written, though the same instant falls on 2026-10-11 in UTC. Any other
- * string is left for the validator.
+ * date it is written with: `2026-10-10T23:30:00-05:00`, or `-0500`, is
+ * 2026-10-10 where it was written, though the same instant falls on 2026-10-11
+ * in UTC. Any other string is left for the validator.
  */
 export const coerceDate = (value: unknown): unknown => {
     if (isValidDate(value)) return value.toISOString().slice(0, 10);
-    return typeof value === 'string' && isoDatetime.safeParse(value).success
+    return typeof value === 'string' &&
+        isoDatetime.safeParse(withExtendedOffset(value)).success
         ? value.slice(0, 10)
         : value;
 };
 
 /**
- * A date is stored as `YYYY-MM-DD`. This also accepts an ISO date-time, the
- * form a date was stored in before, because a patch validates the fields it
- * leaves out without coercing them: such a value reaches this rule only when
- * it is stored and not sent, and refusing it would fail every patch to the row
- * until a caller sent the date again. A sent one is coerced to its date first.
+ * A date is stored as `YYYY-MM-DD`. This also accepts an ISO date-time, with
+ * either offset form, the form a date was stored in before, because a patch
+ * validates the fields it leaves out without coercing them: such a value
+ * reaches this rule only when it is stored and not sent, and refusing it would
+ * fail every patch to the row until a caller sent the date again. A sent one
+ * is coerced to its date first.
  */
 export const validateDate: FieldValidator = async (ctx) => {
     if (typeof ctx.value !== 'string') return 'Must be a date';
     return isoDate.safeParse(ctx.value).success ||
-        isoDatetime.safeParse(ctx.value).success
+        isoDatetime.safeParse(withExtendedOffset(ctx.value)).success
         ? true
         : 'Must be a date as YYYY-MM-DD';
 };

@@ -381,6 +381,48 @@ describe('update — a date stored as a full ISO date-time', () => {
 // A date-time stored before core kept ISO forms only, written here behind the
 // pipeline's back: `Date.parse` reads a basic-format offset, `z.iso.datetime`
 // does not.
+// As above, with the basic-format offset `Date.parse` also read.
+describe('update — a date stored as a date-time with a basic-format offset', () => {
+    async function createWithDay(): Promise<string> {
+        const entry = await api.create({
+            type: 'post',
+            data: { title: 'T', fields: { title_text: 'Hello' } },
+        });
+        await createRepository(entryContentTable).updateMany(
+            { entryId: entry.id },
+            { fields: { title_text: 'Hello', day: '2026-10-10T23:30:00-0500' } }
+        );
+        return entry.id;
+    }
+
+    it('keeps it as stored when a patch leaves the field out', async () => {
+        const id = await createWithDay();
+
+        const updated = await api.update({
+            type: 'post',
+            id,
+            data: { fields: { title_text: 'Changed' } },
+        });
+        const result = Array.isArray(updated) ? updated[0]! : updated;
+        expect(result.fields).toMatchObject({
+            title_text: 'Changed',
+            day: '2026-10-10T23:30:00-0500',
+        });
+    });
+
+    it('stores the date it is written with when the field is sent again', async () => {
+        const id = await createWithDay();
+
+        const updated = await api.update({
+            type: 'post',
+            id,
+            data: { fields: { title_text: 'Hello', day: '2026-10-10T23:30:00-0500' } },
+        });
+        const result = Array.isArray(updated) ? updated[0]! : updated;
+        expect(result.fields.day).toBe('2026-10-10');
+    });
+});
+
 describe('update — a date-time stored with a basic-format offset', () => {
     async function createWithStarts(): Promise<string> {
         const entry = await api.create({

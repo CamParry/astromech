@@ -48,8 +48,8 @@ given a name stores its fields under that name too.
 | `relationship(name)`                       | an id, or a list of ids                   | `target`, `multiple`. See [relationships.md](relationships.md)     |
 
 A `date` given a `Date` stores its UTC date. One given an ISO date-time stores
-the date it is written with: `2026-10-10T23:30:00-05:00` is stored as
-`2026-10-10`. A date already stored as an ISO date-time is valid as it is: an
+the date it is written with: `2026-10-10T23:30:00-05:00`, or
+`2026-10-10T23:30:00-0500`, is stored as `2026-10-10`. A date already stored as an ISO date-time is valid as it is: an
 update that leaves the field out keeps it, and one that sends it stores its
 date.
 
