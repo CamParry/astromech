@@ -44,46 +44,67 @@ source; merge rules come from each repo's public GitHub settings.
 - **Agents are told to run narrow checks**: Mastra ("Use the narrowest
   package build/test/lint/typecheck"), Ghostty, Astro, workers-sdk.
 
+- **Turborepo is the common tool.** Of 26 TypeScript and JS repos checked
+  on 2026-10-13 (the ten above plus TanStack, Hono, Drizzle, Strapi,
+  Directus, Vite, Nuxt, SvelteKit, Better Auth, shadcn/ui, Next.js, React
+  Router, Biome, oxc, Vue), 9 use Turborepo (Vercel AI SDK, Mastra, Astro,
+  workers-sdk, Payload, Drizzle, Better Auth, shadcn/ui, Next.js), 3 use Nx
+  (TanStack Router and Query, Strapi), 2 use Vite+ or its task runner (Hono,
+  a single package, and oxc), 1 uses Bazel (Codex), and 11 use plain scripts
+  or a native build tool. Each from the repo's root files. Vite+ reached 1.0
+  on 2026-09-28 and its docs have no affected or changed-since mode. All
+  three are MIT.
+
 ## The work
 
-- [ ] **The stamp records each check by the files it reads.** A check
-      declares its inputs (a package's sources and tests, the root config,
-      the lockfile), and the stamp records a content hash per check. A check
-      whose inputs are unchanged since its last pass is reused, so a rebase
-      over unrelated commits re-runs nothing.
-- [ ] **The gate picks checks from the diff since the merge base.**
-    - A markdown-only diff runs `check:docs` and `format:check`.
-    - A package change runs that package's tests and the tests of every
-      package that depends on it, from the workspace's `package.json`
-      dependencies.
-    - The boot checks run when the diff reaches boot, the config path, the
-      injected middleware or the Worker entry, or a package they build.
-    - Typecheck, lint and `format:check` stay repo-wide.
-    - It falls back to the full gate when the diff touches the root
-      `package.json`, `pnpm-lock.yaml`, `tsconfig*`, `eslint.config.js`,
-      `scripts/`, `.github/` or a vitest config, or when the diff cannot be
-      computed.
-    - It prints which checks it chose and why, and `--all` still runs
-      everything (`--full` already names a mode). CI runs with `--all`,
-      since on `main` the merge base is HEAD.
+Turborepo runs every check, and its cache replaces the hand-written stamp.
+
+- [ ] **Each check is a Turborepo task with declared `inputs`.** The
+      packages' `build`, `typecheck`, `lint`, `test:run` and `test:coverage`
+      are package tasks with `dependsOn` where one reads another's output.
+      The rest (the boot checks, `check:docs`, `format:check`, `check:unused`,
+      `check:exports`, `check:node-imports`, `check:hooks`, `check:scripts`,
+      the demo apps' typecheck) are root tasks (`//#<name>`). Root config the
+      tasks read (the lockfile, `tsconfig*`, `eslint.config.js`, `scripts/`)
+      is in `globalDependencies`, so changing it reruns everything. Markdown
+      is outside every input but `check:docs` and `format:check`.
+- [ ] **`pnpm run verify` runs `turbo run … --affected` against
+      `origin/main`.** A package change runs its dependents' tasks too,
+      which Turborepo takes from the workspace graph. `verify.mjs` keeps the
+      run lock, the lower priority and a log per task. `--all` drops
+      `--affected` (`--full` already names a mode), and CI passes it, since
+      on `main` the merge base is HEAD.
+- [ ] **The cache is shared and replaces the stamp.** `cacheDir` points at
+      one directory outside the worktrees, so a new worktree reuses results
+      `main` produced and a rebase over unrelated commits reruns nothing.
+      `verify:status` and `land` read `turbo run … --affected --dry=json` and
+      pass only when every task is a cache hit. `scripts/verify-stamp.mjs`
+      goes. CI keeps the cache between runs with `actions/cache`.
+- [ ] **`eslint-config-turbo` checks that a task declares the environment
+      variables it reads**, so the cache key cannot miss one.
 - [ ] **`format:check` joins the gate.** Today the gate leaves it to the
       pre-commit hook, and the hook's Prettier glob skipped `.js` until
       2026-10-13, so `eslint.config.js` reached CI unformatted.
-- [ ] **`pnpm run land` takes the scoped gate's stamp and no longer requires
-      the branch to contain `origin/main`.** It merges when there is no
-      conflict, writing the merged tree with `git merge-tree --write-tree`
-      (today the merge commit takes HEAD's tree, which is only right when the
-      branch contains main), and CI's full run on `main`, which it already waits for, is
-      the check on the merge result. A setting turns the full local gate and
-      the up-to-date rule back on for after 1.0.
+- [ ] **`pnpm run land` no longer requires the branch to contain
+      `origin/main`.** It merges when there is no conflict, writing the
+      merged tree with `git merge-tree --write-tree` (today the merge commit
+      takes HEAD's tree, which is only right when the branch contains main),
+      and CI's full run on `main`, which it already waits for, is the check
+      on the merge result. A setting turns the up-to-date rule and the
+      unscoped local gate back on for after 1.0.
 - [ ] **`AGENTS.md` and `.claude/_agents/coder.md` give the narrow
       commands**: the touched package's test file, typecheck and lint while
       working, then the scoped gate before handing back.
 
 ## Testing
 
-`node:test` suites beside the scripts, run by `check:scripts`: the selection
-for a markdown-only diff, a schema-engine change (schema-engine and core), an
-admin change (admin and the plugins), and a lockfile change (everything); a
-stamp reused across a rebase that touches none of a check's inputs, and not
-reused when one input changes.
+- A markdown-only change: `turbo run … --affected --dry=json` lists only
+  `check:docs` and `format:check`.
+- A schema-engine change lists the tasks of every package that depends on
+  it; an admin change lists admin's and the plugins' but not core's; a
+  lockfile change lists everything.
+- A second `verify` on unchanged content is all cache hits, and so is one
+  in a new worktree after `main` passed.
+- `land`'s merge-tree step on a throwaway repository: a branch behind main
+  with no conflict lands with main's newer commits kept; a conflict is
+  refused.
