@@ -231,7 +231,21 @@ npx wrangler dev -c dist/server/wrangler.json --local --env-file "$PWD/.dev.vars
 `.dev.vars` beside your `wrangler.jsonc` holds local secrets, one per line as
 `BETTER_AUTH_SECRET=…`; keep it out of git. Wrangler looks for `.dev.vars` beside
 the config it runs, which with `-c` is inside the build output, so the file is
-passed with `--env-file` instead.
+passed with `--env-file`.
+
+The build puts a copy there too. The
+[Cloudflare Vite plugin](https://developers.cloudflare.com/workers/vite-plugin/reference/secrets/),
+which Astro's adapter builds through, writes your `.dev.vars`, or with none every
+variable in your `.env` files, to `dist/server/.dev.vars` for `wrangler dev` to
+read. `wrangler deploy` does not upload it, but it holds your secrets, so keep
+`dist/` out of git and out of any archive you share. Two settings narrow it
+([secrets](https://developers.cloudflare.com/workers/configuration/secrets/)):
+
+- `secrets.required` in `wrangler.jsonc` lists the secrets your Worker needs,
+  and only those are copied. Wrangler then also reads them from your shell, and
+  `wrangler deploy` expects each one to be set.
+- `CLOUDFLARE_LOAD_DEV_VARS_FROM_DOT_ENV=false` in the build's environment
+  leaves `.env` out, so only a `.dev.vars` file is copied.
 
 The build applies migrations when it starts, before it prerenders anything,
 through wrangler's `getPlatformProxy()`, which writes local state next to your

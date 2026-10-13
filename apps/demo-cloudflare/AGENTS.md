@@ -13,6 +13,8 @@ pnpm run preview              # wrangler dev over the built Worker
 
 `pnpm run build` applies the migrations into `.wrangler/state` in this directory. A `wrangler dev` pointed at `dist/server/wrangler.json` needs `--persist-to` for that state, or it boots against an empty database.
 
+Every build also copies `.env` into `dist/server/.dev.vars`, `ANTHROPIC_API_KEY` included. The Cloudflare Vite plugin does that for `wrangler dev` over the build, which is how `pnpm run preview` gets the variables, and `wrangler deploy` does not upload it ([Cloudflare's docs](https://developers.cloudflare.com/workers/vite-plugin/reference/secrets/)). `dist/` is gitignored, so it goes nowhere else. It is left on: `secrets.required` in `wrangler.jsonc` would narrow the copy, but it also makes `wrangler deploy` require each listed secret and must be repeated in the `testing` environment, and `check:boot:cloudflare` passes its secret with `--env-file`, so it needs no copy. `apps/docs/deployment/cloudflare.md` ("Running it locally") has both settings that narrow it.
+
 ## What is Cloudflare-specific here
 
 - `src/worker.ts`: `createWorkerEntry(astro, { config })` exports `fetch` and `scheduled` and registers the Worker's `env`. `main` in `wrangler.jsonc` points at it.
