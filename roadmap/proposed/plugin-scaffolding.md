@@ -9,7 +9,7 @@ _from_: a new plugin begins by copying `packages/plugins/redirects/`.
 
 A scaffold locks in conventions, so it waits until the authoring surface stops
 moving. The `definePluginTable` question it was also waiting on is settled
-(`DECISIONS.md`): a plugin with tables keeps its package name in a constant.
+([Plugin tables are typed by package name](../../decisions/plugin-tables-are-typed-by-package-name.md)): a plugin with tables keeps its package name in a constant.
 
 **Trigger:** build it after `planned/hooks.md`, `planned/permissions.md` and
 `planned/notifications-channels-and-events.md` land. Each changes what a plugin

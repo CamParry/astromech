@@ -175,8 +175,8 @@ describe('resolveTable', () => {
         expect(featured?.kind).toBe('badge');
     });
 
-    // A field may share a system column's name (DECISIONS.md, "An entries list
-    // sorts by a field's bare name"), so a column over it needs its own key.
+    // A field may share a system column's name (`decisions/sort-by-field-name.md`),
+    // so a column over it needs its own key.
     it('keys a column over a field named like a system column apart from it', () => {
         const config: AdminEntryType = {
             ...fullConfig,

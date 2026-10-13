@@ -25,7 +25,7 @@ export function createVersionsRepository<V extends Table>(
 ): Omit<ContentVersions<TableSelect<V>>, 'snapshot'> {
     // Pass `db` straight through: `createRepository`'s `handle()` resolves
     // `db ?? getDb()` per call, so a repository built before `transaction()`
-    // opens still binds to the open scope (`DECISIONS.md`).
+    // opens still binds to the open scope (`decisions/transaction-is-a-scope.md`).
     const repository = createRepository(table, db);
 
     /**

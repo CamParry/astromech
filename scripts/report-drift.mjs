@@ -66,7 +66,7 @@ const PATTERNS = [
     {
         name: 'Repository built outside a repository file',
         pattern: /\bcreate\w*Repository\(/,
-        // A plugin builds its repository per call from `ctx.db` (DECISIONS.md).
+        // A plugin builds its repository per call from `ctx.db` (`decisions/repository-is-a-module-object.md`).
         except: [/\/repository(\.ts$|\/)/, 'packages/plugins/'],
         why: 'A service reaches a repository through its getXRepository() registry accessor; only repository files build one.',
     },

@@ -55,7 +55,8 @@ Builds on `roadmap/planned/drafts.md` and `roadmap/planned/locale-trash.md`.
   every sibling.
 - **Config:** `orderable: true` for manual order, and
   `hierarchical: true | { maxDepth }` for nesting, which implies `orderable`.
-  Naming is in `DECISIONS.md`.
+  Naming is in [Nested entries store their path per
+  locale](../../decisions/nested-entries-store-their-path.md).
 - **Each locale's content row stores its `path`:** the ancestors' slugs and
   its own.
     - The `url` template gets a `{path}` token (`url: '/{path}'`).
@@ -115,8 +116,8 @@ Builds on `roadmap/planned/drafts.md` and `roadmap/planned/locale-trash.md`.
 - [ ] The path-change event; the redirects plugin writes its rules from it.
 - [ ] The admin: tree view, parent picker, drag to move, the unpublished-parent
       warning, the trash confirmation.
-- [ ] Revise `DECISIONS.md`, "`type` is copied onto `entry_content`", when
-      it lands; `TERMINOLOGY.md` and `apps/docs`.
+- [ ] Revise [`type` is copied onto `entry_content`](../../decisions/type-is-copied-onto-entry-content.md)
+      when it lands; `TERMINOLOGY.md` and `apps/docs`.
 
 ## Testing
 

@@ -5,8 +5,7 @@ milestone: 1.0
 # Undeclared field keys
 
 When a field is renamed or removed in the config, its stored values sit under a
-key the config no longer declares. `DECISIONS.md` ("Saves keep field values the
-config no longer declares; public reads drop them") says a save keeps those
+key the config no longer declares. [Saves keep values of undeclared fields](../../decisions/saves-keep-undeclared-field-values.md) says a save keeps those
 values and a public read drops them. Only the public-read half is built. Split
 from `roadmap/planned/field-rename-command.md` on 2026-10-13, since the command
 is `later` and this half fixes data loss on its own: rename a field by mistake,

@@ -5,8 +5,8 @@ milestone: later
 # Export and import
 
 Moving a site between hosts or runtimes means copying a database file, which
-does not work for D1. `DECISIONS.md` ("A site owner changes the database only
-through `astromech` CLI commands") promises an export command. Raised on
+does not work for D1. [A site changes its database through CLI commands](../../decisions/database-changes-go-through-the-cli.md)
+promises an export command. Raised on
 2026-10-04; decided 2026-10-05.
 
 Command conventions are in `roadmap/planned/cli-commands.md`.

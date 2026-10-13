@@ -21,7 +21,8 @@ it. These gaps are left.
       from it. A request without the header keeps the connection's address.
       The startup warning is gone, and the runtime warning for a forwarding
       header without `trustProxy` fires whether or not an address is known.
-      `DECISIONS.md` records the rule.
+      [Without `trustProxy`, Node uses the connection](../../decisions/node-uses-the-connection-address.md)
+      records the rule.
 - [x] **A client that adds `x-forwarded-for` has no address.** On a Node site
       with `allowedDomains` and no `trustProxy`, such a request shares the
       address-less sign-in count, and the forms plugin's rate limit counts it
@@ -30,7 +31,9 @@ it. These gaps are left.
       the forms plugin counts by that key
       (`packages/plugins/forms/src/service/forms.ts`). A block still cannot
       apply to such a request: the block list matches an address, and the
-      request has none. `DECISIONS.md` records the rule.
+      request has none.
+      [The forms plugin counts submissions itself](../../decisions/forms-count-submissions-themselves.md)
+      records the rule.
 - [ ] **The install guide job turns main red on an upstream release.** The
       `install` job in `.github/workflows/ci.yml` runs the guide's unpinned
       install on every push, so a new Astro release can fail a push that changed

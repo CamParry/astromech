@@ -14,7 +14,7 @@
  * that are whatever the last build emitted, and nothing else in the gate can
  * see that. Conditions are never compared *between* the maps — the repo map
  * resolving `src` where `publishConfig` resolves `dist` is the design
- * (`DECISIONS.md`).
+ * (`decisions/core-has-two-export-maps.md`).
  */
 
 import console from 'node:console';

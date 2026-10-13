@@ -25,8 +25,7 @@ when it resolves and holds method, target, decision, who and when.
 
 ## The work
 
-Decided 2026-10-02: `DECISIONS.md`, "The audit trail records that a write ran,
-not what it wrote".
+Decided 2026-10-02: [The audit trail records that a write ran](../../decisions/audit-trail-records-writes.md).
 
 - [x] **Decide what a row holds.** Method id, resource type, target ids, user id
       (no foreign key), the user's email, origin, outcome, time, and the

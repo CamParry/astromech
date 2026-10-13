@@ -69,7 +69,7 @@ nothing moves them. Raised on 2026-10-03; decided 2026-10-04.
   deploying the config and running the command, and the privacy leak.
 - **`fields:remove <path>`** ships with it, since it is the same code with
   `unset` in place of the move. Changing a field's type stays a hand-written
-  migration (`DECISIONS.md`).
+  migration ([The migration generator is ours](../../decisions/migration-generator-is-ours.md)).
 - **No hooks per entry**, and one audit trail row with the target and the
   counts. The page cache is cleared as for any direct write
   (`roadmap/planned/cli-commands.md`).

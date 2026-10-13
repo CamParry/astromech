@@ -4,10 +4,9 @@ milestone: 1.0
 
 # D1 content writes as one batch
 
-On D1, `transaction()` runs its function with no transaction (`DECISIONS.md`,
-"D1 degrades to sequential writes"), so a content write that spans several
+On D1, `transaction()` runs its function with no transaction ([A transaction is a scope](../../decisions/transaction-is-a-scope.md)), so a content write that spans several
 statements can stop part way. Each write's first statement carries its guard
-(`DECISIONS.md`, "A write repeats its load-step checks in its own `WHERE`"), so
+([A write repeats its checks in its `WHERE`](../../decisions/writes-guard-in-where.md)), so
 a refused write changes nothing, but these gaps stay open. The migration side of
 the same missing transaction is
 [d1-migrations-run-as-one-batch](d1-migrations-run-as-one-batch.md).

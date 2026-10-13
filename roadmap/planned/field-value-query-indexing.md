@@ -23,7 +23,7 @@ table. When this ships, the choice gets a `DECISIONS.md` entry.
   `slug`, `title`, `id`, `references` (`buildListWhere` in
   `packages/astromech/src/entries/repository/entries-table.ts`). Anything
   else throws `UnknownWhereKeyError`
-  (`DECISIONS.md`, "An unknown entries-list `where` or sort key throws"), and that stays: querying a
+  ([Unknown list keys throw](../../decisions/unknown-list-key-throws.md)), and that stays: querying a
   field with no declared index must throw naming the field path and the
   remediation, never silently full-scan. On D1 an unindexed scan is billed per
   row read against a single-threaded database, so a silent slow success is
@@ -113,12 +113,12 @@ expressions anywhere.
 ## Also riding this mechanism
 
 - [ ] **Indexed field uniqueness.** Fields have no `unique` option
-      (`DECISIONS.md`, "Fields have no `unique` option"). SQLite supports
+      ([Fields have no `unique` option](../../decisions/fields-have-no-unique-option.md)). SQLite supports
       **unique expression indexes**, so it returns as a `UNIQUE` qualifier on a
       declared field index, and the database enforces it, concurrent writes
       included. Map the violation to a 422 on the field, and
-      add the duplicate check to `db:generate`. Amend "Fields have no `unique`
-      option" in `DECISIONS.md`.
+      add the duplicate check to `db:generate`. Amend
+      [its decision](../../decisions/fields-have-no-unique-option.md).
 
 ## Prerequisite it shares with relationships
 

@@ -1,6 +1,7 @@
 /**
  * The one rule for the `publishedAt` an entry or global write stores. Every
- * write path that sets a status calls it; `DECISIONS.md` has the reasoning.
+ * write path that sets a status calls it; `decisions/one-rule-for-published-at.md`
+ * has the reasoning.
  */
 
 import type { EntryStatus } from '@/types/index';

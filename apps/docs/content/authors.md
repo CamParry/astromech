@@ -104,5 +104,5 @@ locale.
 
 ## Why there is no built-in type
 
-`DECISIONS.md` in the repository, "No first-party author type", records the
-choice.
+[`createdBy` and `updatedBy` are stamps, not authorship](../../../decisions/stamps-are-not-authorship.md),
+in the repository, records the choice.

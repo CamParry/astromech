@@ -441,7 +441,8 @@ function openKysely(client: Client, { remote }: { remote: boolean }): Kysely<DB>
 /**
  * A libsql database runs DDL inside a transaction, so its adapter says so, and
  * Kysely's `Migrator` then runs a migration chain as one transaction, which a
- * table rebuild's `defer_foreign_keys` needs (`DECISIONS.md`).
+ * table rebuild's `defer_foreign_keys` needs
+ * (`decisions/libsql-migration-run-is-one-transaction.md`).
  */
 class LibsqlAdapter extends SqliteAdapter {
     override get supportsTransactionalDdl(): boolean {

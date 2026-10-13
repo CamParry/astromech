@@ -1725,7 +1725,7 @@ describe('hooks', () => {
     });
 
     // A throw from an after* handler propagates rather than being logged, and
-    // the write it followed stays committed (see `DECISIONS.md`).
+    // the write it followed stays committed (see `decisions/hook-throws-propagate.md`).
     it('a throwing afterDelete propagates, but the row is still gone', async () => {
         const entry = await api.create({ type: 'post', data: { title: 'Doomed' } });
         setupTestConfig();

@@ -36,7 +36,7 @@ In this repo:
 
 - The `code`, `api` and `testing` skills under `.claude/skills/` (the `css`, `docs` and `ui` skills are parked under `.claude/_skills/`; cite them only as intent, not as rules).
 - `AGENTS.md`, and the nested `AGENTS.md` closest to each changed file.
-- `ARCHITECTURE.md` (where code lives and what it may import), `TERMINOLOGY.md` (names) and `DECISIONS.md` (choices already made, and what they rejected).
+- `ARCHITECTURE.md` (where code lives and what it may import), `TERMINOLOGY.md` (names) and the decisions in `decisions/` (choices already made, and what they rejected): read the `DECISIONS.md` index, open only the decision that bears on the change, and cite it by its file path.
 
 On top of whatever the repo documents, the Standards axis always carries the **smell baseline** below: a fixed set of Fowler code smells (_Refactoring_, ch.3) that applies even when a repo documents nothing. Two rules bind it:
 

@@ -27,7 +27,7 @@ const nonBarrelIndexModules = [
     'pages/.*index',
 ];
 
-// No internal barrels (DECISIONS.md, "A barrel is an entry point, not navigation").
+// No internal barrels (`decisions/barrels-are-entry-points.md`).
 // Only `src/exports/` re-exports, so every other file names the module that
 // declares the symbol.
 const noBarrelImport = [
@@ -42,7 +42,7 @@ const noBarrelImport = [
         // slash in the alternation is escaped before it goes into the selector.
         `[source.value!=/\\/(${nonBarrelIndexModules.map((m) => m.replaceAll('/', '\\/')).join('|')})$/]`,
     message:
-        'Internal barrels are removed — import the file that declares the symbol (see DECISIONS.md, "A barrel is an entry point, not navigation").',
+        'Internal barrels are removed — import the file that declares the symbol (see `decisions/barrels-are-entry-points.md`).',
 }));
 
 // Core's globals share one `globalThis.__astromech` namespace, declared once in
@@ -104,7 +104,7 @@ const noAmbientRead = ['ImportDeclaration', 'ImportExpression'].map((node) => ({
         .map((m) => m.replaceAll('/', '\\/'))
         .join('|')})$/]`,
     message:
-        "Content modules take the user, config, hooks and sibling services from the method's ctx — pass them in rather than reading the request scope, the config registry or the current request's services (see DECISIONS.md).",
+        "Content modules take the user, config, hooks and sibling services from the method's ctx — pass them in rather than reading the request scope, the config registry or the current request's services (see `decisions/handlers-take-explicit-context.md`).",
 }));
 
 // The files below a content module that legitimately read ambiently:
@@ -118,13 +118,14 @@ const ambientReadExceptions = [
     'packages/astromech/src/security/captcha/verify.ts',
 ];
 
-// A module's `internal/` is importable only from inside that module (DECISIONS.md,
-// "A module's `internal/` is private to it"). A block for the rest of core bans
-// all five; each module's own block bans the other four.
+// A module's `internal/` is importable only from inside that module
+// (`decisions/module-internal-is-private.md`). A block for the rest of core
+// bans all five; each module's own block bans the other four.
 const modulesWithInternal = ['entries', 'globals', 'media', 'users', 'notifications'];
 
-// `RESOURCE_CONFIG` is read only inside `content/` (DECISIONS.md, "A caller names
-// the resource; `content/` reads its config"). The `content/` block drops this ban.
+// `RESOURCE_CONFIG` is read only inside `content/`
+// (`decisions/resources-share-helpers-by-name.md`). The `content/` block drops
+// this ban.
 const noResourceConfigImport = {
     regex: '^(@/|(\\.{1,2}/)+(.*/)?)content/resources$',
     importNames: ['RESOURCE_CONFIG'],
@@ -140,7 +141,7 @@ function restrictedCoreImports(modules, { allowResourceConfig = false } = {}) {
                 {
                     regex: `^(@/|(\\.{1,2}/)+(.*/)?)(${modules.join('|')})/internal(/|$)`,
                     message:
-                        'A module\'s internal/ is private to it. Import from the module root, or move the helper there if another module needs it (see DECISIONS.md, "A module\'s internal/ is private to it").',
+                        "A module's internal/ is private to it. Import from the module root, or move the helper there if another module needs it (see `decisions/module-internal-is-private.md`).",
                 },
                 ...(allowResourceConfig ? [] : [noResourceConfigImport]),
             ],
@@ -163,9 +164,10 @@ export default tseslint.config(
         },
     },
     {
-        // Type-aware rules, for correctness only (DECISIONS.md, "Type-aware lint
-        // catches defects, not style"). Tests are left out: `projectService` reads
-        // each package's tsconfig.json, which does not include them.
+        // Type-aware rules, for correctness only
+        // (`decisions/lint-catches-defects-not-style.md`). Tests are left out:
+        // `projectService` reads each package's tsconfig.json, which does not
+        // include them.
         files: ['packages/*/src/**/*.{ts,tsx}', 'packages/plugins/*/src/**/*.{ts,tsx}'],
         languageOptions: {
             parserOptions: { projectService: true, tsconfigRootDir: import.meta.dirname },
@@ -238,12 +240,12 @@ export default tseslint.config(
                         {
                             regex: '^@/',
                             message:
-                                'The admin imports its own files by relative path and reaches core through astromech/shared, astromech/fetch or a type import from astromech, never a @/ path (see DECISIONS.md).',
+                                'The admin imports its own files by relative path and reaches core through astromech/shared, astromech/fetch or a type import from astromech, never a @/ path (see `decisions/only-browser-boundary-is-checked.md`).',
                         },
                         {
                             regex: '^astromech/(?!(shared|fetch)$)',
                             message:
-                                'The admin may import astromech/shared, astromech/fetch and the astromech root, and no other subpath (see DECISIONS.md).',
+                                'The admin may import astromech/shared, astromech/fetch and the astromech root, and no other subpath (see `decisions/only-browser-boundary-is-checked.md`).',
                         },
                     ],
                 },
