@@ -199,8 +199,11 @@ one writes the credential account the user signs in with; without one the user
 sets a password through the reset link. Outside development a site with no
 `email` driver has no way to deliver that link, so give a password on create.
 
-`create` and `update` refuse an email another user already holds with 422
-`VALIDATION_FAILED`, naming `email` in `details.fields`.
+An email is compared without regard to case, as Better Auth compares it at
+sign-in: `create`, `update` and first-run setup store it lower-cased, so
+`Ada@Example.com` is stored as `ada@example.com` and signs in typed either way.
+`create` and `update` refuse an email another user already holds, in any
+casing, with 422 `VALIDATION_FAILED`, naming `email` in `details.fields`.
 
 The reset link goes out through the config's `email` driver. With no driver,
 Astromech logs the link instead when `NODE_ENV` is `development`. Anywhere

@@ -249,6 +249,31 @@ describe('POST /users', () => {
         expect((await usersService.query({ search: 'taken' })).data).toHaveLength(1);
     });
 
+    // Better Auth looks a user up by the lower-cased email, so it is stored that way.
+    it('stores the email lower-cased', async () => {
+        const res = await post({ email: 'New.User@Test.DEV', name: 'New' });
+
+        expect(res.status).toBe(201);
+        expect(((await res.json()) as { data: User }).data.email).toBe(
+            'new.user@test.dev'
+        );
+    });
+
+    it('422s a different casing of an email another user holds, naming `email`', async () => {
+        await makeUser('taken@test.dev', 'First');
+
+        const res = await post({ email: 'Taken@Test.dev', name: 'Second' });
+
+        expect(res.status).toBe(422);
+        const body = (await res.json()) as {
+            error: { details: { fields: Record<string, string[]> } };
+        };
+        expect(body.error.details.fields).toEqual({
+            email: ['A user with this email already exists'],
+        });
+        expect((await usersService.query({ search: 'taken' })).data).toHaveLength(1);
+    });
+
     // The check before the insert races: another create can take the email
     // between them, and the unique index refuses the insert instead.
     it('422s an email another create takes between the check and the insert', async () => {
@@ -378,6 +403,39 @@ describe('PUT /users/:id', () => {
             email: ['A user with this email already exists'],
         });
         expect((await usersService.get({ id: user.id }))?.email).toBe('a@test.dev');
+    });
+
+    it('422s a different casing of an email another user holds, and keeps the email', async () => {
+        await makeUser('taken@test.dev', 'First');
+        const user = await makeUser('a@test.dev', 'Ann');
+
+        const res = await app().request(`/users/${user.id}`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ email: 'TAKEN@test.dev' }),
+        });
+
+        expect(res.status).toBe(422);
+        const body = (await res.json()) as {
+            error: { details: { fields: Record<string, string[]> } };
+        };
+        expect(body.error.details.fields).toEqual({
+            email: ['A user with this email already exists'],
+        });
+        expect((await usersService.get({ id: user.id }))?.email).toBe('a@test.dev');
+    });
+
+    it('stores an updated email lower-cased', async () => {
+        const user = await makeUser('a@test.dev', 'Ann');
+
+        const res = await app().request(`/users/${user.id}`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ email: 'Moved@Test.dev' }),
+        });
+
+        expect(res.status).toBe(200);
+        expect(((await res.json()) as { data: User }).data.email).toBe('moved@test.dev');
     });
 
     it('422s an email another create takes between the check and the write', async () => {
