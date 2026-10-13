@@ -49,7 +49,9 @@ given a name stores its fields under that name too.
 
 A `date` given a `Date` stores its UTC date. One given an ISO date-time stores
 the date it is written with: `2026-10-10T23:30:00-05:00` is stored as
-`2026-10-10`.
+`2026-10-10`. A date already stored as an ISO date-time is valid as it is: an
+update that leaves the field out keeps it, and one that sends it stores its
+date.
 
 A `datetime` written with a zone is stored in UTC:
 `2026-10-10T10:00:00+02:00` is stored and read back as

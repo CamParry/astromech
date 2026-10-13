@@ -128,6 +128,7 @@ function makeApi(rows: {
     return {
         api,
         get,
+        versions,
         update,
         publish,
         unpublish,
@@ -217,6 +218,50 @@ describe('the global edit page', () => {
         });
         // Nothing saved means nothing to badge.
         expect(document.querySelector('.am-badge')).toBeNull();
+    });
+
+    // The API answers 404 for both on a locale with no row, which the browser
+    // logs as an error.
+    it('asks for no staged change or versions before the global is saved', async () => {
+        const { api, get, getStaged, versions } = makeApi({ canonical: null });
+        mountPage({
+            api,
+            config: config({
+                capabilities: {
+                    statuses: true,
+                    translatable: false,
+                    versioning: true,
+                    staging: true,
+                },
+            }),
+        });
+
+        await waitFor(async () => {
+            expect((await tagline()).value).toBe('');
+        });
+        expect(get).toHaveBeenCalled();
+        expect(getStaged).not.toHaveBeenCalled();
+        expect(versions).not.toHaveBeenCalled();
+    });
+
+    it('asks for the staged change and versions of a saved global', async () => {
+        const { api, getStaged, versions } = makeApi({ canonical: makeGlobal() });
+        mountPage({
+            api,
+            config: config({
+                capabilities: {
+                    statuses: true,
+                    translatable: false,
+                    versioning: true,
+                    staging: true,
+                },
+            }),
+        });
+
+        await waitFor(() => {
+            expect(getStaged).toHaveBeenCalled();
+            expect(versions).toHaveBeenCalled();
+        });
     });
 
     it('saves through `update` with the fields alone when the status is unchanged', async () => {

@@ -14,10 +14,10 @@ export const QUALIFIED_SEPARATOR = '/';
 export const ID_SEPARATORS = /[/:]/;
 
 /**
- * The one name an entry type, global key or role slug may not take. The
- * resolved maps are plain objects, and assigning `__proto__` sets the map's
- * prototype rather than adding a key; the admin config, emitted as an object
- * literal, would do the same.
+ * The one name an entry type, global key, role slug or field name may not take.
+ * The resolved maps and a field's value objects are plain objects, and
+ * assigning `__proto__` sets the object's prototype rather than adding a key;
+ * the admin config, emitted as an object literal, would do the same.
  */
 export const PROTOTYPE_KEY = '__proto__';
 

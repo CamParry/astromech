@@ -90,9 +90,12 @@ export async function answerPluginMethod(
     name: string,
     method: string
 ): Promise<Response> {
-    const plugin = createServices(c.var.ctx, { overrideAccess: false }).plugins[name];
+    // Both maps are plain objects, so an own property only: `constructor`
+    // names neither a plugin nor a method.
+    const plugins = createServices(c.var.ctx, { overrideAccess: false }).plugins;
+    const plugin = Object.hasOwn(plugins, name) ? plugins[name] : undefined;
     if (plugin === undefined) return notFound(c, `Plugin "${name}" not found`);
-    const call = plugin[method];
+    const call = Object.hasOwn(plugin, method) ? plugin[method] : undefined;
     if (call === undefined) {
         return notFound(c, `Plugin method "${name}.${method}" not found`);
     }

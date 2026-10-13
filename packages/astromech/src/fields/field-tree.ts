@@ -5,6 +5,7 @@
  */
 
 import type { DataField, Field, ResolvedEntryFields } from '@/types/fields';
+import { PROTOTYPE_KEY } from '@/entries/entry-types';
 import { getFieldType } from './field-type-registry';
 import { fieldAffectsData, isLayoutField } from './flatten';
 import { traverseFields } from './traverse';
@@ -15,7 +16,8 @@ type DataFieldPath = { field: DataField; path: string };
  * Structural-rule validation, crash-loud naming the owner (`entry type "post"`,
  * `global "footer"`, `media`, `users`): `tab` sits only directly inside `tabs`,
  * which holds nothing else and never sits in an item container; an unnamed tab
- * or accordion has a label; names and flags that would do nothing are rejected.
+ * or accordion has a label; names and flags that would do nothing are rejected,
+ * and so is the one name a plain value object cannot hold as a key.
  */
 export function validateFieldTree(owner: string, nodes: Field[]): void {
     traverseFields(nodes, ({ field, ancestors }) => {
@@ -26,6 +28,12 @@ export function validateFieldTree(owner: string, nodes: Field[]): void {
 function assertNodeValid(prefix: string, node: Field, ancestors: readonly Field[]): void {
     const fieldType = getFieldType(node.type);
     const parent = ancestors.at(-1);
+    if (node.name === PROTOTYPE_KEY) {
+        throw new Error(
+            `${prefix} field name must not be "${PROTOTYPE_KEY}", which names an ` +
+                `object's prototype rather than a key.`
+        );
+    }
     if (
         node.name !== undefined &&
         fieldType?.layout === true &&

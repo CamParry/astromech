@@ -485,6 +485,32 @@ describe('resolveConfig structural validation', () => {
         ).toThrow(/Astromech users: `tab` must be a direct child of `tabs`/);
     });
 
+    // A field's value is written by name into a plain object, at the root and
+    // in every group, repeater item and block, where `__proto__` would set the
+    // object's prototype rather than add a key.
+    it('throws on a field named "__proto__", at the root or nested', () => {
+        const message = /entry type "post": field name must not be "__proto__"/;
+        expect(() => resolvePost([text('__proto__')])).toThrow(message);
+        expect(() =>
+            resolvePost([group('meta', { fields: [text('__proto__')] })])
+        ).toThrow(message);
+        expect(() =>
+            resolvePost([repeater('items', { fields: [text('__proto__')] })])
+        ).toThrow(message);
+        expect(() =>
+            resolvePost([
+                blocks('body', {
+                    blocks: [block('hero', { fields: [text('__proto__')] })],
+                }),
+            ])
+        ).toThrow(message);
+        expect(() =>
+            resolvePost([
+                tabs({ fields: [tab('__proto__', { fields: [text('title')] })] }),
+            ])
+        ).toThrow(message);
+    });
+
     it('allows the same name at different nesting levels', () => {
         expect(() =>
             resolveConfig({

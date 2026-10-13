@@ -290,21 +290,8 @@ const mediaService = restService<MediaService>('media', callRoute, {
     },
 });
 
-/**
- * Globals over the table. `get` is the one override: a global that has never
- * been saved is a normal state, and the route answers 404 for it, so the client
- * reads it back as `null` rather than raising.
- */
-const globalsService = restService<GlobalsService>('globals', callRoute, {
-    get: async (params) => {
-        try {
-            return await callRoute('globals.get', params ?? {});
-        } catch (err) {
-            if (err instanceof AstromechApiError && err.status === 404) return null;
-            throw err;
-        }
-    },
-});
+/** Globals over the table. */
+const globalsService = restService<GlobalsService>('globals', callRoute, {});
 
 const usersService = restService<UsersService>('users', callRoute, {});
 

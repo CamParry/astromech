@@ -102,7 +102,10 @@ export function resolveRole(
     config: Pick<ResolvedConfig, 'resolvedRoles'>,
     slug: string
 ): Role | null {
-    return config.resolvedRoles[slug] ?? null;
+    const roles = config.resolvedRoles;
+    // An own property only, so `constructor` is not a role.
+    const role = Object.hasOwn(roles, slug) ? roles[slug] : undefined;
+    return role ?? null;
 }
 
 /**

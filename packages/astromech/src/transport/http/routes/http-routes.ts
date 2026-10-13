@@ -329,11 +329,13 @@ export const ENTRIES_ROUTE_SPECS = [
  * the `:key` segment.
  */
 export const GLOBALS_ROUTE_SPECS = [
+    // A declared global exists whether or not anything has saved it, so a null
+    // read answers `{ data: null }` rather than a 404; an undeclared key is the
+    // service's own 404.
     {
         verb: 'get',
         path: '/:key',
         id: 'globals.get',
-        notFound: 'Global',
         refusals: {
             conflict:
                 '`staged` on a global without `staging` (`capability_not_supported`)',

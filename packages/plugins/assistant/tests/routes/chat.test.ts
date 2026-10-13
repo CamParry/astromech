@@ -1,6 +1,6 @@
 /**
  * The chat route module: its handler's own refusal of a caller with no user,
- * and body validation. Content blocks are checked for a `type` and nothing
+ * its 503 for a site with no usable model, and body validation. Content blocks are checked for a `type` and nothing
  * more — deeper checks would reject the block types the transcript
  * deliberately carries through, and the API is the real validator. Each
  * rejection has an example here even where the property test also reaches it:
@@ -8,9 +8,13 @@
  * threshold has to hold on every run.
  */
 
+import type { AiConfig } from '@/types/index';
+import { roleWith } from '@tests/fixtures';
 import { makeTestConfig } from '@tests/harness';
 import { createPluginTestApp } from '@tests/plugin-app';
 import { describe, expect, it } from 'vitest';
+import { buildAiModels } from '@/ai/models';
+import { setAiModels } from '@/ai/registry';
 import { assistant, resolveOptions } from '../../src/index';
 import { chatRoutes, readChatRequest } from '../../src/routes/chat';
 
@@ -53,6 +57,66 @@ describe('the chat handler', () => {
         expect(res.status).toBe(401);
         await expect(res.json()).resolves.toEqual({
             error: 'Sign in to use the assistant.',
+        });
+    });
+});
+
+// A site that configures no model, or one the assistant cannot use, still
+// boots; the chat request is what fails, before its body is read.
+describe('the chat handler without a usable model', () => {
+    /**
+     * A test app and a signed-in user holding the assistant permission, and a
+     * function posting one turn as that user. Setting the app up resets the
+     * model registry, so a test registers its model after this.
+     */
+    async function signedInPost(): Promise<() => Promise<Response>> {
+        const app = await createPluginTestApp('assistant', {
+            ...makeTestConfig(),
+            plugins: [assistant()],
+        });
+        const user = await app.users.create({
+            data: { email: `${crypto.randomUUID()}@test.dev`, name: 'Test User' },
+        });
+        return () =>
+            app.request('POST', '/plugins/assistant/chat', {
+                as: { user, role: roleWith(assistant.permissions('use')) },
+                body: { messages: [text('user', 'hi')] },
+            });
+    }
+
+    /** A model that reports `provider`. Nothing here calls it. */
+    function modelFrom(provider: string): AiConfig['model'] {
+        return {
+            specificationVersion: 'v4',
+            provider,
+            modelId: 'test-model',
+            supportedUrls: {},
+            doGenerate: () => Promise.reject(new Error('the model was called')),
+            doStream: () => Promise.reject(new Error('the model was called')),
+        };
+    }
+
+    it('answers 503 when the site configures no model', async () => {
+        const post = await signedInPost();
+
+        const res = await post();
+
+        expect(res.status).toBe(503);
+        await expect(res.json()).resolves.toEqual({
+            error: 'The assistant needs a model. Add an `ai` block to astromech.config.ts with one registered as `assistant`.',
+        });
+    });
+
+    it('answers 503 when the model is not an Anthropic one', async () => {
+        const post = await signedInPost();
+        // No model is registered as `assistant`, so the default stands in.
+        setAiModels(await buildAiModels({ model: modelFrom('openai.chat') }));
+
+        const res = await post();
+
+        expect(res.status).toBe(503);
+        await expect(res.json()).resolves.toEqual({
+            error: 'The assistant needs an Anthropic model; `assistant` is configured as openai.chat.',
         });
     });
 });

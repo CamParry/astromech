@@ -244,6 +244,31 @@ describe('POST /plugins/:name/:method — resolution failures', () => {
         const body = (await res.json()) as { error: { message: string } };
         expect(body.error.message).toBe('Plugin method "probe.nosuch" not found');
     });
+
+    // The scoped plugin handle and each plugin's method map are plain objects,
+    // so a name only `Object.prototype` holds must still be unknown: otherwise
+    // `/plugins/constructor/keys` calls `Object.keys` on the body.
+    it('404s a plugin name only Object.prototype holds', async () => {
+        const app = await freshApp();
+        const res = await requestAs(app, signedOut, '/plugins/constructor/keys', {
+            method: 'POST',
+            body: JSON.stringify({ a: 1 }),
+        });
+        expect(res.status).toBe(404);
+        const body = (await res.json()) as { error: { message: string } };
+        expect(body.error.message).toBe('Plugin "constructor" not found');
+    });
+
+    it('404s a method name only Object.prototype holds', async () => {
+        const app = await freshApp();
+        const res = await requestAs(app, signedOut, '/plugins/probe/constructor', {
+            method: 'POST',
+            body: JSON.stringify({ a: 1 }),
+        });
+        expect(res.status).toBe(404);
+        const body = (await res.json()) as { error: { message: string } };
+        expect(body.error.message).toBe('Plugin method "probe.constructor" not found');
+    });
 });
 
 describe('raw routes', () => {
