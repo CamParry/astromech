@@ -8,7 +8,7 @@
  * returns, and the schema and the rows seeded into `a` match `b` built fresh
  * with the same rows. Column order is not part of that contract
  * (`DECISIONS.md`), so the schemas are compared without it. The defects it
- * found are kept as cases at the end, the open one as an expected failure.
+ * found are kept as cases at the end.
  */
 import type { TableOp } from '../src/diff';
 import type { Snapshot, SnapshotColumn, SnapshotTable } from '../src/model';
@@ -57,10 +57,11 @@ const columnArb: fc.Arbitrary<SnapshotColumn> = fc
     });
 
 /**
- * Only `c1` references, and only the `id` of a table earlier in `TABLE_NAMES`,
- * so keys form chains (`gamma` → `beta` → `alpha`) but no cycle. A key prefers
- * the table just before its own and brings its `c1` column, so a chain of
- * keys is common enough for the drop-order cases to come up.
+ * Only `c1` references, and only the `id` of its own table or one earlier in
+ * `TABLE_NAMES`, so keys form chains (`gamma` → `beta` → `alpha`) but no cycle
+ * between tables. A key prefers the table just before its own and brings its
+ * `c1` column, so a chain of keys is common enough for the drop-order cases
+ * to come up.
  */
 function tableArb(name: (typeof TABLE_NAMES)[number]): fc.Arbitrary<SnapshotTable> {
     const [nearest, ...further] = TABLE_NAMES.slice(
@@ -69,10 +70,10 @@ function tableArb(name: (typeof TABLE_NAMES)[number]): fc.Arbitrary<SnapshotTabl
     ).reverse();
     const target =
         nearest === undefined
-            ? fc.constant(null)
+            ? fc.constantFrom(null, name)
             : fc.oneof(
                   { weight: 2, arbitrary: fc.constant(nearest) },
-                  { weight: 1, arbitrary: fc.constantFrom(null, ...further) }
+                  { weight: 1, arbitrary: fc.constantFrom(null, name, ...further) }
               );
     return fc
         .record({
@@ -82,7 +83,15 @@ function tableArb(name: (typeof TABLE_NAMES)[number]): fc.Arbitrary<SnapshotTabl
             }),
             indexed: fc.subarray([...COLUMN_NAMES]),
             uniqueIndexes: fc.boolean(),
-            onDelete: fc.option(fc.constantFrom('no action', 'cascade', 'set null')),
+            onDelete: fc.option(
+                fc.constantFrom(
+                    'no action',
+                    'cascade',
+                    'set null',
+                    'set default',
+                    'restrict'
+                )
+            ),
             target,
         })
         .map(({ columns: generated, indexed, uniqueIndexes, onDelete, target }) => {
@@ -273,8 +282,6 @@ function seedRows(t: SnapshotTable): Row[] {
  * reason that lies in the data rather than the migration. A table is left
  * empty when:
  *
- * - its key has a delete action and points at a table the ops rebuild, whose
- *   `DROP TABLE` fires that action on the rows (see the failing case below);
  * - `b` gives it a key whose target is not in `a`, so the key would point at
  *   an empty new table;
  * - `b` gives a key column a default the rows take (a new column, or NULL
@@ -289,13 +296,6 @@ function canSeed(
     a: Snapshot,
     ops: TableOp[]
 ): boolean {
-    const rebuilt = new Set(
-        ops.flatMap((op) => (op.kind === 'rebuildTable' ? [op.table.name] : []))
-    );
-    const firesAction = prev.fks.some(
-        (f) => f.onDelete !== 'no action' && rebuilt.has(f.targetTable)
-    );
-    if (firesAction) return false;
     const added = ops.flatMap((op) =>
         op.kind === 'addColumn' && op.table === prev.name ? [op.column] : []
     );
@@ -334,10 +334,17 @@ function seedBoth(a: Snapshot, b: Snapshot) {
         for (const prev of Object.values(a.tables)) {
             const next = b.tables[prev.name];
             if (!canSeed(prev, next, a, ops)) continue;
-            // A key points at an earlier table, and a row's key, in `a` or in
-            // `b`, needs that table's rows.
+            // A key points at its own table or an earlier one, and a row's
+            // key, in `a` or in `b`, needs that table's rows. The two rows
+            // share their ids with every other table's, so a key to its own
+            // table finds them.
             const keys = [...prev.fks, ...(next?.fks ?? [])];
-            if (keys.some((f) => !filled.has(f.targetTable))) continue;
+            if (
+                keys.some(
+                    (f) => f.targetTable !== prev.name && !filled.has(f.targetTable)
+                )
+            )
+                continue;
             filled.add(prev.name);
             const seeded = seedRows(prev);
             for (const row of oneRow ? seeded.slice(1) : seeded) {
@@ -698,11 +705,11 @@ describe('diffSnapshots properties', () => {
         );
     });
 
-    // Found by seeding the parity property. The differ refuses a rebuild of a
-    // table whose children keep an `ON DELETE` action in `b`, but not when the
-    // child is rebuilt too: the parent's rebuild comes first, so its `DROP
-    // TABLE` fires the action on the old child rows before the child's rebuild
-    // removes the key (`roadmap/in-progress/schema-engine-defects.md`).
+    // A table whose key in `a` points at a rebuilt table, and which the
+    // migration rebuilds to drop or change that key, is rebuilt first. The
+    // parent's `DROP TABLE` then finds no row under the old key's delete
+    // action, which would otherwise delete the child rows or overwrite their
+    // key column.
     const actionDropped = (onDelete: string) => ({
         onDelete,
         a: snap(
@@ -713,7 +720,9 @@ describe('diffSnapshots properties', () => {
         ),
         b: snap(table('alpha', [col.id()]), table('beta', [col.id(), col.text('c1')])),
     });
-    const actionsDropped = [actionDropped('cascade'), actionDropped('set null')];
+    const actionsDropped = ['cascade', 'set null', 'set default', 'restrict'].map(
+        actionDropped
+    );
 
     it.each(actionsDropped)(
         'migrates when it rebuilds a parent and drops a child key ON DELETE $onDelete, with no rows',
@@ -727,7 +736,7 @@ describe('diffSnapshots properties', () => {
         }
     );
 
-    it.fails.each(actionsDropped)(
+    it.each(actionsDropped)(
         'keeps the child rows when it rebuilds a parent and drops a child key ON DELETE $onDelete',
         async ({ a, b }) => {
             await migrateAndEmit(
@@ -739,6 +748,124 @@ describe('diffSnapshots properties', () => {
                     ]);
                 },
                 seedReference
+            );
+        }
+    );
+
+    // A dropped table that waits for a kept table's rebuild goes before the
+    // rebuilt tables it points at, after that rebuild. Rebuilding `alpha`
+    // first would fire `beta`'s key on its rows, which cascades into `gamma`'s
+    // rows or fails on `beta`'s NOT NULL column.
+    const chainDropped = (onDelete: string) => ({
+        onDelete,
+        a: snap(
+            alpha,
+            table('beta', [col.id(), col.text('c1', { notNull: true })], {
+                fks: [fk('c1', 'alpha', onDelete)],
+            }),
+            table('gamma', [col.id(), col.text('c1')], {
+                fks: [fk('c1', 'beta', 'cascade')],
+            })
+        ),
+        b: snap(table('alpha', [col.id()]), table('gamma', [col.id(), col.text('c1')])),
+    });
+
+    it.each(['cascade', 'set null', 'set default', 'restrict'].map(chainDropped))(
+        'keeps the rows of a table whose key it removes when it drops the table the key points at, ON DELETE $onDelete to a rebuilt table',
+        async ({ a, b }) => {
+            expect(diffSnapshots(a, b).errors).toEqual([]);
+            await migrateAndEmit(
+                a,
+                b,
+                async (migrated, fresh) => {
+                    expect(await describeSchema(migrated)).toEqual(
+                        await describeSchema(fresh)
+                    );
+                    expect(await rows(migrated, 'SELECT id, c1 FROM gamma')).toEqual([
+                        { id: 'g', c1: 'b' },
+                    ]);
+                },
+                async (migrated) => {
+                    await insert(migrated, 'alpha', { id: 'a', c1: null });
+                    await insert(migrated, 'beta', { id: 'b', c1: 'a' });
+                    await insert(migrated, 'gamma', { id: 'g', c1: 'b' });
+                }
+            );
+        }
+    );
+
+    // A rebuild of a table that a kept table points at with a delete action
+    // is refused, since the `DROP TABLE` fires the action on the rows. The
+    // rebuilt copy of a table that points at itself names the table in its
+    // key, so the `DROP TABLE` reaches the copied rows too. Each case runs the
+    // refused ops to show what the refusal prevents.
+    const kept = (onDelete: string, self: boolean) => {
+        const key = { fks: [fk('c1', 'alpha', onDelete)] };
+        if (self) {
+            return {
+                onDelete,
+                kind: 'its own key',
+                child: 'alpha',
+                a: snap(table('alpha', [col.id(), col.text('c1'), col.text('c2')], key)),
+                b: snap(table('alpha', [col.id(), col.text('c1')], key)),
+                seed: async (migrated: Kysely<unknown>) => {
+                    await insert(migrated, 'alpha', { id: 'a', c1: null, c2: null });
+                    await insert(migrated, 'alpha', { id: 'b', c1: 'a', c2: null });
+                },
+            };
+        }
+        const beta = table('beta', [col.id(), col.text('c1')], key);
+        return {
+            onDelete,
+            kind: 'a kept child key',
+            child: 'beta',
+            a: snap(alpha, beta),
+            b: snap(table('alpha', [col.id()]), beta),
+            seed: seedReference,
+        };
+    };
+    const refused = ['cascade', 'set null', 'set default'].flatMap((onDelete) => [
+        kept(onDelete, false),
+        kept(onDelete, true),
+    ]);
+
+    it.each(refused)(
+        'refuses a rebuild under $kind ON DELETE $onDelete, whose ops would change the row pointing at it',
+        async ({ onDelete, child, a, b, seed }) => {
+            expect(diffSnapshots(a, b).errors).toEqual([
+                expect.stringContaining(`"${child}" references it ON DELETE ${onDelete}`),
+            ]);
+            await migrateAndEmit(
+                a,
+                b,
+                async (migrated) => {
+                    // `c1` has no default, so set default writes NULL too.
+                    expect(
+                        await rows(migrated, `SELECT id, c1 FROM ${child} WHERE id = 'b'`)
+                    ).toEqual(onDelete === 'cascade' ? [] : [{ id: 'b', c1: null }]);
+                },
+                seed
+            );
+        }
+    );
+
+    // Under `defer_foreign_keys`, SQLite treats `restrict` as `no action`
+    // (`fkActionTrigger` in SQLite's fkey.c), so the `DROP TABLE` counts the
+    // rows pointing at the table as violations, which the migration's closing
+    // check clears once the `RENAME` brings the table back.
+    it.each([kept('restrict', false), kept('restrict', true), kept('no action', true)])(
+        'keeps the rows when it rebuilds a table under $kind ON DELETE $onDelete',
+        async ({ child, a, b, seed }) => {
+            expect(diffSnapshots(a, b).errors).toEqual([]);
+            await migrateAndEmit(
+                a,
+                b,
+                async (migrated) => {
+                    expect(
+                        await rows(migrated, `SELECT id, c1 FROM ${child} WHERE id = 'b'`)
+                    ).toEqual([{ id: 'b', c1: 'a' }]);
+                },
+                seed
             );
         }
     );

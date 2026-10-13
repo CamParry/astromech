@@ -26,6 +26,9 @@ export type TableOp =
           copy: { column: string; coalesceDefault?: string | number }[];
       };
 
+type RebuildOp = Extract<TableOp, { kind: 'rebuildTable' }>;
+type DropTableOp = Extract<TableOp, { kind: 'dropTable' }>;
+
 /** The result of a {@link diffSnapshots} call. */
 export type DiffResult = { ops: TableOp[]; errors: string[]; warnings: string[] };
 
@@ -76,7 +79,7 @@ type Accumulators = {
     errors: string[];
     warnings: string[];
     addColumnOps: TableOp[];
-    rebuildOps: TableOp[];
+    rebuildOps: RebuildOp[];
     dropIndexOps: TableOp[];
     createIndexOps: TableOp[];
 };
@@ -220,46 +223,42 @@ function diffTable(
 }
 
 /**
- * A rebuild of a table another table references `ON DELETE cascade` or
- * `ON DELETE set null` is refused: the rebuild's `DROP TABLE` fires those
- * triggered actions — cascade deletes the children's rows, set null nulls their
- * referencing columns — and nothing at apply time catches it.
+ * A rebuild of a table that a table references `ON DELETE cascade`,
+ * `set null` or `set default` in `next` is refused: the rebuild's `DROP TABLE`
+ * fires those actions on the rows pointing at it (cascade deletes them, the
+ * others overwrite their referencing column) and nothing at apply time
+ * catches it. That includes the table itself: its rebuilt copy names the
+ * table in its key, so the `DROP TABLE` reaches the copied rows. `restrict` is
+ * allowed: under `defer_foreign_keys` SQLite treats it as `no action`.
  */
 function cascadeRebuildErrors(
-    rebuildOps: TableOp[],
+    rebuildOps: RebuildOp[],
     tables: Record<string, SnapshotTable>
 ): string[] {
+    const effects: Record<string, string> = {
+        cascade: 'the DROP deletes their rows',
+        'set null': 'the DROP nulls their referencing columns',
+        'set default': 'the DROP sets their referencing columns to the default',
+    };
     const errors: string[] = [];
     for (const op of rebuildOps) {
-        if (op.kind !== 'rebuildTable') continue;
-        const cascade: string[] = [];
-        const setNull: string[] = [];
+        const byAction = new Map<string, string[]>();
         for (const t of Object.values(tables)) {
-            if (t.name === op.table.name) continue;
             for (const fk of t.fks) {
                 if (fk.targetTable !== op.table.name) continue;
                 const action = fk.onDelete.toLowerCase();
-                if (action === 'cascade' && !cascade.includes(t.name)) {
-                    cascade.push(t.name);
-                } else if (action === 'set null' && !setNull.includes(t.name)) {
-                    setNull.push(t.name);
-                }
+                if (!(action in effects)) continue;
+                const names = byAction.get(action) ?? [];
+                if (!names.includes(t.name)) names.push(t.name);
+                byAction.set(action, names);
             }
         }
-        if (cascade.length === 0 && setNull.length === 0) continue;
-        const clauses: string[] = [];
-        if (cascade.length > 0) {
-            clauses.push(
-                `${quoteNames(cascade)} reference${cascade.length === 1 ? 's' : ''} it ` +
-                    `ON DELETE cascade (the DROP deletes their rows)`
-            );
-        }
-        if (setNull.length > 0) {
-            clauses.push(
-                `${quoteNames(setNull)} reference${setNull.length === 1 ? 's' : ''} it ` +
-                    `ON DELETE set null (the DROP nulls their referencing columns)`
-            );
-        }
+        if (byAction.size === 0) continue;
+        const clauses = [...byAction].map(
+            ([action, names]) =>
+                `${quoteNames(names)} reference${names.length === 1 ? 's' : ''} it ` +
+                `ON DELETE ${action} (${effects[action]})`
+        );
         errors.push(
             `table "${op.table.name}" needs a rebuild, and ${clauses.join(', and ')} — ` +
                 `the rebuild's DROP TABLE fires those triggered actions ` +
@@ -271,19 +270,49 @@ function cascadeRebuildErrors(
 }
 
 /**
- * The dropped tables, split around the rebuilds. With foreign keys on, a
- * `DROP TABLE` fails while rows point at the table, or fires the keys' delete
- * actions on them, so each table is dropped after the tables that point at it:
- * after another dropped table's own drop, or, for a table that stays, after
- * the rebuild that removes its key. A dropped table that waits for the
- * rebuilds holds back every dropped table it points at, directly or through
- * other dropped tables, since dropping one of those earlier would cascade
- * through it into the kept table's rows. A cycle of keys keeps snapshot order.
+ * `ops` with each op before the ops on the tables its table points at, and
+ * otherwise in the order given. A cycle of keys keeps the order given.
  */
-function dropTableOps(
+function childrenFirst(
+    ops: (RebuildOp | DropTableOp)[],
+    pointsAt: (from: string, to: string) => boolean
+): TableOp[] {
+    const nameOf = (op: RebuildOp | DropTableOp): string =>
+        op.kind === 'dropTable' ? op.name : op.table.name;
+    const pending = [...ops];
+    const ordered: TableOp[] = [];
+    while (pending.length > 0) {
+        const free = pending.findIndex(
+            (op) => !pending.some((other) => pointsAt(nameOf(other), nameOf(op)))
+        );
+        const [op] = pending.splice(Math.max(free, 0), 1);
+        if (op === undefined) break;
+        ordered.push(op);
+    }
+    return ordered;
+}
+
+/**
+ * The table drops and rebuilds, in order. With foreign keys on, a `DROP TABLE`
+ * (a rebuild runs one too) fires the delete actions of the keys pointing at
+ * the table: cascade deletes their rows, and set null and set default
+ * overwrite their key column, or fail on a NOT NULL one. So each op goes
+ * before the ops on the tables its table points at in `prev`: a table is
+ * dropped or rebuilt only once each table pointing at it is dropped, or
+ * rebuilt to remove or change the key.
+ *
+ * A dropped table that a kept table points at waits for that table's
+ * rebuild, and so does every dropped table it points at, directly or through
+ * other dropped tables, since dropping one of those earlier would cascade
+ * through it into the kept table's rows. Those late drops are ordered among
+ * the rebuilds; the other drops go before every rebuild. A cycle of keys keeps
+ * snapshot order.
+ */
+function rebuildAndDropOps(
+    rebuildOps: RebuildOp[],
     prevTables: Record<string, SnapshotTable>,
     nextTables: Record<string, SnapshotTable>
-): { beforeRebuilds: TableOp[]; afterRebuilds: TableOp[] } {
+): { dropsBeforeRebuilds: TableOp[]; rebuildsAndLateDrops: TableOp[] } {
     const pointsAt = (from: string, to: string): boolean =>
         from !== to && (prevTables[from]?.fks.some((f) => f.targetTable === to) ?? false);
     const dropped = Object.keys(prevTables).filter((name) => !(name in nextTables));
@@ -297,21 +326,17 @@ function dropTableOps(
     for (const from of late) {
         for (const to of dropped) if (pointsAt(from, to)) late.add(to);
     }
-    const pending = [...dropped];
-    const beforeRebuilds: TableOp[] = [];
-    const afterRebuilds: TableOp[] = [];
-    while (pending.length > 0) {
-        const free = pending.findIndex(
-            (name) => !pending.some((other) => pointsAt(other, name))
-        );
-        const [name] = pending.splice(Math.max(free, 0), 1);
-        if (name === undefined) break;
-        (late.has(name) ? afterRebuilds : beforeRebuilds).push({
-            kind: 'dropTable',
-            name,
-        });
-    }
-    return { beforeRebuilds, afterRebuilds };
+    const drop = (name: string): DropTableOp => ({ kind: 'dropTable', name });
+    return {
+        dropsBeforeRebuilds: childrenFirst(
+            dropped.filter((name) => !late.has(name)).map(drop),
+            pointsAt
+        ),
+        rebuildsAndLateDrops: childrenFirst(
+            [...rebuildOps, ...dropped.filter((name) => late.has(name)).map(drop)],
+            pointsAt
+        ),
+    };
 }
 
 /** Comma-joined, double-quoted table names for an error message. */
@@ -418,16 +443,19 @@ export function diffSnapshots(prev: Snapshot | null, next: Snapshot): DiffResult
     }
 
     errors.push(...cascadeRebuildErrors(acc.rebuildOps, nextTables));
-    const drops = dropTableOps(prevTables, nextTables);
+    const { dropsBeforeRebuilds, rebuildsAndLateDrops } = rebuildAndDropOps(
+        acc.rebuildOps,
+        prevTables,
+        nextTables
+    );
 
     return {
         ops: [
             ...acc.dropIndexOps,
-            ...drops.beforeRebuilds,
+            ...dropsBeforeRebuilds,
             ...createTableOps,
             ...acc.addColumnOps,
-            ...acc.rebuildOps,
-            ...drops.afterRebuilds,
+            ...rebuildsAndLateDrops,
             ...acc.createIndexOps,
         ],
         errors,
