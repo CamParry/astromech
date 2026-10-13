@@ -31,7 +31,7 @@ export const Route = createFileRoute('/_protected/globals/$key/')({
         }
     },
     // The staged row is not readable through `get`, so only the canonical row
-    // is prefetched; the page's `useGetStagedGlobal` fetches the other.
+    // is prefetched; the page's `useEditController` fetches the other.
     loaderDeps: ({ search }) => ({ locale: search.locale }),
     loader: ({ context, params, deps }) =>
         context.queryClient.ensureQueryData(
