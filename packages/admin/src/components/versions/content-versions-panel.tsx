@@ -19,6 +19,8 @@ export type VersionListItem = Pick<VersionMetadata, 'version' | 'createdAt'>;
 export type ContentVersionsPanelProps = {
     versions: VersionListItem[];
     isLoading: boolean;
+    /** Whether the versions read failed. A list already read stays shown. */
+    isError: boolean;
     canUpdate: boolean;
     /** Restore the version with this number. */
     onRestore: (version: number) => void;
@@ -28,6 +30,7 @@ export type ContentVersionsPanelProps = {
 export function ContentVersionsPanel({
     versions,
     isLoading,
+    isError,
     canUpdate,
     onRestore,
     isRestoring,
@@ -52,7 +55,9 @@ export function ContentVersionsPanel({
             {isLoading ? (
                 <Spinner />
             ) : sorted.length === 0 ? (
-                <p className="am-text-muted am-text-sm">{t('versions.noVersions')}</p>
+                <p className="am-text-muted am-text-sm">
+                    {isError ? t('versions.loadFailed') : t('versions.noVersions')}
+                </p>
             ) : (
                 <ul className="am-content-versions-list">
                     {sorted.map((version) => (

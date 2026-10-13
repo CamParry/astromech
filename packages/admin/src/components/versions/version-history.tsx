@@ -219,6 +219,8 @@ export type VersionHistoryProps<V extends VersionWithSnapshot, K extends QueryKe
     /** The locale's versions, in any order; the list sorts newest first. */
     versions: VersionListItem[] | undefined;
     isLoading: boolean;
+    /** Whether a read the list depends on failed: the row's or the versions'. */
+    isError: boolean;
     /** The query that reads one version of this locale, with its snapshot. */
     versionQuery: (version: number) => UseQueryOptions<V, Error, V, K>;
     /** Restore the version with this number. */
@@ -235,6 +237,7 @@ export type VersionHistoryProps<V extends VersionWithSnapshot, K extends QueryKe
 export function VersionHistory<V extends VersionWithSnapshot, K extends QueryKey>({
     versions: rawVersions,
     isLoading,
+    isError,
     versionQuery,
     onRestore,
     isRestoring,
@@ -283,6 +286,10 @@ export function VersionHistory<V extends VersionWithSnapshot, K extends QueryKey
                   previous: previousRead.data?.snapshot ?? null,
               }
             : null;
+    // Either side failing leaves nothing to diff, so the pane says so rather
+    // than wait on a read that will not answer.
+    const isDiffError =
+        selectedRead.isError || (previousVersion !== null && previousRead.isError);
 
     function handleRestore(): void {
         if (selectedVersion == null) return;
@@ -323,14 +330,7 @@ export function VersionHistory<V extends VersionWithSnapshot, K extends QueryKey
                             </Link>
                         </div>
 
-                        {versions == null || versions.length === 0 ? (
-                            <p
-                                className="am-text-muted am-text-sm"
-                                style={{ padding: '1rem' }}
-                            >
-                                {t('versions.noVersions')}
-                            </p>
-                        ) : (
+                        {versions != null && versions.length > 0 ? (
                             <div className="am-versions-list">
                                 {versions.map((version) => (
                                     <VersionItem
@@ -342,6 +342,17 @@ export function VersionHistory<V extends VersionWithSnapshot, K extends QueryKey
                                     />
                                 ))}
                             </div>
+                        ) : (
+                            // A failed read is not an empty history. A list
+                            // already read stays shown when a refetch fails.
+                            <p
+                                className="am-text-muted am-text-sm"
+                                style={{ padding: '1rem' }}
+                            >
+                                {isError
+                                    ? t('versions.loadFailed')
+                                    : t('versions.noVersions')}
+                            </p>
                         )}
                     </div>
 
@@ -355,7 +366,13 @@ export function VersionHistory<V extends VersionWithSnapshot, K extends QueryKey
                             </Panel>
                         ) : snapshots === null ? (
                             <Panel>
-                                <Spinner />
+                                {isDiffError ? (
+                                    <p className="am-text-muted">
+                                        {t('versions.versionLoadFailed')}
+                                    </p>
+                                ) : (
+                                    <Spinner />
+                                )}
                             </Panel>
                         ) : (
                             <DiffView

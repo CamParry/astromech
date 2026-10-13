@@ -2,7 +2,8 @@
  * @vitest-environment happy-dom
  *
  * The shared versions list: newest first, restore behind a confirm, and no
- * restore action at all for a viewer who may not update.
+ * restore action at all for a viewer who may not update. A failed read shows
+ * an error rather than an empty history.
  */
 import type { VersionListItem } from '@/admin/components/versions/content-versions-panel';
 import { render, screen } from '@testing-library/react';
@@ -22,14 +23,20 @@ function renderPanel(
     versions: VersionListItem[],
     {
         canUpdate = true,
+        isError = false,
         onRestore = vi.fn(),
-    }: { canUpdate?: boolean; onRestore?: (version: number) => void } = {}
+    }: {
+        canUpdate?: boolean;
+        isError?: boolean;
+        onRestore?: (version: number) => void;
+    } = {}
 ): { onRestore: (version: number) => void } {
     render(
         <ConfirmProvider>
             <ContentVersionsPanel
                 versions={versions}
                 isLoading={false}
+                isError={isError}
                 canUpdate={canUpdate}
                 onRestore={onRestore}
                 isRestoring={false}
@@ -44,6 +51,20 @@ describe('ContentVersionsPanel', () => {
         renderPanel([]);
 
         expect(screen.getByText('No versions recorded yet.')).not.toBeNull();
+    });
+
+    it('shows an error, not the empty state, when the read failed', () => {
+        renderPanel([], { isError: true });
+
+        expect(screen.getByText('The versions could not be loaded.')).not.toBeNull();
+        expect(screen.queryByText('No versions recorded yet.')).toBeNull();
+    });
+
+    it('keeps a list already read when a later read fails', () => {
+        renderPanel([makeVersion(1)], { isError: true });
+
+        expect(document.querySelectorAll('.am-content-versions-number')).toHaveLength(1);
+        expect(screen.queryByText('The versions could not be loaded.')).toBeNull();
     });
 
     it('lists the versions newest first whatever order they arrive in', () => {

@@ -2,18 +2,28 @@ import { useState } from 'react';
 
 const STORAGE_PREFIX = 'am:state:';
 
+/**
+ * A string value remembered in the browser under `key`, always one of `allow`.
+ * When `key` changes the hook reads the value stored under the new key in the
+ * same render, so the old key's value never shows for the new one.
+ */
 export function useLocalState<T extends string>(
     key: string,
     defaultValue: T,
     allow: readonly string[] = []
 ): [T, (value: T) => void] {
-    const [value, _setValue] = useState<T>(() => {
-        const initialValue = localStorage.getItem(STORAGE_PREFIX + key) || defaultValue;
-        if (allow.includes(initialValue)) {
-            return initialValue as T;
-        }
-        return defaultValue;
-    });
+    const [state, setState] = useState(() => ({
+        key,
+        value: readStored(key, defaultValue, allow),
+    }));
+
+    // Adjusting state during render (React's pattern for state that follows a
+    // prop) re-renders before the commit, so no frame shows the old value.
+    let current = state;
+    if (state.key !== key) {
+        current = { key, value: readStored(key, defaultValue, allow) };
+        setState(current);
+    }
 
     function setValue(value: T) {
         if (!allow.includes(value)) {
@@ -23,7 +33,7 @@ export function useLocalState<T extends string>(
             return;
         }
 
-        _setValue(value);
+        setState({ key, value });
         try {
             localStorage.setItem(STORAGE_PREFIX + key, value ?? '');
         } catch {
@@ -31,5 +41,22 @@ export function useLocalState<T extends string>(
         }
     }
 
-    return [value, setValue];
+    return [current.value, setValue];
+}
+
+function readStored<T extends string>(
+    key: string,
+    defaultValue: T,
+    allow: readonly string[]
+): T {
+    let stored: string | null = null;
+    try {
+        stored = localStorage.getItem(STORAGE_PREFIX + key);
+    } catch {
+        // Storage can be blocked; the default stands in.
+    }
+    if (stored !== null && allow.includes(stored)) {
+        return stored as T;
+    }
+    return defaultValue;
 }
