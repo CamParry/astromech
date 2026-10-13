@@ -328,3 +328,43 @@ describe('a grid field at config resolve', () => {
         }
     );
 });
+
+// The admin's entries list opens in one of the type's views, so it needs one.
+describe('views and defaultView at config resolve', () => {
+    const post = (views: Pick<EntryType, 'views' | 'defaultView'>): EntryType => ({
+        type: 'post',
+        single: 'Post',
+        plural: 'Posts',
+        ...views,
+    });
+
+    const accepted: Pick<EntryType, 'views' | 'defaultView'>[] = [
+        {},
+        { views: ['grid'] },
+        { views: ['list', 'grid'], defaultView: 'grid' },
+        { defaultView: 'list' },
+    ];
+    it.each(accepted)('accepts %j', (views) => {
+        expect(() => resolveEntryTypes({ entries: [post(views)] })).not.toThrow();
+    });
+
+    it('refuses a defaultView that is not one of the views', () => {
+        expect(() =>
+            resolveEntryTypes({
+                entries: [post({ views: ['list'], defaultView: 'grid' })],
+            })
+        ).toThrow(/`defaultView` is 'grid', which is not one of its views \('list'\)/);
+    });
+
+    it('refuses a grid defaultView on a type whose views default to the list', () => {
+        expect(() =>
+            resolveEntryTypes({ entries: [post({ defaultView: 'grid' })] })
+        ).toThrow(/`defaultView` is 'grid', which is not one of its views \('list'\)/);
+    });
+
+    it('refuses empty views', () => {
+        expect(() => resolveEntryTypes({ entries: [post({ views: [] })] })).toThrow(
+            /entry type "post": `views` is empty/
+        );
+    });
+});

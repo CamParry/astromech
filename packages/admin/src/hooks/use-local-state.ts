@@ -5,7 +5,7 @@ const STORAGE_PREFIX = 'am:state:';
 export function useLocalState<T extends string>(
     key: string,
     defaultValue: T,
-    allow: string[] = []
+    allow: readonly string[] = []
 ): [T, (value: T) => void] {
     const [value, _setValue] = useState<T>(() => {
         const initialValue = localStorage.getItem(STORAGE_PREFIX + key) || defaultValue;

@@ -5,6 +5,7 @@
  * `useListController`: the URL drives the query, and a sort writes the URL
  * and returns to the first page. An id the config does not declare renders
  * the not-found page, and a user without read sees the forbidden message.
+ * The list opens in one of the type's views, whatever the browser remembers.
  */
 
 import type { AdminEntryType, Entry, QueryResult, User } from '@/types/index';
@@ -59,6 +60,7 @@ afterEach(() => {
     adminConfig.entryTypes = {};
     adminConfig.locales = ['en'];
     localStorage.removeItem('am-hidden-cols-post');
+    localStorage.removeItem('am:state:view-mode:entry:post');
 });
 
 function makeEntry(id: string, title: string): Entry {
@@ -326,6 +328,58 @@ describe('the entries list', () => {
             expect(items.map((item) => item.textContent)).toEqual(actions);
         }
     );
+
+    it('opens in the first of the views when the type sets no defaultView', async () => {
+        adminConfig.entryTypes = { post: { ...POST, views: ['grid'] } };
+        query.mockResolvedValue({
+            data: [makeEntry('e1', 'Hello')],
+            pagination: { page: 1, pages: 1, total: 1, limit: 20 },
+        });
+
+        mountList('/entries/post');
+
+        expect(await screen.findByText('Hello')).toBeTruthy();
+        expect(document.querySelector('.am-entry-grid')).not.toBeNull();
+        expect(screen.queryByRole('table')).toBeNull();
+    });
+
+    it('ignores a remembered view the type does not offer', async () => {
+        localStorage.setItem('am:state:view-mode:entry:post', 'grid');
+        adminConfig.entryTypes = { post: { ...POST, views: ['list'] } };
+        query.mockResolvedValue({
+            data: [makeEntry('e1', 'Hello')],
+            pagination: { page: 1, pages: 1, total: 1, limit: 20 },
+        });
+
+        mountList('/entries/post');
+
+        expect(await screen.findByRole('table')).toBeTruthy();
+        expect(document.querySelector('.am-entry-grid')).toBeNull();
+    });
+
+    it('resolves a grid field’s message label as a column’s', async () => {
+        adminConfig.entryTypes = {
+            post: {
+                ...POST,
+                views: ['grid'],
+                // Any key the English strings hold will do.
+                gridFields: [
+                    { field: 'excerpt', label: { $t: 'entries.columnUpdated' } },
+                ],
+                fields: { main: [{ name: 'excerpt', type: 'text' }], sidebar: [] },
+            },
+        };
+        query.mockResolvedValue({
+            data: [{ ...makeEntry('e1', 'Hello'), fields: { excerpt: 'Short' } }],
+            pagination: { page: 1, pages: 1, total: 1, limit: 20 },
+        });
+
+        mountList('/entries/post');
+
+        expect(await screen.findByText('Short')).toBeTruthy();
+        const label = document.querySelector('.am-entry-card-field-label');
+        expect(label?.textContent).toBe('Updated');
+    });
 
     it('shows a user without read the forbidden message in place', async () => {
         adminConfig.entryTypes = { post: POST };

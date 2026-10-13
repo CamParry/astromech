@@ -14,6 +14,7 @@ import adminConfig from 'virtual:astromech/admin-config';
 import {
     globalMutations,
     globalVersionQueryOptions,
+    useGlobal,
     useGlobalVersions,
 } from '../../hooks/globals';
 import { useAdminGlobal } from '../../hooks/use-admin-global';
@@ -54,7 +55,11 @@ function GlobalVersionsBody({
 
     const label = resolveLabel(config.label, key, t, namespace);
 
-    const { data: versions, isLoading } = useGlobalVersions(key, locale, true);
+    // A locale never saved has no row and no versions, and the versions read
+    // answers 404 for it, so it is asked for only once the row exists.
+    const { data: row, isLoading: isRowLoading } = useGlobal(key, locale);
+    const hasRow = row !== null && row !== undefined;
+    const { data: versions, isLoading } = useGlobalVersions(key, locale, hasRow);
 
     const restoreMutation = useAdminMutation(globalMutations(key).restoreVersion, {
         onSuccess: () => void navigate({ to: editPath }),
@@ -63,7 +68,7 @@ function GlobalVersionsBody({
     return (
         <VersionHistory
             versions={versions}
-            isLoading={isLoading}
+            isLoading={isRowLoading || isLoading}
             versionQuery={(version) => globalVersionQueryOptions(key, locale, version)}
             onRestore={(version) => restoreMutation.mutate({ locale, version })}
             isRestoring={restoreMutation.isPending}

@@ -1,6 +1,7 @@
 /**
  * Global version history route for the site's globals; the loader prefetches the
- * global and its versions, and a plugin's global id redirects to the plugin route.
+ * global and, once it has a row in the locale, its versions. A plugin's global id
+ * redirects to the plugin route.
  */
 
 import { createFileRoute, redirect } from '@tanstack/react-router';
@@ -34,14 +35,17 @@ export const Route = createFileRoute('/_protected/globals/$key/versions')({
         }
     },
     loaderDeps: ({ search }) => ({ locale: search.locale }),
-    loader: ({ context, params, deps }) => {
+    loader: async ({ context, params, deps }) => {
         const locale = deps.locale ?? defaultContentLocale(adminConfig);
-        return Promise.all([
-            context.queryClient.ensureQueryData(globalQueryOptions(params.key, locale)),
-            context.queryClient.ensureQueryData(
-                globalVersionsQueryOptions(params.key, locale)
-            ),
-        ]);
+        const global = await context.queryClient.ensureQueryData(
+            globalQueryOptions(params.key, locale)
+        );
+        // A locale never saved has no versions, and the versions read answers
+        // 404 for it; the page shows its empty state instead.
+        if (global === null) return;
+        await context.queryClient.ensureQueryData(
+            globalVersionsQueryOptions(params.key, locale)
+        );
     },
     component: GlobalVersionsRoutePage,
 });
