@@ -60,6 +60,10 @@ a failing test first.
 - [x] The CLI disposes the wrangler platform proxy when any command finishes
       or fails, so `db:init` against a D1 binding exits; `mcp` disposes it on
       shutdown.
+- [x] A Worker woken only by a Cron Trigger checks for pending migrations:
+      done 2026-10-13 by having boot read the bundled names from a build-time
+      define, `__ASTROMECH_MIGRATION_NAMES__`, where only the middleware
+      registered them before.
 
 ## Checks on Cloudflare
 
@@ -92,9 +96,6 @@ production D1.
 
 ## Left open
 
-- **A Worker woken only by a Cron Trigger skips the pending-migration check**:
-  the middleware registers the bundled names, and no request has run it.
-  `createWorkerEntry` would need the names passed in.
 - **Restore cannot run on Workers**: `createMergedProvider` loads the
   migrations' code from disk, which bundled names do not replace.
 - **No screen shows a cron run's result**: `last_result` and `last_error` are

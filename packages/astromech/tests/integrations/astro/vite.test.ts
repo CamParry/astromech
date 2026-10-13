@@ -61,6 +61,10 @@ describe('createViteConfig()', () => {
         expect(resolvedConfig.basePath).toBe('/admin');
     });
 
+    it('defines __ASTROMECH_MIGRATION_NAMES__ as the JSON of the bundled names', () => {
+        expect(vite.define?.__ASTROMECH_MIGRATION_NAMES__).toBe('["0000_baseline"]');
+    });
+
     it('serves virtual:astromech/admin-config as the default export of buildAdminConfig', () => {
         expect(loadVirtualModule(vite, 'virtual:astromech/admin-config')).toBe(
             `export default ${JSON.stringify(buildAdminConfig(config, resolvedConfig))};`
@@ -69,7 +73,7 @@ describe('createViteConfig()', () => {
 
     it('serves virtual:astromech/config as a re-export of the config file', () => {
         expect(loadVirtualModule(vite, 'virtual:astromech/config')).toBe(
-            'import rawConfig from "/site/site.config.ts";\nexport { rawConfig };\nexport const astroReadsForwardedFor = false;\nexport const astroSendsCsp = false;\nexport const migrationNames = ["0000_baseline"];'
+            'import rawConfig from "/site/site.config.ts";\nexport { rawConfig };\nexport const astroReadsForwardedFor = false;\nexport const astroSendsCsp = false;'
         );
     });
 

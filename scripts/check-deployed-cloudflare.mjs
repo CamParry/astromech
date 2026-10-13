@@ -47,8 +47,9 @@
 //    Worker has to bundle a migration the database lacks. Build for the
 //    environment (`CLOUDFLARE_ENV=testing pnpm exec astro build`), which
 //    applies no migrations to the remote database.
-//    In the built chunk holding `migrationNames = ["0000_migration"]` (grep
-//    `dist/server`), add a name such as "9999_check_pending". Note the
+//    In each built chunk where `resolveBundledMigrationNames` returns
+//    `["0000_migration"]` (grep `dist/server`; there can be two), add a name
+//    such as "9999_check_pending". Note the
 //    deployed version (`wrangler deployments status --env testing`), upload
 //    the build without deploying it (`wrangler versions upload --env
 //    testing`), and deploy that version just after a minute boundary
@@ -59,7 +60,7 @@
 //    `/`. The first request in each new isolate logs "1 migration has not
 //    been applied to this database: 9999_check_pending". Deploy the noted
 //    version again (`wrangler versions deploy <old>@100%`) and restore the
-//    chunk. No database row is touched.
+//    chunks. No database row is touched.
 // 2. The cron secret comparison without `nodejs_compat` (`operations-defects.md`).
 //    The demo cannot run without the flag: `wrangler versions upload` of a
 //    build with `nodejs_compat` removed from `dist/server/wrangler.json` is

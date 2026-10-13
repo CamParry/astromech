@@ -101,6 +101,9 @@ export function createViteConfig({
         },
         define: {
             __ASTROMECH_BASE_PATH__: JSON.stringify(resolvedConfig.basePath),
+            // Read by boot through `resolveBundledMigrationNames`, so a Worker
+            // checks them whichever event wakes it.
+            __ASTROMECH_MIGRATION_NAMES__: JSON.stringify(migrationNames),
         },
         plugins: [
             coreSourceAlias(packageSource),
@@ -109,8 +112,7 @@ export function createViteConfig({
                 liveConfigModule(
                     resolveConfigPath(rootDir, configFile),
                     astroReadsForwardedFor(),
-                    astroSendsCsp(),
-                    migrationNames
+                    astroSendsCsp()
                 )
             ),
             virtualModule(
@@ -169,15 +171,13 @@ function pluginOptimizeDeps(def: PluginDefinition): string[] {
 function liveConfigModule(
     configPath: string,
     astroReadsForwardedFor: boolean,
-    astroSendsCsp: boolean,
-    migrationNames: readonly string[] | null
+    astroSendsCsp: boolean
 ): string {
     return [
         `import rawConfig from ${specifier(configPath)};`,
         `export { rawConfig };`,
         `export const astroReadsForwardedFor = ${String(astroReadsForwardedFor)};`,
         `export const astroSendsCsp = ${String(astroSendsCsp)};`,
-        `export const migrationNames = ${JSON.stringify(migrationNames)};`,
     ].join('\n');
 }
 

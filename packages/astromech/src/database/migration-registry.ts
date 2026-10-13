@@ -1,6 +1,7 @@
 /**
  * The migration chain this site runs: the app's own merged with each plugin's.
  * Boot registers it, and a restore reads it to bring a backup up to this schema.
+ * Also the app migration names the build bundled.
  */
 
 import type { MigrationProvider } from 'kysely/migration';
@@ -15,17 +16,20 @@ export const setMigrationProvider = migrationProvider.set;
 /** The registered migration chain. Throws when unset. */
 export const getMigrationProvider = migrationProvider.getOrThrow;
 
-const bundledMigrationNames = createRegistry<readonly string[]>('bundledMigrationNames', {
-    required: false,
-});
+/**
+ * The app's migration names, which the Astro integration's Vite config defines
+ * at build time. Undefined where nothing defined it, as in the CLI.
+ */
+declare const __ASTROMECH_MIGRATION_NAMES__: readonly string[] | null;
 
 /**
- * Register the app's migration names the build bundled, for a runtime that
- * cannot read the migrations folder. The Astro middleware sets it before boot.
+ * The app migration names the build bundled, for a runtime that cannot read
+ * the migrations folder; undefined when the build bundled none. A build-time
+ * constant rather than a registry, so boot reads it whichever event woke the
+ * runtime: a Worker's first event can be a Cron Trigger, which runs no
+ * middleware.
  */
-export const setBundledMigrationNames = bundledMigrationNames.set;
-
-/** The bundled app migration names, or undefined when none were registered. */
 export function resolveBundledMigrationNames(): readonly string[] | undefined {
-    return bundledMigrationNames.get() ?? undefined;
+    if (typeof __ASTROMECH_MIGRATION_NAMES__ === 'undefined') return undefined;
+    return __ASTROMECH_MIGRATION_NAMES__ ?? undefined;
 }

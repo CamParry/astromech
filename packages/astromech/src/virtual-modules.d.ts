@@ -14,8 +14,6 @@ declare module 'virtual:astromech/config' {
      * warning in production.
      */
     export const astroSendsCsp: boolean;
-    /** The app's migration names when the site was built, or null with no chain. */
-    export const migrationNames: readonly string[] | null;
 }
 
 declare const __ASTROMECH_BASE_PATH__: string;
