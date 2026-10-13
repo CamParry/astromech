@@ -68,4 +68,11 @@ describe('plugin service methods', () => {
     it('answer the result unparsed without an output', async () => {
         await expect(probeMethods()['undeclared']?.({})).resolves.toEqual(row);
     });
+
+    it.each(['toString', 'constructor', 'hasOwnProperty', '__proto__'])(
+        'read %s, which the service does not declare, as undefined',
+        (name) => {
+            expect(probeMethods()[name]).toBeUndefined();
+        }
+    );
 });
