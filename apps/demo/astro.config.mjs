@@ -14,6 +14,9 @@ export default defineConfig({
     // never in settings (see DECISIONS.md).
     site: process.env.SITE_URL ?? 'https://astromech.dev',
     output: 'server',
+    // `SECURITY_CSP=1` sends Astro's default policy, which `check:boot` builds
+    // with so its browser steps fail on anything the policy blocks.
+    ...(process.env.SECURITY_CSP === '1' ? { security: { csp: true } } : {}),
     adapter: node({ mode: 'standalone' }),
     server: {
         port: 4323,

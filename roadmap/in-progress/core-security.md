@@ -138,6 +138,10 @@ screen in chromium. These need real keys or a deployed Worker:
       adds its hash to its own page's policy when `security.csp` is set, and
       `check:boot:cloudflare` builds with Astro's default policy and finds the
       hash of every inline script on `/cms` in its `script-src` (2026-10-13).
+      The same policy refused the style element TipTap adds to the page on
+      an entry edit page, so the editor sets `injectCSS: false`, its CSS ships
+      in the admin's stylesheet, and `check:boot` drives the admin under
+      Astro's default policy and fails on any violation (2026-10-13).
       Token expiry was checked in a real Chrome the same day (a test key's
       token did not expire in six minutes): a solved real widget left for 379
       seconds had renewed its own token (the response field changed and
@@ -179,13 +183,6 @@ screen in chromium. These need real keys or a deployed Worker:
 
 ## Left open
 
-- **The rich-text editor breaks Astro's default `security.csp`.** With
-  `csp: true`, `check:boot` in chromium logged a `style-src` violation
-  ("Applying inline style") from the TipTap/ProseMirror chunk, likely on an
-  entry edit page, so the admin needs more than the captcha sources
-  `apps/docs/configuration/security.md` lists. Found 2026-10-13; the shell's
-  hash check runs in `check:boot:cloudflare`, which has no browser step, for
-  that reason.
 - **`cf-connecting-ip` is trusted on workerd unchecked**
   (`roadmap/completed/auth-rate-limit-defects.md`), so a forged value could
   dodge a block there.
