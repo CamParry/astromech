@@ -17,9 +17,16 @@ import { labelNamespace } from '../../i18n/label-namespace';
 import { FieldColumn, FieldsForm } from '../forms/fields-form';
 import { ForbiddenPage } from '../layout/forbidden-page';
 import { Breadcrumb } from '../ui/breadcrumb';
-import { Button } from '../ui/button';
-import { Page, PageContent, PageHeader, PageTitle, Stack } from '../ui/page';
+import {
+    Page,
+    PageContent,
+    PageHeader,
+    PageHeaderActions,
+    PageTitle,
+    Stack,
+} from '../ui/page';
 import { Panel } from '../ui/panel';
+import { SaveButton } from '../ui/save-button';
 import { requiredValidator, UserRoleField, UserTextField } from './user-profile-fields';
 
 /** The account's own keys, held beside the declared fields' `fields`. */
@@ -61,13 +68,23 @@ function UserNewBody(): React.ReactElement {
     return (
         <Page>
             <PageHeader>
-                <PageTitle>{t('users.createTitle')}</PageTitle>
-                <Breadcrumb
-                    items={[
-                        { label: t('users.title'), to: '/users' },
-                        { label: t('users.createTitle') },
-                    ]}
-                />
+                <PageTitle>
+                    <Breadcrumb
+                        items={[
+                            { label: t('users.title'), to: '/users' },
+                            { label: t('users.createTitle') },
+                        ]}
+                    />
+                </PageTitle>
+                <PageHeaderActions>
+                    <SaveButton
+                        onClick={() => handleSubmit()}
+                        loading={mutation.isPending}
+                        disabled={mutation.isPending}
+                    >
+                        {t('common.create')}
+                    </SaveButton>
+                </PageHeaderActions>
             </PageHeader>
 
             <PageContent>
@@ -132,17 +149,6 @@ function UserNewBody(): React.ReactElement {
                                 </Panel>
                             )}
                         </>
-                    }
-                    sidebar={
-                        <Panel title={t('users.actionsPanel')}>
-                            <Button
-                                onClick={() => handleSubmit()}
-                                loading={mutation.isPending}
-                                disabled={mutation.isPending}
-                            >
-                                {t('common.create')}
-                            </Button>
-                        </Panel>
                     }
                 />
             </PageContent>

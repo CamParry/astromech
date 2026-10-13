@@ -209,6 +209,11 @@ which expands to `./locales/en.json`, `./locales/fr.json` and resolves like
 any other asset. Pass a `{ locale: specifier }` map instead when the bundles
 don't follow that layout.
 
+A page, resource or global `label` can be a key in those bundles rather than a
+literal: `label: t('nav.overview')`, with `t` from `astromech`. The admin
+resolves it against the plugin's own bundle in the sidebar, the command palette
+and the page header.
+
 ## Surfaces
 
 ### Custom field types
@@ -496,6 +501,9 @@ Cmd+S (Ctrl+S outside macOS), from a field too, but not while a modal dialog is
 open. Only a page's main form keeps the shortcut: any other form, such as one in
 a dialog, passes `saveHotkey: false`, so one key press saves one form.
 
+Render the form's Save with `SaveButton` from `astromech/ui`: a `Button` that
+names the shortcut in a tooltip and in `aria-keyshortcuts`.
+
 While the form has unsaved changes it asks before they are lost: the browser
 asks before the tab closes, and the admin's confirm dialog asks before any
 in-app navigation, from a link, Back or your own `navigate`. A save marks the
@@ -512,7 +520,7 @@ and its navigation passes `ignoreBlocker: true` so it does not ask again.
 
 ```tsx
 // admin/pages/redirect-form.tsx
-import { Button } from 'astromech/ui';
+import { SaveButton } from 'astromech/ui';
 import { FieldsForm, useAstromechPlugin, useFieldsForm } from 'astromech/ui/app';
 import { redirectFields } from '../../fields';
 
@@ -546,7 +554,14 @@ export function RedirectForm({ redirect }: { redirect: Redirect }) {
     return (
         <FieldsForm
             form={form}
-            sidebar={<Button onClick={() => form.handleSubmit()}>Save</Button>}
+            sidebar={
+                <SaveButton
+                    onClick={() => form.handleSubmit()}
+                    loading={form.mutation.isPending}
+                >
+                    Save
+                </SaveButton>
+            }
         />
     );
 }

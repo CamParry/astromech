@@ -10,7 +10,8 @@
 
 import type { Entry, QueryResult } from '@/types/index';
 import { screen, waitFor, within } from '@testing-library/react';
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import i18n from 'i18next';
+import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
 import {
     CommandPalette,
     CommandPaletteProvider,
@@ -37,8 +38,8 @@ vi.mock('astromech/fetch', async (importOriginal) => {
 });
 
 // The shim's config plus a second site entry type, a global in the nav, an
-// app page behind a permission and a plugin with two nav pages, one behind a
-// permission.
+// app page behind a permission, a plugin with one nav page labelled with a
+// translation key, and a plugin with two nav pages, one behind a permission.
 vi.mock('virtual:astromech/admin-config', async (importOriginal) => {
     const real = await importOriginal<{
         default: { entryTypes: Record<string, object>; globals: Record<string, object> };
@@ -66,6 +67,17 @@ vi.mock('virtual:astromech/admin-config', async (importOriginal) => {
             ],
             plugins: [
                 {
+                    namespace: 'backups',
+                    label: 'Backups',
+                    nav: [
+                        {
+                            label: { $t: 'nav.runs' },
+                            to: '/plugin/backups/runs',
+                            permission: 'plugin:backups:read',
+                        },
+                    ],
+                },
+                {
                     namespace: 'seo',
                     label: 'SEO',
                     nav: [
@@ -85,6 +97,11 @@ vi.mock('virtual:astromech/admin-config', async (importOriginal) => {
 function emptyPage<T>(): QueryResult<T> {
     return { data: [], pagination: { page: 1, pages: 1, total: 0, limit: 5 } };
 }
+
+// The plugin's English bundle, loaded as `src/i18n.ts` loads it.
+beforeAll(() => {
+    i18n.addResourceBundle('en', 'backups', { nav: { runs: 'Backup runs' } });
+});
 
 beforeEach(() => {
     entriesQuery.mockResolvedValue(emptyPage());
@@ -150,6 +167,7 @@ describe('the command palette', () => {
             'Pages',
             'Footer',
             'Reports',
+            'Backup runs',
             'SEO: Settings',
             'SEO: Sitemap',
         ]);
@@ -257,6 +275,17 @@ describe('the command palette', () => {
         });
         expect(usersQuery).not.toHaveBeenCalled();
         expect(mediaQuery).not.toHaveBeenCalled();
+    });
+
+    it("shows a key-labelled plugin page's text from the plugin's bundle", async () => {
+        const view = mountPalette();
+        await openPalette(view);
+
+        await view.user.keyboard('backup');
+
+        await waitFor(() => {
+            expect(optionLabels()).toEqual(['Backup runs']);
+        });
     });
 
     it('drops a plugin page the user lacks the permission for', async () => {

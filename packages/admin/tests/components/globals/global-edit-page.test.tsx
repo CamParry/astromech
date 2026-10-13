@@ -270,7 +270,7 @@ describe('the global edit page', () => {
         const field = await tagline();
         await page.user.clear(field);
         await page.user.type(field, 'A new tagline');
-        await page.user.click(await screen.findByRole('button', { name: 'Update' }));
+        await page.user.click(await screen.findByRole('button', { name: 'Save' }));
 
         await waitFor(() => {
             expect(update).toHaveBeenCalledTimes(1);
@@ -307,7 +307,7 @@ describe('the global edit page', () => {
 
         await page.user.clear(field);
         await page.user.type(field, 'A new tagline');
-        await page.user.click(screen.getByRole('button', { name: 'Update' }));
+        await page.user.click(screen.getByRole('button', { name: 'Save' }));
 
         await waitFor(() => {
             expect(update).toHaveBeenCalledTimes(1);
@@ -327,7 +327,7 @@ describe('the global edit page', () => {
         await tagline();
         // The publish panel's status select is the only combobox on the page.
         await pickOption(page, 0, 'Published');
-        await page.user.click(await screen.findByRole('button', { name: 'Update' }));
+        await page.user.click(await screen.findByRole('button', { name: 'Save' }));
 
         await waitFor(() => {
             expect(update).toHaveBeenCalledTimes(1);
@@ -347,7 +347,7 @@ describe('the global edit page', () => {
         await tagline();
         await pickOption(page, 0, 'Scheduled');
         expect(screen.getByLabelText<HTMLInputElement>('Publish date').value).toBe('');
-        await page.user.click(screen.getByRole('button', { name: 'Update' }));
+        await page.user.click(screen.getByRole('button', { name: 'Save' }));
 
         expect(
             await screen.findByText('Publish date is required when scheduled')
@@ -368,7 +368,7 @@ describe('the global edit page', () => {
         const input = await tagline();
         await page.user.clear(input);
         await page.user.type(input, 'A new tagline');
-        await page.user.click(screen.getByRole('button', { name: 'Update' }));
+        await page.user.click(screen.getByRole('button', { name: 'Save' }));
 
         await waitFor(() => {
             expect(update).toHaveBeenCalledTimes(1);
@@ -424,7 +424,7 @@ describe('the global edit page', () => {
         });
 
         await tagline();
-        expect(screen.queryByRole('button', { name: 'Update' })).toBeNull();
+        expect(screen.queryByRole('button', { name: 'Save' })).toBeNull();
         expect(
             screen.getByText('You have read-only access to this entry type.')
         ).toBeDefined();
@@ -490,7 +490,7 @@ describe('the global edit page', () => {
         const field = await tagline();
         await page.user.clear(field);
         await page.user.type(field, 'Staged edit');
-        await page.user.click(screen.getByRole('button', { name: 'Update' }));
+        await page.user.click(screen.getByRole('button', { name: 'Save' }));
 
         await waitFor(() => {
             expect(update).toHaveBeenCalledTimes(1);

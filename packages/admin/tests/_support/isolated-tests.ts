@@ -13,6 +13,7 @@
 export const isolatedTests = [
     'tests/components/admin-resources/admin-resource-pages.test.tsx',
     'tests/pages/_protected/index.test.tsx',
+    'tests/pages/_protected/plugin-page.test.tsx',
     'tests/components/globals/global-versions-page.test.tsx',
     'tests/components/entries/locale-switcher.test.tsx',
     'tests/components/entries/entry-edit-cache-invalidation.test.tsx',
@@ -24,6 +25,7 @@ export const isolatedTests = [
     'tests/components/entries/entries-list-page.test.tsx',
     'tests/components/globals/global-edit-page.test.tsx',
     'tests/components/layout/sidebar-globals.test.tsx',
+    'tests/components/layout/sidebar-plugins.test.tsx',
     'tests/components/layout/sidebar-security.test.tsx',
     'tests/components/security/security-page.test.tsx',
     'tests/components/fields/plugin-field-loading.test.tsx',

@@ -26,18 +26,22 @@ export type FieldsFormProps = {
     form: AnyFieldsForm;
     /** The main column. Defaults to a `FieldColumn` over every declared field. */
     main?: React.ReactNode;
-    /** The sidebar column: the caller's actions, and any fields it places there. */
+    /** The sidebar column: any panels and fields the caller places there. */
     sidebar?: React.ReactNode;
 };
 
-/** Main column left, sidebar right, under the form's validation providers. */
+/**
+ * Main column left, sidebar right, under the form's validation providers. With
+ * no sidebar the main column takes the full width.
+ */
 export function FieldsForm({ form, main, sidebar }: FieldsFormProps): React.ReactElement {
+    const hasSidebar = sidebar !== undefined && sidebar !== null && sidebar !== false;
     return (
         <FieldsFormProvider form={form}>
             <FormLayout>
                 <FormLayoutContent>
                     <Stack gap={8}>{main ?? <FieldColumn form={form} />}</Stack>
-                    <Stack gap={8}>{sidebar}</Stack>
+                    {hasSidebar && <Stack gap={8}>{sidebar}</Stack>}
                 </FormLayoutContent>
             </FormLayout>
         </FieldsFormProvider>

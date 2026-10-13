@@ -296,6 +296,17 @@ describe('the admin resource edit page', () => {
         );
     });
 
+    it('holds Save in the page header, with its Cmd/Ctrl+S shortcut', async () => {
+        rpc.get.mockResolvedValue(RULE);
+        mount('/plugin/redirects/resources/rules/r1');
+
+        await waitFor(() => expect(inputNamed('from').value).toBe('/old'));
+        const save = screen.getByRole('button', { name: 'Save' });
+        expect(save.closest('.am-page-header')).not.toBeNull();
+        expect(save.getAttribute('aria-keyshortcuts')).toMatch(/^(Meta|Control)\+S$/);
+        expect(screen.queryByText('Actions')).toBeNull();
+    });
+
     it('renders read-only for a user without the update permission', async () => {
         rpc.get.mockResolvedValue(RULE);
         mount('/plugin/redirects/resources/rules/r1', [READ]);
@@ -303,7 +314,7 @@ describe('the admin resource edit page', () => {
         await waitFor(() => expect(inputNamed('from').value).toBe('/old'));
         expect(inputNamed('from').disabled).toBe(true);
         expect(screen.queryByRole('button', { name: 'Save' })).toBeNull();
-        expect(screen.queryByRole('button', { name: 'Delete' })).toBeNull();
+        expect(screen.queryByRole('button', { name: 'More actions' })).toBeNull();
     });
 
     it('renders read-only for a resource without an update method', async () => {
@@ -321,7 +332,10 @@ describe('the admin resource edit page', () => {
         rpc.list.mockResolvedValue(page([]));
         const view = mount('/plugin/redirects/resources/rules/r1');
 
-        await userEvent.click(await screen.findByRole('button', { name: 'Delete' }));
+        await userEvent.click(
+            await screen.findByRole('button', { name: 'More actions' })
+        );
+        await userEvent.click(await screen.findByRole('menuitem', { name: 'Delete' }));
         expect(await screen.findByText('Delete Rule?')).toBeTruthy();
         expect(rpc.remove).not.toHaveBeenCalled();
         const dialog = screen.getByRole('alertdialog');

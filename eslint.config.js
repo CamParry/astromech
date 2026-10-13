@@ -69,6 +69,15 @@ const noModuleScopeConfigRead = {
         'Call getConfig() and getAstromech() inside the function that uses them. Astro evaluates a module before the request that boots the app, so a module-scope call throws.',
 };
 
+// A `<button>` with no `type` is a submit button, so inside a `<form>` Enter in
+// a text field clicks the first one. `Button` defaults to `type="button"`; a raw
+// `<button>` has to say which it is.
+const noUntypedButton = {
+    selector: "JSXOpeningElement[name.name='button']:not(:has(JSXAttribute[name.name='type']))",
+    message:
+        'Set type="button" or type="submit" on a raw <button>: with no type it submits the form it is in.',
+};
+
 // The content modules take their dependencies from the method's `ctx`. The
 // modules a handler must not reach for are the request scope, the config
 // registry, the hook bus and the services bound to the current request.
@@ -179,6 +188,18 @@ export default tseslint.config(
         },
     },
     {
+        // The plugins' sources: the shared set plus the raw `<button>` rule.
+        files: ['packages/plugins/*/src/**/*.tsx'],
+        rules: {
+            'no-restricted-syntax': [
+                'error',
+                ...noJsExtension,
+                noModuleScopeConfigRead,
+                noUntypedButton,
+            ],
+        },
+    },
+    {
         // `no-restricted-syntax` options replace rather than merge, so each block
         // that narrows the set has to restate the ones it keeps.
         files: ['packages/astromech/src/**/*.ts', 'packages/astromech/src/**/*.tsx'],
@@ -189,6 +210,7 @@ export default tseslint.config(
                 noDeclareGlobal,
                 ...noBarrelImport,
                 noModuleScopeConfigRead,
+                noUntypedButton,
             ],
         },
     },
@@ -206,6 +228,7 @@ export default tseslint.config(
                 noDeclareGlobal,
                 ...noBarrelImport,
                 noModuleScopeConfigRead,
+                noUntypedButton,
             ],
             '@typescript-eslint/no-restricted-imports': [
                 'error',

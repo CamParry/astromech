@@ -20,7 +20,7 @@ import { useToast } from '../components/ui/toast';
 import { labelNamespace } from '../i18n/label-namespace';
 import { resolveLabel } from '../i18n/labels';
 import { useFieldValidation } from './use-field-validation';
-import { useHotkeys } from './use-hotkeys';
+import { SAVE_HOTKEY, useHotkeys } from './use-hotkeys';
 import { useUnsavedChangesGuard } from './use-unsaved-changes-guard';
 
 /**
@@ -222,7 +222,7 @@ export function useFieldsForm<
     isPendingRef.current = mutation.isPending;
 
     useHotkeys(
-        'mod+s',
+        SAVE_HOTKEY,
         () => {
             if (isPendingRef.current) return;
             handleSubmit();

@@ -1,7 +1,7 @@
 /**
  * Opens when a media item is clicked in the library: a two-thirds preview
  * with metadata beneath it, a one-third edit column, and footer actions —
- * delete kept apart from cancel/update so it isn't adjacent to either.
+ * delete kept apart from cancel/save so it isn't adjacent to either.
  */
 
 import type { Media } from 'astromech';
@@ -17,6 +17,7 @@ import {
     useMediaVersions,
 } from '../../hooks/media';
 import { useAdminMutation } from '../../hooks/use-admin-mutation';
+import { SAVE_HOTKEY, useHotkeys } from '../../hooks/use-hotkeys';
 import { useUnsavedChangesGuard } from '../../hooks/use-unsaved-changes-guard';
 import { formatBytes } from '../../utilities/bytes';
 import { localeOptions } from '../../utilities/content-locale';
@@ -27,6 +28,7 @@ import { useConfirm } from '../ui/confirm';
 import { EmptyState } from '../ui/empty-state';
 import { Input } from '../ui/input';
 import { Modal } from '../ui/modal';
+import { SaveButton } from '../ui/save-button';
 import { Select } from '../ui/select';
 import { Spinner } from '../ui/spinner';
 import { UploadButton } from '../ui/upload-button';
@@ -165,6 +167,18 @@ function MediaDetailBody({
     // `form.state` is a plain getter — reading it in render never re-renders on
     // change, which left the submit button permanently disabled.
     const isDirty = useStore(form.store, (state) => state.isDirty);
+
+    // The edit screens' save shortcut. The modal covers the page, so the
+    // shortcut runs while it is open, and only when Save would.
+    useHotkeys(
+        SAVE_HOTKEY,
+        () => {
+            if (!isDirty || updateMutation.isPending) return;
+            void form.handleSubmit();
+        },
+        { enabled: canUpdate, enableInModal: true },
+        [isDirty, updateMutation.isPending]
+    );
 
     // Closing the modal is a navigation (it drops `?item=`), so the guard's
     // blocker covers it; the locale switch remounts this body without navigating.
@@ -357,15 +371,15 @@ function MediaDetailBody({
                         {t('common.cancel')}
                     </Button>
                     {canUpdate && (
-                        <Button
+                        <SaveButton
                             variant="primary"
                             size="sm"
                             onClick={() => void form.handleSubmit()}
                             disabled={!isDirty}
                             loading={updateMutation.isPending}
                         >
-                            {t('media.updateButton')}
-                        </Button>
+                            {t('common.save')}
+                        </SaveButton>
                     )}
                 </div>
             </div>

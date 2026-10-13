@@ -49,7 +49,10 @@ function resolveHostSpecifier(root: string, specifier: string): string {
     return fileURLToPath(new URL(specifier, root));
 }
 
-/** `Label` is `string | { $t }`; the browser-side route resolves it via resolveLabel. */
+/**
+ * `Label` is `string | { $t }`; a key is carried as is. The admin's page routes
+ * resolve the label from the admin config, and fall back to this one.
+ */
 function labelText(label: AdminPage['label']): string {
     return typeof label === 'string' ? label : label.$t;
 }

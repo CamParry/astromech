@@ -130,7 +130,7 @@ async function openLibrary({
 
 /** The Save button, which only exists when the viewer may update. */
 function saveButton(): HTMLButtonElement {
-    return screen.getByRole('button', { name: 'Update' }) as HTMLButtonElement;
+    return screen.getByRole('button', { name: 'Save' }) as HTMLButtonElement;
 }
 
 describe('MediaDetailModal save gate', () => {
@@ -166,11 +166,56 @@ describe('MediaDetailModal save gate', () => {
     });
 });
 
+describe('MediaDetailModal save shortcut', () => {
+    const SAVE_KEYS = '{Control>}s{/Control}{Meta>}s{/Meta}';
+
+    it('saves on Cmd/Ctrl+S once a field changes', async () => {
+        const user = await openModal();
+
+        await user.type(screen.getByLabelText('Alt text'), 'A cat');
+        await user.keyboard(SAVE_KEYS);
+
+        await waitFor(() => {
+            expect(media.update).toHaveBeenCalledWith({
+                id: 'm1',
+                locale: undefined,
+                data: { alt: 'A cat', title: '', caption: '' },
+            });
+        });
+        expect(media.update).toHaveBeenCalledTimes(1);
+    });
+
+    it('does nothing on Cmd/Ctrl+S while the form is untouched', async () => {
+        const user = await openModal();
+
+        await user.keyboard(SAVE_KEYS);
+
+        expect(media.update).not.toHaveBeenCalled();
+    });
+
+    it('does nothing on Cmd/Ctrl+S without update permission', async () => {
+        const user = await openModal({ canUpdate: false });
+
+        await user.type(screen.getByLabelText('Alt text'), 'A cat');
+        await user.keyboard(SAVE_KEYS);
+
+        expect(media.update).not.toHaveBeenCalled();
+    });
+
+    it('names the shortcut on the Save button', async () => {
+        await openModal();
+
+        expect(saveButton().getAttribute('aria-keyshortcuts')).toMatch(
+            /^(Meta|Control)\+S$/
+        );
+    });
+});
+
 describe('MediaDetailModal permissions', () => {
     it('renders no Save button without update permission', async () => {
         await openModal({ canUpdate: false });
 
-        expect(screen.queryByRole('button', { name: 'Update' })).toBeNull();
+        expect(screen.queryByRole('button', { name: 'Save' })).toBeNull();
     });
 
     it('still renders Delete without update permission', async () => {
@@ -183,7 +228,7 @@ describe('MediaDetailModal permissions', () => {
         await openModal({ canDelete: false });
 
         expect(screen.queryByRole('button', { name: 'Delete' })).toBeNull();
-        expect(screen.queryByRole('button', { name: 'Update' })).not.toBeNull();
+        expect(screen.queryByRole('button', { name: 'Save' })).not.toBeNull();
     });
 });
 

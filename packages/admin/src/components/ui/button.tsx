@@ -11,7 +11,13 @@ type ButtonProps = React.ComponentProps<'button'> & {
     icon?: React.ReactNode;
 };
 
+/**
+ * The admin's button. It is `type="button"` unless the caller passes
+ * `type="submit"`, so a `Button` inside a `<form>` never submits it by
+ * accident when Enter is pressed in a field.
+ */
 export function Button({
+    type = 'button',
     variant = 'primary',
     size = 'md',
     loading = false,
@@ -33,7 +39,7 @@ export function Button({
         .join(' ');
 
     return (
-        <button className={classes} disabled={disabled ?? loading} {...props}>
+        <button type={type} className={classes} disabled={disabled ?? loading} {...props}>
             {loading ? (
                 <Spinner size="sm" />
             ) : icon !== undefined ? (

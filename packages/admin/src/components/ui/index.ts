@@ -13,6 +13,8 @@ assertSingleUiInstance();
 export { Button } from './button';
 export type { ButtonProps, ButtonVariant, ButtonSize } from './button';
 
+export { SaveButton } from './save-button';
+
 export { Input } from './input';
 export type { InputProps } from './input';
 

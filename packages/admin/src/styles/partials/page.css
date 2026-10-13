@@ -195,6 +195,11 @@
     align-items: start;
 }
 
+/* A form with no sidebar column: the main column takes the full width. */
+.am-form-layout-content > :only-child {
+    grid-column: 1 / -1;
+}
+
 .am-stack {
     display: flex;
     flex-direction: column;

@@ -11,10 +11,11 @@ import { useTranslation } from 'react-i18next';
 import { Link } from '../../rendering/cells/link';
 import { Button } from '../ui/button';
 import { Panel } from '../ui/panel';
+import { SaveButton } from '../ui/save-button';
 
 /**
  * The header's write controls. On the canonical row: "Stage change" (or "View
- * staged" when one exists), then Update. On the staged row: Update, then Merge
+ * staged" when one exists), then Save. On the staged row: Save, then Merge
  * (needs publish) and Discard.
  */
 export function EditActions({
@@ -25,13 +26,13 @@ export function EditActions({
     const { t } = useTranslation();
     const { staging, isStaged, isReadOnly, canPublish, paths } = controller;
     const update = !isReadOnly && (
-        <Button
+        <SaveButton
             variant={isStaged ? 'secondary' : 'primary'}
             onClick={controller.handleSave}
             loading={controller.mutation.isPending}
         >
-            {t('common.update')}
-        </Button>
+            {t('common.save')}
+        </SaveButton>
     );
     if (!staging.enabled) return <>{update}</>;
 

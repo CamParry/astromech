@@ -77,6 +77,48 @@ describe('derivePluginNav — entry types', () => {
         expect(kids[0]?.label).toBe('Gadgets');
     });
 
+    // The browser resolves the key against the plugin's own bundle, so the
+    // descriptor reaches it whole.
+    it('keeps a translation key label on a global, resource and page child', () => {
+        const kids = children({
+            package: '@astromech/redirects',
+            globals: [{ key: 'settings', label: { $t: 'nav.settings' }, fields: [] }],
+            service: {
+                list: {
+                    access: { permission: 'read' },
+                    input: z.looseObject({}),
+                    mutates: false,
+                    handler: () => null,
+                },
+            },
+            admin: {
+                resources: [
+                    {
+                        name: 'rules',
+                        label: { $t: 'nav.rules' },
+                        labelSingular: 'Rule',
+                        fields: [{ name: 'from', type: 'text' }],
+                        columns: ['from'],
+                        methods: { list: 'list' },
+                    },
+                ],
+                pages: [
+                    {
+                        path: '/overview',
+                        label: { $t: 'nav.overview' },
+                        component: './overview.js',
+                    },
+                ],
+            },
+        });
+
+        expect(kids.map((child) => child.label)).toEqual([
+            { $t: 'nav.settings' },
+            { $t: 'nav.rules' },
+            { $t: 'nav.overview' },
+        ]);
+    });
+
     it('returns no group when the plugin has no entries and no nav pages', () => {
         expect(nav({ package: 'empty' })).toEqual([]);
     });

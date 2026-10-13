@@ -4,7 +4,7 @@
  * holds only what the user's permissions let them open.
  */
 
-import type { PluginNavItem } from 'astromech';
+import type { Label, PluginNavItem } from 'astromech';
 import type { TFunction } from 'i18next';
 import type { LucideIcon } from 'lucide-react';
 import { globalPermission, hasPermission } from 'astromech/shared';
@@ -21,6 +21,7 @@ import { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import adminConfig from 'virtual:astromech/admin-config';
 import { useAuth } from '../context/auth';
+import { labelNamespace } from '../i18n/label-namespace';
 import { resolveLabel } from '../i18n/labels';
 import { resolveIcon } from '../utilities/admin-icon';
 
@@ -31,10 +32,16 @@ export type AdminNavLink = {
     Icon: LucideIcon;
 };
 
+/** A plugin nav item with its label resolved to the text the user reads. */
+export type AdminNavPluginItem = Omit<PluginNavItem, 'label' | 'children'> & {
+    label: string;
+    children?: AdminNavPluginItem[];
+};
+
 /** One plugin's nav tree, with the items the user lacks permission for removed. */
 type AdminNavPlugin = {
     label: string;
-    items: PluginNavItem[];
+    items: AdminNavPluginItem[];
 };
 
 /** The sidebar's sections, in the order it renders them. */
@@ -103,7 +110,9 @@ function buildAdminNav(permissions: string[], t: TFunction): AdminNav {
     const plugins = adminConfig.plugins
         .map((plugin) => ({
             label: plugin.label,
-            items: filterNavItems(plugin.nav, allowed),
+            items: pluginNavItems(plugin.nav, allowed, (label) =>
+                resolveLabel(label, '', t, labelNamespace(plugin.namespace))
+            ),
         }))
         .filter((plugin) => plugin.items.length > 0);
     const system: AdminNavLink[] = [
@@ -119,20 +128,25 @@ function buildAdminNav(permissions: string[], t: TFunction): AdminNav {
 }
 
 /**
- * Drop nav items the user lacks permission for, recursively. A linkless
- * parent whose children are all hidden disappears too.
+ * Drop nav items the user lacks permission for, recursively, and resolve each
+ * label against the plugin's bundle. A linkless parent whose children are all
+ * hidden disappears too.
  */
-function filterNavItems(
+function pluginNavItems(
     items: PluginNavItem[],
-    allowed: (permission: string) => boolean
-): PluginNavItem[] {
+    allowed: (permission: string) => boolean,
+    label: (value: Label) => string
+): AdminNavPluginItem[] {
     return items
         .filter((item) => item.permission === undefined || allowed(item.permission))
-        .map((item) => ({
-            ...item,
-            ...(item.children !== undefined && {
-                children: filterNavItems(item.children, allowed),
-            }),
-        }))
+        .map(
+            ({ children, ...item }): AdminNavPluginItem => ({
+                ...item,
+                label: label(item.label),
+                ...(children !== undefined && {
+                    children: pluginNavItems(children, allowed, label),
+                }),
+            })
+        )
         .filter((item) => item.to !== undefined || (item.children?.length ?? 0) > 0);
 }

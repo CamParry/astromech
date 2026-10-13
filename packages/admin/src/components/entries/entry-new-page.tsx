@@ -22,7 +22,8 @@ import { ForbiddenPage } from '../layout/forbidden-page';
 import { NotFoundPage } from '../layout/not-found-page';
 import { Breadcrumb } from '../ui/breadcrumb';
 import { Button } from '../ui/button';
-import { ButtonGroup, Page, PageContent, PageHeader, PageTitle } from '../ui/page';
+import { Page, PageContent, PageHeader, PageHeaderActions, PageTitle } from '../ui/page';
+import { SaveButton } from '../ui/save-button';
 import { useToast } from '../ui/toast';
 import { CreateLocaleModal } from './create-locale-modal';
 import { SlugField, StatusField, TitleField } from './entry-form-fields';
@@ -170,20 +171,18 @@ function EntryNewBody({
                             ]}
                         />
                     </PageTitle>
-                    <ButtonGroup>
+                    <PageHeaderActions>
                         {hasStatuses && canPublish ? (
                             <>
-                                <Button
+                                <SaveButton
                                     variant="secondary"
-                                    size="sm"
                                     onClick={handleSave}
                                     disabled={mutation.isPending}
                                 >
                                     {t('common.save')}
-                                </Button>
+                                </SaveButton>
                                 <Button
                                     variant="primary"
-                                    size="sm"
                                     onClick={handlePublish}
                                     loading={mutation.isPending}
                                 >
@@ -191,16 +190,15 @@ function EntryNewBody({
                                 </Button>
                             </>
                         ) : (
-                            <Button
+                            <SaveButton
                                 variant="primary"
-                                size="sm"
                                 onClick={handleSave}
                                 loading={mutation.isPending}
                             >
                                 {t('common.save')}
-                            </Button>
+                            </SaveButton>
                         )}
-                    </ButtonGroup>
+                    </PageHeaderActions>
                 </PageHeader>
 
                 <PageContent>

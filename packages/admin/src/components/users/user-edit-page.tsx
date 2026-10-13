@@ -9,6 +9,7 @@
 import type { JsonObject, User, UserUpdateData } from 'astromech';
 import { useNavigate } from '@tanstack/react-router';
 import { defaultContentLocale } from 'astromech/shared';
+import { Trash2 } from 'lucide-react';
 import React, { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import adminConfig from 'virtual:astromech/admin-config';
@@ -23,18 +24,19 @@ import { localeOptions } from '../../utilities/content-locale';
 import { FieldColumn, FieldsForm } from '../forms/fields-form';
 import { ForbiddenPage } from '../layout/forbidden-page';
 import { Breadcrumb } from '../ui/breadcrumb';
-import { Button } from '../ui/button';
 import { useConfirm } from '../ui/confirm';
+import { MoreActionsMenu } from '../ui/more-actions-menu';
 import {
-    ButtonGroup,
     Page,
     PageContent,
     PageHeader,
+    PageHeaderActions,
     PageLoading,
     PageTitle,
     Stack,
 } from '../ui/page';
 import { Panel } from '../ui/panel';
+import { SaveButton } from '../ui/save-button';
 import { Select } from '../ui/select';
 import { ContentVersionsPanel } from '../versions/content-versions-panel';
 import { requiredValidator, UserRoleField, UserTextField } from './user-profile-fields';
@@ -160,14 +162,57 @@ function UserEditBody({
             <Page>
                 <PageHeader>
                     <PageTitle>
-                        {user.name !== '' ? user.name : t('users.editUser')}
+                        <Breadcrumb
+                            items={[
+                                { label: t('users.title'), to: '/users' },
+                                {
+                                    label:
+                                        user.name !== ''
+                                            ? user.name
+                                            : t('users.editUser'),
+                                },
+                            ]}
+                        />
                     </PageTitle>
-                    <Breadcrumb
-                        items={[
-                            { label: t('users.title'), to: '/users' },
-                            { label: user.name !== '' ? user.name : t('users.editUser') },
-                        ]}
-                    />
+                    <PageHeaderActions>
+                        {canSave && isDirty && (
+                            <span className="am-form-layout-dirty-indicator">
+                                {t('common.unsavedChanges')}
+                            </span>
+                        )}
+                        {canSave && (
+                            <SaveButton
+                                onClick={() => handleSubmit()}
+                                loading={mutation.isPending}
+                                disabled={!isDirty || mutation.isPending}
+                            >
+                                {t('common.save')}
+                            </SaveButton>
+                        )}
+                        {canDeleteUsers() && (
+                            <MoreActionsMenu
+                                items={[
+                                    {
+                                        label: t('common.delete'),
+                                        icon: <Trash2 size={14} />,
+                                        onClick: () =>
+                                            confirm({
+                                                title: t('users.confirmDeleteTitle'),
+                                                description: t(
+                                                    'users.confirmDeleteMessage',
+                                                    { name: user.name }
+                                                ),
+                                                confirmLabel: t('common.delete'),
+                                                onConfirm: () =>
+                                                    deleteMutation.mutate(id),
+                                            }),
+                                        disabled: deleteMutation.isPending,
+                                        variant: 'danger',
+                                    },
+                                ]}
+                            />
+                        )}
+                    </PageHeaderActions>
                 </PageHeader>
 
                 <PageContent>
@@ -275,47 +320,7 @@ function UserEditBody({
                                 />
                             </>
                         }
-                        sidebar={
-                            <>
-                                <Panel title={t('users.actionsPanel')}>
-                                    <ButtonGroup>
-                                        {canSave && (
-                                            <Button
-                                                onClick={() => handleSubmit()}
-                                                loading={mutation.isPending}
-                                                disabled={!isDirty || mutation.isPending}
-                                            >
-                                                {t('common.save')}
-                                            </Button>
-                                        )}
-                                        {canDeleteUsers() && (
-                                            <Button
-                                                variant="danger"
-                                                onClick={() =>
-                                                    confirm({
-                                                        title: t(
-                                                            'users.confirmDeleteTitle'
-                                                        ),
-                                                        description: t(
-                                                            'users.confirmDeleteMessage',
-                                                            { name: user.name }
-                                                        ),
-                                                        confirmLabel: t('common.delete'),
-                                                        onConfirm: () =>
-                                                            deleteMutation.mutate(id),
-                                                    })
-                                                }
-                                                loading={deleteMutation.isPending}
-                                            >
-                                                {t('common.delete')}
-                                            </Button>
-                                        )}
-                                    </ButtonGroup>
-                                </Panel>
-
-                                <UserSummaryPanel user={user} />
-                            </>
-                        }
+                        sidebar={<UserSummaryPanel user={user} />}
                     />
                 </PageContent>
             </Page>

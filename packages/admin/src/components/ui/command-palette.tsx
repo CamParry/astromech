@@ -4,8 +4,12 @@
  * Static shortcuts filter client-side; a non-empty query also runs live search.
  */
 
-import type { AdminNav, AdminNavLink } from '../../hooks/use-admin-nav';
-import type { AdminEntryType, Entry, Media, PluginNavItem, User } from 'astromech';
+import type {
+    AdminNav,
+    AdminNavLink,
+    AdminNavPluginItem,
+} from '../../hooks/use-admin-nav';
+import type { AdminEntryType, Entry, Media, User } from 'astromech';
 import type { LucideIcon } from 'lucide-react';
 import { Dialog } from '@base-ui/react/dialog';
 import { useQuery } from '@tanstack/react-query';
@@ -500,7 +504,7 @@ function staticItems(nav: AdminNav): StaticCommandItem[] {
 }
 
 /** Every item in a nav tree that links somewhere, depth first. */
-function navPages(items: PluginNavItem[]): (PluginNavItem & { to: string })[] {
+function navPages(items: AdminNavPluginItem[]): (AdminNavPluginItem & { to: string })[] {
     return items.flatMap((item) => [
         ...(item.to !== undefined ? [{ ...item, to: item.to }] : []),
         ...navPages(item.children ?? []),

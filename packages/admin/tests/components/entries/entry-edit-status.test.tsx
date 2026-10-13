@@ -141,7 +141,7 @@ describe('the entry edit page status', () => {
 
             await page.user.clear(title);
             await page.user.type(title, 'Renamed post');
-            await page.user.click(screen.getByRole('button', { name: 'Update' }));
+            await page.user.click(screen.getByRole('button', { name: 'Save' }));
 
             await waitFor(() => expect(update).toHaveBeenCalledTimes(1));
             expect(update.mock.calls[0]?.[0]).toEqual({
@@ -206,7 +206,7 @@ describe('the entry edit page status', () => {
         expect(screen.queryByText(STATUS_HINT)).toBeNull();
         await page.user.click(statusSelect());
         await page.user.click(await screen.findByRole('option', { name: 'Unpublished' }));
-        await page.user.click(screen.getByRole('button', { name: 'Update' }));
+        await page.user.click(screen.getByRole('button', { name: 'Save' }));
 
         await waitFor(() => expect(update).toHaveBeenCalledTimes(1));
         expect(update.mock.calls[0]?.[0]).toEqual({
@@ -227,7 +227,7 @@ describe('the entry edit page status', () => {
         const date = screen.getByLabelText('Publish date');
         await page.user.clear(date);
         await page.user.type(date, '2027-02-01T09:00');
-        await page.user.click(screen.getByRole('button', { name: 'Update' }));
+        await page.user.click(screen.getByRole('button', { name: 'Save' }));
 
         await waitFor(() => expect(update).toHaveBeenCalledTimes(1));
         expect(update.mock.calls[0]?.[0]).toMatchObject({
@@ -252,7 +252,7 @@ describe('the entry edit page status', () => {
 
         await page.user.click(statusSelect());
         await page.user.click(await screen.findByRole('option', { name: 'Unpublished' }));
-        await page.user.click(screen.getByRole('button', { name: 'Update' }));
+        await page.user.click(screen.getByRole('button', { name: 'Save' }));
         await waitFor(() => expect(update).toHaveBeenCalledTimes(1));
         expect(update.mock.calls[0]?.[0].data).toEqual({
             title: 'Live post',
@@ -261,7 +261,7 @@ describe('the entry edit page status', () => {
         });
 
         await page.user.type(title, ' again');
-        await page.user.click(screen.getByRole('button', { name: 'Update' }));
+        await page.user.click(screen.getByRole('button', { name: 'Save' }));
 
         await waitFor(() => expect(update).toHaveBeenCalledTimes(2));
         expect(update.mock.calls[1]?.[0].data).toEqual({
@@ -283,9 +283,9 @@ describe('the entry edit page status', () => {
 
         await page.user.click(statusSelect());
         await page.user.click(await screen.findByRole('option', { name: 'Unpublished' }));
-        await page.user.click(screen.getByRole('button', { name: 'Update' }));
+        await page.user.click(screen.getByRole('button', { name: 'Save' }));
         expect(await screen.findByText('Forbidden')).not.toBeNull();
-        await page.user.click(screen.getByRole('button', { name: 'Update' }));
+        await page.user.click(screen.getByRole('button', { name: 'Save' }));
 
         await waitFor(() => expect(update).toHaveBeenCalledTimes(2));
         expect(update.mock.calls[1]?.[0].data).toEqual({
@@ -305,7 +305,7 @@ describe('the entry edit page status', () => {
         await page.user.click(await screen.findByRole('option', { name: 'Scheduled' }));
         const date = screen.getByLabelText<HTMLInputElement>('Publish date');
         expect(date.value).toBe('');
-        await page.user.click(screen.getByRole('button', { name: 'Update' }));
+        await page.user.click(screen.getByRole('button', { name: 'Save' }));
 
         const error = await screen.findByText(DATE_REQUIRED);
         expect(date.getAttribute('aria-describedby')?.split(' ')).toContain(error.id);
@@ -319,7 +319,7 @@ describe('the entry edit page status', () => {
         });
 
         await page.user.clear(screen.getByLabelText('Publish date'));
-        await page.user.click(screen.getByRole('button', { name: 'Update' }));
+        await page.user.click(screen.getByRole('button', { name: 'Save' }));
 
         expect(await screen.findByText(DATE_REQUIRED)).not.toBeNull();
         expect(update).not.toHaveBeenCalled();
@@ -332,7 +332,7 @@ describe('the entry edit page status', () => {
         });
 
         await page.user.type(title, ' edited');
-        await page.user.click(screen.getByRole('button', { name: 'Update' }));
+        await page.user.click(screen.getByRole('button', { name: 'Save' }));
 
         await waitFor(() => expect(update).toHaveBeenCalledTimes(1));
         expect(update.mock.calls[0]?.[0].data).toEqual({
@@ -349,7 +349,7 @@ describe('the entry edit page status', () => {
         });
         await page.user.click(statusSelect());
         await page.user.click(await screen.findByRole('option', { name: 'Scheduled' }));
-        await page.user.click(screen.getByRole('button', { name: 'Update' }));
+        await page.user.click(screen.getByRole('button', { name: 'Save' }));
         expect(await screen.findByText(DATE_REQUIRED)).not.toBeNull();
 
         await page.user.click(statusSelect());
