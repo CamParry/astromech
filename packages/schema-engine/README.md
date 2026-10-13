@@ -111,6 +111,13 @@ or after the rebuild that removes their key. A dropped table that waits for a
 rebuild holds back every dropped table it points at, directly or through other
 dropped tables, so no drop cascades into a kept table's rows.
 
+A rebuilt table goes after the tables that point at it in the same way,
+including a dropped table that waits for a rebuild, because the rebuild's
+`DROP TABLE` fires the delete action of every key still pointing at it. A child
+rebuilt after its parent would lose its rows, or the values in its key column,
+before its own rebuild removed or changed the key. A cycle of keys keeps
+snapshot order.
+
 Purely additive changes (a nullable column, or a NOT NULL column with a literal
 default, that is not a primary key) fast-path to native `ALTER TABLE ADD COLUMN`
 / `CREATE INDEX` / `DROP INDEX` instead.
@@ -124,7 +131,11 @@ resolvable — rather than a silent hash mismatch.
 **Generation refuses to write on any validation error.** The differ collects
 states it cannot express as errors: a new or newly-NOT-NULL column with no SQL
 literal to backfill from, an index naming a column that does not exist, a
-duplicate index name. If any exist, `generateMigrations` throws and writes
+duplicate index name, and a rebuild of a table that a table (itself included)
+still references `ON DELETE cascade`, `set null` or `set default` after the
+migration, since no order of ops keeps those rows. `restrict` is allowed: under
+`defer_foreign_keys` SQLite treats it as `no action` (`fkActionTrigger` in
+[SQLite's fkey.c](https://sqlite.org/src/file?name=src/fkey.c)). If any exist, `generateMigrations` throws and writes
 nothing at all — no partial migration, no advanced journal. Warnings (dropped
 tables and columns, narrowed enums, changed storage types, new unique indexes)
 are returned in the result for the caller to surface however it likes; the

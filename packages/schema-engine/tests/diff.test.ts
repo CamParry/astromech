@@ -223,16 +223,44 @@ describe('diffSnapshots', () => {
         expect(result.errors[0]).toMatch(/ON DELETE set null/);
     });
 
-    it('a rebuild of a table children reference without cascade or set null → no error', () => {
+    it('a rebuild of a table children reference ON DELETE set default → error', () => {
         const prev = table('users', [col.id(), col.text('name')]);
         const next = table('users', [col.id(), col.integer('name')]);
-        const sessions = table('sessions', [col.id(), col.reference('user_id')], {
-            fks: [fk('user_id', 'users', 'no action')],
+        const entries = table('entries', [col.id(), col.reference('created_by')], {
+            fks: [fk('created_by', 'users', 'set default')],
         });
-        const result = diffSnapshots(snap(prev, sessions), snap(next, sessions));
-        expect(result.ops.map((op) => op.kind)).toEqual(['rebuildTable']);
-        expect(result.errors).toEqual([]);
+        const result = diffSnapshots(snap(prev, entries), snap(next, entries));
+        expect(result.errors).toHaveLength(1);
+        expect(result.errors[0]).toMatch(/"users" needs a rebuild/);
+        expect(result.errors[0]).toMatch(/"entries" references it ON DELETE set default/);
     });
+
+    it('a rebuild of a table that references itself ON DELETE cascade → error', () => {
+        const key = { fks: [fk('parent_id', 'pages', 'cascade')] };
+        const prev = table(
+            'pages',
+            [col.id(), col.reference('parent_id'), col.text('n')],
+            key
+        );
+        const next = table('pages', [col.id(), col.reference('parent_id')], key);
+        const result = diffSnapshots(snap(prev), snap(next));
+        expect(result.errors).toHaveLength(1);
+        expect(result.errors[0]).toMatch(/"pages" references it ON DELETE cascade/);
+    });
+
+    it.each(['no action', 'restrict'])(
+        'a rebuild of a table children reference ON DELETE %s → no error',
+        (onDelete) => {
+            const prev = table('users', [col.id(), col.text('name')]);
+            const next = table('users', [col.id(), col.integer('name')]);
+            const sessions = table('sessions', [col.id(), col.reference('user_id')], {
+                fks: [fk('user_id', 'users', onDelete)],
+            });
+            const result = diffSnapshots(snap(prev, sessions), snap(next, sessions));
+            expect(result.ops.map((op) => op.kind)).toEqual(['rebuildTable']);
+            expect(result.errors).toEqual([]);
+        }
+    );
 
     it('a primary-key membership change → rebuildTable', () => {
         const prev = table('widgets', [col.id(), col.text('code')]);
@@ -374,5 +402,34 @@ describe('diffSnapshots', () => {
             'rebuildTable',
             'createIndex',
         ]);
+    });
+
+    it('rebuilds and late drops go before the tables their old keys point at', () => {
+        // `apples` and `beans` are rebuilt, `corn` is dropped once `beans`
+        // lets go of it, and the keys run `beans` → `corn` → `apples`.
+        const prevSnap = snap(
+            table('apples', [col.id(), col.text('n')]),
+            table('beans', [col.id(), col.reference('corn_id')], {
+                fks: [fk('corn_id', 'corn')],
+            }),
+            table('corn', [col.id(), col.reference('apple_id')], {
+                fks: [fk('apple_id', 'apples')],
+            })
+        );
+        const nextSnap = snap(
+            table('apples', [col.id()]),
+            table('beans', [col.id(), col.reference('corn_id')])
+        );
+        const result = diffSnapshots(prevSnap, nextSnap);
+        expect(result.errors).toEqual([]);
+        expect(
+            result.ops.map((op) =>
+                op.kind === 'dropTable'
+                    ? `drop ${op.name}`
+                    : op.kind === 'rebuildTable'
+                      ? `rebuild ${op.table.name}`
+                      : op.kind
+            )
+        ).toEqual(['rebuild beans', 'drop corn', 'rebuild apples']);
     });
 });
