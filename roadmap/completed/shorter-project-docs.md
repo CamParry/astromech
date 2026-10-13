@@ -25,25 +25,25 @@ holds the history.
 
 ## The work
 
-- [ ] Each decision is its own file, `decisions/<slug>.md`, with an `area`
+- [x] Each decision is its own file, `decisions/<slug>.md`, with an `area`
       field in frontmatter, the claim as its title, then the decision, why, and
       what it beat. The slug is the claim in a few words.
-- [ ] `DECISIONS.md` becomes an index written by a script, one line per
+- [x] `DECISIONS.md` becomes an index written by a script, one line per
       decision grouped by area, as `pnpm run roadmap` writes the roadmap
       index. `check:docs` fails when it is stale. Existing links to
       `DECISIONS.md` keep resolving.
-- [ ] An entry is dropped when it restates the code or `ARCHITECTURE.md`, or
+- [x] An entry is dropped when it restates the code or `ARCHITECTURE.md`, or
       when nobody would reach for what it rejected. Entries on one subject are
       merged.
-- [ ] A citation by quoted title becomes a path to the decision's file, so
+- [x] A citation by quoted title becomes a path to the decision's file, so
       `check:docs` checks it. `roadmap/completed/` is history and keeps its
       citations.
-- [ ] `ARCHITECTURE.md` is bullets under its current headings: where code
+- [x] `ARCHITECTURE.md` is bullets under its current headings: where code
       lives and what may import what. Reasons move to a decision or go.
-- [ ] `TERMINOLOGY.md` gives each term one or two lines.
-- [ ] `AGENTS.md` and the nested `AGENTS.md` files are cut to what an agent
+- [x] `TERMINOLOGY.md` gives each term one or two lines.
+- [x] `AGENTS.md` and the nested `AGENTS.md` files are cut to what an agent
       needs in every session. The root one loads into every session (5.1k
       tokens on 2026-10-13); detail only some tasks need moves to the skill or
       script header that covers that task.
-- [ ] The `docs` skill, the `code` skill, the agent briefs in `.claude/_agents/`
+- [x] The `docs` skill, the `code` skill, the agent briefs in `.claude/_agents/`
       and `AGENTS.md` describe the new layout.

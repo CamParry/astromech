@@ -32,9 +32,9 @@ source; merge rules come from each repo's public GitHub settings.
 - **Checks are picked from the diff, falling back to all.** Zed's
   `run_tests.yml` tests the changed crates and their reverse dependencies,
   and everything when the toolchain, `.cargo/`, `.github/` or `Cargo.lock`
-  change. Mastra's `scripts/affected-tests.mjs` follows the import graph and
+  change. Mastra's [affected-tests.mjs](https://github.com/mastra-ai/mastra/blob/main/scripts/affected-tests.mjs) follows the import graph and
   runs everything when over half the tests are affected or the diff cannot
-  be read. Astro's `scripts/turbo-run-affected.js` selects changed packages
+  be read. Astro's [turbo-run-affected.js](https://github.com/withastro/astro/blob/main/scripts/turbo-run-affected.js) selects changed packages
   without their dependents, so a core change skips the integrations' tests:
   the form to avoid.
 - **Docs-only diffs take a cheap path** in 7 of 10 (Astro, Vitest, Payload,
