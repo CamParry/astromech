@@ -29,7 +29,7 @@
 // Without one the Worker refuses every request and `/` answers 500.
 import { spawn } from 'node:child_process';
 import { createHash } from 'node:crypto';
-import { mkdtemp, rm, writeFile } from 'node:fs/promises';
+import { mkdtemp, readdir, readFile, rm, writeFile } from 'node:fs/promises';
 import { constants, tmpdir } from 'node:os';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -98,6 +98,7 @@ async function main() {
         BUILD_TIMEOUT_MS,
         () => `the build did not finish within ${minutes(BUILD_TIMEOUT_MS)}`
     );
+    await expectCleanBundle();
 
     scratchDir = await mkdtemp(join(tmpdir(), 'astromech-check-boot-cloudflare-'));
     const envFile = join(scratchDir, 'secrets.env');
@@ -137,6 +138,37 @@ async function main() {
     // closed for it, and that request fails with a 500 "Network connection
     // lost." without reaching the Worker. A loaded machine makes it likely.
     await expectSignInLimited(base);
+}
+
+/**
+ * Checks on the built Worker's code, before it is served.
+ *
+ * One copy of core: the site's Vite resolves every core subpath to source
+ * (`astromech:core-source-alias`). A subpath left on `dist` puts a second copy
+ * beside it, and an error class from one copy fails an `instanceof` check in
+ * the other. `createRegistry` stands in for the whole package.
+ */
+async function expectCleanBundle() {
+    const serverDir = join(demoDir, 'dist', 'server');
+    const files = (await readdir(serverDir, { recursive: true })).filter((file) =>
+        file.endsWith('.mjs')
+    );
+    const sources = await Promise.all(
+        files.map(async (file) => ({
+            file,
+            source: await readFile(join(serverDir, file), 'utf8'),
+        }))
+    );
+    const copies = sources.filter(({ source }) =>
+        source.includes('function createRegistry(')
+    );
+    if (copies.length !== 1) {
+        throw new Error(
+            `dist/server holds ${copies.length} copies of core's createRegistry, expected 1: ` +
+                copies.map(({ file }) => file).join(', ')
+        );
+    }
+    console.log('  ok  dist/server holds one copy of core');
 }
 
 /**

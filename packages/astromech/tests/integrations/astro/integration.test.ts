@@ -8,7 +8,7 @@ import type { HookParameters } from 'astro';
 import { mkdir, mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { fileURLToPath, pathToFileURL } from 'node:url';
+import { pathToFileURL } from 'node:url';
 import { LibsqlDialect } from '@libsql/kysely-libsql';
 import { createTempSite, runOk, writeSiteConfig } from '@tests/cli';
 import { findMissingExportTargets } from '@tests/package-exports';
@@ -38,8 +38,6 @@ type AllowedDomains = { hostname?: string; protocol?: string; port?: string }[];
 
 /** Astro's `security.csp`, as a site writes it. */
 type Csp = boolean | { scriptDirective?: { resources?: string[] } };
-
-const packageSource = fileURLToPath(new URL('../../../src', import.meta.url));
 
 // No imports, so jiti can load it from a directory outside the package.
 const configSource = `
@@ -96,9 +94,6 @@ describe('astromech()', () => {
 
             expect(recorded.updateConfig).toHaveLength(1);
             const vite = recorded.updateConfig[0]?.vite;
-            expect(vite?.resolve.alias['astromech/shared']).toBe(
-                `${packageSource}/exports/shared.ts`
-            );
             expect(vite?.define.__ASTROMECH_BASE_PATH__).toBe('"/admin"');
         });
 
