@@ -6,7 +6,8 @@
  * content, so the page reads the selected version and the one before it to
  * diff them. Restoring names the global by key, locale and version number,
  * never by a row id. A locale never saved has no versions to ask for, and a
- * failed read shows an error rather than an empty history.
+ * failed read shows an error rather than an empty history or a diff that
+ * never arrives.
  */
 
 import type {
@@ -80,7 +81,8 @@ function version(n: number): GlobalVersion {
 
 /**
  * Mount the page over a global whose locale `saved` says has a row or not,
- * with `history` as its versions. `fails` names a read that rejects.
+ * with `history` as its versions. `fails` names a read that rejects: the
+ * row's, the list's, or one version's.
  */
 function mountPage({
     saved = true,
@@ -89,10 +91,13 @@ function mountPage({
 }: {
     saved?: boolean;
     history?: VersionMetadata[];
-    fails?: 'row' | 'versions';
+    fails?: 'row' | 'versions' | `version ${number}`;
 } = {}) {
     const restoreVersion = vi.fn(async () => null);
-    const getVersion = vi.fn(async ({ version: n }: { version: number }) => version(n));
+    const getVersion = vi.fn(async ({ version: n }: { version: number }) => {
+        if (fails === `version ${n}`) throw new Error('version read failed');
+        return version(n);
+    });
     const versions = vi.fn(async () => {
         if (fails === 'versions') throw new Error('versions read failed');
         return history;
@@ -201,5 +206,19 @@ describe('the global versions page', () => {
         expect(await screen.findByText('The versions could not be loaded.')).toBeTruthy();
         expect(versions).not.toHaveBeenCalled();
         expect(screen.queryByText('No versions recorded yet.')).toBeNull();
+    });
+
+    it('shows an error, not a spinner, when the selected version cannot be read', async () => {
+        mountPage({ fails: 'version 3' });
+
+        expect(await screen.findByText('This version could not be loaded.')).toBeTruthy();
+        expect(document.querySelector('.am-versions-diff')).toBeNull();
+    });
+
+    it('shows an error, not a spinner, when the version before it cannot be read', async () => {
+        mountPage({ fails: 'version 2' });
+
+        expect(await screen.findByText('This version could not be loaded.')).toBeTruthy();
+        expect(document.querySelector('.am-versions-diff')).toBeNull();
     });
 });

@@ -286,6 +286,10 @@ export function VersionHistory<V extends VersionWithSnapshot, K extends QueryKey
                   previous: previousRead.data?.snapshot ?? null,
               }
             : null;
+    // Either side failing leaves nothing to diff, so the pane says so rather
+    // than wait on a read that will not answer.
+    const isDiffError =
+        selectedRead.isError || (previousVersion !== null && previousRead.isError);
 
     function handleRestore(): void {
         if (selectedVersion == null) return;
@@ -362,7 +366,13 @@ export function VersionHistory<V extends VersionWithSnapshot, K extends QueryKey
                             </Panel>
                         ) : snapshots === null ? (
                             <Panel>
-                                <Spinner />
+                                {isDiffError ? (
+                                    <p className="am-text-muted">
+                                        {t('versions.versionLoadFailed')}
+                                    </p>
+                                ) : (
+                                    <Spinner />
+                                )}
                             </Panel>
                         ) : (
                             <DiffView
