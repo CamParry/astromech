@@ -56,8 +56,8 @@ npx astromech db:init
 ```
 
 The server never applies migrations. When it starts, it compares the database
-with the `migrations` folder, or your `migrationsDir`, and logs a warning naming
-any that are pending. Run
+with the migrations in your config's `migrations` key, which the build bundles,
+and logs a warning naming any that are pending. Run
 `db:init` against the production database before starting a new build.
 
 The CLI refuses a remote database, meaning any `libsql:`, `http:`, `https:`,
@@ -76,10 +76,9 @@ keys, so check that your libSQL host has them on.
 node dist/server/entry.mjs
 ```
 
-Run it from the project root, so that `file:./database.db`, `./uploads` and the
-`migrations` folder (or your `migrationsDir`) resolve to the right place. Any
-process manager or container
-works, as long as it runs this command with the environment above.
+Run it from the project root, so that `file:./database.db` and `./uploads`
+resolve to the right place. Any process manager or container works, as long as
+it runs this command with the environment above.
 
 With no `scheduler` in your config, scheduled jobs run from `interval()`, a timer
 inside this process that ticks once a minute. To drive them from outside
@@ -115,4 +114,5 @@ replace the code:
   config names
 
 The `migrations` folder, or your `migrationsDir`, is committed to git, so each
-checkout brings it.
+checkout brings it for `db:init`. The server needs no copy: the build bundles
+the migrations.

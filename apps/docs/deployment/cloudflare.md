@@ -166,9 +166,11 @@ CLOUDFLARE_ENV=production astromech db:init --allow-remote
 under `CLOUDFLARE_ENV=production` logs that the database is remote and applies
 none, so run `db:init` first.
 
-A Worker cannot read your migrations folder, so the build bundles the names of
-its migrations. The first request or Cron Trigger a Worker handles compares
-them with the database and logs a warning when migrations are pending. The
+A Worker cannot read files, so it takes its migrations from your config's
+`migrations` key, which the build bundles
+([../data/migrations.md](../data/migrations.md#the-migrations-folder)). The
+first request or Cron Trigger a Worker handles compares them with the database
+and logs a warning when migrations are pending. The
 Worker still serves the request or runs the due jobs
 ([../configuration/scheduler.md](../configuration/scheduler.md#how-scheduling-works)).
 

@@ -100,9 +100,7 @@ production D1.
   `restore`, by design
   ([database.md](../../apps/docs/configuration/database.md#backups-are-not-available-on-d1)),
   so the backups plugin answers 400 before any migration code runs. The work
-  is "D1 dump/restore" in [backlog.md](../backlog.md). A D1 restore would then
-  meet the next wall: `createMergedProvider` loads the app migrations' code
-  from disk, which bundled names do not replace.
+  is "D1 dump/restore" in [backlog.md](../backlog.md).
 - **No screen shows a cron run's result**: `last_result` and `last_error` are
   stored and documented, and nothing in the admin or the API reads them yet
   (`roadmap/planned/site-health.md`).

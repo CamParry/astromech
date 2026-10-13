@@ -19,19 +19,43 @@ chain applies the same way on D1 as on libsql. See
 The folder is your config's `migrationsDir`, `./migrations` by default. Like
 every relative path in the config, it resolves against the working directory, so
 `migrationsDir: './database/migrations'` puts it in `database/migrations` under
-the directory you run `astro` and `astromech` from. `db:generate` writes to it,
-and `db:init`, `astro dev`, `astro build` and the built server's check for
-pending migrations read from it. The build also bundles the migration names, so
-a server that cannot read the folder, such as a Cloudflare Worker, still warns
-on its first request or Cron Trigger when the database is behind. It holds
-these files:
+the directory you run `astro` and `astromech` from. `db:generate` writes to it.
+
+Everything that applies or checks migrations reads them from your config's
+`migrations` key: the `migrationProvider` that `index.ts` exports, which the
+config imports.
+
+```ts
+// astromech.config.ts
+import { migrationProvider } from './migrations';
+
+export default defineConfig({
+    // ...
+    migrations: migrationProvider,
+});
+```
+
+So `db:init`, `db:status`, `astro dev`, `astro build` and the built server all
+read the same list, and the server bundle carries the migrations themselves. A
+server that cannot read files, such as a Cloudflare Worker, still warns on its
+first request or Cron Trigger when the database is behind. If you set
+`migrationsDir`, import `migrationProvider` from that folder too. `db:init`,
+`db:status`, `astro dev` and `astro build` refuse to apply or list migrations
+when the provider's migrations differ from the folder's `journal.json`, and name
+the migrations each side has that the other does not.
+
+A new site has no `index.ts` until `db:generate` writes one, but `db:generate`
+loads the config, which imports it. [installation.md](../installation.md#3-write-the-config)
+creates an empty one first, which `db:generate` replaces.
+
+The folder holds these files:
 
 | File             | Written by | What it is                                            |
 | ---------------- | ---------- | ----------------------------------------------------- |
 | `NNNN_<name>.ts` | generator  | one forward step, as Kysely `sql` statements          |
 | `journal.json`   | generator  | the ordered chain, keyed by `idx`                     |
 | `snapshot.json`  | generator  | the schema state the chain arrives at                 |
-| `index.ts`       | generator  | the static `MigrationProvider` the app imports        |
+| `index.ts`       | generator  | the static `MigrationProvider` the config imports     |
 | `ops/`           | you        | records of hand-authored ops (see below); not applied |
 
 Every one of those except `ops/` is machine-written. Editing `snapshot.json` by

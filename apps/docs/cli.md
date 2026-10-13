@@ -20,8 +20,11 @@ The `db:*` commands, `generate:types`, `generate:manifest`, `plugin:generate`,
 `plugin:purge` and `permissions` load the config without booting, since the
 application cannot boot against a database that is not migrated yet.
 
-`db:generate`, `db:init` and `db:rebaseline` use the migrations folder your
-config's `migrationsDir` names, `./migrations` by default, as
+`db:generate` and `db:rebaseline` write to the migrations folder your config's
+`migrationsDir` names, `./migrations` by default. `db:init`, `db:status` and
+every command that boots the application read the migrations from the config's
+`migrations` key, and `db:init` and `db:status` first check that they match the
+folder's `journal.json`, as
 [data/migrations.md](data/migrations.md#the-migrations-folder) describes.
 
 Every command that opens the database refuses a remote one — a `libsql://` URL,
