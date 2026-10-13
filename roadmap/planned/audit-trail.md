@@ -42,7 +42,7 @@ not what it wrote".
       transport on the context.
 - [ ] **The core table**, with a migration and a hand edit to the Cloudflare
       baseline. Decide retention when it is built (Strapi defaults to 90 days).
-- [ ] **Security events** (`roadmap/in-progress/core-security.md`). Each has one
+- [ ] **Security events** (`roadmap/completed/core-security.md`). Each has one
       call site, and none logs until this table exists:
       a failed sign-in in the `hooks.after` branch of
       `packages/astromech/src/auth/better-auth.ts`, and the lock refusal in its

@@ -88,9 +88,6 @@ is `DECISIONS.md`, "Security in core is defaults and shared mechanisms".
       the server check, the middleware on Better Auth's routes, a client
       renderer, and the admin sign-in and reset forms sending the token.
 - [x] Opt-in HSTS, and `frame-ancestors 'self'` on the admin page.
-- [ ] Security events written to the audit trail. Waits for the table in
-      `roadmap/planned/audit-trail.md`, which lists each event's call site; the
-      Security screen shows no events until then.
 - [x] The Security screen and its permission.
 - [x] Docs: the defaults, the settings, and the CSP sources a captcha needs.
 - [x] `cf-connecting-ip` on workerd goes through the IP check the other address
@@ -205,6 +202,9 @@ screen in chromium. These need real keys or a deployed Worker:
 
 ## Left open
 
+- **Security events are not written yet.** The work moved to
+  `roadmap/planned/audit-trail.md` on 2026-10-13, which lists each event's call
+  site; the Security screen shows no events until that table exists.
 - **A blocked shared address blocks everyone behind it** for the hour; the
   allow list is the remedy.
 - **The captcha check runs before Better Auth's limiter**, so a client can

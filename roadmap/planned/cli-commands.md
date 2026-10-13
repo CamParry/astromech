@@ -123,7 +123,7 @@ and `roadmap/planned/field-rename-command.md`.
     - `entries-list.ts` turns a bad `--limit` into `NaN`.
     - `roadmap/completed/cli.md` lists a `seed` command that does not exist.
     - The D1 platform proxy is never disposed, so `db:init` hangs
-      (`roadmap/in-progress/operations-defects.md`, "Left open").
+      (`roadmap/completed/operations-defects.md`, "Left open").
 - [ ] `defineCommand`, `output()` and `confirm()`; move every core command to
       it; `definePlugin({ commands })`.
 - [ ] The shared flags, `--as`, and the no-terminal rule.
