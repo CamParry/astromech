@@ -8,7 +8,7 @@
 
 import { act, renderHook } from '@testing-library/react';
 import { useEffect } from 'react';
-import { afterEach, describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import { useLocalState } from '@/admin/hooks/use-local-state';
 
 type View = 'list' | 'grid';
@@ -47,6 +47,18 @@ describe('useLocalState', () => {
         localStorage.setItem('am:state:view', 'table');
 
         expect(mount('view').result.current[0]).toBe('list');
+    });
+
+    it('falls back to the default when storage cannot be read', () => {
+        // A blocked or unavailable storage throws on access.
+        const getItem = vi.spyOn(localStorage, 'getItem').mockImplementation(() => {
+            throw new DOMException('blocked', 'SecurityError');
+        });
+        try {
+            expect(mount('view').result.current[0]).toBe('list');
+        } finally {
+            getItem.mockRestore();
+        }
     });
 
     it('stores a set value under its key', () => {

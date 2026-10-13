@@ -49,8 +49,13 @@ function readStored<T extends string>(
     defaultValue: T,
     allow: readonly string[]
 ): T {
-    const stored = localStorage.getItem(STORAGE_PREFIX + key) || defaultValue;
-    if (allow.includes(stored)) {
+    let stored: string | null = null;
+    try {
+        stored = localStorage.getItem(STORAGE_PREFIX + key);
+    } catch {
+        // Storage can be blocked; the default stands in.
+    }
+    if (stored !== null && allow.includes(stored)) {
         return stored as T;
     }
     return defaultValue;
