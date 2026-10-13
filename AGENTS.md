@@ -12,8 +12,8 @@ Astromech is a lightweight TypeScript CMS: a framework-agnostic core plus an Ast
 
 ## Commands and the gate
 
-- While working, run the test file you touched: `pnpm -F <package> exec vitest run <path>`.
-- Run `pnpm run verify:fast` before handing work back, and `pnpm run verify` before a change lands. A failing check's `FAIL` line names its log: search the log rather than rerun the check.
+- While working, run the narrow thing: the test file you touched (`pnpm -F <package> exec vitest run <path>`), or one package's task (`pnpm exec turbo run <task> --filter <package>`).
+- **The gate (`pnpm run verify`) runs through Turborepo**: only the tasks a change affects since `origin/main`, reusing cached passes. `--all` checks everything. Run it once before handing work back or landing, after the last change. Don't rerun it to confirm a pass: `verify:status` reads the cache. A failing check's `FAIL` line names its log: search the log rather than rerun the check.
 - **Never `--no-verify`.** If the pre-commit hook fails, fix the cause.
 - **Run the boot checks by hand**, since no hook does: `check:boot` after touching boot, the config path or the injected middleware, and `check:boot:cloudflare` after touching bindings, the environment or the Worker entry. Run `check:config` after editing the config path.
 - **One heavy run at a time.** The gate, the boot checks and the root `build`, `build:js` and `test:run` share a lock across worktrees and sessions (`scripts/run-lock.mjs`). When another run may hold it, start yours in the background: the wait can outlast a 2-minute tool timeout.
@@ -25,7 +25,7 @@ Astromech is a lightweight TypeScript CMS: a framework-agnostic core plus an Ast
 
 - **Clarify before acting**: ask when a task, or a requirement the approach depends on, is unclear.
 - **Delegate implementation to a sub-agent**; edit directly only for a trivial one-liner or to correct one. Give it the whole plan (file paths, exact changes, expected outcomes), starting from `.claude/_agents/coder.md`.
-- **Verify what comes back** with `pnpm run verify:status --fast` (`--full` for the full gate) in the worktree, and run the gate yourself if it fails. A sub-agent's report of a clean run is not evidence; the stamp is.
+- **Verify what comes back** with `pnpm run verify:status --full` in the worktree, and run the gate yourself if it fails. A sub-agent's report of a clean run is not evidence; the cache is.
 - **Study a pattern before changing it.** Change every copy, record the rest in a `roadmap/` file, or say why this one differs. A defect fix asks where else the same defect can occur.
 - **Back each recommendation with prior art**: a linked CMS or framework that does it, or "none found". Say whether each claim about platform behaviour comes from docs or a test.
 - **Run `pnpm run report:drift` before a branch merges**, and give each item a decision in the merge summary: share it now, add it to a `roadmap/` file, or leave it with a reason.
@@ -42,7 +42,7 @@ Astromech is a lightweight TypeScript CMS: a framework-agnostic core plus an Ast
 - **Land on main early**, with partial work behind an unticked `roadmap/` checkbox, rather than keep a long-lived branch. A branch's roadmap file, and so its status, stays on main.
 - **At the end of a session**, commit loose work as `wip(scope): …` with a body saying what is unfinished, push every surviving branch, and remove merged or parked worktrees.
 - **Squash `wip` commits before landing** with `git reset --soft "$(git merge-base HEAD origin/main)" && git commit -m '<message>'` inside the worktree, then check `git show --stat HEAD` lists only the branch's files: a reset onto a newer `origin/main` folds the reversal of main's later commits into yours (`rebase -i` needs a terminal; the Bash hook refuses `wt step squash`).
-- **The lead lands with `pnpm run land`** from inside the worktree, once `pnpm run verify` has passed on its HEAD; a sub-agent never runs it. Its header has the steps. Never `wt merge`.
+- **The lead lands with `pnpm run land`** from inside the worktree, once `pnpm run verify` has passed on its HEAD; a sub-agent never runs it. The branch needs no rebase onto main: `land` merges it, and refuses a conflict. Its header has the steps. Never `wt merge`.
 - **Remove an abandoned worktree with `wt remove <branch> --yes`**, which keeps the branch. Delete a branch only after `git merge-base --is-ancestor <branch> <keeper>` confirms another branch contains it.
 
 ## Naming

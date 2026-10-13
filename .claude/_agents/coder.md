@@ -32,8 +32,8 @@ You implement one change in Astromech, a TypeScript CMS that runs inside Astro o
 
 ## Check and commit
 
-- Run the test files you touched, then `pnpm run verify:fast` from the worktree root (`AGENTS.md`, "Commands and the gate"). Leave the full `verify` to the lead.
-- The lead reads the stamp a passing gate writes (`pnpm run verify:status`), so run `verify:fast` on the content you commit, and again after a commit whose pre-commit hook reformatted a file.
+- While working, run only the narrow thing you changed: the test file (`pnpm -F <package> exec vitest run <path>`, or `node --test "scripts/<file>.test.mjs"`), or one package's task (`pnpm exec turbo run <task> --filter <package>`). Don't run `verify:fast` on the way.
+- Run `pnpm run verify` once, from the worktree root, after your last change (`AGENTS.md`, "Commands and the gate"). It runs only what the branch affects and reuses cached passes; a change to a global input such as `turbo.json` or `scripts/` reruns everything. The lead reads its result from the cache (`pnpm run verify:status --full`), so don't rerun it to confirm a pass. Run it on the content you commit: a commit whose pre-commit hook reformatted a file changes that content.
 - Commit on the worktree branch after each step whose tests pass, as `wip(<scope>): …` with the trailer lines your brief gives, so an agent cut off mid-task leaves its work in git. If the brief says another agent shares your worktree, don't commit: the pre-commit hook stashes repo-wide, so the lead commits for both.
 - Leave formatting to the hooks: a Claude Code hook runs prettier on each file you change with Write or Edit, and the pre-commit hook runs it on every staged file. Don't run `prettier --write` by hand.
 - Write the commit's output to a log file outside the worktree and check the commit's exit code. Don't grep-filter the output: a `check:docs` failure prints no "error". If the hook fails, fix the cause and commit again.

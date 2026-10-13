@@ -1,0 +1,26 @@
+{
+    // The demo's boot check and typecheck build or read every package it
+    // depends on through `exports`, which point at `dist`, so both wait for
+    // those builds (`^build`), and a package's source reaches their hash
+    // through its build's. The app's `build` script is no task of its own:
+    // the boot check runs it.
+    "$schema": "../../node_modules/turbo/schema.json",
+    "extends": ["//"],
+    "tasks": {
+        "build": { "extends": false },
+        // `scripts/check-boot.mjs`. The `.env` is read by the build, and git
+        // ignores it.
+        "check:boot": {
+            "dependsOn": ["^build", "//#routes:generate"],
+            "inputs": ["$TURBO_DEFAULT$", "!**/*.md", ".env"],
+            "env": ["BETTER_AUTH_SECRET"]
+        },
+        // After the boot check, because `astro sync` here and `astro build`
+        // there write the same `.astro/` files.
+        "typecheck": {
+            "extends": false,
+            "dependsOn": ["^build", "//#routes:generate", "check:boot"],
+            "inputs": ["$TURBO_DEFAULT$", "!**/*.md"]
+        }
+    }
+}

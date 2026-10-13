@@ -89,7 +89,7 @@ let patchedChunk = null;
 async function main() {
     // This check builds only `apps/demo-cloudflare`, so a package `src` edit
     // would otherwise verify the previous package build.
-    await requireFreshDist();
+    await requireFreshDist(demoDir);
 
     const env = {
         ...environmentWithoutNodeEnv('check:boot:cloudflare'),

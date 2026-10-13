@@ -18,13 +18,17 @@ concurrency:
     cancel-in-progress: true
 
 # The gate is one script, scripts/verify.mjs, so CI and a developer run the same
-# checks and the two cannot drift. `pnpm run verify` runs the whole gate on the
-# Active LTS; `verify:runtime` runs only the version-sensitive subset — the test
-# suites and the two boot checks — on the floor Node version, so those run on
+# checks and the two cannot drift. It runs the tasks in turbo.json through
+# Turborepo. `pnpm run verify --all` runs the whole gate on the Active LTS;
+# `verify:runtime --all` runs only the version-sensitive subset, the test
+# suites and the two boot checks, on the floor Node version, so those run on
 # both while lint, typecheck and the build, whose output no Node version
-# changes, run once. Three jobs sit outside verify: the relationships-index
-# parity check (CI-only, needs a seeded database), a backstop for the two checks
-# verify leaves to the pre-commit hook, and the install guide check, which
+# changes, run once. Both pass `--all`: on main the merge base with
+# origin/main is HEAD, so `--affected` would select nothing. Each job keeps
+# Turborepo's cache between runs with actions/cache, so a task whose inputs
+# did not change since the last run on any branch is restored, not rerun.
+# Three jobs sit outside verify: the relationships-index parity check (CI-only,
+# needs a seeded database), the CSS lint, and the install guide check, which
 # installs the packed packages into a new site with npm and with pnpm and needs
 # the npm registry.
 #
@@ -41,14 +45,18 @@ concurrency:
 # Both boot checks serve a built site, which refuses every request without
 # BETTER_AUTH_SECRET. This value signs sessions on a scratch site that lives for
 # one run, so it is not a secret and sits here in the open.
+#
+# TURBO_CACHE_DIR is where verify keeps Turborepo's cache, and the directory
+# each verify job saves and restores. `.turbo/` is gitignored.
 env:
     ACTIVE_LTS: 24
     BETTER_AUTH_SECRET: ci-boot-check-secret-0123456789abcdef
+    TURBO_CACHE_DIR: ${{ github.workspace }}/.turbo/cache
 
 # Each job's `timeout-minutes` is more than twice its normal duration. Without
-# one, a hung step runs until GitHub's six-hour limit. verify gives each check a
-# shorter deadline of its own, so a hang fails there first and prints the
-# check's output before the job is cancelled.
+# one, a hung step runs until GitHub's six-hour limit. verify gives its
+# Turborepo run a shorter deadline, so a hang fails there first and prints the
+# output so far before the job is cancelled.
 jobs:
     gate:
         name: Gate (Node 24)
@@ -65,7 +73,14 @@ jobs:
             # The boot checks in the gate load /cms in headless chromium. The
             # browser is not part of the npm install, so it is fetched here.
             - run: pnpm exec playwright install --with-deps chromium
-            - run: pnpm run verify
+            # Keyed on the commit, so every run saves its own; the restore key
+            # takes the newest one this job saved.
+            - uses: actions/cache@v6
+              with:
+                  path: ${{ env.TURBO_CACHE_DIR }}
+                  key: turbo-gate-${{ github.sha }}
+                  restore-keys: turbo-gate-
+            - run: pnpm run verify --all
 
     runtime:
         name: Runtime (Node 22)
@@ -80,10 +95,15 @@ jobs:
                   cache: pnpm
             - run: pnpm install --frozen-lockfile
             - run: pnpm exec playwright install --with-deps chromium
-            # The test suites and both boot checks — the only checks whose result
-            # a Node version can change — on the floor version. The gate job
+            - uses: actions/cache@v6
+              with:
+                  path: ${{ env.TURBO_CACHE_DIR }}
+                  key: turbo-runtime-${{ github.sha }}
+                  restore-keys: turbo-runtime-
+            # The test suites and both boot checks, the only checks whose result
+            # a Node version can change, on the floor version. The gate job
             # covers them on the Active LTS.
-            - run: pnpm run verify:runtime
+            - run: pnpm run verify:runtime --all
 
     index:
         name: Relationships Index (Node 24)
@@ -112,8 +132,8 @@ jobs:
             - run: pnpm run db:seed:demo
             - run: pnpm -F astromech-demo index:rebuild --check
 
-    backstop:
-        name: Format and CSS (Node 24)
+    css:
+        name: CSS (Node 24)
         runs-on: ubuntu-latest
         timeout-minutes: 5
         steps:
@@ -124,10 +144,8 @@ jobs:
                   node-version: ${{ env.ACTIVE_LTS }}
                   cache: pnpm
             - run: pnpm install --frozen-lockfile
-            # verify leaves these two to the pre-commit hook for dev-loop speed;
-            # CI enforces them here against a `--no-verify` commit. format:check
-            # covers the whole repo, lint:css the admin styles.
-            - run: pnpm run format:check
+            # verify leaves the admin styles' lint to the pre-commit hook for
+            # dev-loop speed; CI enforces it here against a `--no-verify` commit.
             - run: pnpm run lint:css
 
     install:

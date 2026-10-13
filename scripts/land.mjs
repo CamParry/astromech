@@ -3,38 +3,45 @@
  * Lands the current worktree's branch on main: a `--no-ff` merge onto the remote's main, pushed,
  * then the worktree and branch removed and CI watched. Run it from inside the worktree, after
  * the gate (`pnpm run verify`) has passed on the branch's HEAD. It does not run the gate: it
- * reads the stamp a passing run leaves (`scripts/verify-stamp.mjs`) and refuses without one.
+ * asks Turborepo's cache whether a full run would be all cache hits (`scripts/gate.mjs`) and
+ * refuses when it would not.
  *
  *   pnpm run land [--message-file <path>] [--no-ci] [--dry-run] [--no-gate-check]
  *
  * Steps, each stopping the script when it fails:
  *  1. Refuse when the worktree has uncommitted changes.
- *  2. Fetch, and refuse unless the branch contains the remote's main.
- *  3. Refuse unless the worktree's stamp records a full gate run that passed on this content
+ *  2. Fetch, and print how many commits the remote's main has that the branch does not. The
+ *     branch need not contain them, unless `REQUIRE_UP_TO_DATE` is set.
+ *  3. Refuse unless a full gate run on this content would be all cache hits
  *     (`pnpm run verify:status --full`). Step 1 leaves no uncommitted changes, so that content is
- *     HEAD's tree, which is the tree the merge commit gets. `--no-gate-check` skips this step,
- *     and is only for the throwaway repositories the script is tested on, which have no gate.
- *     The Bash hook (`.claude/hooks/guard-bash-commands.mjs`) refuses the flag for agents; run
- *     from a terminal, it works as written.
- *  4. Make the merge commit with `git commit-tree`, without touching the worktree: its parents are
- *     the remote's main and HEAD, and its tree is HEAD's, which is exactly what a `--no-ff` merge
- *     gives once step 2 holds. The message is "Merge branch '<branch>'" with the body from
- *     `--message-file` (the drift decisions, AGENTS.md "Workflow").
- *  5. Push the merge commit to main. Nothing needs undoing when the push fails: the merge commit
+ *     HEAD's tree. The run is scoped to the tasks the branch affects since its merge base with
+ *     main, so main's newer commits never make it miss; CI's full run on main checks the merge.
+ *     With `REQUIRE_UP_TO_DATE` it is unscoped (`--all`). `--no-gate-check` skips this step, and
+ *     is only for the throwaway repositories the script is tested on, which have no gate. The
+ *     Bash hook (`.claude/hooks/guard-bash-commands.mjs`) refuses the flag for agents; run from a
+ *     terminal, it works as written.
+ *  4. Merge HEAD into the remote's main with `git merge-tree --write-tree`
+ *     (`scripts/merged-tree.mjs`), which writes the merged tree without touching the worktree,
+ *     and refuse when the merge conflicts, naming the conflicted paths.
+ *  5. Make the merge commit with `git commit-tree`: its parents are the remote's main and HEAD,
+ *     and its tree is step 4's, which is what a `--no-ff` merge gives. The message is "Merge
+ *     branch '<branch>'" with the body from `--message-file` (the drift decisions, AGENTS.md
+ *     "Workflow").
+ *  6. Push the merge commit to main. Nothing needs undoing when the push fails: the merge commit
  *     is on no branch. The script fetches again to say why: main moved since the first fetch, or
  *     something else, when it prints git's error output.
- *  6. Remove the worktree with `wt remove`. Every later step runs in the main checkout.
- *  7. Delete the branch once main contains it.
- *  8. Fast-forward the main checkout when it is on main with no uncommitted changes to tracked
+ *  7. Remove the worktree with `wt remove`. Every later step runs in the main checkout.
+ *  8. Delete the branch once main contains it.
+ *  9. Fast-forward the main checkout when it is on main with no uncommitted changes to tracked
  *     files. Untracked files don't block it: git refuses a fast-forward that would overwrite one.
- *  9. Wait for CI on the merge commit, and print the failed jobs' logs when it fails.
+ * 10. Wait for CI on the merge commit, and print the failed jobs' logs when it fails.
  *     `--no-ci` skips this, for a repository with no CI.
  *
- * The merge is on main once step 5 succeeds, so a failure in steps 6 to 8 does not stop the
+ * The merge is on main once step 6 succeeds, so a failure in steps 7 to 9 does not stop the
  * script: it prints the steps left to do by hand, still waits for CI, and exits 1.
  *
- * `--dry-run` runs the checks in steps 1 to 3 (the fetch updates only remote-tracking refs) and
- * prints the commands of the other steps without running them.
+ * `--dry-run` runs the checks in steps 1 to 4 (the fetch updates only remote-tracking refs, and
+ * the merge writes only objects) and prints the commands of the other steps without running them.
  *
  * The repository, its main checkout and the remote all come from the current directory, so the
  * script works on a throwaway repository as well as this one. The remote is the one main tracks,
@@ -45,7 +52,15 @@ import { mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { dirname, join, resolve } from 'node:path';
 import { run, sleep, step } from './check-helpers.mjs';
-import { stampStatus } from './verify-stamp.mjs';
+import { gateStatus } from './gate.mjs';
+import { mergedTree } from './merged-tree.mjs';
+
+/**
+ * Whether the branch must contain the remote's main before it lands, and the gate check runs
+ * every task rather than those the branch affects. Off while no site runs Astromech; set it to
+ * true after 1.0.
+ */
+const REQUIRE_UP_TO_DATE = false;
 
 const MAIN = 'main';
 /** How long to wait for the CI run on a pushed commit to appear before giving up. */
@@ -76,15 +91,21 @@ if (changes !== '') refuse(`${worktree} has uncommitted changes:\n${changes}`);
 
 step(`Fetching ${remote}`);
 await run('git', ['fetch', '--quiet', remote]);
-if (!gitSucceeds(['merge-base', '--is-ancestor', remoteMain, 'HEAD'])) {
+const behind = Number(git(['rev-list', '--count', `HEAD..${remoteMain}`]));
+if (behind > 0 && REQUIRE_UP_TO_DATE) {
     refuse(
         `${branch} does not contain ${remoteMain}: rebase onto ${remoteMain} and rerun the gate.`
     );
 }
+console.log(
+    behind === 0
+        ? `${branch} contains ${remoteMain}.`
+        : `${remoteMain} has ${behind} commit${behind === 1 ? '' : 's'} that ${branch} does not; the merge keeps them.`
+);
 
 if (options.gateCheck) {
     step('Checking the full gate passed on this content');
-    const gate = stampStatus(worktree, 'full');
+    const gate = gateStatus(worktree, 'full', { all: REQUIRE_UP_TO_DATE });
     if (!gate.matches) {
         refuse(`run \`pnpm run verify\` in this worktree first: ${gate.message}.`);
     }
@@ -98,8 +119,17 @@ const tip = git(['rev-parse', '--verify', 'HEAD^{commit}']);
 const head = git(['log', '-1', '--format=%h %s', tip]);
 console.log(`Landing ${branch} at ${head}.`);
 
+step(`Merging ${branch} into ${remoteMain}`);
+const merge = mergedTree(worktree, base, tip);
+if (merge.tree === undefined) {
+    refuse(
+        `${branch} conflicts with ${remoteMain} in:\n${merge.conflicts.map((path) => `  ${path}`).join('\n')}\nRebase onto ${remoteMain}, resolve them, and rerun the gate.`
+    );
+}
+console.log(`Merged tree ${merge.tree.slice(0, 12)}.`);
+
 step(`Making the merge commit of ${branch} onto ${remoteMain}`);
-const landed = mergeCommit();
+const landed = mergeCommit(merge.tree);
 console.log(`Made ${landed}.`);
 
 step(`Pushing to ${remoteMain}`);
@@ -173,7 +203,7 @@ function pushMergeCommit() {
     }
     const fetched = gitSucceeds(['fetch', '--quiet', remote]);
     if (fetched && gitOrNull(['rev-parse', '--verify', remoteMain]) !== base) {
-        refuse(`${MAIN} moved: fetch, rebase, rerun the gate if code changed.`);
+        refuse(`${MAIN} moved since the fetch: run \`pnpm run land\` again.`);
     }
     process.stderr.write(result.stderr || (result.error?.message ?? ''));
     refuse(
@@ -243,22 +273,14 @@ async function fastForwardMainCheckout() {
 }
 
 /**
- * Writes the merge commit and returns its hash. Under `--dry-run` it prints the command instead.
- * The commit is on no branch until the push, so it changes nothing a reader can see.
+ * Writes the merge commit with `tree`, the merged tree, and returns its hash. Under `--dry-run` it
+ * prints the command instead. The commit is on no branch until the push, so it changes nothing a
+ * reader can see.
  */
-function mergeCommit() {
+function mergeCommit(tree) {
     const directory = mkdtempSync(join(tmpdir(), 'land-'));
     const messageFile = join(directory, 'message');
-    const args = [
-        'commit-tree',
-        `${tip}^{tree}`,
-        '-p',
-        base,
-        '-p',
-        tip,
-        '-F',
-        messageFile,
-    ];
+    const args = ['commit-tree', tree, '-p', base, '-p', tip, '-F', messageFile];
     try {
         writeFileSync(messageFile, message);
         if (options.dryRun) {

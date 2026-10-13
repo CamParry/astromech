@@ -57,3 +57,6 @@ apps/demo/database.db-wal
 
 # Personal scratch / pre-thinking doc — not part of the repo
 NEXT.md
+
+# Turborepo: per-package task logs and run summaries (the cache lives in the git directory)
+.turbo/

@@ -1,0 +1,172 @@
+{
+    // The gate's tasks (`scripts/verify.mjs`). Each task lists the files it
+    // reads in `inputs`, so `--affected` selects it only when one of them
+    // changed, and its cache entry is reused when none did. A task that reads
+    // another task's output says so in `dependsOn`, which also puts that
+    // task's hash into its own. `decisions/turborepo-runs-the-gate.md`.
+    "$schema": "./node_modules/turbo/schema.json",
+    // Turborepo would otherwise write a block into the root AGENTS.md when it
+    // detects an agent.
+    "agentGuidance": false,
+    "noUpdateNotifier": true,
+    "ui": "stream",
+    "futureFlags": {
+        // `--affected` matches the changed files against each task's `inputs`
+        // rather than selecting every task of a changed package, so a
+        // markdown-only change selects only `check:docs` and `format:check`.
+        "affectedUsingTaskInputs": true,
+        // With `--output-logs=errors-only`, a line for each task as it starts.
+        "errorsOnlyShowHash": true
+    },
+    // A change to any of these reruns every task, as does a change to the
+    // root package.json, this file or the lockfile, which Turborepo adds itself.
+    "globalDependencies": [
+        "pnpm-workspace.yaml",
+        ".nvmrc",
+        ".gitignore",
+        "eslint.config.js",
+        ".prettierrc",
+        ".prettierignore",
+        "knip.json",
+        "scripts/**",
+        ".github/**"
+    ],
+    // Set by `scripts/gate.mjs`, so a result from one Node major is never
+    // reused on another: CI's runtime job runs the tests on Node 22.
+    "globalEnv": ["ASTROMECH_NODE_MAJOR"],
+    // Available to every task, and no part of any hash: none changes a result.
+    "globalPassThroughEnv": [
+        // Turborepo passes `TMP` and `TEMP` but not `TMPDIR`, which macOS sets
+        // per user. `os.tmpdir()` reads it, and the run lock lives there.
+        "TMPDIR",
+        // `scripts/cpu-limits.mjs`: how many workers, and at what priority.
+        "CI",
+        "ASTROMECH_FULL_SPEED",
+        "ASTROMECH_LOWERED_PRIORITY",
+        // `scripts/run-lock.mjs`: lets a check the gate starts skip the lock.
+        "ASTROMECH_RUN_LOCK_PID",
+        "pnpm_config_*",
+        "PLAYWRIGHT_BROWSERS_PATH",
+        "XDG_CACHE_HOME",
+        "XDG_CONFIG_HOME"
+    ],
+    "tasks": {
+        // The package tasks. These definitions are what a plugin reads: its own
+        // files, and the source of the schema engine, core and the admin,
+        // which its tests and type checks resolve to through `paths` and
+        // vitest aliases. The schema engine, the admin and core have their own
+        // `turbo.json`. Markdown changes no result here.
+        "build": {
+            "dependsOn": ["^build"],
+            "inputs": ["$TURBO_DEFAULT$", "!**/*.md", "!tests/**"],
+            "outputs": ["dist/**"],
+            // Set, a build writes no declarations: `scripts/gate.mjs` sets it in
+            // runtime mode, which reads none, and each `build:js` script sets it.
+            "env": ["ASTROMECH_NO_DTS"]
+        },
+        "typecheck": {
+            "inputs": [
+                "$TURBO_DEFAULT$",
+                "!**/*.md",
+                "$TURBO_ROOT$/packages/schema-engine/src/**",
+                "$TURBO_ROOT$/packages/astromech/src/**",
+                "$TURBO_ROOT$/packages/astromech/tests/_support/**",
+                "$TURBO_ROOT$/packages/astromech/tsconfig.json",
+                "$TURBO_ROOT$/packages/admin/src/**",
+                "!$TURBO_ROOT$/packages/admin/src/routeTree.gen.ts",
+                "$TURBO_ROOT$/packages/admin/tests/_support/**"
+            ]
+        },
+        "lint": {
+            "inputs": [
+                "$TURBO_DEFAULT$",
+                "!**/*.md",
+                "$TURBO_ROOT$/packages/schema-engine/src/**",
+                "$TURBO_ROOT$/packages/astromech/src/**",
+                "$TURBO_ROOT$/packages/astromech/tests/_support/**",
+                "$TURBO_ROOT$/packages/astromech/tsconfig.json",
+                "$TURBO_ROOT$/packages/admin/src/**",
+                "!$TURBO_ROOT$/packages/admin/src/routeTree.gen.ts",
+                "$TURBO_ROOT$/packages/admin/tests/_support/**"
+            ]
+        },
+        "test:coverage": {
+            "inputs": [
+                "$TURBO_DEFAULT$",
+                "!**/*.md",
+                "$TURBO_ROOT$/packages/schema-engine/src/**",
+                "$TURBO_ROOT$/packages/astromech/src/**",
+                "$TURBO_ROOT$/packages/astromech/tests/_support/**",
+                "$TURBO_ROOT$/packages/astromech/tsconfig.json",
+                "$TURBO_ROOT$/packages/admin/src/**",
+                "!$TURBO_ROOT$/packages/admin/src/routeTree.gen.ts",
+                "$TURBO_ROOT$/packages/admin/tests/_support/**"
+            ],
+            "outputs": ["coverage/**"]
+        },
+
+        // The root tasks. `$TURBO_DEFAULT$` here is every file git tracks or
+        // does not ignore, in the whole repository, so a task that reads a
+        // part of it starts from that and excludes the rest.
+
+        // Writes `routeTree.gen.ts` before anything that reads it: the app
+        // builds, the admin's typecheck and lint. The generator skips the write
+        // when the file is current, so once this has run nothing writes it
+        // again, and two builds reading it at once cannot race a write.
+        "//#routes:generate": {
+            "inputs": ["packages/admin/src/pages/**", "packages/admin/tsr.config.json"],
+            "outputs": ["packages/admin/src/routeTree.gen.ts"]
+        },
+        // The boot checks and the demo apps' typecheck are package tasks, in
+        // `apps/demo/turbo.json` and `apps/demo-cloudflare/turbo.json`.
+
+        // Loads core's and every plugin's `dist` under plain Node. Turborepo has
+        // no `dependsOn` form for every package's build, and the root package
+        // depends on none, so the builds are listed by hand: a new plugin must
+        // be added here, or a cached pass is reused after its `dist` changed.
+        "//#check:node-imports": {
+            "dependsOn": [
+                "@astromech/schema-engine#build",
+                "@astromech/admin#build",
+                "astromech#build",
+                "@astromech/assistant#build",
+                "@astromech/backups#build",
+                "@astromech/forms#build",
+                "@astromech/menus#build",
+                "@astromech/redirects#build",
+                "@astromech/seo#build"
+            ],
+            "inputs": [
+                "packages/astromech/scripts/check-node-imports.mjs",
+                "packages/*/package.json",
+                "packages/plugins/*/package.json"
+            ]
+        },
+        "//#check:exports": {
+            "inputs": [
+                "packages/astromech/scripts/check-exports-parity.mjs",
+                "packages/astromech/package.json",
+                "packages/admin/package.json"
+            ]
+        },
+        // Links in markdown and in source comments, and the two indexes.
+        "//#check:docs": {
+            "inputs": ["$TURBO_DEFAULT$"]
+        },
+        "//#format:check": {
+            "inputs": ["$TURBO_DEFAULT$"]
+        },
+        "//#check:unused": {
+            "inputs": ["$TURBO_DEFAULT$", "!**/*.md"]
+        },
+        "//#check:hooks": {
+            "inputs": [".claude/hooks/**"]
+        },
+        "//#check:scripts": {
+            "inputs": ["scripts/**"]
+        },
+        "//#lint:scripts": {
+            "inputs": ["scripts/**"]
+        }
+    }
+}

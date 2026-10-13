@@ -1,28 +1,40 @@
-// Guards the boot checks against a stale `dist`. Each boot check builds only
-// its own app, not the packages, so a package `src` edit followed by a
-// standalone boot check would verify the previous package build. This fails
-// loudly when any published package's `dist` is older than its `src`.
-import { readdir, readFile, stat } from 'node:fs/promises';
+// Guards the boot checks and `check:install` against a stale `dist`. Each boot
+// check builds only its own app, not the packages, so a package `src` edit
+// followed by a standalone boot check would verify the previous package build.
+// This fails loudly when a package's `dist` is older than its `src`.
+import { readdir, stat } from 'node:fs/promises';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { workspaceDependencies, workspacePackages } from './workspace-packages.mjs';
 
 const repoRoot = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 
 /**
- * Throw if any published package's `dist` is older than its `src`, naming the
- * stale packages and the remedy. A package counts as published when its
- * package.json has a `build` script and it carries a `src/` directory.
+ * Throw if a package's `dist` is older than its `src`, naming the stale
+ * packages and the remedy. Given an app's directory (`apps/demo`), it checks
+ * the workspace packages that app depends on, directly or through another,
+ * which are the builds its `^build` waits for. Without one, it checks every
+ * package that is not private. A package is checked only when its
+ * package.json has a `build` script and it has a `src/` directory.
  */
-export async function requireFreshDist() {
-    const packageDirs = [
-        ...(await packageDirsUnder('packages')),
-        ...(await packageDirsUnder(join('packages', 'plugins'))),
-    ];
+export async function requireFreshDist(appDirectory) {
+    const packages = workspacePackages(repoRoot);
+    let checked;
+    if (appDirectory === undefined) {
+        checked = packages.filter((each) => each.manifest.private !== true);
+    } else {
+        const app = packages.find(
+            (each) => each.directory === resolve(repoRoot, appDirectory)
+        );
+        if (app === undefined) {
+            throw new Error(`${appDirectory} is not a workspace package`);
+        }
+        checked = workspaceDependencies(packages, app);
+    }
 
     const stale = [];
-    for (const packageDir of packageDirs) {
-        const manifest = await readManifest(packageDir);
-        if (manifest?.scripts?.build === undefined) continue;
+    for (const { directory: packageDir, manifest } of checked) {
+        if (manifest.scripts?.build === undefined) continue;
 
         const srcDir = join(packageDir, 'src');
         if (!(await isDirectory(srcDir))) continue;
@@ -41,25 +53,6 @@ export async function requireFreshDist() {
         throw new Error(
             `dist is stale for: ${stale.join(', ')} — run \`pnpm run build\` (or \`pnpm run build:js\`) before the boot check`
         );
-    }
-}
-
-/** The immediate subdirectories of a repo-relative directory, as absolute paths. */
-async function packageDirsUnder(relativeDir) {
-    const parent = join(repoRoot, relativeDir);
-    const entries = await readdir(parent, { withFileTypes: true });
-    return entries
-        .filter((entry) => entry.isDirectory())
-        .map((entry) => join(parent, entry.name));
-}
-
-/** The parsed package.json for a directory, or undefined if it has none. */
-async function readManifest(packageDir) {
-    try {
-        const raw = await readFile(join(packageDir, 'package.json'));
-        return JSON.parse(raw);
-    } catch {
-        return undefined;
     }
 }
 

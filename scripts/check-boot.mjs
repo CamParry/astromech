@@ -108,7 +108,7 @@ function started(child) {
 async function main() {
     // This check builds only `apps/demo`, so a package `src` edit would
     // otherwise verify the previous package build.
-    await requireFreshDist();
+    await requireFreshDist(demoDir);
 
     // `apps/demo/database.db` is a working file, not a fixture. The check gets
     // its own migrated database in a temp directory and never touches that one.
