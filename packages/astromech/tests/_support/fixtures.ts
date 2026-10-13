@@ -1,9 +1,11 @@
 /**
- * Fixtures shared across the suite: a storage driver that stores nothing, the
- * roles tests act under, and typed builders for values that need no database.
+ * Fixtures shared across the suite: a storage driver that stores nothing, an
+ * empty migration chain, the roles tests act under, and typed builders for
+ * values that need no database.
  */
 
 import type { DataField, Role, StorageDriver, StorageList, User } from '@/types/index';
+import type { MigrationProvider } from 'kysely/migration';
 
 /** A storage driver that stores nothing, for tests that never read a file back. */
 export const noopStorage: StorageDriver = {
@@ -26,6 +28,11 @@ export const noopStorage: StorageDriver = {
     getPublicUrl(key: string): string | null {
         return `/${key}`;
     },
+};
+
+/** A migration chain with no migrations, for a config that never migrates or boots. */
+export const noMigrations: MigrationProvider = {
+    getMigrations: () => Promise.resolve({}),
 };
 
 /** An admin role holding the `*` matcher, so every permission check passes. */

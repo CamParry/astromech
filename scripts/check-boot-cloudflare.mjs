@@ -27,6 +27,11 @@
 // does (`scripts/check-helpers.mjs`), and hands it over in a scratch env file
 // passed with `--env-file`, so no value is written into the app or committed.
 // Without one the Worker refuses every request and `/` answers 500.
+//
+// The Worker reads the app's migration chain from the config, which imports
+// it, so it needs no file system. To see that, the check adds a migration the
+// database lacks beside the chain's in the built bundle, and expects the
+// Worker's boot to report it pending. `cleanUp` restores the chunk.
 import { spawn } from 'node:child_process';
 import { createHash } from 'node:crypto';
 import { mkdtemp, readdir, readFile, rm, writeFile } from 'node:fs/promises';
@@ -59,6 +64,9 @@ const repoRoot = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const demoDir = join(repoRoot, 'apps', 'demo-cloudflare');
 const stateDir = join(demoDir, '.wrangler', 'state');
 
+/** The migration the check adds to the bundled chain, which no database has applied. */
+const UNAPPLIED_MIGRATION = '9999_check_boot_unapplied';
+
 const READY_ATTEMPTS = 60;
 const READY_INTERVAL_MS = 500;
 
@@ -75,6 +83,8 @@ let scratchDir = null;
 let server = null;
 let runningCommand = null;
 let currentStep = 'checking the package builds are current';
+/** The bundle chunk `addUnappliedMigration` changed, and its built source. */
+let patchedChunk = null;
 
 async function main() {
     // This check builds only `apps/demo-cloudflare`, so a package `src` edit
@@ -99,6 +109,7 @@ async function main() {
         () => `the build did not finish within ${minutes(BUILD_TIMEOUT_MS)}`
     );
     await expectCleanBundle();
+    await addUnappliedMigration();
 
     scratchDir = await mkdtemp(join(tmpdir(), 'astromech-check-boot-cloudflare-'));
     const envFile = join(scratchDir, 'secrets.env');
@@ -113,6 +124,7 @@ async function main() {
     await waitForServer(base);
 
     await expectHtml(`${base}/`, 'the site renders');
+    await expectPendingMigrationReported();
     await expectHtml(`${base}/cms`, 'the admin route is mounted');
     await expectInlineScriptsHashed(`${base}/cms`);
     // 401 rather than 500 proves the API is mounted and rejecting an anonymous
@@ -182,6 +194,62 @@ async function expectCleanBundle() {
         );
     }
     console.log('  ok  dist/server holds no build-machine Node path');
+}
+
+/**
+ * Add `UNAPPLIED_MIGRATION` to the app's chain in the built Worker, next to
+ * the first migration in `migrations/journal.json`, which the build applied.
+ */
+async function addUnappliedMigration() {
+    const journal = JSON.parse(
+        await readFile(join(demoDir, 'migrations', 'journal.json'), 'utf8')
+    );
+    const applied = journal.entries[0].tag;
+    const entry = new RegExp(`(["'])${applied}\\1\\s*:\\s*[\\w$]+`);
+    const serverDir = join(demoDir, 'dist', 'server');
+    const files = (await readdir(serverDir, { recursive: true })).filter((file) =>
+        file.endsWith('.mjs')
+    );
+    const found = [];
+    for (const file of files) {
+        const path = join(serverDir, file);
+        const source = await readFile(path, 'utf8');
+        if (entry.test(source)) found.push({ path, source });
+    }
+    if (found.length !== 1) {
+        throw new Error(
+            `dist/server holds the migration chain's "${applied}" entry in ${found.length} chunks, expected 1`
+        );
+    }
+    patchedChunk = found[0];
+    await writeFile(
+        patchedChunk.path,
+        patchedChunk.source.replace(
+            entry,
+            (match) => `${match}, "${UNAPPLIED_MIGRATION}": { up: async () => {} }`
+        )
+    );
+    console.log(
+        `  ok  dist/server bundles the migration chain; added ${UNAPPLIED_MIGRATION}`
+    );
+}
+
+/**
+ * Fail unless the Worker's boot, which the first request started, reported
+ * `UNAPPLIED_MIGRATION` pending: its chain is the one the config imports.
+ */
+async function expectPendingMigrationReported() {
+    const warning = `1 migration has not been applied to this database: ${UNAPPLIED_MIGRATION}`;
+    for (let attempt = 0; attempt < READY_ATTEMPTS; attempt += 1) {
+        if (server.output.includes(warning)) {
+            console.log(
+                `  ok  the Worker's boot reported ${UNAPPLIED_MIGRATION} pending`
+            );
+            return;
+        }
+        await sleep(READY_INTERVAL_MS);
+    }
+    throw new Error(`the Worker never logged "${warning}"`);
 }
 
 /**
@@ -423,13 +491,14 @@ async function waitForServer(base) {
 }
 
 /**
- * Stop the build and wrangler, with everything they started, on every exit
- * path. A live process holding this script's pipes keeps its event loop open,
+ * Stop the build and wrangler, with everything they started, and restore the
+ * chunk `addUnappliedMigration` changed, on every exit path. A live process holding this script's pipes keeps its event loop open,
  * so the stop is waited on rather than fired and forgotten.
  */
 async function cleanUp() {
     if (runningCommand) await stopProcessGroup(runningCommand, STOP_GRACE_MS);
     if (server) await stopProcessGroup(server.child, STOP_GRACE_MS);
+    if (patchedChunk) await writeFile(patchedChunk.path, patchedChunk.source);
     if (scratchDir) await rm(scratchDir, { recursive: true, force: true });
 }
 

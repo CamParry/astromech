@@ -44,8 +44,6 @@ export type ViteConfigOptions = {
     astroReadsForwardedFor: () => boolean;
     /** Whether Astro sends a content security policy (`security.csp`), known once its config is done. */
     astroSendsCsp: () => boolean;
-    /** The app's migration names, bundled for a runtime with no file system; null with no chain. */
-    migrationNames: readonly string[] | null;
     /** Whether Astro runs `astro dev`, rather than a build. */
     dev: boolean;
 };
@@ -60,7 +58,6 @@ export function createViteConfig({
     resolvedConfig,
     astroReadsForwardedFor,
     astroSendsCsp,
-    migrationNames,
     dev,
 }: ViteConfigOptions): ViteConfig {
     const rootDir = fileURLToPath(root);
@@ -104,9 +101,6 @@ export function createViteConfig({
         },
         define: {
             __ASTROMECH_BASE_PATH__: JSON.stringify(resolvedConfig.basePath),
-            // Read by boot through `resolveBundledMigrationNames`, so a Worker
-            // checks them whichever event wakes it.
-            __ASTROMECH_MIGRATION_NAMES__: JSON.stringify(migrationNames),
         },
         plugins: [
             coreSourceAlias(

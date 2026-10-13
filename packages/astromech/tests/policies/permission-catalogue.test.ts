@@ -1,5 +1,5 @@
 import type { AstromechConfig, DatabaseDriver } from '@/types/index';
-import { noopStorage } from '@tests/fixtures';
+import { noMigrations, noopStorage } from '@tests/fixtures';
 import { describe, expect, it } from 'vitest';
 import { generateMethodManifest } from '@/codegen/method-manifest';
 import { resolveConfig } from '@/config/resolve';
@@ -48,6 +48,7 @@ describe('buildPermissionCatalogue', () => {
     const resolved = resolveConfig({
         db: driver,
         storage: noopStorage,
+        migrations: noMigrations,
         entries: [
             {
                 type: 'posts',

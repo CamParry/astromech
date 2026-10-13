@@ -46,7 +46,6 @@ describe('createViteConfig()', () => {
         resolvedConfig,
         astroReadsForwardedFor: () => false,
         astroSendsCsp: () => false,
-        migrationNames: ['0000_baseline'],
         dev: false,
     });
 
@@ -65,10 +64,6 @@ describe('createViteConfig()', () => {
             JSON.stringify(resolvedConfig.basePath)
         );
         expect(resolvedConfig.basePath).toBe('/admin');
-    });
-
-    it('defines __ASTROMECH_MIGRATION_NAMES__ as the JSON of the bundled names', () => {
-        expect(vite.define?.__ASTROMECH_MIGRATION_NAMES__).toBe('["0000_baseline"]');
     });
 
     it('serves virtual:astromech/admin-config as the default export of buildAdminConfig', () => {
@@ -295,7 +290,6 @@ function includeWith(plugins: PluginDefinition[]): string[] {
         resolvedConfig: resolveConfig(config),
         astroReadsForwardedFor: () => false,
         astroSendsCsp: () => false,
-        migrationNames: null,
         dev: false,
     });
     return (vite.optimizeDeps?.include ?? []).filter((entry) => entry !== undefined);

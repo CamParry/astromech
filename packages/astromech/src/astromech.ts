@@ -135,8 +135,9 @@ async function build(config: AstromechConfig): Promise<Astromech> {
     if (config.ai) setAiModels(await buildAiModels(config.ai));
 
     // Verify the schema before anything boots against it
-    await checkMigrationDrift(db, plugins, resolved.migrationsDir);
-    setMigrationProvider(createMergedProvider(plugins, resolved.migrationsDir));
+    const migrations = createMergedProvider(config.migrations, plugins);
+    await checkMigrationDrift(db, migrations);
+    setMigrationProvider(migrations);
 
     // Built-in cron jobs
     registerBuiltInJobs();

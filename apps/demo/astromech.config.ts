@@ -20,6 +20,7 @@ import { consoleEmail } from 'astromech/email/console';
 import * as fields from 'astromech/fields';
 import { sharp } from 'astromech/media/image/sharp';
 import { filesystem } from 'astromech/storage/filesystem';
+import { migrationProvider } from './migrations';
 import { author } from './src/entries/author';
 import { rating } from './src/plugins/rating/index';
 
@@ -136,6 +137,8 @@ export default defineConfig({
     // No `urlPrefix`: the built server serves `dist/client`, not `public/`, so
     // a file uploaded after the build is served through the media route.
     storage: filesystem({ dir: './public/uploads' }),
+    // The chain `db:generate` writes to `./migrations`.
+    migrations: migrationProvider,
     // The demo sends nothing real — the console driver prints each message so
     // form notifications (and anything else that emails) are visible in the dev
     // server output. With no `email` driver at all, `ctx.email.send` throws and

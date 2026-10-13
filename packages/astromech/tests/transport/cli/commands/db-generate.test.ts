@@ -145,7 +145,8 @@ describe('db:generate', () => {
         ).rejects.toThrow(
             `[astromech db:generate] --ops file "${ops}" must default-export a function`
         );
-        await expect(readdir(migrationsDir)).rejects.toThrow(/ENOENT/);
+        // Only the empty starter the config imports.
+        expect(await readdir(migrationsDir)).toEqual(['index.ts']);
     });
 
     it('runs against a remote database without --allow-remote or opening it', async () => {

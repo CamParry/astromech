@@ -1,6 +1,7 @@
 import { defineCommand } from 'citty';
 import { DEFAULT_MIGRATION_TABLE } from 'kysely/migration';
-import { listPendingMigrations, loadMergedProvider } from '@/database/migrations';
+import { checkedMigrationProvider } from '@/database/app-migrations';
+import { listPendingMigrations } from '@/database/migrations';
 import { getDb } from '@/database/registry';
 import { configArgs, toAllowRemoteOption } from '../common-args';
 import { loadConfig } from '../config';
@@ -12,8 +13,8 @@ export default defineCommand({
         ...configArgs,
     },
     async run({ args }) {
-        // `resolveConfig` strips `plugins`, so the raw config gives the plugin
-        // definitions.
+        // `resolveConfig` strips `plugins` and `migrations`, so the raw config
+        // gives both.
         const { config: rawConfig, resolved: config } = await loadConfig(
             args.config,
             toAllowRemoteOption(args)
@@ -33,10 +34,12 @@ export default defineCommand({
                 .select(['name', 'timestamp'] as never)
                 .orderBy('timestamp' as never)
                 .execute();
-            const pending = await listPendingMigrations(
-                db,
-                await loadMergedProvider(rawConfig.plugins ?? [], config.migrationsDir)
+            const provider = await checkedMigrationProvider(
+                rawConfig,
+                config.migrationsDir
             );
+            const pending =
+                provider === null ? [] : await listPendingMigrations(db, provider);
 
             console.log('Applied migrations:');
             for (const row of rows) {

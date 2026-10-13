@@ -5,25 +5,19 @@ import type { MigrationProvider } from 'kysely/migration';
 import { mergeMigrationProviders, migrateToLatest } from '@astromech/schema-engine';
 import { sql } from 'kysely';
 import { Migrator } from 'kysely/migration';
-import {
-    hasAppMigrations,
-    loadAppMigrations,
-    resolveMigrationsDir,
-} from '@/database/app-migrations';
-import { resolveBundledMigrationNames } from '@/database/migration-registry';
 import { collectPluginMigrations } from '@/database/plugin-migrations';
 import { AstromechError } from '@/errors/astromech-error';
 import { log } from '@/utilities/log';
 import { pluralise } from '@/utilities/strings';
 
 /**
- * Migrations at the two moments the runtime touches them: applying the chain on
- * demand, and reporting drift when the application boots.
+ * The migration chain the config holds, merged with each plugin's, at the two
+ * moments the runtime touches it: applying it on demand, and reporting drift
+ * when the application boots. Nothing here reads a file, so a Worker runs it.
  */
 
 export type MigrationLogger = {
     info: (message: string) => void;
-    error: (message: string) => void;
 };
 
 /**
@@ -52,29 +46,28 @@ export async function assertForeignKeysEnforced(db: Kysely<DB>): Promise<void> {
     );
 }
 
+/** The app's chain merged with each plugin's, as one provider. */
+export function createMergedProvider(
+    app: MigrationProvider,
+    plugins: PluginDefinition[]
+): MigrationProvider {
+    // Plugin migrations merge at apply time, so a newly installed plugin can
+    // introduce a migration that sorts before ones already applied, which is
+    // why every caller here passes `allowUnorderedMigrations`.
+    return mergeMigrationProviders(app, collectPluginMigrations(plugins));
+}
+
 /**
- * Apply the app chain, merged with every plugin's, to the latest migration,
- * after checking the database enforces foreign keys. A missing provider is
- * reported and skipped, because `db:init` is the primary migration path; a
- * failed migration throws, because the caller would otherwise carry on against
- * a stale schema. `migrationsDir` is the resolved config's.
+ * Apply `provider` to the latest migration, after checking the database
+ * enforces foreign keys. A failed migration throws, because the caller would
+ * otherwise carry on against a stale schema.
  */
 export async function runMigrations(
     db: Kysely<DB>,
     logger: MigrationLogger,
-    plugins: PluginDefinition[],
-    migrationsDir: string
+    provider: MigrationProvider
 ): Promise<void> {
     await assertForeignKeysEnforced(db);
-
-    let provider: MigrationProvider;
-    try {
-        provider = await loadMergedProvider(plugins, migrationsDir);
-    } catch (error) {
-        logger.error(`Astromech could not load its migrations: ${describe(error)}`);
-        return;
-    }
-
     await migrateToLatest(db, provider, { allowUnorderedMigrations: true });
     logger.info('Astromech database migrations applied');
 }
@@ -82,33 +75,12 @@ export async function runMigrations(
 /**
  * Warn when the database is behind the migration chain. Reads only: applying
  * the difference is `db:init`'s job, and a serving process that migrates itself
- * races every other replica. Where `migrationsDir` cannot be read, as on a
- * Worker, the app migration names the build bundled stand in for it.
+ * races every other replica.
  */
 export async function checkMigrationDrift(
     db: Kysely<DB>,
-    plugins: PluginDefinition[],
-    migrationsDir: string
+    provider: MigrationProvider
 ): Promise<void> {
-    const bundled = resolveBundledMigrationNames();
-    let provider: MigrationProvider;
-    try {
-        provider = await loadMergedProvider(plugins, migrationsDir);
-    } catch (error) {
-        if (bundled === undefined) {
-            // Quiet when there is no chain: a new site may not have run
-            // `db:generate` yet.
-            if (await hasAppMigrations(resolveMigrationsDir(migrationsDir))) {
-                log.error(
-                    'could not load the migrations, so the database was not checked ' +
-                        `for pending ones: ${describe(error)}`
-                );
-            }
-            return;
-        }
-        provider = bundledProvider(bundled, plugins);
-    }
-
     const pending = await listPendingMigrations(db, provider);
     if (pending.length === 0) return;
 
@@ -129,66 +101,4 @@ export async function listPendingMigrations(
     return (await migrator.getMigrations())
         .filter((migration) => migration.executedAt === undefined)
         .map((migration) => migration.name);
-}
-
-/** The app's own migrations with each plugin's merged in, as one provider. */
-export async function loadMergedProvider(
-    plugins: PluginDefinition[],
-    migrationsDir: string
-): Promise<MigrationProvider> {
-    // Plugin migrations merge at apply time, so a newly installed plugin can
-    // introduce a migration that sorts before ones already applied — which is
-    // why every caller here passes `allowUnorderedMigrations`.
-    return mergeMigrationProviders(
-        await loadAppMigrations(resolveMigrationsDir(migrationsDir)),
-        collectPluginMigrations(plugins)
-    );
-}
-
-/**
- * The merged chain as a provider that loads it on each read, so boot can
- * register it without loading files a bundled runtime may not ship.
- */
-export function createMergedProvider(
-    plugins: PluginDefinition[],
-    migrationsDir: string
-): MigrationProvider {
-    return {
-        async getMigrations() {
-            let provider: MigrationProvider;
-            try {
-                provider = await loadMergedProvider(plugins, migrationsDir);
-            } catch (error) {
-                throw new AstromechError(
-                    `could not load the migrations from ${migrationsDir}: ${describe(error)}`
-                );
-            }
-            return provider.getMigrations();
-        },
-    };
-}
-
-/**
- * The bundled app migration names with each plugin's chain merged in. Names
- * are all a pending check reads; an app migration here cannot be applied.
- */
-function bundledProvider(
-    names: readonly string[],
-    plugins: PluginDefinition[]
-): MigrationProvider {
-    const notBundled = (): Promise<void> =>
-        Promise.reject(
-            new AstromechError('only the names of the app migrations are bundled')
-        );
-    const app: MigrationProvider = {
-        getMigrations: () =>
-            Promise.resolve(
-                Object.fromEntries(names.map((name) => [name, { up: notBundled }]))
-            ),
-    };
-    return mergeMigrationProviders(app, collectPluginMigrations(plugins));
-}
-
-function describe(error: unknown): string {
-    return error instanceof Error ? error.message : String(error);
 }

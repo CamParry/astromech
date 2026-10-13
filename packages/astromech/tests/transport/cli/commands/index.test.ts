@@ -122,9 +122,18 @@ describe('astromech', () => {
             onTestFinished(() => removeWranglerProject(wranglerProject));
             const site = await createTempSite();
             await mkdir(join(site, 'migrations'));
+            // One migration that does nothing: `db:init` refuses an empty chain.
             await writeFile(
                 join(site, 'migrations/index.ts'),
-                'export const migrationProvider = { getMigrations: async () => ({}) };\n'
+                "export const migrationProvider = { getMigrations: async () => ({ '0000_empty': { up: async () => {} } }) };\n"
+            );
+            await writeFile(
+                join(site, 'migrations/journal.json'),
+                JSON.stringify({
+                    version: 1,
+                    dialect: 'sqlite',
+                    entries: [{ idx: 0, tag: '0000_empty', when: 0 }],
+                })
             );
             const driver = pathToFileURL(
                 join(packageRoot, 'src/database/drivers/d1.ts')
@@ -133,8 +142,10 @@ describe('astromech', () => {
             await writeFile(
                 configPath,
                 `import { d1 } from ${JSON.stringify(driver)};
+import { migrationProvider } from './migrations/index.ts';
 export default {
     db: d1({ binding: 'DB' }),
+    migrations: migrationProvider,
     migrationsDir: ${JSON.stringify(join(site, 'migrations'))},
 };
 `

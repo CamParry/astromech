@@ -7,6 +7,7 @@
 
 import type { DB } from '@/database/types';
 import type { Kysely } from 'kysely';
+import { mkdir, readFile, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import { createTempSite, run, runOk, writeSiteConfig } from '@tests/cli';
 import { resetRuntime } from '@tests/harness';
@@ -108,12 +109,65 @@ describe('db:init', () => {
         expect(rows).toEqual([{ name: 'kept' }]);
     });
 
-    it('fails, naming the folder, when the migrations folder has no chain', async () => {
+    it('fails, naming the folder, before db:generate has written a chain', async () => {
         const config = await writeConfig();
 
         await expect(run(dbInit, ['--config', config])).rejects.toThrow(
-            join(migrationsDir, 'index.ts')
+            `${migrationsDir} has no migrations. Run \`astromech db:generate\` first.`
         );
+    });
+
+    it('refuses a config whose migrations are not the chain in migrationsDir', async () => {
+        const config = await writeConfig();
+        await runOk(dbGenerate, ['--config', config]);
+        // The config imports one folder; `migrationsDir` names another.
+        const other = join(siteDir, 'other');
+        await mkdir(other);
+        await writeFile(
+            join(other, 'journal.json'),
+            JSON.stringify({ version: 1, dialect: 'sqlite', entries: [] })
+        );
+        const mismatched = await writeSiteConfig(siteDir, {
+            database: join(siteDir, 'database.db'),
+            migrationsDir,
+        });
+        await writeFile(
+            mismatched,
+            (await readFile(mismatched, 'utf-8')).replace(
+                /migrationsDir: ".*",/,
+                `migrationsDir: ${JSON.stringify(other)},`
+            )
+        );
+
+        await expect(run(dbInit, ['--config', mismatched])).rejects.toThrow(
+            `the config's \`migrations\` does not match ${join(other, 'journal.json')}. ` +
+                'Only in `migrations`: 0000_migration. Only in the journal: none.'
+        );
+        expect(await tableNames(getDb())).toEqual([]);
+    });
+
+    it('applies a migration db:generate wrote earlier in the same process', async () => {
+        const config = await writeConfig();
+        await runOk(dbGenerate, ['--config', config]);
+        await runOk(dbInit, ['--config', config]);
+        // Stand in for a core table added since: drop it from the database and
+        // the snapshot, so the next generate writes a migration creating it.
+        await sql`DROP TABLE _astromech_cron`.execute(getDb());
+        const snapshotPath = join(migrationsDir, 'snapshot.json');
+        const snapshot = JSON.parse(await readFile(snapshotPath, 'utf-8')) as {
+            tables: Record<string, unknown>;
+        };
+        delete snapshot.tables['_astromech_cron'];
+        await writeFile(snapshotPath, JSON.stringify(snapshot));
+        await runOk(dbGenerate, ['--config', config, '--name', 'add-cron']);
+
+        await runOk(dbInit, ['--config', config]);
+
+        expect(await appliedMigrations(getDb())).toEqual([
+            '0000_migration',
+            '0001_add-cron',
+        ]);
+        expect(await tableNames(getDb())).toContain('_astromech_cron');
     });
 
     it('refuses a remote database without --allow-remote, before opening it', async () => {

@@ -1,28 +1,46 @@
 /**
- * Unit tests for `database/app-migrations.ts`.
- *
- * The generated `migrations/index.ts` imports its siblings by `.js` specifier,
- * which plain Node cannot resolve — the loader has to transpile.
+ * Unit tests for `database/app-migrations.ts`: where the migrations folder is,
+ * and the check that the provider the config imports is the chain its journal
+ * lists.
  */
 
-import { mkdir, mkdtemp, rm, writeFile } from 'node:fs/promises';
+import type { PluginDefinition } from '@/types/index';
+import type { MigrationProvider } from 'kysely/migration';
+import { mkdtemp, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
+import { noMigrations } from '@tests/fixtures';
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { loadAppMigrations, resolveMigrationsDir } from '@/database/app-migrations';
+import {
+    assertMatchesJournal,
+    checkedMigrationProvider,
+    resolveMigrationsDir,
+} from '@/database/app-migrations';
+import { AstromechError } from '@/errors/astromech-error';
 
 const created: string[] = [];
 
-/** A throwaway app directory holding `migrations/` with the given files; returns that folder. */
-async function migrationsFolder(files: Record<string, string>): Promise<string> {
+/** A throwaway migrations folder whose `journal.json` lists `tags`, or has none. */
+async function migrationsFolder(tags?: string[]): Promise<string> {
     const dir = await mkdtemp(join(tmpdir(), 'astromech-migrations-'));
     created.push(dir);
-    const folder = join(dir, 'migrations');
-    await mkdir(folder, { recursive: true });
-    for (const [name, contents] of Object.entries(files)) {
-        await writeFile(join(folder, name), contents, 'utf-8');
+    if (tags !== undefined) {
+        const entries = tags.map((tag, idx) => ({ idx, tag, when: 0 }));
+        await writeFile(
+            join(dir, 'journal.json'),
+            JSON.stringify({ version: 1, dialect: 'sqlite', entries })
+        );
     }
-    return folder;
+    return dir;
+}
+
+/** A provider listing `names`, each a migration that does nothing. */
+function providerOf(...names: string[]): MigrationProvider {
+    const up = (): Promise<void> => Promise.resolve();
+    return {
+        getMigrations: () =>
+            Promise.resolve(Object.fromEntries(names.map((name) => [name, { up }]))),
+    };
 }
 
 afterEach(async () => {
@@ -49,33 +67,67 @@ describe('resolveMigrationsDir', () => {
     });
 });
 
-const MIGRATION = `
-export async function up() {}
-export async function down() {}
-`;
+describe('assertMatchesJournal', () => {
+    it("returns the provider's names when they are the journal's", async () => {
+        const dir = await migrationsFolder(['0000_baseline', '0001_next']);
 
-describe('loadAppMigrations', () => {
-    it('resolves a TypeScript migration chain written with .js specifiers', async () => {
-        const dir = await migrationsFolder({
-            '0000_baseline.ts': MIGRATION,
-            'index.ts': `
-                import * as m0000 from './0000_baseline';
-                export const migrationProvider = {
-                    async getMigrations() {
-                        return { '0000_baseline': m0000 };
-                    },
-                };
-            `,
-        });
-
-        const provider = await loadAppMigrations(dir);
-
-        expect(Object.keys(await provider.getMigrations())).toEqual(['0000_baseline']);
+        await expect(
+            assertMatchesJournal(providerOf('0000_baseline', '0001_next'), dir)
+        ).resolves.toEqual(['0000_baseline', '0001_next']);
     });
 
-    it('names the file when the module has no migrationProvider export', async () => {
-        const dir = await migrationsFolder({ 'index.ts': 'export const other = 1;' });
+    it('refuses a provider imported from another folder, naming both differences', async () => {
+        const dir = await migrationsFolder(['0000_baseline', '0001_next']);
 
-        await expect(loadAppMigrations(dir)).rejects.toThrow(/migrationProvider/);
+        const check = assertMatchesJournal(
+            providerOf('0000_baseline', '0001_other'),
+            dir
+        );
+
+        await expect(check).rejects.toBeInstanceOf(AstromechError);
+        await expect(check).rejects.toThrow(
+            `the config's \`migrations\` does not match ${join(dir, 'journal.json')}. ` +
+                'Only in `migrations`: 0001_other. Only in the journal: 0001_next. ' +
+                `Import \`migrationProvider\` from the \`index.ts\` in ${dir}`
+        );
+    });
+
+    it('reads a folder with no journal as listing no migrations', async () => {
+        const dir = await migrationsFolder();
+
+        await expect(assertMatchesJournal(noMigrations, dir)).resolves.toEqual([]);
+        await expect(
+            assertMatchesJournal(providerOf('0000_baseline'), dir)
+        ).rejects.toThrow(
+            'Only in `migrations`: 0000_baseline. Only in the journal: none.'
+        );
+    });
+});
+
+describe('checkedMigrationProvider', () => {
+    it('merges each plugin chain into the checked app chain', async () => {
+        const dir = await migrationsFolder(['0000_baseline']);
+        const plugin = {
+            package: '@example/plugin',
+            migrations: providerOf('0000_init'),
+        } as PluginDefinition;
+
+        const provider = await checkedMigrationProvider(
+            { migrations: providerOf('0000_baseline'), plugins: [plugin] },
+            dir
+        );
+
+        expect(Object.keys((await provider?.getMigrations()) ?? {})).toEqual([
+            '0000_baseline',
+            'plugin_example_plugin_0000_init',
+        ]);
+    });
+
+    it('is null for a site that has not generated its chain yet', async () => {
+        const dir = await migrationsFolder();
+
+        await expect(
+            checkedMigrationProvider({ migrations: noMigrations }, dir)
+        ).resolves.toBeNull();
     });
 });

@@ -34,8 +34,8 @@ afterEach(async () => {
 });
 
 /**
- * A site config with two types that relate to `post`. `migrationsDir` names a
- * folder with no chain, so boot skips the drift check the template would pass.
+ * A site config with two types that relate to `post`. Its migration chain is
+ * the empty starter, so boot finds nothing pending on the template database.
  * A remote driver throws if it is opened, so a refusal is seen to come first.
  */
 function writeConfig(options: { remote?: boolean } = {}): Promise<string> {
@@ -48,7 +48,6 @@ function writeConfig(options: { remote?: boolean } = {}): Promise<string> {
     };
     return writeSiteConfig(root, {
         database: join(root, 'site.db'),
-        migrationsDir: join(root, 'no-migrations'),
         entries: [
             { type: 'post', single: 'Post', plural: 'Posts', fields: [related] },
             { type: 'note', single: 'Note', plural: 'Notes', fields: [related] },
@@ -81,6 +80,16 @@ async function seedThenEmptyIndex(config: string): Promise<{ target: string }> {
     expect(await usedByTypes(target.id)).toEqual([]);
     resetRuntime();
     return { target: target.id };
+}
+
+/**
+ * Close the database a command opened and clear the runtime, so the next
+ * command boots afresh: each one loads its own copy of the config, and boot
+ * refuses a second config in one runtime.
+ */
+async function endRun(): Promise<void> {
+    await getDb().destroy();
+    resetRuntime();
 }
 
 /** The source types the public read path lists as using `id`. */
@@ -136,8 +145,10 @@ describe('index:rebuild', () => {
         expect(drift.stderr.at(-1)).toBe('Run `astromech index:rebuild` to repair.');
         expect(await usedByTypes(target)).toEqual([]);
 
+        await endRun();
         await runOk(indexRebuild, ['--config', config]);
 
+        await endRun();
         expect(await run(indexRebuild, ['--config', config, '--check'])).toEqual({
             stdout: ['Relationships index is in sync (3 sources scanned).'],
             stderr: [],

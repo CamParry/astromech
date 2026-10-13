@@ -44,23 +44,23 @@
 // were. In `apps/demo-cloudflare`:
 //
 // 1. Pending migrations on a deployed Worker (`operations-defects.md`). The
-//    Worker has to bundle a migration the database lacks. Build for the
+//    Worker has to bundle a migration the database lacks: add
+//    `'9999_check_pending': { up: async () => {} }` to the provider in
+//    `migrations/index.ts`, which the config imports. Build for the
 //    environment (`CLOUDFLARE_ENV=testing pnpm exec astro build`), which
-//    applies no migrations to the remote database.
-//    In each built chunk where `resolveBundledMigrationNames` returns
-//    `["0000_migration"]` (grep `dist/server`; there can be two), add a name
-//    such as "9999_check_pending". Note the
-//    deployed version (`wrangler deployments status --env testing`), upload
-//    the build without deploying it (`wrangler versions upload --env
-//    testing`), and deploy that version just after a minute boundary
-//    (`wrangler versions deploy <new>@100% --env testing --yes`), so fresh
-//    isolates boot before the next Cron Trigger. Then start `wrangler tail
+//    applies no migrations to the remote database, so it does not compare the
+//    provider with `journal.json` either. Note the deployed version
+//    (`wrangler deployments status --env testing`), upload the build without
+//    deploying it (`wrangler versions upload --env testing`), and deploy that
+//    version just after a minute boundary (`wrangler versions deploy
+//    <new>@100% --env testing --yes`), so fresh isolates boot before the next
+//    Cron Trigger. Then start `wrangler tail
 //    --env testing --format json`, wait 20 seconds (a tail delivers nothing
 //    at first, and one started before the deploy saw nothing), and request
 //    `/`. The first request in each new isolate logs "1 migration has not
 //    been applied to this database: 9999_check_pending". Deploy the noted
-//    version again (`wrangler versions deploy <old>@100%`) and restore the
-//    chunks. No database row is touched.
+//    version again (`wrangler versions deploy <old>@100%`) and revert
+//    `migrations/index.ts`. No database row is touched.
 // 2. The cron secret comparison without `nodejs_compat` (`operations-defects.md`).
 //    The demo cannot run without the flag: `wrangler versions upload` of a
 //    build with `nodejs_compat` removed from `dist/server/wrangler.json` is

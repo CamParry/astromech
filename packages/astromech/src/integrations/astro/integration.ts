@@ -11,7 +11,7 @@ import { createAdminViteConfig } from '@astromech/admin/vite';
 import { buildAdminConfig } from '@/config/admin-config';
 import { loadConfigFile } from '@/config/load';
 import { resolveConfig } from '@/config/resolve';
-import { listAppMigrationNames, resolveMigrationsDir } from '@/database/app-migrations';
+import { checkedMigrationProvider } from '@/database/app-migrations';
 import { runMigrations } from '@/database/migrations';
 import { AstromechError } from '@/errors/astromech-error';
 import { registerRoutes } from '@/integrations/astro/routes';
@@ -77,11 +77,6 @@ export function astromech(options: AstromechIntegrationOptions = {}): AstroInteg
 
                 logger.info('Initializing Astromech CMS');
 
-                const migrationNames = await bundleMigrationNames(
-                    resolveMigrationsDir(resolvedConfig.migrationsDir),
-                    (message) => logger.warn(message)
-                );
-
                 const admin = createAdminViteConfig({
                     iconNames: collectIconNames(buildAdminConfig(config, resolvedConfig)),
                     warn: (message) => logger.warn(message),
@@ -97,7 +92,6 @@ export function astromech(options: AstromechIntegrationOptions = {}): AstroInteg
                         resolvedConfig,
                         astroReadsForwardedFor: () => getAstroFacts().readsForwardedFor,
                         astroSendsCsp: () => getAstroFacts().sendsCsp,
-                        migrationNames,
                         dev: command === 'dev',
                     }),
                 });
@@ -185,7 +179,9 @@ export function astromech(options: AstromechIntegrationOptions = {}): AstroInteg
  * only. A remote one is left to `astromech db:init --allow-remote`, as the CLI
  * refuses it without that flag, so the environment of the machine that builds
  * never decides on its own that production is migrated. A driver with no
- * `isRemote` reads as local.
+ * `isRemote` reads as local. A site with no migrations yet is reported and
+ * skipped, since `db:init` is the primary migration path; a config whose
+ * `migrations` differs from `migrationsDir` throws.
  */
 async function migrateLocalDatabase(
     config: AstromechConfig,
@@ -199,32 +195,15 @@ async function migrateLocalDatabase(
         );
         return;
     }
-    await runMigrations(
-        config.db.getInstance(),
-        logger,
-        config.plugins ?? [],
-        resolved.migrationsDir
-    );
-}
-
-/**
- * The app's migration names for the build to bundle, or null when the site has
- * no chain. A chain that fails to load is warned about rather than failing the
- * build, since `db:init` reports it too.
- */
-async function bundleMigrationNames(
-    dir: string,
-    warn: (message: string) => void
-): Promise<string[] | null> {
-    try {
-        return await listAppMigrationNames(dir);
-    } catch (error) {
-        warn(
-            `Could not read the migrations in ${dir}, so the build bundles none: ` +
-                (error instanceof Error ? error.message : String(error))
+    const provider = await checkedMigrationProvider(config, resolved.migrationsDir);
+    if (provider === null) {
+        logger.error(
+            `${resolved.migrationsDir} has no migrations, so Astromech applied none. ` +
+                'Run `astromech db:generate` and `astromech db:init`.'
         );
-        return null;
+        return;
     }
+    await runMigrations(config.db.getInstance(), logger, provider);
 }
 
 /**

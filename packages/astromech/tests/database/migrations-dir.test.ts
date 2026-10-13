@@ -1,24 +1,27 @@
 /**
  * A config naming its own `migrationsDir`: the generator writes the chain there,
- * `runMigrations` applies it from there and `checkMigrationDrift` compares the
- * database against it, each resolving the folder against the working directory.
+ * the provider imported from it passes the journal check, and `runMigrations`
+ * applies it and `checkMigrationDrift` compares the database against it.
  */
 
 import type { DB } from '@/database/types';
 import type { Client } from '@libsql/client';
 import type { Kysely } from 'kysely';
-import { access, mkdir, mkdtemp, rm, symlink, writeFile } from 'node:fs/promises';
+import type { MigrationProvider } from 'kysely/migration';
+import { access, mkdtemp, rm, symlink } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { createClient } from '@libsql/client';
-import { expectConsole } from '@tests/console';
 import { makeTestConfig } from '@tests/harness';
 import { openTestDb } from '@tests/test-db';
 import { sql } from 'kysely';
 import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
 import { resolveConfig } from '@/config/resolve';
-import { resolveMigrationsDir } from '@/database/app-migrations';
+import {
+    checkedMigrationProvider,
+    resolveMigrationsDir,
+} from '@/database/app-migrations';
 import { generateMigrations } from '@/database/generate';
 import { checkMigrationDrift, runMigrations } from '@/database/migrations';
 import { CORE_TABLES } from '@/database/tables';
@@ -73,17 +76,23 @@ describe('a config naming its own migrationsDir', () => {
         ).resolves.toBeUndefined();
         await expect(access(join(siteDir, 'migrations'))).rejects.toThrow();
 
+        // What the site's config imports.
+        const { migrationProvider } = (await import(
+            join(siteDir, 'database', 'chain', 'index.ts')
+        )) as { migrationProvider: MigrationProvider };
+        const provider = await checkedMigrationProvider(
+            { migrations: migrationProvider, plugins: [] },
+            migrationsDir
+        );
+        if (provider === null) throw new Error('the generated chain is empty');
+
         const warn = vi.spyOn(log, 'warn').mockImplementation(() => undefined);
-        await checkMigrationDrift(db, [], migrationsDir);
+        await checkMigrationDrift(db, provider);
         expect(warn).toHaveBeenCalledTimes(1);
         expect(warn.mock.calls[0]?.[0]).toContain('1 migration has not been applied');
 
         const messages: string[] = [];
-        const logger = {
-            info: (message: string) => messages.push(message),
-            error: (message: string) => messages.push(message),
-        };
-        await runMigrations(db, logger, [], migrationsDir);
+        await runMigrations(db, { info: (message) => messages.push(message) }, provider);
         expect(messages).toEqual(['Astromech database migrations applied']);
         const { rows } = await sql<{ name: string }>`
             SELECT name FROM sqlite_master WHERE type = 'table' AND name = 'users'
@@ -91,31 +100,7 @@ describe('a config naming its own migrationsDir', () => {
         expect(rows).toHaveLength(1);
 
         warn.mockClear();
-        await checkMigrationDrift(db, [], migrationsDir);
+        await checkMigrationDrift(db, provider);
         expect(warn).not.toHaveBeenCalled();
-    });
-});
-
-describe('checkMigrationDrift', () => {
-    it('logs a migrations index that fails to load, and skips the check', async () => {
-        await mkdir(join(siteDir, 'broken'));
-        await writeFile(
-            join(siteDir, 'broken', 'index.ts'),
-            'export const migrationProvider = {;\n'
-        );
-        expectConsole(
-            'error',
-            '[Astromech] could not load the migrations, so the database was not checked for pending ones'
-        );
-
-        await expect(checkMigrationDrift(db, [], './broken')).resolves.toBeUndefined();
-    });
-
-    // A bundled runtime ships no migrations folder, and a new site may not have
-    // run `db:generate` yet.
-    it('skips the check without logging when the migrations folder does not exist', async () => {
-        await expect(
-            checkMigrationDrift(db, [], './no-migrations-here')
-        ).resolves.toBeUndefined();
     });
 });

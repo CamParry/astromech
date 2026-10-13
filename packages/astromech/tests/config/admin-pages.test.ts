@@ -1,5 +1,5 @@
 import type { AdminPage, AstromechConfig, DatabaseDriver } from '@/types/index';
-import { noopStorage } from '@tests/fixtures';
+import { noMigrations, noopStorage } from '@tests/fixtures';
 import { describe, expect, it } from 'vitest';
 import { defineAdminPage } from '@/config/define-admin-page';
 import { resolveConfig } from '@/config/resolve';
@@ -14,6 +14,7 @@ const driver: DatabaseDriver = {
 const baseConfig = (overrides: Partial<AstromechConfig> = {}): AstromechConfig => ({
     db: driver,
     storage: noopStorage,
+    migrations: noMigrations,
     entries: [
         {
             type: 'post',

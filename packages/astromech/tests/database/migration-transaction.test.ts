@@ -7,6 +7,7 @@
 import type { DB } from '@/database/types';
 import type { Snapshot, SnapshotTable } from '@astromech/schema-engine';
 import type { Kysely } from 'kysely';
+import type { MigrationProvider } from 'kysely/migration';
 import { cp, mkdtemp, rm, symlink } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
@@ -41,12 +42,7 @@ afterEach(async () => {
     await rm(siteDir, { recursive: true, force: true });
 });
 
-const logger = {
-    info: () => undefined,
-    error: (message: string) => {
-        throw new Error(message);
-    },
-};
+const logger = { info: () => undefined };
 let runs = 0;
 
 /** Generate the migration from the last snapshot to `snapshot`. */
@@ -60,13 +56,16 @@ async function generate(snapshot: Snapshot, name: string): Promise<void> {
     expect(result.status).toBe('generated');
 }
 
-/** Run the chain as `db:init` does. jiti caches a module by path, so each run
- *  loads a copy of the chain made after the last `generate`. */
+/** Run the chain as `db:init` does. The module loader caches a module by path,
+ *  so each run imports a copy of the chain made after the last `generate`. */
 async function runChain(): Promise<void> {
     runs += 1;
     const copy = join(siteDir, `migrations-${runs}`);
     await cp(migrationsDir, copy, { recursive: true });
-    await runMigrations(db, logger, [], copy);
+    const { migrationProvider } = (await import(join(copy, 'index.ts'))) as {
+        migrationProvider: MigrationProvider;
+    };
+    await runMigrations(db, logger, migrationProvider);
 }
 
 function snapshot(...tables: SnapshotTable[]): Snapshot {

@@ -48,20 +48,30 @@ export function openPlainDb(client: Client): Kysely<unknown> {
 }
 
 /**
- * The full migration chain a site with the first-party plugins gets:
- * `apps/demo/migrations` merged with each plugin's own chain. Running the real
- * chain (rather than a test-only schema) means every harness-based test also
- * exercises the generated `migrationProvider`. It loads on each read.
+ * The app chain alone: `apps/demo/migrations`, which `makeTestConfig()` passes
+ * as its `migrations`, as a site's config imports its own. It loads on each read.
  *
  * The migration providers live outside this package's rootDir, so they are
  * imported dynamically by URL (vitest resolves the .ts) to keep `apps/demo` and
  * the plugins out of the tsconfig project.
  */
-export const testMigrationProvider: MigrationProvider = {
+export const appMigrationProvider: MigrationProvider = {
     async getMigrations() {
         const { migrationProvider } = await import(
             new URL('../../../../apps/demo/migrations/index.ts', import.meta.url).href
         );
+        return (migrationProvider as MigrationProvider).getMigrations();
+    },
+};
+
+/**
+ * The full migration chain a site with the first-party plugins gets: the app
+ * chain merged with each plugin's own. Running the real chain (rather than a
+ * test-only schema) means every harness-based test also exercises the
+ * generated `migrationProvider`. It loads on each read.
+ */
+export const testMigrationProvider: MigrationProvider = {
+    async getMigrations() {
         // The first-party plugins own their tables, so the app chain alone does
         // not create them. This is the merged provider a real boot applies.
         const plugins = await Promise.all(
@@ -75,7 +85,7 @@ export const testMigrationProvider: MigrationProvider = {
                 return { alias, provider: mod.migrationProvider as MigrationProvider };
             })
         );
-        return mergeMigrationProviders(migrationProvider, plugins).getMigrations();
+        return mergeMigrationProviders(appMigrationProvider, plugins).getMigrations();
     },
 };
 
