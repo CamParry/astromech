@@ -203,9 +203,14 @@ describe('every globals method builds its request from the route table', () => {
 });
 
 describe('globals.get', () => {
-    it('reads a global that has never been saved back as null, not as a 404', async () => {
-        stub({ error: { id: 'e', code: 'NOT_FOUND', message: 'no', status: 404 } }, 404);
+    it('reads a global that has never been saved back as null', async () => {
+        stub({ data: null });
         await expect(client.globals.get({ key: 'site' })).resolves.toBeNull();
+    });
+
+    it('raises the 404 an undeclared key answers', async () => {
+        stub({ error: { id: 'e', code: 'NOT_FOUND', message: 'no', status: 404 } }, 404);
+        await expect(client.globals.get({ key: 'nope' })).rejects.toThrow();
     });
 
     it('raises every other failure', async () => {

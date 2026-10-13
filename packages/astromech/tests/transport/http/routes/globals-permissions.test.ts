@@ -48,11 +48,12 @@ describe('reading', () => {
         expect(body.data.fields).toEqual({ terms: 'Be nice' });
     });
 
-    it('404s a public global that is not published — the read is the public one', async () => {
+    it('answers null for a public global that is not published — the read is the public one', async () => {
         await save('legal', { terms: 'Draft' });
 
         const res = await app(roleWith([])).request('/globals/legal');
-        expect(res.status).toBe(404);
+        expect(res.status).toBe(200);
+        expect(await res.json()).toEqual({ data: null });
     });
 
     it('403s a public global asked for in the full shape', async () => {

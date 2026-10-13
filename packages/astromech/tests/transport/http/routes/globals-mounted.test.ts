@@ -4,8 +4,8 @@
  * The failure this catches is a row that matches no route — a path Hono orders
  * behind another, or a handler the table never attached. Such a row answers the
  * app's own `Route <method> <path> not found`, which is the one 404 no row may
- * produce; the domain's own 404 ("Global 'site' not found", for a declared
- * global nothing has saved yet) is a handler having run.
+ * produce; the domain's own 404 ("Global 'site' not found in locale 'en'",
+ * for a locale nothing has saved yet) is a handler having run.
  *
  * A plugin global is served by the same routes, addressed by its QUALIFIED key
  * (`seo/settings`) URL-encoded into the `:key` segment.

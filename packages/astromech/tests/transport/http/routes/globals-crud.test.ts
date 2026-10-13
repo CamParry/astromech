@@ -23,12 +23,11 @@ async function data(res: Response): Promise<Global> {
 }
 
 describe('GET /globals/:key', () => {
-    it('404s a declared global nothing has saved', async () => {
+    // The config declares it, so it exists: the read is the service's null.
+    it('answers null for a declared global nothing has saved', async () => {
         const res = await app().request('/globals/site?full=true');
-        expect(res.status).toBe(404);
-        const body = (await res.json()) as { error: { code: string; message: string } };
-        expect(body.error.code).toBe('NOT_FOUND');
-        expect(body.error.message).toBe("Global 'site' not found");
+        expect(res.status).toBe(200);
+        expect(await res.json()).toEqual({ data: null });
     });
 
     it('returns the saved fields in a { data } envelope', async () => {

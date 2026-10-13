@@ -61,7 +61,9 @@ A key is developer-written and locale-invariant. It never appears in a
 front-end URL, so it is a `key`, not a `slug`.
 
 A global has no row until something writes to it. Reading a declared but unsaved
-global returns `null`; the first `update` creates it.
+global returns `null`, and over HTTP `GET /cms/api/globals/<key>` answers
+`{ "data": null }` for it; only an undeclared key is a 404. The first `update`
+creates the row.
 
 ## Reading a global from your site
 
