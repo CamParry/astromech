@@ -140,6 +140,17 @@ describe('getStaged', () => {
         expect(staged?.fields['title']).toBe('Draft');
     });
 
+    // `get` answers null for a declared global with no row, and so does this.
+    it('answers null for a global that has never been saved', async () => {
+        expect(await api.getStaged({ key: 'site' })).toBeNull();
+    });
+
+    it('throws for an undeclared key', async () => {
+        await expect(api.getStaged({ key: 'nope' })).rejects.toThrow(
+            ResourceNotFoundError
+        );
+    });
+
     it('answers null through get for a global that has never been saved', async () => {
         expect(await api.get({ key: 'site', staged: true, full: true })).toBeNull();
     });
