@@ -2,7 +2,7 @@
 milestone: 1.0
 ---
 
-# Admin UI defects
+# Admin save and label defects
 
 Found on 2026-10-04 while planning `roadmap/planned/sidebar-groups.md` and
 `roadmap/planned/admin-widgets.md`.
@@ -23,9 +23,15 @@ The sidebar listing site entry types without a read check is already a fix in
 
 ## The work
 
-- [ ] A test for the label, in the sidebar and the command palette; fix it if
-      it fails.
-- [ ] `Button` defaults to `type="button"`; submit buttons opt in.
-- [ ] Cmd/Ctrl+S in the media detail modal; Save in the header on the user and
+- [x] A test for the label, in the sidebar and the command palette; fix it if
+      it fails. The defect was real: core turned a `{ $t }` label into its bare
+      key. Labels now resolve against the plugin's bundle in the sidebar, the
+      command palette and the plugin page header.
+- [x] `Button` defaults to `type="button"`; submit buttons opt in. A raw
+      `<button>` with no `type` is a lint error in core, admin and plugin
+      sources.
+- [x] Cmd/Ctrl+S in the media detail modal; Save in the header on the user and
       admin-resource screens; `aria-keyshortcuts` and a tooltip on every
-      primary Save.
+      primary Save. Every primary save is labelled Save (`SaveButton`),
+      Delete sits in the shared more-actions menu, and a form with no sidebar
+      spans the full width. Cmd+S had never worked on a Mac.

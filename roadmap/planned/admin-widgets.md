@@ -11,7 +11,7 @@ cannot add a panel to the dashboard or beside an entry. Raised on 2026-10-03 as
 dashboard widgets; decided 2026-10-04 as widgets anywhere in the admin, with the
 edit-screen layout around them.
 
-Prerequisite: `roadmap/in-progress/admin-ui-defects.md` (the `Button` type).
+The `Button` type fix it needed is in `roadmap/completed/admin-save-and-label-defects.md`. The user, admin-resource and entry new and edit screens repeat their header actions (the unsaved-changes indicator and `SaveButton`); the edit-screen areas should give them one component.
 
 ## What exists
 

@@ -19,6 +19,8 @@ Finished items are deleted rather than ticked; the record of what shipped is in
 
 - [ ] The admin's login, forgot-password and reset-password pages hard-code "Sign in", "Email address", "Password" and "Signing in…" although i18n keys exist for them. A session that ends mid-use (`onUnauthorized` in `main.tsx`) lands on `/login` with no message; it could reuse the `error` search param that `access_denied` uses.
 
+- [ ] Admin UI follow-ups (from `completed/admin-save-and-label-defects.md`): a plugin component page cannot put actions in the page header, since `ComponentPageView` owns it, so a plugin form page keeps Save in the `FieldsForm` sidebar; the media modal's Cmd+S still fires while a confirm dialog is open over it; a plugin's own `label` (its sidebar group name) is a plain string and cannot be a translation key.
+
 ### Search
 
 - [ ] Dedicated `GET /search` endpoint + `search()` SDK method — only if a public/programmatic search surface is needed
