@@ -262,6 +262,7 @@ function UserEditBody({
                                 <ContentVersionsPanel
                                     versions={versions.data ?? []}
                                     isLoading={versions.isLoading}
+                                    isError={versions.isError}
                                     canUpdate={canUpdateUsers()}
                                     onRestore={(version) =>
                                         restoreVersionMutation.mutate({

@@ -312,6 +312,7 @@ function MediaDetailBody({
                     <ContentVersionsPanel
                         versions={versions.data ?? []}
                         isLoading={versions.isLoading}
+                        isError={versions.isError}
                         canUpdate={canUpdate}
                         onRestore={(version) =>
                             restoreVersionMutation.mutate({
