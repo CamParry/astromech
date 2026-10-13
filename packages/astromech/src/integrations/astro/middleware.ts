@@ -7,10 +7,9 @@
 import type { RequestScope } from '@/request-scope/request-scope';
 import type { AstromechConfig } from '@/types/index';
 import type { MiddlewareHandler } from 'astro';
-import { migrationNames, rawConfig } from 'virtual:astromech/config';
+import { rawConfig } from 'virtual:astromech/config';
 import { createAstromech } from '@/astromech';
 import { assertAuthSecret } from '@/auth/better-auth';
-import { setBundledMigrationNames } from '@/database/migration-registry';
 import { resolveEnv, resolveNodeEnv } from '@/env';
 import { AstromechError } from '@/errors/astromech-error';
 import { readRemoteAddress } from '@/integrations/astro/remote-address';
@@ -29,7 +28,6 @@ export const onRequest: MiddlewareHandler = async (context, next) => {
     // nothing.
     assertAuthSecret();
     assertCaptchaSecret(rawConfig);
-    if (migrationNames !== null) setBundledMigrationNames(migrationNames);
     const app = await createAstromech({ config: rawConfig });
     // The Node deployment has no external cron, so the serving integration is
     // what starts the in-process ticker. A no-op on Workers.

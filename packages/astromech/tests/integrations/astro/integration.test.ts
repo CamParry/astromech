@@ -182,7 +182,7 @@ describe('astromech()', () => {
             }
         );
 
-        it('serves the names of the migrations in migrationsDir, so a Worker can check them', async () => {
+        it('defines the names of the migrations in migrationsDir, so a Worker can check them', async () => {
             await mkdir(join(root, 'migrations'));
             await writeFile(
                 join(root, 'migrations', 'index.ts'),
@@ -194,22 +194,20 @@ describe('astromech()', () => {
             );
             // `migrationsDir` resolves against the working directory.
             vi.spyOn(process, 'cwd').mockReturnValue(root);
-            const { integration, recorded, done } = await runSetup();
-            await integration.hooks['astro:config:done']?.(done);
+            const { recorded } = await runSetup();
 
-            expect(loadConfigModule(recorded)).toContain(
-                'export const migrationNames = ["0000_baseline","0001_next"];'
-            );
+            expect(
+                recorded.updateConfig[0]?.vite?.define.__ASTROMECH_MIGRATION_NAMES__
+            ).toBe('["0000_baseline","0001_next"]');
         });
 
-        it('serves null migration names for a site with no migrations folder', async () => {
+        it('defines null migration names for a site with no migrations folder', async () => {
             vi.spyOn(process, 'cwd').mockReturnValue(root);
-            const { integration, recorded, done } = await runSetup();
-            await integration.hooks['astro:config:done']?.(done);
+            const { recorded } = await runSetup();
 
-            expect(loadConfigModule(recorded)).toContain(
-                'export const migrationNames = null;'
-            );
+            expect(
+                recorded.updateConfig[0]?.vite?.define.__ASTROMECH_MIGRATION_NAMES__
+            ).toBe('null');
         });
 
         it('does not warn at startup when allowedDomains is set and trustProxy is unset', async () => {

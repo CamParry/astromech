@@ -21,6 +21,13 @@ That is why trigger cadence and job cadence are independent: ticking every
 minute does not run every job every minute, it gives due-evaluation a
 once-a-minute chance to fire what is due.
 
+Booting the application checks the database for pending migrations, whichever
+event starts it, so a Worker woken only by a Cron Trigger checks as one woken
+by a request does. When migrations are pending, boot logs a warning naming
+them and the tick still runs the due jobs, the same way a request is still
+served. Nothing is recorded in `last_result` or `last_error`. Apply migrations
+with `astromech db:init` before you deploy code whose jobs need them.
+
 ## Picking a driver
 
 The `scheduler` key in `astromech.config.ts` takes a driver. Leave it unset

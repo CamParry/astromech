@@ -19,16 +19,12 @@ import { onRequest } from '@/integrations/astro/middleware';
 // because the mock is built before any test runs.
 const site = vi.hoisted(() => ({
     config: undefined as AstromechConfig | undefined,
-    migrationNames: null as readonly string[] | null,
     astroReadsForwardedFor: false,
 }));
 
 vi.mock('virtual:astromech/config', () => ({
     get rawConfig() {
         return site.config;
-    },
-    get migrationNames() {
-        return site.migrationNames;
     },
     get astroReadsForwardedFor() {
         return site.astroReadsForwardedFor;
@@ -43,7 +39,6 @@ const noScheduler: SchedulerDriver = { name: 'none' };
 beforeEach(async () => {
     await createTestDb();
     site.config = { ...makeBootConfig(), scheduler: noScheduler };
-    site.migrationNames = null;
     site.astroReadsForwardedFor = false;
     clearEnvSource();
     // A secret in the shell running the suite would otherwise satisfy the check.
@@ -53,6 +48,7 @@ beforeEach(async () => {
 afterEach(() => {
     clearEnvSource();
     vi.unstubAllEnvs();
+    vi.unstubAllGlobals();
 });
 
 type RouteCache = APIContext['cache'] & {
@@ -182,7 +178,7 @@ describe('the Astro middleware', () => {
     it('checks the database against the migration names bundled at build time', async () => {
         setEnvSource({ NODE_ENV: 'development' });
         const applied = Object.keys(await getMigrationProvider().getMigrations());
-        site.migrationNames = [...applied, '9999_not-applied'];
+        vi.stubGlobal('__ASTROMECH_MIGRATION_NAMES__', [...applied, '9999_not-applied']);
         expectConsole(
             'error',
             '1 migration has not been applied to this database: 9999_not-applied'

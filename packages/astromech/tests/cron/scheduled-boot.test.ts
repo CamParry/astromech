@@ -8,8 +8,10 @@
 import type { DB } from '@/database/types';
 import type { AstromechConfig } from '@/types/index';
 import type { Kysely } from 'kysely';
+import { expectConsole } from '@tests/console';
 import { createTestDb, makeBootConfig, resetRuntime } from '@tests/harness';
-import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import { sql } from 'kysely';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { interval } from '@/cron/drivers/interval';
 import { registerCronJob } from '@/cron/registry';
 import { encodePatchWith } from '@/database/codec';
@@ -32,6 +34,7 @@ beforeEach(async () => {
 
 afterEach(() => {
     interval().stop?.();
+    vi.unstubAllGlobals();
 });
 
 /** A stand-in for the Astro adapter's worker entry. */
@@ -88,5 +91,28 @@ describe('createWorkerEntry().scheduled on an uncreated application', () => {
 
         await entry.scheduled({ scheduledTime: seedTime.getTime() }, {});
         expect(ran).toBe(true);
+    });
+
+    // A Worker has no file system to read the migrations folder from, and a
+    // Worker woken only by a Cron Trigger has served no request.
+    it('checks the database against the migration names bundled at build time', async () => {
+        const { rows } = await sql<{
+            name: string;
+        }>`SELECT name FROM kysely_migration`.execute(db);
+        vi.stubGlobal('__ASTROMECH_MIGRATION_NAMES__', [
+            ...rows.map((row) => row.name),
+            '9999_not-applied',
+        ]);
+        expectConsole(
+            'error',
+            '1 migration has not been applied to this database: 9999_not-applied'
+        );
+
+        await expect(
+            worker().scheduled(
+                { scheduledTime: Date.parse('2024-06-01T12:00:00.000Z') },
+                {}
+            )
+        ).resolves.toBeUndefined();
     });
 });

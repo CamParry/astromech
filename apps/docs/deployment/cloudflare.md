@@ -167,9 +167,10 @@ under `CLOUDFLARE_ENV=production` logs that the database is remote and applies
 none, so run `db:init` first.
 
 A Worker cannot read your migrations folder, so the build bundles the names of
-its migrations. The first request a Worker serves compares them with the
-database and logs a warning when migrations are pending. A Worker woken only by
-a Cron Trigger skips the check.
+its migrations. The first request or Cron Trigger a Worker handles compares
+them with the database and logs a warning when migrations are pending. The
+Worker still serves the request or runs the due jobs
+([../configuration/scheduler.md](../configuration/scheduler.md#how-scheduling-works)).
 
 ## Deploying
 
