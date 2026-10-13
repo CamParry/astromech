@@ -2,7 +2,10 @@
  * The chat route module: its handler's own refusal of a caller with no user,
  * and body validation. Content blocks are checked for a `type` and nothing
  * more — deeper checks would reject the block types the transcript
- * deliberately carries through, and the API is the real validator.
+ * deliberately carries through, and the API is the real validator. Each
+ * rejection has an example here even where the property test also reaches it:
+ * generated bodies reach a rare branch only by chance, and the coverage
+ * threshold has to hold on every run.
  */
 
 import { makeTestConfig } from '@tests/harness';
@@ -167,6 +170,10 @@ describe('readChatRequest', () => {
         ).resolves.toBeNull();
     });
 
+    it('rejects a turn that is not an object', async () => {
+        await expect(readChatRequest(postJson({ messages: ['hi'] }))).resolves.toBeNull();
+    });
+
     it('accepts a user turn whose content is a bare string', async () => {
         const messages = [{ role: 'user', content: 'hi' }];
 
@@ -235,6 +242,14 @@ describe('readChatRequest', () => {
                     messages: [text('user', 'hi')],
                     decisions: [{ action: 'approve' }],
                 })
+            )
+        ).resolves.toBeNull();
+    });
+
+    it('rejects a decision that is not an object', async () => {
+        await expect(
+            readChatRequest(
+                postJson({ messages: [text('user', 'hi')], decisions: ['ap_1'] })
             )
         ).resolves.toBeNull();
     });
