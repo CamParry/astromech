@@ -378,13 +378,26 @@ describe.each(RESOURCE_TYPES)('%s', (kind) => {
             ]);
         });
 
-        it('throws for a locale with no content row', async () => {
-            const id = await adapter.create('one');
+        // A declared global exists before anything saves a locale of it, as `get`
+        // answers null for one. An entry, user or media item with no row does not.
+        if (kind === 'global') {
+            it('answers an empty list for a locale with no content row', async () => {
+                const id = await adapter.create('one');
 
-            await expect(adapter.versions(id, 'de')).rejects.toThrow(
-                ResourceNotFoundError
-            );
-        });
+                expect(await adapter.versions(id, 'de')).toEqual([]);
+                await expect(adapter.getVersion(id, 1, 'de')).rejects.toThrow(
+                    ResourceNotFoundError
+                );
+            });
+        } else {
+            it('throws for a locale with no content row', async () => {
+                const id = await adapter.create('one');
+
+                await expect(adapter.versions(id, 'de')).rejects.toThrow(
+                    ResourceNotFoundError
+                );
+            });
+        }
     });
 
     describe('getVersion', () => {

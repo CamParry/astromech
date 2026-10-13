@@ -220,8 +220,7 @@ describe('the global edit page', () => {
         expect(document.querySelector('.am-badge')).toBeNull();
     });
 
-    // Neither exists on a locale with no row, and the versions read answers 404
-    // for one, which the browser logs as an error.
+    // Neither exists on a locale with no row, so there is nothing to ask for.
     it('asks for no staged change or versions before the global is saved', async () => {
         const { api, get, getStaged, versions } = makeApi({ canonical: null });
         mountPage({

@@ -52,11 +52,23 @@ describe('GET /globals/:key/versions', () => {
         await save('one@b.dev');
         expect(await versions()).toEqual([]);
     });
+
+    // As `GET /globals/:key` answers null for a declared global with no row.
+    it('returns an empty list for a global never saved, and 404s an undeclared key', async () => {
+        expect(await versions()).toEqual([]);
+
+        expect((await app().request('/globals/nope/versions')).status).toBe(404);
+    });
 });
 
 describe('GET /globals/:key/versions/:version', () => {
     it('404s a number the locale has no version for', async () => {
         await save('one@b.dev');
+        const res = await app().request('/globals/contact/versions/1');
+        expect(res.status).toBe(404);
+    });
+
+    it('404s a number on a global never saved', async () => {
         const res = await app().request('/globals/contact/versions/1');
         expect(res.status).toBe(404);
     });

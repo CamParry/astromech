@@ -170,8 +170,8 @@ export function useEditController<TRecord extends EditRecord, TAddress>(
 
     const canonical = useQuery(resource.canonical);
     // A locale nothing has saved has no staged change and no versions, so
-    // neither is asked for until the row exists. The versions read answers 404
-    // for such a locale, which the browser logs as an error.
+    // neither is asked for until the row exists. An entry's versions read
+    // answers 404 for such a locale, which the browser logs as an error.
     const hasRow = canonical.data !== null && canonical.data !== undefined;
     // The staged change for this locale: what the staged view edits, and what
     // tells the canonical view whether to offer "Stage" or "View staged".

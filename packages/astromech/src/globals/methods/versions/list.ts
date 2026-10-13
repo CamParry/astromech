@@ -4,13 +4,14 @@ import { versionMetadataSchema } from '@/content/schema';
 import { listVersions } from '@/content/versions';
 import { defineServiceMethod } from '@/services/define-service-method';
 import { globalAccess } from '../../internal/access';
-import { getCanonicalGlobal } from '../../internal/canonical-global';
+import { findCanonicalGlobal } from '../../internal/canonical-global';
 import { globalRepository } from '../../repository';
 import { localised } from '../../schema';
 
 /**
- * Newest first, as metadata; `getVersion` reads one's fields. A locale with no
- * content row throws, with no fallback to the default locale.
+ * Newest first, as metadata; `getVersion` reads one's fields. A locale nothing
+ * has saved answers an empty list, as `get` answers null for it, with no
+ * fallback to the default locale. An undeclared key throws.
  */
 export const listGlobalVersions = defineServiceMethod({
     summary: 'List the saved versions of one locale of a global.',
@@ -22,8 +23,9 @@ export const listGlobalVersions = defineServiceMethod({
     async handler(params, ctx): Promise<VersionMetadata[]> {
         const { config } = ctx;
 
-        const { current } = await getCanonicalGlobal(config, params);
+        const canonical = await findCanonicalGlobal(config, params);
+        if (!canonical) return [];
 
-        return listVersions(globalRepository.versions, current);
+        return listVersions(globalRepository.versions, canonical.current);
     },
 });
