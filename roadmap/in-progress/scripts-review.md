@@ -35,7 +35,7 @@ with `node:util` `parseArgs` and 9 read `process.argv` by hand; some shared
 
 ## The work
 
-- [ ] The `scripts` package: `package.json`, `tsconfig.json` (Node's
+- [x] The `scripts` package: `package.json`, `tsconfig.json` (Node's
       recommended type-stripping block: `erasableSyntaxOnly`,
       `verbatimModuleSyntax`, `allowImportingTsExtensions`, `noEmit`),
       `lib/run.ts`, and its tasks in Turborepo. Each root task lists the
