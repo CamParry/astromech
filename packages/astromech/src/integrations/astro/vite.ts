@@ -46,6 +46,8 @@ export type ViteConfigOptions = {
     astroSendsCsp: () => boolean;
     /** The app's migration names, bundled for a runtime with no file system; null with no chain. */
     migrationNames: readonly string[] | null;
+    /** Whether Astro runs `astro dev`, rather than a build. */
+    dev: boolean;
 };
 
 /** Build the `vite` half of the Astro config update. */
@@ -59,6 +61,7 @@ export function createViteConfig({
     astroReadsForwardedFor,
     astroSendsCsp,
     migrationNames,
+    dev,
 }: ViteConfigOptions): ViteConfig {
     const rootDir = fileURLToPath(root);
     const plugins = config.plugins ?? [];
@@ -115,7 +118,8 @@ export function createViteConfig({
                 liveConfigModule(
                     resolveConfigPath(rootDir, configFile),
                     astroReadsForwardedFor(),
-                    astroSendsCsp()
+                    astroSendsCsp(),
+                    dev
                 )
             ),
             virtualModule(
@@ -178,17 +182,24 @@ function pluginOptimizeDeps(def: PluginDefinition): string[] {
  * Source for `virtual:astromech/config`. Re-exporting the author's module
  * puts the live config in the SSR graph, so functions and class instances
  * survive where a JSON literal would destroy them.
+ *
+ * `viteEnv` is `import.meta.env` under `astro dev` only. In a build, Astro
+ * replaces an `import.meta.env` read as a whole object with every variable of
+ * the build machine whose name appears in the module's source, so a build's
+ * module never mentions it.
  */
 function liveConfigModule(
     configPath: string,
     astroReadsForwardedFor: boolean,
-    astroSendsCsp: boolean
+    astroSendsCsp: boolean,
+    dev: boolean
 ): string {
     return [
         `import rawConfig from ${specifier(configPath)};`,
         `export { rawConfig };`,
         `export const astroReadsForwardedFor = ${String(astroReadsForwardedFor)};`,
         `export const astroSendsCsp = ${String(astroSendsCsp)};`,
+        `export const viteEnv = ${dev ? 'import.meta.env' : 'undefined'};`,
     ].join('\n');
 }
 

@@ -65,7 +65,7 @@ export type AppContext = {
     email: PluginEmail;
     notify: (input: NotifyInput) => Promise<void>;
     logger: PluginLogger;
-    /** Env vars (resolved via import.meta.env in Vite/Astro SSR). Never the browser. */
+    /** Env vars, as `resolveEnv` reads them (`src/env.ts`). Never the browser. */
     env: Record<string, string | undefined>;
     /**
      * Run `event`'s handlers in registration order, each as this context,

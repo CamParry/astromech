@@ -141,12 +141,17 @@ async function main() {
 }
 
 /**
- * Checks on the built Worker's code, before it is served.
+ * Two checks on the built Worker's code, before it is served.
  *
  * One copy of core: the site's Vite resolves every core subpath to source
  * (`astromech:core-source-alias`). A subpath left on `dist` puts a second copy
  * beside it, and an error class from one copy fails an `instanceof` check in
  * the other. `createRegistry` stands in for the whole package.
+ *
+ * No build-machine environment: Astro inlines into a module that reads
+ * `import.meta.env` as a whole object every variable whose name appears in its
+ * source, which once put the `NODE` variable, the path of the build's Node
+ * binary, in the bundle. That path stands in for the rest.
  */
 async function expectCleanBundle() {
     const serverDir = join(demoDir, 'dist', 'server');
@@ -169,6 +174,14 @@ async function expectCleanBundle() {
         );
     }
     console.log('  ok  dist/server holds one copy of core');
+    const leaked = sources.filter(({ source }) => source.includes(process.execPath));
+    if (leaked.length > 0) {
+        throw new Error(
+            `the build machine's Node path (${process.execPath}) is in ` +
+                leaked.map(({ file }) => file).join(', ')
+        );
+    }
+    console.log('  ok  dist/server holds no build-machine Node path');
 }
 
 /**

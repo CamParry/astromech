@@ -71,7 +71,7 @@ A handler reaches the user, config, hooks and sibling services through its `AppC
 
 ## The environment
 
-Every environment read goes through `src/env.ts`: `resolveEnv(name)` returns the value or `undefined`, and `getEnvRecord()` builds the record on `ctx.env`. A runtime integration sets its own source with `setEnvSource`; that is how a Worker's `env` (string vars and bindings in one object) reaches `resolveEnv` and `resolveBinding`, which lives in `integrations/cloudflare/bindings.ts`. The admin is exempt: it reads only `import.meta.env.DEV`, which Vite replaces at build time.
+Every environment read goes through `src/env.ts`: `resolveEnv(name)` returns the value or `undefined`, and `getEnvRecord()` builds the record on `ctx.env`. A runtime integration sets its own source with `setEnvSource`; that is how a Worker's `env` (string vars and bindings in one object) reaches `resolveEnv` and `resolveBinding`, which lives in `integrations/cloudflare/bindings.ts`. Under `astro dev`, the middleware registers Vite's `import.meta.env`, where Astro puts the site's `.env` values, with `setViteEnvSource`; `virtual:astromech/config` exports it as `viteEnv` in dev only. Core reads `import.meta.env` nowhere else: in a build, Astro replaces a whole-object `import.meta.env` read with every build-machine variable whose name appears in that module's source, and that put the build's `NODE` path in the Worker bundle. The admin is exempt: it reads only `import.meta.env.DEV`, which Vite replaces at build time.
 
 ## Drivers and registries
 

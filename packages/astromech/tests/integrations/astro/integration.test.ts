@@ -177,6 +177,20 @@ describe('astromech()', () => {
             }
         );
 
+        it.each([
+            ['dev', 'import.meta.env'],
+            ['build', 'undefined'],
+        ] as const)('serves viteEnv under astro %s as %s', async (command, expected) => {
+            const { integration, recorded, done } = await runSetup(undefined, {
+                command,
+            });
+            await integration.hooks['astro:config:done']?.(done);
+
+            expect(loadConfigModule(recorded)).toContain(
+                `export const viteEnv = ${expected};`
+            );
+        });
+
         it('defines the names of the migrations in migrationsDir, so a Worker can check them', async () => {
             await mkdir(join(root, 'migrations'));
             await writeFile(
@@ -291,7 +305,7 @@ async function runSetup(integrations?: { name: string }[], site: Site = {}) {
 }
 
 /** The Astro config a fake site sets beyond its integrations. */
-type Site = { allowedDomains?: AllowedDomains; csp?: Csp };
+type Site = { allowedDomains?: AllowedDomains; csp?: Csp; command?: 'dev' | 'build' };
 
 /** Recording fakes for both hooks, for a site whose integrations are `integrations`. */
 function createFakes(
@@ -319,6 +333,7 @@ function createFakes(
     };
 
     const setup = {
+        command: site.command ?? 'build',
         config,
         logger,
         updateConfig: (update: { vite: ViteUpdate }) =>
