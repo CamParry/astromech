@@ -73,7 +73,8 @@ const noModuleScopeConfigRead = {
 // a text field clicks the first one. `Button` defaults to `type="button"`; a raw
 // `<button>` has to say which it is.
 const noUntypedButton = {
-    selector: "JSXOpeningElement[name.name='button']:not(:has(JSXAttribute[name.name='type']))",
+    selector:
+        "JSXOpeningElement[name.name='button']:not(:has(JSXAttribute[name.name='type']))",
     message:
         'Set type="button" or type="submit" on a raw <button>: with no type it submits the form it is in.',
 };
