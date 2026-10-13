@@ -22,6 +22,7 @@ backups/
   migrations/                   generated — never hand-edited
   src/repository.ts             createRepository over the table — the only DB access
   src/backup.ts                 performBackup / rotate / resolveKeep — the core work
+  src/streams.ts                pipelineTo — gzip and gunzip on the way to storage or restore
   src/service/backups.ts        list, run, delete (JSON, over RPC), and their output schemas
   src/routes/backups.ts         download + restore (raw routes — they stream)
   src/permissions/backups.ts    definePermissions — the grantable permission keys

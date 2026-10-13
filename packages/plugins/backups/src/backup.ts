@@ -7,10 +7,10 @@
 import type { BackupRunRow } from './tables/runs';
 import type { BackupRunTrigger } from './types';
 import type { PluginContext } from 'astromech';
-import { Readable } from 'node:stream';
 import { createGzip } from 'node:zlib';
 import { BACKUPS_SETTINGS_KEY } from './globals/settings';
 import { createBackupRunsRepository } from './repository';
+import { pipelineTo } from './streams';
 
 declare global {
     var __astromechBackupRunning: boolean | undefined;
@@ -64,15 +64,9 @@ export async function performBackup(
             const shortId = id.slice(-8);
             const key = `${timestamp}-${shortId}.sqlite.gz`;
 
-            // Compress: web stream → Node Readable → gzip pipe → web ReadableStream.
-            const nodeReadable = Readable.fromWeb(
-                dump.stream as Parameters<typeof Readable.fromWeb>[0]
+            await pipelineTo(dump.stream, createGzip(), (gzipped) =>
+                ctx.storage.put(key, gzipped, { contentType: 'application/gzip' })
             );
-            const gzipTransform = createGzip();
-            nodeReadable.pipe(gzipTransform);
-            const gzipped = Readable.toWeb(gzipTransform) as ReadableStream<Uint8Array>;
-
-            await ctx.storage.put(key, gzipped, { contentType: 'application/gzip' });
 
             // Determine artifact size cheaply — get() returns size without reading body.
             const obj = await ctx.storage.get(key);

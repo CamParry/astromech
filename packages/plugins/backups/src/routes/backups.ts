@@ -5,11 +5,11 @@
  */
 import type { BackupRunRow } from '../tables/runs';
 import type { PluginContext, PluginRawRoute } from 'astromech';
-import { Readable } from 'node:stream';
 import { createGunzip } from 'node:zlib';
 import { InvalidBackupError, RestoreRefusedError } from 'astromech';
 import { isBackupRunning, performBackup, resolveKeep } from '../backup';
 import { createBackupRunsRepository } from '../repository';
+import { pipelineTo } from '../streams';
 import { backupRunsTable } from '../tables/runs';
 
 /**
@@ -101,17 +101,11 @@ async function restoreFromBackup(
             );
         }
 
-        // Gunzip the stored stream before handing it to the restore driver.
-        const gunzip = createGunzip();
-        const nodeReadable = Readable.fromWeb(
-            obj.body as Parameters<typeof Readable.fromWeb>[0]
+        // Gunzip the stored stream on its way to the restore driver.
+        const { restore } = ctx.database;
+        await pipelineTo(obj.body, createGunzip(), (plain) =>
+            restore(plain, { preserve: [RUNS_TABLE, '_astromech_cron'] })
         );
-        nodeReadable.pipe(gunzip);
-        const plain = Readable.toWeb(gunzip) as ReadableStream<Uint8Array>;
-
-        await ctx.database.restore(plain, {
-            preserve: [RUNS_TABLE, '_astromech_cron'],
-        });
 
         return Response.json({ data: { restored: row.id } });
     } catch (err) {

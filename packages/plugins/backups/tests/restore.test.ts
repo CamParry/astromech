@@ -15,6 +15,7 @@ import { Migrator } from 'kysely/migration';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { getDatabaseDriverOrThrow } from '@/database/driver-registry';
 import { setMigrationProvider } from '@/database/migration-registry';
+import { getStorageDriver } from '@/storage/registry';
 import { purgePlugin } from '@/transport/cli/commands/plugin-purge';
 import { backups } from '../src/index';
 import { artifactKey, createBackupsApp, takeBackup } from './_support/backups-app';
@@ -288,6 +289,42 @@ describe('POST /plugins/backups/runs/:id/restore', () => {
         expect(await res.json()).toEqual({
             error: 'The safety backup before the restore failed, so nothing was restored: Error: disk full',
         });
+        expect(
+            (await app.entries.get({ type: 'note', id: note.id, full: true }))?.title
+        ).toBe('Changed');
+    });
+
+    it('answers 500, logs the failure and changes nothing when reading the stored backup fails partway', async () => {
+        expectConsole('error', 'Restore failed');
+        const note = await app.entries.create({
+            type: 'note',
+            data: { title: 'Original' },
+        });
+        const run = await takeBackup(app);
+        await app.entries.update({
+            type: 'note',
+            id: note.id,
+            data: { title: 'Changed' },
+        });
+        const driver = getStorageDriver();
+        const get = driver.get.bind(driver);
+        vi.spyOn(driver, 'get').mockImplementation(async (key, opts) => {
+            const stored = await get(key, opts);
+            if (stored === null || !key.endsWith(artifactKey(run))) return stored;
+            return {
+                ...stored,
+                body: new ReadableStream<Uint8Array>({
+                    pull() {
+                        throw new Error('the connection to storage dropped');
+                    },
+                }),
+            };
+        });
+
+        const res = await restore(run.id);
+
+        expect(res.status).toBe(500);
+        expect(await res.json()).toEqual({ error: expect.any(String) });
         expect(
             (await app.entries.get({ type: 'note', id: note.id, full: true }))?.title
         ).toBe('Changed');
