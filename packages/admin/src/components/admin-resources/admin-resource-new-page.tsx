@@ -15,9 +15,8 @@ import { useFieldsForm } from '../../hooks/use-fields-form';
 import { useLabel } from '../../i18n/label-namespace';
 import { FieldsForm } from '../forms/fields-form';
 import { Breadcrumb } from '../ui/breadcrumb';
-import { Button } from '../ui/button';
-import { Page, PageContent, PageHeader, PageTitle } from '../ui/page';
-import { Panel } from '../ui/panel';
+import { Page, PageContent, PageHeader, PageHeaderActions, PageTitle } from '../ui/page';
+import { SaveButton } from '../ui/save-button';
 import { AdminResourceGuard } from './admin-resource-guard';
 
 export type AdminResourceNewPageProps = {
@@ -74,30 +73,27 @@ function AdminResourceNew({
     return (
         <Page>
             <PageHeader>
-                <PageTitle>{title}</PageTitle>
-                <Breadcrumb
-                    items={[
-                        { label: label(resource.label, resource.name), to: basePath },
-                        { label: title },
-                    ]}
-                />
+                <PageTitle>
+                    <Breadcrumb
+                        items={[
+                            { label: label(resource.label, resource.name), to: basePath },
+                            { label: title },
+                        ]}
+                    />
+                </PageTitle>
+                <PageHeaderActions>
+                    <SaveButton
+                        onClick={() => handleSubmit()}
+                        loading={mutation.isPending}
+                        disabled={mutation.isPending}
+                    >
+                        {t('common.create')}
+                    </SaveButton>
+                </PageHeaderActions>
             </PageHeader>
 
             <PageContent>
-                <FieldsForm
-                    form={resourceForm}
-                    sidebar={
-                        <Panel title={t('adminResources.actionsPanel')}>
-                            <Button
-                                onClick={() => handleSubmit()}
-                                loading={mutation.isPending}
-                                disabled={mutation.isPending}
-                            >
-                                {t('common.create')}
-                            </Button>
-                        </Panel>
-                    }
-                />
+                <FieldsForm form={resourceForm} />
             </PageContent>
         </Page>
     );

@@ -15,7 +15,7 @@ import type {
     ResolvedConfig,
 } from './config';
 import type { Permission } from './domain';
-import type { FieldType } from './fields';
+import type { FieldType, Label } from './fields';
 import type { PluginHooks } from './hooks';
 import type { ServiceMethod, ToolDefinition } from './methods';
 import type { Table } from '@/database/define-table';
@@ -247,7 +247,8 @@ export type PluginCronJob = {
  * under the plugin's `admin.nav` identity).
  */
 export type PluginNavItem = {
-    label: string;
+    /** A literal, or a key the admin resolves against the plugin's own bundle. */
+    label: Label;
     /** Where the item points — any admin path. */
     to?: string;
     icon?: string;

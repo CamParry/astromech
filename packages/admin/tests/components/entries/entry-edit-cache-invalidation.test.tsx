@@ -156,7 +156,7 @@ describe('the entry edit page after a save', () => {
         // First edit + save, via the real Update button.
         await user.clear(input);
         await user.type(input, 'Lumenflow International');
-        const updateButton = await screen.findByRole('button', { name: 'Update' });
+        const updateButton = await screen.findByRole('button', { name: 'Save' });
         await user.click(updateButton);
         await waitForSave(updateButton, 1);
 

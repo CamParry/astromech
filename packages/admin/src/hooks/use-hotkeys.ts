@@ -27,16 +27,63 @@ type ParsedHotkey = {
     alt: boolean;
 };
 
-const isMac = typeof navigator !== 'undefined' && navigator.platform.includes('Mac');
+/** Whether `mod` means Cmd here: a Mac, by the platform the browser reports. */
+function isMac(): boolean {
+    return typeof navigator !== 'undefined' && navigator.platform.includes('Mac');
+}
+
+/** The shortcut that saves the form on screen: every edit screen and the media modal. */
+export const SAVE_HOTKEY = 'mod+s';
+
+/**
+ * A hotkey as `aria-keyshortcuts` spells it, for this platform: `mod+s` is
+ * `Meta+S` on a Mac and `Control+S` elsewhere.
+ */
+export function ariaKeyShortcuts(descriptor: string): string {
+    const { key, meta, ctrl, shift, alt } = parseHotkey(descriptor);
+    return [
+        ...(ctrl ? ['Control'] : []),
+        ...(alt ? ['Alt'] : []),
+        ...(shift ? ['Shift'] : []),
+        ...(meta ? ['Meta'] : []),
+        key.toUpperCase(),
+    ].join('+');
+}
+
+/**
+ * A hotkey as the user reads it, for this platform: `mod+s` is `⌘S` on a Mac
+ * and `Ctrl+S` elsewhere.
+ */
+export function hotkeyLabel(descriptor: string): string {
+    const { key, meta, ctrl, shift, alt } = parseHotkey(descriptor);
+    if (isMac()) {
+        return [
+            ...(ctrl ? ['⌃'] : []),
+            ...(alt ? ['⌥'] : []),
+            ...(shift ? ['⇧'] : []),
+            ...(meta ? ['⌘'] : []),
+            key.toUpperCase(),
+        ].join('');
+    }
+    return [
+        ...(ctrl ? ['Ctrl'] : []),
+        ...(alt ? ['Alt'] : []),
+        ...(shift ? ['Shift'] : []),
+        ...(meta ? ['Meta'] : []),
+        key.toUpperCase(),
+    ].join('+');
+}
 
 function parseHotkey(descriptor: string): ParsedHotkey {
     const parts = descriptor.toLowerCase().split('+');
     const key = parts[parts.length - 1] ?? '';
+    const mod = parts.includes('mod');
+    const mac = isMac();
 
     return {
         key,
-        meta: parts.includes('meta') || parts.includes('cmd'),
-        ctrl: parts.includes('ctrl') || (parts.includes('mod') && !isMac),
+        meta: parts.includes('meta') || parts.includes('cmd') || (mod && mac),
+        ctrl: parts.includes('ctrl') || (mod && !mac),
         shift: parts.includes('shift'),
         alt: parts.includes('alt'),
     };

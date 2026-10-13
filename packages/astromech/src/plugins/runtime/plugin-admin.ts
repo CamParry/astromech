@@ -6,7 +6,6 @@
 
 import type {
     AdminPage,
-    Label,
     PluginDefinition,
     PluginNavItem,
     ResolvedAdminPage,
@@ -80,7 +79,7 @@ export function derivePluginNav(
         .filter((global) => global.nav !== false)
         .map((global) => {
             const item: PluginNavItem = {
-                label: labelText(global.label),
+                label: global.label,
                 to: `/plugin/${identity.namespace}/globals/${name(global.id)}`,
                 permission: globalPermission(global.id, 'read'),
             };
@@ -93,7 +92,7 @@ export function derivePluginNav(
         .filter((resource) => resource.nav !== false)
         .map((resource) => {
             const item: PluginNavItem = {
-                label: labelText(resource.label),
+                label: resource.label,
                 to: `/plugin/${identity.namespace}/resources/${resource.name}`,
                 permission: resolveResourceMethod(
                     identity,
@@ -111,7 +110,7 @@ export function derivePluginNav(
         .filter((page) => page.nav !== false)
         .map((page) => {
             const item: PluginNavItem = {
-                label: labelText(page.label),
+                label: page.label,
                 to: `/plugin/${identity.namespace}${page.path}`,
             };
             if (page.icon !== undefined) item.icon = page.icon;
@@ -134,12 +133,4 @@ export function derivePluginNav(
     };
     if (def.icon !== undefined) group.icon = def.icon;
     return [group];
-}
-
-/**
- * A nav item's label is a string: an i18n descriptor falls back to its `$t` key
- * here until the browser resolves it.
- */
-function labelText(label: Label): string {
-    return typeof label === 'string' ? label : label.$t;
 }

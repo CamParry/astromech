@@ -406,3 +406,32 @@ describe('FieldsForm', () => {
         expect(onSubmit).toHaveBeenCalledTimes(1);
     });
 });
+
+/** A form with no sidebar, as the admin-resource screens render it. */
+function FormWithoutSidebar(): React.ReactElement {
+    const form = useFieldsForm({
+        fieldDefinitions: FIELDS,
+        operation: 'create',
+        defaultValues: { fields: { from: '/old', to: '' } },
+        onSubmit: () => Promise.resolve({}),
+    });
+    return <FieldsForm form={form} />;
+}
+
+describe('FieldsForm layout', () => {
+    // A second, empty column would leave the right of the page blank.
+    it('renders no sidebar column when it is given no sidebar', async () => {
+        renderAdmin(<FormWithoutSidebar />);
+        await waitFor(() => inputNamed('to'));
+
+        const columns = document.querySelector('.am-form-layout-content')?.children;
+        expect(columns).toHaveLength(1);
+    });
+
+    it('renders the sidebar column beside the main one', async () => {
+        await mount(vi.fn());
+
+        const columns = document.querySelector('.am-form-layout-content')?.children;
+        expect(columns).toHaveLength(2);
+    });
+});

@@ -5,10 +5,9 @@
 
 import type { UseAdminEntryTypeResult } from '../../hooks/use-admin-entry-type';
 import type { Entry } from 'astromech';
-import { Menu } from '@base-ui/react/menu';
 import { useNavigate } from '@tanstack/react-router';
 import { defaultContentLocale, resolveEntryLocaleUrl } from 'astromech/shared';
-import { Copy, ExternalLink, Eye, MoreHorizontal, Trash2 } from 'lucide-react';
+import { Copy, ExternalLink, Eye, Trash2 } from 'lucide-react';
 import React from 'react';
 import { useTranslation } from 'react-i18next';
 import adminConfig from 'virtual:astromech/admin-config';
@@ -28,6 +27,7 @@ import { NotFoundPage } from '../layout/not-found-page';
 import { LocaleSwitcher } from '../translations/locale-switcher';
 import { Breadcrumb } from '../ui/breadcrumb';
 import { Button } from '../ui/button';
+import { MoreActionsMenu } from '../ui/more-actions-menu';
 import {
     Page,
     PageContent,
@@ -229,60 +229,35 @@ function EntryEditBody({
                         )}
                         <EditActions controller={controller} />
                         {!isReadOnly && !isStaged && (
-                            <Menu.Root>
-                                <Menu.Trigger
-                                    className="am-btn am-btn-secondary am-btn-md am-btn-icon"
-                                    aria-label={t('entries.moreActions')}
-                                >
-                                    <MoreHorizontal size={16} />
-                                </Menu.Trigger>
-                                <Menu.Portal>
-                                    <Menu.Positioner
-                                        className="am-topbar-menu-positioner"
-                                        sideOffset={6}
-                                        align="end"
-                                    >
-                                        <Menu.Popup className="am-topbar-menu-popup">
-                                            <Menu.Item
-                                                className="am-topbar-menu-item"
-                                                onClick={() =>
-                                                    controller.confirmDiscard(() =>
-                                                        duplicateEntry.mutate(id)
-                                                    )
-                                                }
-                                                disabled={duplicateEntry.isPending}
-                                            >
-                                                <span className="am-topbar-menu-item-icon">
-                                                    <Copy size={14} />
-                                                </span>
-                                                {t('common.duplicate')}
-                                            </Menu.Item>
-                                            {capabilities.staging && (
-                                                <Menu.Item
-                                                    className="am-topbar-menu-item"
-                                                    onClick={() => revokeToken.mutate(id)}
-                                                    disabled={revokeToken.isPending}
-                                                >
-                                                    <span className="am-topbar-menu-item-icon">
-                                                        <Eye size={14} />
-                                                    </span>
-                                                    {t('staging.revokePreview')}
-                                                </Menu.Item>
-                                            )}
-                                            <Menu.Separator className="am-topbar-menu-separator" />
-                                            <Menu.Item
-                                                className="am-topbar-menu-item am-topbar-menu-item-danger"
-                                                onClick={() => setDeleteOpen(true)}
-                                            >
-                                                <span className="am-topbar-menu-item-icon">
-                                                    <Trash2 size={14} />
-                                                </span>
-                                                {t('common.delete')}
-                                            </Menu.Item>
-                                        </Menu.Popup>
-                                    </Menu.Positioner>
-                                </Menu.Portal>
-                            </Menu.Root>
+                            <MoreActionsMenu
+                                items={[
+                                    {
+                                        label: t('common.duplicate'),
+                                        icon: <Copy size={14} />,
+                                        onClick: () =>
+                                            controller.confirmDiscard(() =>
+                                                duplicateEntry.mutate(id)
+                                            ),
+                                        disabled: duplicateEntry.isPending,
+                                    },
+                                    ...(capabilities.staging
+                                        ? [
+                                              {
+                                                  label: t('staging.revokePreview'),
+                                                  icon: <Eye size={14} />,
+                                                  onClick: () => revokeToken.mutate(id),
+                                                  disabled: revokeToken.isPending,
+                                              },
+                                          ]
+                                        : []),
+                                    {
+                                        label: t('common.delete'),
+                                        icon: <Trash2 size={14} />,
+                                        onClick: () => setDeleteOpen(true),
+                                        variant: 'danger',
+                                    },
+                                ]}
+                            />
                         )}
                     </PageHeaderActions>
                 </PageHeader>

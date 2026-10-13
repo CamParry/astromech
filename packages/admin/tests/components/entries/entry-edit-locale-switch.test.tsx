@@ -289,7 +289,7 @@ describe('the entry edit page across a locale switch', () => {
         const back = await findControl('input[name="seo.title"]');
         await user.clear(back);
         await user.type(back, 'EN edited again');
-        await user.click(await screen.findByRole('button', { name: 'Update' }));
+        await user.click(await screen.findByRole('button', { name: 'Save' }));
         // The success toast comes from `onSuccess`, after `form.reset` has run.
         await screen.findByText('Case Study updated.');
 

@@ -8,6 +8,7 @@ import type { UseAdminResourceResult } from '../../hooks/use-admin-resource';
 import type { AdminResourceRow } from 'astromech';
 import { useQuery } from '@tanstack/react-query';
 import { useNavigate } from '@tanstack/react-router';
+import { Trash2 } from 'lucide-react';
 import React from 'react';
 import { useTranslation } from 'react-i18next';
 import {
@@ -20,18 +21,18 @@ import { useLabel } from '../../i18n/label-namespace';
 import { FieldsForm } from '../forms/fields-form';
 import { NotFoundPage } from '../layout/not-found-page';
 import { Breadcrumb } from '../ui/breadcrumb';
-import { Button } from '../ui/button';
 import { useConfirm } from '../ui/confirm';
 import { EmptyState } from '../ui/empty-state';
+import { MoreActionsMenu } from '../ui/more-actions-menu';
 import {
-    ButtonGroup,
     Page,
     PageContent,
     PageHeader,
+    PageHeaderActions,
     PageLoading,
     PageTitle,
 } from '../ui/page';
-import { Panel } from '../ui/panel';
+import { SaveButton } from '../ui/save-button';
 import { AdminResourceGuard } from './admin-resource-guard';
 
 export type AdminResourceEditPageProps = {
@@ -140,45 +141,47 @@ function AdminResourceEditBody({
     return (
         <Page>
             <PageHeader>
-                <PageTitle>{title}</PageTitle>
-                <Breadcrumb
-                    items={[
-                        { label: label(resource.label, resource.name), to: basePath },
-                        { label: title },
-                    ]}
-                />
+                <PageTitle>
+                    <Breadcrumb
+                        items={[
+                            { label: label(resource.label, resource.name), to: basePath },
+                            { label: title },
+                        ]}
+                    />
+                </PageTitle>
+                <PageHeaderActions>
+                    {canUpdate && isDirty && (
+                        <span className="am-form-layout-dirty-indicator">
+                            {t('common.unsavedChanges')}
+                        </span>
+                    )}
+                    {canUpdate && (
+                        <SaveButton
+                            onClick={() => handleSubmit()}
+                            loading={mutation.isPending}
+                            disabled={!isDirty || mutation.isPending}
+                        >
+                            {t('common.save')}
+                        </SaveButton>
+                    )}
+                    {canDelete && (
+                        <MoreActionsMenu
+                            items={[
+                                {
+                                    label: t('common.delete'),
+                                    icon: <Trash2 size={14} />,
+                                    onClick: handleDelete,
+                                    disabled: deleteMutation.isPending,
+                                    variant: 'danger',
+                                },
+                            ]}
+                        />
+                    )}
+                </PageHeaderActions>
             </PageHeader>
 
             <PageContent>
-                <FieldsForm
-                    form={resourceForm}
-                    sidebar={
-                        (canUpdate || canDelete) && (
-                            <Panel title={t('adminResources.actionsPanel')}>
-                                <ButtonGroup>
-                                    {canUpdate && (
-                                        <Button
-                                            onClick={() => handleSubmit()}
-                                            loading={mutation.isPending}
-                                            disabled={!isDirty || mutation.isPending}
-                                        >
-                                            {t('common.save')}
-                                        </Button>
-                                    )}
-                                    {canDelete && (
-                                        <Button
-                                            variant="danger"
-                                            onClick={handleDelete}
-                                            loading={deleteMutation.isPending}
-                                        >
-                                            {t('common.delete')}
-                                        </Button>
-                                    )}
-                                </ButtonGroup>
-                            </Panel>
-                        )
-                    }
-                />
+                <FieldsForm form={resourceForm} />
             </PageContent>
         </Page>
     );

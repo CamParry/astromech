@@ -1,5 +1,4 @@
-import type { AdminNavLink } from '../../hooks/use-admin-nav';
-import type { PluginNavItem } from 'astromech';
+import type { AdminNavLink, AdminNavPluginItem } from '../../hooks/use-admin-nav';
 import { Link, useRouterState } from '@tanstack/react-router';
 import { ChevronLeft, ChevronRight, Puzzle } from 'lucide-react';
 import React from 'react';
@@ -108,7 +107,7 @@ function PluginNavIcon({ name }: { name?: string | undefined }) {
 }
 
 /** True when the pathname matches this item's link or any descendant's. */
-function navItemContains(item: PluginNavItem, pathname: string): boolean {
+function navItemContains(item: AdminNavPluginItem, pathname: string): boolean {
     if (
         item.to !== undefined &&
         (pathname === item.to || pathname.startsWith(item.to + '/'))
@@ -118,7 +117,7 @@ function navItemContains(item: PluginNavItem, pathname: string): boolean {
     return (item.children ?? []).some((child) => navItemContains(child, pathname));
 }
 
-function PluginNavEntry({ item }: { item: PluginNavItem }) {
+function PluginNavEntry({ item }: { item: AdminNavPluginItem }) {
     const children = item.children ?? [];
     const onlyChild = children.length === 1 ? children[0] : undefined;
 
@@ -157,8 +156,8 @@ function PluginNavGroup({
     item,
     children_,
 }: {
-    item: PluginNavItem;
-    children_: PluginNavItem[];
+    item: AdminNavPluginItem;
+    children_: AdminNavPluginItem[];
 }) {
     const { t } = useTranslation();
     const { sidebarOpen, setSidebarOpen } = useUi();

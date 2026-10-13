@@ -197,3 +197,37 @@ describe('UserEditPage access', () => {
         ).toBeNull();
     });
 });
+
+describe('UserEditPage header', () => {
+    // The entry edit screen's layout: Save in the header, naming its shortcut.
+    it('holds Save, with its Cmd/Ctrl+S shortcut, and no Actions panel', async () => {
+        mountPage();
+        await findPage();
+
+        const save = screen.getByRole('button', { name: 'Save' });
+        expect(save.closest('.am-page-header')).not.toBeNull();
+        expect(save.getAttribute('aria-keyshortcuts')).toMatch(/^(Meta|Control)\+S$/);
+        expect(screen.queryByText('Actions')).toBeNull();
+    });
+
+    it('keeps Delete in the More actions menu beside Save', async () => {
+        const page = mountPage('someone-else');
+        await findPage();
+
+        expect(screen.queryByRole('button', { name: 'Delete' })).toBeNull();
+        const more = screen.getByRole('button', { name: 'More actions' });
+        expect(more.closest('.am-page-header')).not.toBeNull();
+        await page.user.click(more);
+        expect(await screen.findByRole('menuitem', { name: 'Delete' })).toBeDefined();
+    });
+
+    it('saves on Cmd/Ctrl+S', async () => {
+        const page = mountPage();
+        await findPage();
+
+        await page.user.type(screen.getByLabelText('Name'), ' B');
+        await page.user.keyboard('{Control>}s{/Control}{Meta>}s{/Meta}');
+
+        await waitFor(() => expect(users.update).toHaveBeenCalledTimes(1));
+    });
+});

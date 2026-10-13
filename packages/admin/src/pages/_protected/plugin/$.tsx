@@ -16,6 +16,7 @@ import { EmptyState } from '../../../components/ui/empty-state';
 import { Page, PageContent } from '../../../components/ui/page';
 import { useAiContext } from '../../../context/ai-context';
 import { usePermissions } from '../../../hooks/use-permissions';
+import { labelNamespace } from '../../../i18n/label-namespace';
 import { resolveLabel } from '../../../i18n/labels';
 
 function PluginPage(): React.ReactElement {
@@ -34,11 +35,17 @@ function PluginPage(): React.ReactElement {
     // Component-mode registration from the codegen registry.
     const registration = pages[splat];
 
-    // Identify the page by its route key (the splat). A page label matching
-    // its plugin's stands alone, as the page header does.
+    // Identify the page by its route key (the splat). A key label resolves
+    // against the plugin's own bundle. A page label matching its plugin's
+    // stands alone, as the page header does.
     const pageLabel =
         declaredPage !== undefined
-            ? resolveLabel(declaredPage.label, declaredPage.path, t, 'translation')
+            ? resolveLabel(
+                  declaredPage.label,
+                  declaredPage.path,
+                  t,
+                  labelNamespace(owningPlugin?.namespace)
+              )
             : (registration?.label ?? null);
     const ownerLabel = owningPlugin?.label;
     useAiContext(
@@ -79,11 +86,11 @@ function PluginPage(): React.ReactElement {
     // A page whose label already matches its plugin's stands alone; otherwise
     // compose the two ("SEO Overview"). A null label means no header at all.
     const title =
-        registration.label === null
+        registration.label === null || pageLabel === null
             ? undefined
-            : owner !== undefined && owner.label !== registration.label
-              ? `${owner.label} ${registration.label}`
-              : registration.label;
+            : owner !== undefined && owner.label !== pageLabel
+              ? `${owner.label} ${pageLabel}`
+              : pageLabel;
 
     return (
         <ComponentPageView
