@@ -112,4 +112,4 @@ production D1.
   with `--allow-remote` printed "Network connection lost." three times, and
   the testing build once, each marked `[ERROR]`, then exited 0 with the
   migrations applied. It comes from wrangler's remote proxy; the cause was not
-  found, and it reads as a failure.
+  found, and it reads as a failure. Recorded in `backlog.md`, Tooling.
