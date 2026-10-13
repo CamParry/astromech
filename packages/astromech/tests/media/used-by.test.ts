@@ -15,8 +15,9 @@ const mediaService = currentServices.media;
 const usersService = currentServices.users;
 
 /**
- * `article` holds a media field flat and another inside a repeater; users hold
- * one too, so a `sourceType: null` source is reachable.
+ * `article` holds a media field flat and another inside a repeater, plus a
+ * relationship targeting media; users hold a media field too, so a
+ * `sourceType: null` source is reachable.
  */
 function makeUsageConfig(): AstromechConfig {
     const base = makeTestConfig();
@@ -31,6 +32,12 @@ function makeUsageConfig(): AstromechConfig {
                 staging: true,
                 fields: [
                     { name: 'cover', type: 'media', label: 'Cover' },
+                    {
+                        name: 'photo',
+                        type: 'relationship',
+                        target: 'media',
+                        label: 'Photo',
+                    },
                     {
                         name: 'sections',
                         type: 'repeater',
@@ -82,6 +89,18 @@ describe('mediaService.usedBy', () => {
                 instancePath: 'cover',
                 sourceStaged: false,
             },
+        ]);
+    });
+
+    it('returns an entry that references the file from a relationship targeting media', async () => {
+        const mediaId = await createMedia();
+        const article = await entriesService.create({
+            type: 'article',
+            data: { title: 'Article', fields: { photo: mediaId } },
+        });
+
+        expect(await mediaService.usedBy({ id: mediaId })).toEqual([
+            expect.objectContaining({ sourceId: article.id, schemaPath: 'photo' }),
         ]);
     });
 
