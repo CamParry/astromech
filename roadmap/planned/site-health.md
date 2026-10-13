@@ -9,7 +9,7 @@ publishes scheduled entries and nobody is told, which is WordPress's well-known
 "missed schedule" failure. Raised on 2026-10-03 as a status screen; decided
 2026-10-04.
 
-Prerequisite: `roadmap/in-progress/operations-defects.md` (cron results, the
+Prerequisite: `roadmap/completed/operations-defects.md` (cron results, the
 migrations list on Workers). Notifications use
 `roadmap/planned/notifications-channels-and-events.md`.
 
@@ -64,7 +64,7 @@ action?: { label, href } }`, the message a translation key. `run` returns
   "cron job failed" notification goes through the same row, so a job failing
   every minute notifies once.
 - **Where:** `/health` in the sidebar's System section, with a badge counting
-  critical checks. The Security screen (`roadmap/in-progress/core-security.md`)
+  critical checks. The Security screen (`roadmap/completed/core-security.md`)
   stays separate; security checks here link to it.
 
 ## The work

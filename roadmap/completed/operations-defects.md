@@ -63,7 +63,9 @@ a failing test first.
 - [x] A Worker woken only by a Cron Trigger checks for pending migrations:
       done 2026-10-13 by having boot read the bundled names from a build-time
       define, `__ASTROMECH_MIGRATION_NAMES__`, where only the middleware
-      registered them before.
+      registered them before. Replaced the same day by the chain the config
+      imports (`DECISIONS.md`, "The config imports the generated
+      migration chain"), which boot reads on every event.
 
 ## Checks on Cloudflare
 
@@ -77,6 +79,15 @@ production D1.
       logged "1 migration has not been applied to this database:
       9999_check_pending" on the first request in each new isolate
       (`scripts/check-deployed-cloudflare.mjs` says how).
+- [x] A deployed Worker woken only by a Cron Trigger logs the same warning
+      and still runs its jobs. Checked 2026-10-13 with the chain the config
+      imports: a testing build with `9999_check_pending` added to
+      `migrations/index.ts`, deployed at 17:58:02 UTC and tailed with no
+      request sent, logged the warning on the Cron Trigger at 17:58:25 in an
+      isolate no request had woken, and each trigger ended `ok`.
+      `_astromech_cron` then held `last_run` 18:00:25 and `last_result`
+      `'ok'` for `scheduled-publish` and `security-cleanup`. The previous
+      version was deployed again.
 - [x] `d1().isRemote()` answers true for a binding marked `"remote": true` and
       under `CLOUDFLARE_ENV=production`, and `db:init --allow-remote` reaches
       production D1 after `wrangler login`. Checked 2026-10-11 with the
@@ -88,7 +99,8 @@ production D1.
       runs on workerd without `nodejs_compat`. Checked 2026-10-11 on local
       workerd, in a Worker with no compatibility flags: it answers true for
       equal values and false for unequal ones, though the demo itself cannot
-      be deployed without the flag (see "Left open").
+      be deployed without the flag (`scripts/check-deployed-cloudflare.mjs`
+      header, 2).
 - [x] The `last_result` and `last_error` cron columns and `POST /entries/count`
       on production D1. Checked 2026-10-11: the Cron Trigger records
       `last_result` `'ok'` and `last_error` null for `scheduled-publish`, and a
