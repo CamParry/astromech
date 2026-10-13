@@ -109,9 +109,10 @@ status:
   whenever `views` includes it. A view the browser remembers that `views` no
   longer offers gives way to the default.
 - `gridFields` names top-level fields of the type, each with an optional
-  `label` (the field's name when absent). A card shows a field's value the way
-  a table column over that field shows it. As with an admin column, config
-  loading fails when a grid field names no field the type declares.
+  `label`: a string, or `t('key')` for a translated one (the field's name when
+  absent). A card shows a field's value the way a table column over that field
+  shows it. As with an admin column, config loading fails when a grid field
+  names no field the type declares.
 
 ## Updating entries
 

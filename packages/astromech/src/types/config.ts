@@ -103,10 +103,10 @@ export type EntryType = {
     defaultView?: 'list' | 'grid';
     /**
      * The fields each card in the grid view shows under the entry's title and
-     * status. Each names a top-level field of the type; `label` defaults to the
-     * field's name.
+     * status. Each names a top-level field of the type; `label`, a string or a
+     * `t()` message as an admin column's is, defaults to the field's name.
      */
-    gridFields?: { field: string; label?: string }[];
+    gridFields?: { field: string; label?: Label }[];
     /**
      * Front-end URL template for an entry, e.g. `/blog/{slug}`. Tokens: `{slug}`
      * and `{fieldName}`. Powers the admin "View" link and redirect generation.
@@ -517,7 +517,7 @@ export type AdminEntryType = {
     fields: ResolvedEntryFields;
     views?: ('list' | 'grid')[];
     defaultView?: 'list' | 'grid';
-    gridFields?: { field: string; label?: string }[];
+    gridFields?: { field: string; label?: Label }[];
     url: string | null;
     capabilities: ResolvedEntryCapabilities;
     titleField: 'title' | false;

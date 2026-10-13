@@ -357,6 +357,30 @@ describe('the entries list', () => {
         expect(document.querySelector('.am-entry-grid')).toBeNull();
     });
 
+    it('resolves a grid field’s message label as a column’s', async () => {
+        adminConfig.entryTypes = {
+            post: {
+                ...POST,
+                views: ['grid'],
+                // Any key the English strings hold will do.
+                gridFields: [
+                    { field: 'excerpt', label: { $t: 'entries.columnUpdated' } },
+                ],
+                fields: { main: [{ name: 'excerpt', type: 'text' }], sidebar: [] },
+            },
+        };
+        query.mockResolvedValue({
+            data: [{ ...makeEntry('e1', 'Hello'), fields: { excerpt: 'Short' } }],
+            pagination: { page: 1, pages: 1, total: 1, limit: 20 },
+        });
+
+        mountList('/entries/post');
+
+        expect(await screen.findByText('Short')).toBeTruthy();
+        const label = document.querySelector('.am-entry-card-field-label');
+        expect(label?.textContent).toBe('Updated');
+    });
+
     it('shows a user without read the forbidden message in place', async () => {
         adminConfig.entryTypes = { post: POST };
         const view = mountList('/entries/post', 'post', ['entry:page:read']);
