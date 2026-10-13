@@ -16,9 +16,14 @@ import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { createAdminViteConfig } from '@astromech/admin/vite';
 import { makeTestConfig } from '@tests/harness';
+import { listPublishedDistSources } from '@tests/package-exports';
 import { describe, expect, it } from 'vitest';
 import { buildAdminConfig } from '@/config/admin-config';
 import { resolveConfig } from '@/config/resolve';
+import {
+    coreSourceAlias,
+    listDistSubpaths,
+} from '@/integrations/astro/core-source-alias';
 import { collectIconNames, createViteConfig } from '@/integrations/astro/vite';
 
 type ViteConfig = ReturnType<typeof createViteConfig>;
@@ -42,6 +47,7 @@ describe('createViteConfig()', () => {
         astroReadsForwardedFor: () => false,
         astroSendsCsp: () => false,
         migrationNames: ['0000_baseline'],
+        dev: false,
     });
 
     it('points every alias at a path that exists', () => {
@@ -73,7 +79,7 @@ describe('createViteConfig()', () => {
 
     it('serves virtual:astromech/config as a re-export of the config file', () => {
         expect(loadVirtualModule(vite, 'virtual:astromech/config')).toBe(
-            'import rawConfig from "/site/site.config.ts";\nexport { rawConfig };\nexport const astroReadsForwardedFor = false;\nexport const astroSendsCsp = false;'
+            'import rawConfig from "/site/site.config.ts";\nexport { rawConfig };\nexport const astroReadsForwardedFor = false;\nexport const astroSendsCsp = false;\nexport const viteEnv = undefined;'
         );
     });
 
@@ -91,9 +97,10 @@ describe('createViteConfig()', () => {
     it('keeps core and the admin out of pre-bundling, aliased entries included', () => {
         const exclude = vite.optimizeDeps?.exclude ?? [];
         const alias = vite.resolve?.alias as Record<string, string>;
-        const packageEntries = Object.keys(alias).filter(
-            (id) => id.startsWith('astromech/') || id.startsWith('@astromech/admin')
-        );
+        const packageEntries = [
+            ...Object.keys(alias),
+            ...listPublishedDistSources().map(({ specifier }) => specifier),
+        ].filter((id) => id.startsWith('astromech') || id.startsWith('@astromech/admin'));
         const bundled = packageEntries.filter(
             (id) => !exclude.some((name) => id === name || id.startsWith(`${name}/`))
         );
@@ -102,7 +109,7 @@ describe('createViteConfig()', () => {
             expect.arrayContaining(['astromech', '@astromech/admin'])
         );
         expect(packageEntries).toEqual(
-            expect.arrayContaining(['astromech/shared', 'astromech/fetch'])
+            expect.arrayContaining(['astromech/ui', 'astromech/shared', 'astromech'])
         );
         expect(bundled).toEqual([]);
     });
@@ -177,11 +184,57 @@ describe('createViteConfig()', () => {
             expect(calls).toEqual([]);
         });
 
-        it('ignores an id that does not start with @/', async () => {
+        it('ignores an id that is neither @/ nor a core subpath', async () => {
             const { result, calls } = await resolveCoreSourceAlias(
                 vite,
-                'astromech/shared',
+                'react',
                 packageSource + '/exports/fetch.ts'
+            );
+
+            expect(result).toBeNull();
+            expect(calls).toEqual([]);
+        });
+
+        // Left on `dist`, a subpath would put a second copy of core in the
+        // bundle beside the source the route handler reaches. Checked against
+        // the published map, where `./middleware` is on `dist` too.
+        it('resolves every subpath published on dist to the source tsup builds it from, for a site importer', async () => {
+            const published = listPublishedDistSources();
+            const plugin = coreSourceAlias(
+                packageSource,
+                published.map(({ subpath }) => subpath)
+            );
+            const wrong: string[] = [];
+            for (const { specifier, source } of published) {
+                const { result } = await callResolveId(
+                    plugin,
+                    specifier,
+                    '/site/src/worker.ts'
+                );
+                if (result?.id !== source) {
+                    wrong.push(`${specifier} -> ${result?.id ?? 'null'}, not ${source}`);
+                }
+            }
+
+            expect(published).not.toHaveLength(0);
+            expect(wrong).toEqual([]);
+        });
+
+        it('lists the subpaths whose default target is in dist', () => {
+            expect(
+                listDistSubpaths({
+                    '.': { types: './dist/index.d.ts', default: './dist/index.js' },
+                    './middleware': './src/exports/middleware.ts',
+                    './fields': './dist/fields.js',
+                })
+            ).toEqual(['.', './fields']);
+        });
+
+        it('leaves a subpath that already points at source to its export', async () => {
+            const { result, calls } = await resolveCoreSourceAlias(
+                vite,
+                'astromech/routes/handler.ts',
+                '/site/src/pages/index.astro'
             );
 
             expect(result).toBeNull();
@@ -243,6 +296,7 @@ function includeWith(plugins: PluginDefinition[]): string[] {
         astroReadsForwardedFor: () => false,
         astroSendsCsp: () => false,
         migrationNames: null,
+        dev: false,
     });
     return (vite.optimizeDeps?.include ?? []).filter((entry) => entry !== undefined);
 }
@@ -254,8 +308,19 @@ function loadVirtualModule(vite: ViteConfig, id: string): string | undefined {
 }
 
 /** Call the core source alias with a fake context that records each `resolve` call. */
-async function resolveCoreSourceAlias(vite: ViteConfig, id: string, importer: string) {
-    const plugin = findPlugin<CoreSourceAliasPlugin>(vite, 'astromech:core-source-alias');
+function resolveCoreSourceAlias(vite: ViteConfig, id: string, importer: string) {
+    return callResolveId(
+        findPlugin<CoreSourceAliasPlugin>(vite, 'astromech:core-source-alias'),
+        id,
+        importer
+    );
+}
+
+async function callResolveId(
+    plugin: CoreSourceAliasPlugin,
+    id: string,
+    importer: string
+) {
     const calls: ResolveCall[] = [];
     const context: ResolveContext = {
         resolve: (...args) => {

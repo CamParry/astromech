@@ -7,10 +7,10 @@
 import type { RequestScope } from '@/request-scope/request-scope';
 import type { AstromechConfig } from '@/types/index';
 import type { MiddlewareHandler } from 'astro';
-import { rawConfig } from 'virtual:astromech/config';
+import { rawConfig, viteEnv } from 'virtual:astromech/config';
 import { createAstromech } from '@/astromech';
 import { assertAuthSecret } from '@/auth/better-auth';
-import { resolveEnv, resolveNodeEnv } from '@/env';
+import { resolveEnv, resolveNodeEnv, setViteEnvSource } from '@/env';
 import { AstromechError } from '@/errors/astromech-error';
 import { readRemoteAddress } from '@/integrations/astro/remote-address';
 import { isAdminPage, resolveInjectedRoute } from '@/integrations/astro/routes';
@@ -21,6 +21,8 @@ import { resolveClientAddress } from '@/transport/http/client-address';
 import { strictTransportSecurity } from '@/transport/http/strict-transport-security';
 
 export const onRequest: MiddlewareHandler = async (context, next) => {
+    // Under `astro dev`, the site's `.env` values reach the app only here.
+    if (viteEnv !== undefined) setViteEnvSource(viteEnv);
     // A page prerendered at build time gets no application, so a build neither
     // needs the secret nor runs scheduled jobs against the site's database.
     if (context.isPrerendered) return next();

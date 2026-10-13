@@ -14,6 +14,11 @@ declare module 'virtual:astromech/config' {
      * warning in production.
      */
     export const astroSendsCsp: boolean;
+    /**
+     * Vite's `import.meta.env` under `astro dev`, which carries the values in
+     * the site's `.env` files; undefined in a build.
+     */
+    export const viteEnv: Record<string, unknown> | undefined;
 }
 
 declare const __ASTROMECH_BASE_PATH__: string;

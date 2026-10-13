@@ -8,7 +8,7 @@ import type { HookParameters } from 'astro';
 import { mkdir, mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { fileURLToPath, pathToFileURL } from 'node:url';
+import { pathToFileURL } from 'node:url';
 import { LibsqlDialect } from '@libsql/kysely-libsql';
 import { createTempSite, runOk, writeSiteConfig } from '@tests/cli';
 import { findMissingExportTargets } from '@tests/package-exports';
@@ -38,8 +38,6 @@ type AllowedDomains = { hostname?: string; protocol?: string; port?: string }[];
 
 /** Astro's `security.csp`, as a site writes it. */
 type Csp = boolean | { scriptDirective?: { resources?: string[] } };
-
-const packageSource = fileURLToPath(new URL('../../../src', import.meta.url));
 
 // No imports, so jiti can load it from a directory outside the package.
 const configSource = `
@@ -96,9 +94,6 @@ describe('astromech()', () => {
 
             expect(recorded.updateConfig).toHaveLength(1);
             const vite = recorded.updateConfig[0]?.vite;
-            expect(vite?.resolve.alias['astromech/shared']).toBe(
-                `${packageSource}/exports/shared.ts`
-            );
             expect(vite?.define.__ASTROMECH_BASE_PATH__).toBe('"/admin"');
         });
 
@@ -181,6 +176,20 @@ describe('astromech()', () => {
                 );
             }
         );
+
+        it.each([
+            ['dev', 'import.meta.env'],
+            ['build', 'undefined'],
+        ] as const)('serves viteEnv under astro %s as %s', async (command, expected) => {
+            const { integration, recorded, done } = await runSetup(undefined, {
+                command,
+            });
+            await integration.hooks['astro:config:done']?.(done);
+
+            expect(loadConfigModule(recorded)).toContain(
+                `export const viteEnv = ${expected};`
+            );
+        });
 
         it('defines the names of the migrations in migrationsDir, so a Worker can check them', async () => {
             await mkdir(join(root, 'migrations'));
@@ -296,7 +305,7 @@ async function runSetup(integrations?: { name: string }[], site: Site = {}) {
 }
 
 /** The Astro config a fake site sets beyond its integrations. */
-type Site = { allowedDomains?: AllowedDomains; csp?: Csp };
+type Site = { allowedDomains?: AllowedDomains; csp?: Csp; command?: 'dev' | 'build' };
 
 /** Recording fakes for both hooks, for a site whose integrations are `integrations`. */
 function createFakes(
@@ -324,6 +333,7 @@ function createFakes(
     };
 
     const setup = {
+        command: site.command ?? 'build',
         config,
         logger,
         updateConfig: (update: { vite: ViteUpdate }) =>

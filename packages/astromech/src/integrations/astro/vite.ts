@@ -4,10 +4,13 @@
  * virtual modules. The admin package supplies its own share, which this merges.
  */
 
+import type { PackageExports } from '@/integrations/astro/core-source-alias';
 import type { AdminConfig } from '@/types/config';
 import type { AstromechConfig, PluginDefinition, ResolvedConfig } from '@/types/index';
 import type { AdminViteConfig } from '@astromech/admin/vite';
 import type { HookParameters } from 'astro';
+import { readFileSync } from 'node:fs';
+import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import {
     generatePluginClientManifest,
@@ -15,7 +18,10 @@ import {
 } from '@/codegen/plugin-client-manifest';
 import { buildAdminConfig } from '@/config/admin-config';
 import { resolveConfigPath } from '@/config/load';
-import { coreSourceAlias } from '@/integrations/astro/core-source-alias';
+import {
+    coreSourceAlias,
+    listDistSubpaths,
+} from '@/integrations/astro/core-source-alias';
 import { virtualModule } from '@/integrations/astro/virtual-module';
 
 /** The `vite` field of the config update Astro accepts. */
@@ -40,6 +46,8 @@ export type ViteConfigOptions = {
     astroSendsCsp: () => boolean;
     /** The app's migration names, bundled for a runtime with no file system; null with no chain. */
     migrationNames: readonly string[] | null;
+    /** Whether Astro runs `astro dev`, rather than a build. */
+    dev: boolean;
 };
 
 /** Build the `vite` half of the Astro config update. */
@@ -53,29 +61,24 @@ export function createViteConfig({
     astroReadsForwardedFor,
     astroSendsCsp,
     migrationNames,
+    dev,
 }: ViteConfigOptions): ViteConfig {
     const rootDir = fileURLToPath(root);
     const plugins = config.plugins ?? [];
 
     return {
         resolve: {
-            // Browser-facing entries alias to source so plugin components share
-            // module identity (React context, hooks) with the admin app. The
-            // admin's aliases cover `astromech/ui*`. `astromech/shared` and
-            // `astromech/fetch` are how the admin reaches core, so every browser
-            // caller shares their one module instance.
-            alias: {
-                ...admin.alias,
-                'astromech/shared': packageSource + '/exports/shared.ts',
-                'astromech/fetch': packageSource + '/exports/fetch.ts',
-            },
+            // The kit's entries alias to the admin's source, so plugin components
+            // share module identity (React context, hooks) with the admin app.
+            // Core's own subpaths resolve to source in `astromech:core-source-alias`.
+            alias: admin.alias,
         },
         // Core and the admin ship source only the site's Vite can compile: core's
-        // `@/` imports resolve through `astromech:core-source-alias`, a plugin the
-        // pre-bundler does not run. So neither package is pre-bundled. A package
-        // name also excludes its subpaths, and Vite checks the specifier before an
-        // alias replaces it, so `astromech/shared` and `astromech/fetch` stay out
-        // too. `include` still pre-bundles the packages they depend on.
+        // subpaths and its `@/` imports resolve through
+        // `astromech:core-source-alias`, a plugin the pre-bundler does not run.
+        // So neither package is pre-bundled. A package name also excludes its
+        // subpaths, and Vite checks the specifier before a plugin or alias
+        // resolves it. `include` still pre-bundles the packages they depend on.
         optimizeDeps: {
             exclude: ['astromech', '@astromech/admin'],
             // Named from the site's root. Peers stay flat, because the site installs
@@ -106,13 +109,17 @@ export function createViteConfig({
             __ASTROMECH_MIGRATION_NAMES__: JSON.stringify(migrationNames),
         },
         plugins: [
-            coreSourceAlias(packageSource),
+            coreSourceAlias(
+                packageSource,
+                listDistSubpaths(readCoreExports(packageSource))
+            ),
             ...admin.plugins,
             virtualModule('virtual:astromech/config', () =>
                 liveConfigModule(
                     resolveConfigPath(rootDir, configFile),
                     astroReadsForwardedFor(),
-                    astroSendsCsp()
+                    astroSendsCsp(),
+                    dev
                 )
             ),
             virtualModule(
@@ -131,6 +138,14 @@ export function createViteConfig({
             ),
         ],
     };
+}
+
+/** The `exports` of core's `package.json`, which sits beside `src`. */
+function readCoreExports(packageSource: string): PackageExports {
+    const manifest = JSON.parse(
+        readFileSync(join(packageSource, '..', 'package.json'), 'utf8')
+    ) as { exports: PackageExports };
+    return manifest.exports;
 }
 
 /** Every `icon` name in the admin config, deduped and sorted, for the admin's icon map. */
@@ -167,17 +182,24 @@ function pluginOptimizeDeps(def: PluginDefinition): string[] {
  * Source for `virtual:astromech/config`. Re-exporting the author's module
  * puts the live config in the SSR graph, so functions and class instances
  * survive where a JSON literal would destroy them.
+ *
+ * `viteEnv` is `import.meta.env` under `astro dev` only. In a build, Astro
+ * replaces an `import.meta.env` read as a whole object with every variable of
+ * the build machine whose name appears in the module's source, so a build's
+ * module never mentions it.
  */
 function liveConfigModule(
     configPath: string,
     astroReadsForwardedFor: boolean,
-    astroSendsCsp: boolean
+    astroSendsCsp: boolean,
+    dev: boolean
 ): string {
     return [
         `import rawConfig from ${specifier(configPath)};`,
         `export { rawConfig };`,
         `export const astroReadsForwardedFor = ${String(astroReadsForwardedFor)};`,
         `export const astroSendsCsp = ${String(astroSendsCsp)};`,
+        `export const viteEnv = ${dev ? 'import.meta.env' : 'undefined'};`,
     ].join('\n');
 }
 

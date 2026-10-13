@@ -1,7 +1,8 @@
 /**
  * Cross-runtime environment reads. A platform integration supplies its own
- * source through `setEnvSource`; otherwise values come from the ambient
- * `import.meta.env` and `process.env`.
+ * source through `setEnvSource`, and the Astro middleware supplies Vite's under
+ * `astro dev` through `setViteEnvSource`; otherwise values come from
+ * `process.env`.
  */
 
 import { createRegistry } from '@/registry';
@@ -14,6 +15,8 @@ export type EnvSource = Record<string, unknown>;
 
 const envSource = createRegistry<EnvSource>('envSource', { required: false });
 
+const viteEnvSource = createRegistry<EnvSource>('viteEnvSource', { required: false });
+
 /**
  * Declare where environment values come from. A platform integration calls
  * this as it receives the host's environment.
@@ -22,14 +25,25 @@ export function setEnvSource(source: EnvSource): void {
     envSource.set(source);
 }
 
+/**
+ * Declare Vite's `import.meta.env` under `astro dev`, which is where Astro puts
+ * the values in the site's `.env` files. Core never reads `import.meta.env`
+ * itself: in a build, Astro would inline into the bundle every build-machine
+ * variable whose name appears in the module that reads it.
+ */
+export function setViteEnvSource(source: EnvSource): void {
+    viteEnvSource.set(source);
+}
+
 /** The registered source, or `undefined`. For binding lookups, which want objects. */
 export function resolveEnvSource(): EnvSource | undefined {
     return envSource.get() ?? undefined;
 }
 
-/** @internal Test-only. Drops the registered source. */
+/** @internal Test-only. Drops the registered sources. */
 export function clearEnvSource(): void {
     envSource.clear();
+    viteEnvSource.clear();
 }
 
 /** True inside a Cloudflare Worker isolate, by the user agent the runtime sets. */
@@ -81,13 +95,8 @@ function sources(): EnvSource[] {
     const platform = envSource.get();
     if (platform !== null) found.push(platform);
 
-    try {
-        // Populated by Vite in Astro SSR; absent in plain Node.
-        const fromImportMeta = (import.meta as { env?: EnvSource }).env;
-        if (fromImportMeta !== undefined) found.push(fromImportMeta);
-    } catch {
-        // `import.meta` is unavailable in some CommonJS loaders.
-    }
+    const vite = viteEnvSource.get();
+    if (vite !== null) found.push(vite);
 
     if (typeof process !== 'undefined' && process.env !== undefined) {
         found.push(process.env);

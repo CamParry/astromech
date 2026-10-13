@@ -61,6 +61,7 @@ export function astromech(options: AstromechIntegrationOptions = {}): AstroInteg
         name: 'astromech',
         hooks: {
             'astro:config:setup': async ({
+                command,
                 updateConfig,
                 injectRoute,
                 addMiddleware,
@@ -97,6 +98,7 @@ export function astromech(options: AstromechIntegrationOptions = {}): AstroInteg
                         astroReadsForwardedFor: () => getAstroFacts().readsForwardedFor,
                         astroSendsCsp: () => getAstroFacts().sendsCsp,
                         migrationNames,
+                        dev: command === 'dev',
                     }),
                 });
 

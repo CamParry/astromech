@@ -12,7 +12,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { currentServices } from '@/app-context/services';
 import { getAstromech } from '@/astromech';
 import { getMigrationProvider } from '@/database/migration-registry';
-import { clearEnvSource, setEnvSource } from '@/env';
+import { clearEnvSource, resolveEnv, setEnvSource } from '@/env';
 import { onRequest } from '@/integrations/astro/middleware';
 
 // The site config the middleware boots, set per test. Read through a getter
@@ -20,6 +20,7 @@ import { onRequest } from '@/integrations/astro/middleware';
 const site = vi.hoisted(() => ({
     config: undefined as AstromechConfig | undefined,
     astroReadsForwardedFor: false,
+    viteEnv: undefined as Record<string, unknown> | undefined,
 }));
 
 vi.mock('virtual:astromech/config', () => ({
@@ -28,6 +29,9 @@ vi.mock('virtual:astromech/config', () => ({
     },
     get astroReadsForwardedFor() {
         return site.astroReadsForwardedFor;
+    },
+    get viteEnv() {
+        return site.viteEnv;
     },
 }));
 
@@ -40,6 +44,7 @@ beforeEach(async () => {
     await createTestDb();
     site.config = { ...makeBootConfig(), scheduler: noScheduler };
     site.astroReadsForwardedFor = false;
+    site.viteEnv = undefined;
     clearEnvSource();
     // A secret in the shell running the suite would otherwise satisfy the check.
     vi.stubEnv('BETTER_AUTH_SECRET', undefined);
@@ -172,6 +177,15 @@ describe('the Astro middleware', () => {
         setEnvSource({ NODE_ENV: 'development' });
 
         expect(await bodyOf(onRequest(context(), page))).toBe('page');
+    });
+
+    // Under `astro dev`, Vite's `import.meta.env` is where the `.env` values are.
+    it("reads the environment from Vite's import.meta.env under astro dev", async () => {
+        vi.stubEnv('NODE_ENV', 'production');
+        site.viteEnv = { NODE_ENV: 'production', BETTER_AUTH_SECRET: SECRET };
+
+        expect(await bodyOf(onRequest(context(), page))).toBe('page');
+        expect(resolveEnv('BETTER_AUTH_SECRET')).toBe(SECRET);
     });
 
     // A Worker has no file system to read the migrations folder from.

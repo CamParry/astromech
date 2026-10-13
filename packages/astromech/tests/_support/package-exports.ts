@@ -46,6 +46,27 @@ export function findMissingExportTargets(specifier: string): string[] {
     });
 }
 
+/**
+ * Each subpath whose `publishConfig.exports` target is in `dist`, as an
+ * `astromech` specifier too, with the source file the tsup entry builds it from.
+ */
+export function listPublishedDistSources(): {
+    subpath: string;
+    specifier: string;
+    source: string;
+}[] {
+    const manifest = JSON.parse(
+        readFileSync(join(packageRoot, 'package.json'), 'utf8')
+    ) as { publishConfig: { exports: ExportsMap } };
+    return Object.entries(manifest.publishConfig.exports).flatMap(([subpath, entry]) => {
+        const target = typeof entry === 'string' ? entry : entry.default;
+        if (target?.startsWith('./dist/') !== true) return [];
+        const source = sourceFileOf(target);
+        if (source === undefined) throw new Error(`no tsup entry builds ${target}`);
+        return [{ subpath, specifier: `astromech${subpath.slice(1)}`, source }];
+    });
+}
+
 function sourceFileOf(target: string): string | undefined {
     if (!target.startsWith('./dist/')) return join(packageRoot, target);
     const entryName = target.slice('./dist/'.length).replace(/\.js$/, '');
