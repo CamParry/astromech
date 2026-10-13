@@ -108,9 +108,10 @@ pnpm run dev                # rebuild the core package on change
 pnpm -F astromech-demo dev  # the demo site, in another terminal
 ```
 
-Run `pnpm run verify:fast` while working (typechecks, tests and lint, no build),
-and `pnpm run verify` before a change lands. [AGENTS.md](AGENTS.md) has the full
-table of checks and what each one covers.
+While working, run the test file you changed, or one package's task with
+`pnpm exec turbo run <task> --filter <package>`. Run `pnpm run verify` once before
+a change lands: it runs, through Turborepo, the checks the change affects.
+[AGENTS.md](AGENTS.md) has the rest.
 
 ## License
 

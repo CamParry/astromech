@@ -11,7 +11,8 @@
  *   with `relaunchAtLowerPriority`, and the root `package.json` scripts that
  *   test, build, typecheck and lint start through
  *   `scripts/run-at-lower-priority.mjs`.
- * - It runs fewer workers: `TEST_WORKERS` and `WORKSPACE_CONCURRENCY`.
+ * - It runs fewer workers: `TEST_WORKERS`, and `WORKSPACE_CONCURRENCY` tasks
+ *   of the gate at once.
  *
  * A vitest command run directly (`pnpm -F <package> exec vitest run`) gets
  * the fewer workers but not the lower priority: its config could only lower it
@@ -40,8 +41,9 @@ export const cpuLimitsApply =
 export const TEST_WORKERS = 4;
 
 /**
- * pnpm's workspace concurrency for typecheck and lint in a limited run of the
- * gate. pnpm's default is four, and both share a stage with the tests.
+ * How many tasks a limited run of the gate runs at once (Turborepo's
+ * `--concurrency`, whose default is ten). Each test suite runs `TEST_WORKERS`
+ * workers of its own.
  */
 export const WORKSPACE_CONCURRENCY = 2;
 

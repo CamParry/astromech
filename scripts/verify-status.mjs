@@ -1,28 +1,32 @@
 /**
- * Says whether the gate's last passing run in this worktree still holds:
- * whether the stamp `scripts/verify.mjs` wrote matches the working tree's
- * current content, committed or not. Exits 0 when it matches and 1 otherwise.
- * It runs no check, so it costs a moment rather than a gate.
+ * Says whether the gate has already passed on the working tree's current
+ * content, committed or not: whether every task a run would run is a cache
+ * hit in Turborepo's shared cache. Exits 0 when it is and 1 otherwise. It runs
+ * no check and does not wait for the run lock, so it costs a few seconds
+ * rather than a gate.
  *
- * With no flag, a passing run of any mode matches, and the line printed names
- * the mode. `--fast`, `--runtime` or `--full` asks for a run that covers that
- * mode: a full run covers all three. `scripts/verify-stamp.mjs` has the detail.
+ *     pnpm run verify:status [--fast | --runtime | --full] [--all]
  *
- *     pnpm run verify:status --fast
+ * `--fast`, `--runtime` or `--full` asks about that mode, scoped as
+ * `pnpm run verify` scopes it (`--affected` against `origin/main`, or every
+ * task with `--all`). With no mode flag it prints a line for each mode and
+ * exits 0 when any matches. `scripts/gate.mjs` has the detail.
  */
 import console from 'node:console';
 import { dirname, resolve } from 'node:path';
 import process from 'node:process';
 import { fileURLToPath } from 'node:url';
-import { stampStatus } from './verify-stamp.mjs';
+import { gateStatus, MODES } from './gate.mjs';
 
 const repoRoot = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 
-const mode = ['fast', 'runtime', 'full'].find((name) =>
-    process.argv.includes(`--${name}`)
-);
+const asked = MODES.filter((name) => process.argv.includes(`--${name}`));
+const all = process.argv.includes('--all');
 
-const { matches, message } = stampStatus(repoRoot, mode);
-const wanted = mode === undefined ? '' : ` (${mode})`;
-console.log(`${matches ? 'match' : 'no match'}${wanted}: ${message}`);
-process.exitCode = matches ? 0 : 1;
+let matched = false;
+for (const mode of asked.length > 0 ? asked : MODES) {
+    const { matches, message } = gateStatus(repoRoot, mode, { all });
+    matched ||= matches;
+    console.log(`${matches ? 'match' : 'no match'} (${mode}): ${message}`);
+}
+process.exitCode = matched ? 0 : 1;

@@ -1,0 +1,17 @@
+{
+    // The schema engine sits below core and reads no other package, so its
+    // tasks read only its own files. The root `turbo.json` has the rest.
+    "$schema": "../../node_modules/turbo/schema.json",
+    "extends": ["//"],
+    "tasks": {
+        "typecheck": {
+            "inputs": ["$TURBO_DEFAULT$", "!**/*.md"]
+        },
+        "lint": {
+            "inputs": ["$TURBO_DEFAULT$", "!**/*.md"]
+        },
+        "test:coverage": {
+            "inputs": ["$TURBO_DEFAULT$", "!**/*.md"]
+        }
+    }
+}

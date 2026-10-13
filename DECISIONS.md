@@ -172,6 +172,7 @@ Each decision is a file in `decisions/`, stating a live choice and what it beat.
 - [The Cloudflare demo's build copies its whole `.env`](decisions/cloudflare-demo-build-copies-env.md)
 - [The gate keeps its logs in the git directory](decisions/gate-keeps-logs-in-the-git-directory.md)
 - [The Node floor is 22.13](decisions/node-floor-is-22-13.md)
+- [Turborepo runs the gate](decisions/turborepo-runs-the-gate.md)
 - [Type-aware lint catches defects, not style](decisions/lint-catches-defects-not-style.md)
 
 ## Reserved words

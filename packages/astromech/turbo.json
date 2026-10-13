@@ -1,0 +1,54 @@
+{
+    // Core's tasks read its own files, the source of the admin and the schema
+    // engine (`paths` and vitest aliases), the first-party plugins' source,
+    // migrations and manifests (`tests/_support/test-db.ts`,
+    // `plugin-contract.ts`), and parts of `apps/demo`: its migrations, its
+    // local plugin and its manifest. The root `turbo.json` has the rest.
+    "$schema": "../../node_modules/turbo/schema.json",
+    "extends": ["//"],
+    "tasks": {
+        "typecheck": {
+            "inputs": [
+                "$TURBO_DEFAULT$",
+                "!**/*.md",
+                "$TURBO_ROOT$/packages/schema-engine/src/**",
+                "$TURBO_ROOT$/packages/admin/src/**",
+                "!$TURBO_ROOT$/packages/admin/src/routeTree.gen.ts",
+                "$TURBO_ROOT$/packages/plugins/*/src/**",
+                "$TURBO_ROOT$/packages/plugins/*/migrations/**",
+                "$TURBO_ROOT$/packages/plugins/*/package.json",
+                "$TURBO_ROOT$/apps/demo/migrations/**",
+                "$TURBO_ROOT$/apps/demo/src/plugins/**",
+                "!$TURBO_ROOT$/apps/demo/src/plugins/**/*.md",
+                "$TURBO_ROOT$/apps/demo/package.json"
+            ]
+        },
+        "lint": {
+            "inputs": [
+                "$TURBO_DEFAULT$",
+                "!**/*.md",
+                "$TURBO_ROOT$/packages/schema-engine/src/**",
+                "$TURBO_ROOT$/packages/admin/src/**",
+                "!$TURBO_ROOT$/packages/admin/src/routeTree.gen.ts",
+                "$TURBO_ROOT$/packages/plugins/*/src/**"
+            ]
+        },
+        "test:coverage": {
+            "inputs": [
+                "$TURBO_DEFAULT$",
+                "!**/*.md",
+                "$TURBO_ROOT$/packages/schema-engine/src/**",
+                "$TURBO_ROOT$/packages/admin/src/**",
+                "!$TURBO_ROOT$/packages/admin/src/routeTree.gen.ts",
+                "$TURBO_ROOT$/packages/plugins/*/src/**",
+                "$TURBO_ROOT$/packages/plugins/*/migrations/**",
+                "$TURBO_ROOT$/packages/plugins/*/package.json",
+                "$TURBO_ROOT$/packages/plugins/*/tests/contract.test.ts",
+                "$TURBO_ROOT$/apps/demo/migrations/**",
+                "$TURBO_ROOT$/apps/demo/src/plugins/**",
+                "!$TURBO_ROOT$/apps/demo/src/plugins/**/*.md",
+                "$TURBO_ROOT$/apps/demo/package.json"
+            ]
+        }
+    }
+}

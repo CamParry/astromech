@@ -1,0 +1,54 @@
+{
+    // The admin's tasks read its own files and the source of core and the
+    // schema engine, through `paths` and vitest aliases. The root `turbo.json`
+    // has the rest.
+    "$schema": "../../node_modules/turbo/schema.json",
+    "extends": ["//"],
+    "tasks": {
+        // Core depends on the admin and the admin's tests depend on core, so
+        // one edge of `^build` goes. The admin's declarations read core's
+        // source, never its `dist`, so this build waits for nothing.
+        "build": {
+            "dependsOn": [],
+            "inputs": [
+                "$TURBO_DEFAULT$",
+                "!**/*.md",
+                "!tests/**",
+                "$TURBO_ROOT$/packages/schema-engine/src/**",
+                "$TURBO_ROOT$/packages/astromech/src/**",
+                "$TURBO_ROOT$/packages/astromech/tsconfig.json"
+            ]
+        },
+        "typecheck": {
+            "dependsOn": ["//#routes:generate"],
+            "inputs": [
+                "$TURBO_DEFAULT$",
+                "!**/*.md",
+                "$TURBO_ROOT$/packages/schema-engine/src/**",
+                "$TURBO_ROOT$/packages/astromech/src/**",
+                "$TURBO_ROOT$/packages/astromech/tests/_support/**",
+                "$TURBO_ROOT$/packages/astromech/tsconfig.json"
+            ]
+        },
+        "lint": {
+            "dependsOn": ["//#routes:generate"],
+            "inputs": [
+                "$TURBO_DEFAULT$",
+                "!**/*.md",
+                "$TURBO_ROOT$/packages/schema-engine/src/**",
+                "$TURBO_ROOT$/packages/astromech/src/**",
+                "$TURBO_ROOT$/packages/astromech/tsconfig.json"
+            ]
+        },
+        "test:coverage": {
+            "inputs": [
+                "$TURBO_DEFAULT$",
+                "!**/*.md",
+                "$TURBO_ROOT$/packages/schema-engine/src/**",
+                "$TURBO_ROOT$/packages/astromech/src/**",
+                "$TURBO_ROOT$/packages/astromech/tests/_support/**",
+                "$TURBO_ROOT$/packages/astromech/tsconfig.json"
+            ]
+        }
+    }
+}

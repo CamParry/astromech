@@ -1,5 +1,6 @@
 import eslint from '@eslint/js';
 import pluginQuery from '@tanstack/eslint-plugin-query';
+import turboConfig from 'eslint-config-turbo/flat';
 import tseslint from 'typescript-eslint';
 
 const noJsExtension = [
@@ -153,6 +154,9 @@ export default tseslint.config(
     eslint.configs.recommended,
     ...tseslint.configs.strict,
     ...tseslint.configs.stylistic,
+    // Every environment variable the code reads is declared in `turbo.json`,
+    // so a task's cache key cannot miss one.
+    ...turboConfig,
     {
         rules: {
             '@typescript-eslint/consistent-type-imports': 'error',
@@ -368,6 +372,66 @@ export default tseslint.config(
                 AbortSignal: 'readonly',
             },
         },
+    },
+    // `turbo/no-undeclared-env-vars` exceptions. Strict mode hands a task only
+    // the variables `turbo.json` lists, so none of these reaches a task from
+    // the shell.
+    {
+        // Variables a test sets for itself, or saves and restores around a
+        // test that sets them.
+        files: ['packages/**/tests/**/*.{ts,tsx}'],
+        rules: {
+            'turbo/no-undeclared-env-vars': [
+                'error',
+                {
+                    allowList: [
+                        '^ASTROMECH_CRON_SECRET$',
+                        '^BETTER_AUTH_URL$',
+                        '^DATABASE_URL$',
+                        '^I18NEXT_NO_SUPPORT_NOTICE$',
+                    ],
+                },
+            ],
+        },
+    },
+    {
+        // `import.meta.env.DEV` is the site's Vite build constant, not a variable.
+        files: ['packages/admin/src/**/*.{ts,tsx}'],
+        rules: { 'turbo/no-undeclared-env-vars': ['error', { allowList: ['^DEV$'] }] },
+    },
+    {
+        // `BETTER_AUTH_SECRET` is in the boot checks' `env`, in the demo apps'
+        // `turbo.json`, which the rule does not match to files under
+        // `scripts/`. `NODE_ENV` is dropped on purpose
+        // (`scripts/check-helpers.mjs`). pnpm sets `INIT_CWD` and
+        // `npm_lifecycle_event`, the `TURBO_` ones configure Turborepo, and
+        // the `GIT_` ones are git's, which a test sets for a throwaway
+        // repository.
+        files: ['scripts/**/*.mjs'],
+        rules: {
+            'turbo/no-undeclared-env-vars': [
+                'error',
+                {
+                    allowList: [
+                        '^BETTER_AUTH_SECRET$',
+                        '^NODE_ENV$',
+                        '^INIT_CWD$',
+                        '^npm_lifecycle_event$',
+                        '^TURBO_',
+                        '^GIT_',
+                    ],
+                },
+            ],
+        },
+    },
+    {
+        // Scripts no task runs: each is run by hand, against a site or a deployment.
+        files: [
+            'packages/astromech/scripts/seed.ts',
+            'packages/plugins/assistant/scripts/**',
+            'scripts/check-deployed-cloudflare.mjs',
+        ],
+        rules: { 'turbo/no-undeclared-env-vars': 'off' },
     },
     {
         ignores: [

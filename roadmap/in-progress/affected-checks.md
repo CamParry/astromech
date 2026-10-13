@@ -7,8 +7,8 @@ milestone: 1.0
 A full gate takes about 8 minutes locally: the test suites 4 to 5, lint about
 1.5, `check:unused` about 1, the build and boot checks about 1.5. Every
 change runs all of it, whatever it touched. `pnpm run land` refuses a branch
-that does not contain the fetched `origin/main`, and the stamp
-(`scripts/verify-stamp.mjs`) is keyed on the whole tree, so a rebase over
+that does not contain the fetched `origin/main`, and the gate's stamp
+(`verify-stamp.mjs`) is keyed on the whole tree, so a rebase over
 commits that touched only roadmap markdown re-runs the whole gate. CI then
 runs the full gate again on `main` after the merge.
 
@@ -62,9 +62,11 @@ Turborepo runs every check, and its cache replaces the hand-written stamp.
 - [ ] **Each check is a Turborepo task with declared `inputs`.** The
       packages' `build`, `typecheck`, `lint`, `test:run` and `test:coverage`
       are package tasks with `dependsOn` where one reads another's output.
-      The rest (the boot checks, `check:docs`, `format:check`, `check:unused`,
-      `check:exports`, `check:node-imports`, `check:hooks`, `check:scripts`,
-      the demo apps' typecheck) are root tasks (`//#<name>`). Root config the
+      The demo apps' boot checks and `typecheck` are package tasks too, on
+      `^build`, so a new plugin reaches them through the app's dependencies.
+      The rest (`check:docs`, `format:check`, `check:unused`,
+      `check:exports`, `check:node-imports`, `check:hooks`, `check:scripts`)
+      are root tasks (`//#<name>`). Root config the
       tasks read (the lockfile, `tsconfig*`, `eslint.config.js`, `scripts/`)
       is in `globalDependencies`, so changing it reruns everything. Markdown
       is outside every input but `check:docs` and `format:check`.
@@ -78,7 +80,7 @@ Turborepo runs every check, and its cache replaces the hand-written stamp.
       one directory outside the worktrees, so a new worktree reuses results
       `main` produced and a rebase over unrelated commits reruns nothing.
       `verify:status` and `land` read `turbo run … --affected --dry=json` and
-      pass only when every task is a cache hit. `scripts/verify-stamp.mjs`
+      pass only when every task is a cache hit. The stamp script
       goes. CI keeps the cache between runs with `actions/cache`.
 - [ ] **`eslint-config-turbo` checks that a task declares the environment
       variables it reads**, so the cache key cannot miss one.
