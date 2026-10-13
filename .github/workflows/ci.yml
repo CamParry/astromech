@@ -158,7 +158,11 @@ jobs:
         strategy:
             fail-fast: false
             matrix:
-                package-manager: [npm, pnpm]
+                include:
+                    - package-manager: npm
+                      script: check:install
+                    - package-manager: pnpm
+                      script: check:install:pnpm
         steps:
             - uses: actions/checkout@v7
             - uses: pnpm/action-setup@v6
@@ -168,6 +172,6 @@ jobs:
                   cache: pnpm
             - run: pnpm install --frozen-lockfile
             - run: pnpm exec playwright install --with-deps chromium
-            # check:install packs each package from its `dist`.
-            - run: pnpm run build
-            - run: pnpm run check:install -- --package-manager ${{ matrix.package-manager }}
+            # A Turborepo task that builds every published package first, then
+            # packs each from its `dist` (`scripts/check-install.ts`).
+            - run: pnpm run ${{ matrix.script }}

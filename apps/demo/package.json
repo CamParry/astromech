@@ -8,7 +8,7 @@
         "build": "astro build",
         "preview": "astro preview",
         "typecheck": "astro sync && tsc --noEmit",
-        "check:boot": "node ../../scripts/check-boot.mjs",
+        "check:boot": "node ../../scripts/check-boot.ts",
         "check:config": "tsx astromech.config.ts",
         "db:generate": "tsx --tsconfig ../../packages/astromech/tsconfig.json ../../packages/astromech/src/transport/cli/index.ts db:generate",
         "db:init": "tsx --tsconfig ../../packages/astromech/tsconfig.json ../../packages/astromech/src/transport/cli/index.ts db:init",

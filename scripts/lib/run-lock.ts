@@ -198,7 +198,8 @@ export type Ending = { code: number | null; signal: NodeJS.Signals | null };
 /**
  * Runs `command` to its end, and resolves with how it ended. With `lock`, the
  * run's name in other runs' waiting lines, it first waits for the lock and
- * holds it while the command runs.
+ * holds it while the command runs, and a run the command starts, such as a
+ * boot check under `scripts/turbo.ts --lock`, goes ahead without it.
  *
  * When this process takes the lock, the command runs in a process group of its
  * own, recorded in the lock file, with no stdin, and every signal that stops
@@ -217,7 +218,9 @@ export async function runCommand(
     const ownGroup = ownsLock && process.platform !== 'win32';
     const child = spawn(command, args, {
         cwd,
-        env,
+        // A caller's copy of the environment predates the lock, so the
+        // variable that lets the command's own runs go ahead is added here.
+        env: ownsLock ? { ...env, [HOLDER_VARIABLE]: String(process.pid) } : env,
         // A process outside the terminal's foreground group that reads from it
         // is stopped, so the command gets no stdin of its own.
         stdio: ownGroup ? ['ignore', 'inherit', 'inherit'] : 'inherit',

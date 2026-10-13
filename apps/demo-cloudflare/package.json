@@ -10,7 +10,7 @@
         "deploy:testing": "node ../../scripts/turbo.ts --lock --filter=\"astromech-demo-cloudflare^...\" build && CLOUDFLARE_ENV=testing pnpm run db:init --allow-remote && CLOUDFLARE_ENV=testing astro build && wrangler deploy --env testing",
         "deploy:testing:captcha": ": \"${CAPTCHA_PROVIDER:?}\" \"${CAPTCHA_SITE_KEY:?}\" && pnpm run deploy:testing --var CAPTCHA_PROVIDER:$CAPTCHA_PROVIDER --var CAPTCHA_SITE_KEY:$CAPTCHA_SITE_KEY",
         "typecheck": "astro sync && tsc --noEmit",
-        "check:boot:cloudflare": "node ../../scripts/check-boot-cloudflare.mjs",
+        "check:boot:cloudflare": "node ../../scripts/check-boot-cloudflare.ts",
         "check:config": "tsx astromech.config.ts",
         "db:generate": "tsx --tsconfig ../../packages/astromech/tsconfig.json ../../packages/astromech/src/transport/cli/index.ts db:generate",
         "db:init": "tsx --tsconfig ../../packages/astromech/tsconfig.json ../../packages/astromech/src/transport/cli/index.ts db:init"

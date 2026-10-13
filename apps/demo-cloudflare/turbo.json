@@ -8,7 +8,7 @@
     "extends": ["//"],
     "tasks": {
         "build": { "extends": false },
-        // `scripts/check-boot-cloudflare.mjs`, which reads the scripts listed
+        // `scripts/check-boot-cloudflare.ts`, which reads the scripts listed
         // here. The `.env` and `.dev.vars` are read by the build and the
         // Worker, and git ignores them.
         "check:boot:cloudflare": {
@@ -18,8 +18,7 @@
                 "!**/*.md",
                 ".env",
                 ".dev.vars",
-                "$TURBO_ROOT$/scripts/check-boot-cloudflare.mjs",
-                "$TURBO_ROOT$/scripts/require-fresh-dist.mjs",
+                "$TURBO_ROOT$/scripts/check-boot-cloudflare.ts",
                 "$TURBO_ROOT$/scripts/lib/**",
                 "!$TURBO_ROOT$/scripts/lib/**/*.test.ts",
                 "$TURBO_ROOT$/scripts/package.json"

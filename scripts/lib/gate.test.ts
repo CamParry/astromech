@@ -1,7 +1,8 @@
 /**
  * Tests of the gate's helpers (`scripts/lib/gate.ts`) that need no Turborepo run:
  * the scope, each mode's tasks, the environment, the arguments, the log names
- * and the skipped tasks, and the builds `check:node-imports` waits for. The
+ * and the skipped tasks, and the builds `check:node-imports` and the two
+ * `check:install` tasks wait for. The
  * scope tests use throwaway git repositories; the task tests read this
  * repository's workspace and `turbo.json`.
  */
@@ -145,21 +146,36 @@ test('fast mode type-checks every package outside apps/, and not the apps', () =
     );
 });
 
-test('check:node-imports waits for every package build', () => {
-    // `turbo.json` is JSON with whole-line comments.
-    const config = JSON.parse(
-        readFileSync(join(repoRoot, 'turbo.json'), 'utf8')
+/** A `turbo.json` under the repository root, which is JSON with whole-line comments. */
+function readTurboConfig(path: string): {
+    tasks: Record<string, { dependsOn?: string[] }>;
+} {
+    return JSON.parse(
+        readFileSync(join(repoRoot, path), 'utf8')
             .split('\n')
             .filter((line) => !line.trim().startsWith('//'))
             .join('\n')
     );
-    const builds = workspacePackages(repoRoot)
+}
+
+/** Every published package's `build`, as a task id. */
+function publishedBuilds(): string[] {
+    return workspacePackages(repoRoot)
         .filter(({ manifest }) => manifest.private !== true)
-        .map(({ name }) => `${name}#build`);
-    assert.deepEqual(
-        config.tasks['//#check:node-imports'].dependsOn.toSorted(),
-        builds.toSorted()
-    );
+        .map(({ name }) => `${name}#build`)
+        .toSorted();
+}
+
+test('check:node-imports waits for every package build', () => {
+    const task = readTurboConfig('turbo.json').tasks['//#check:node-imports'];
+    assert.deepEqual(task?.dependsOn?.toSorted(), publishedBuilds());
+});
+
+test('check:install waits for every package build, with either package manager', () => {
+    const { tasks } = readTurboConfig('scripts/turbo.json');
+    for (const name of ['check:install', 'check:install:pnpm']) {
+        assert.deepEqual(tasks[name]?.dependsOn?.toSorted(), publishedBuilds(), name);
+    }
 });
 
 test('the environment drops NODE_ENV, and only runtime mode skips declarations', () => {
