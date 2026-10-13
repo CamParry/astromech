@@ -59,7 +59,7 @@ source; merge rules come from each repo's public GitHub settings.
 
 Turborepo runs every check, and its cache replaces the hand-written stamp.
 
-- [ ] **Each check is a Turborepo task with declared `inputs`.** The
+- [x] **Each check is a Turborepo task with declared `inputs`.** The
       packages' `build`, `typecheck`, `lint`, `test:run` and `test:coverage`
       are package tasks with `dependsOn` where one reads another's output.
       The demo apps' boot checks and `typecheck` are package tasks too, on
@@ -70,31 +70,31 @@ Turborepo runs every check, and its cache replaces the hand-written stamp.
       tasks read (the lockfile, `tsconfig*`, `eslint.config.js`, `scripts/`)
       is in `globalDependencies`, so changing it reruns everything. Markdown
       is outside every input but `check:docs` and `format:check`.
-- [ ] **`pnpm run verify` runs `turbo run … --affected` against
+- [x] **`pnpm run verify` runs `turbo run … --affected` against
       `origin/main`.** A package change runs its dependents' tasks too,
       which Turborepo takes from the workspace graph. `verify.mjs` keeps the
       run lock, the lower priority and a log per task. `--all` drops
       `--affected` (`--full` already names a mode), and CI passes it, since
       on `main` the merge base is HEAD.
-- [ ] **The cache is shared and replaces the stamp.** `cacheDir` points at
+- [x] **The cache is shared and replaces the stamp.** `cacheDir` points at
       one directory outside the worktrees, so a new worktree reuses results
       `main` produced and a rebase over unrelated commits reruns nothing.
       `verify:status` and `land` read `turbo run … --affected --dry=json` and
       pass only when every task is a cache hit. The stamp script
       goes. CI keeps the cache between runs with `actions/cache`.
-- [ ] **`eslint-config-turbo` checks that a task declares the environment
+- [x] **`eslint-config-turbo` checks that a task declares the environment
       variables it reads**, so the cache key cannot miss one.
-- [ ] **`format:check` joins the gate.** Today the gate leaves it to the
+- [x] **`format:check` joins the gate.** Today the gate leaves it to the
       pre-commit hook, and the hook's Prettier glob skipped `.js` until
       2026-10-13, so `eslint.config.js` reached CI unformatted.
-- [ ] **`pnpm run land` no longer requires the branch to contain
+- [x] **`pnpm run land` no longer requires the branch to contain
       `origin/main`.** It merges when there is no conflict, writing the
       merged tree with `git merge-tree --write-tree` (today the merge commit
       takes HEAD's tree, which is only right when the branch contains main),
       and CI's full run on `main`, which it already waits for, is the check
       on the merge result. A setting turns the up-to-date rule and the
       unscoped local gate back on for after 1.0.
-- [ ] **`AGENTS.md` and `.claude/_agents/coder.md` give the narrow
+- [x] **`AGENTS.md` and `.claude/_agents/coder.md` give the narrow
       commands**: the touched package's test file, typecheck and lint while
       working, then the scoped gate before handing back.
 

@@ -16,7 +16,7 @@ nothing moves them. Raised on 2026-10-03; decided 2026-10-04.
   (`packages/astromech/src/fields/parse-fields.ts`), and nested keys are never
   checked.
 - A save keeping the stored values of an undeclared field, and a public read
-  dropping them, are `roadmap/planned/undeclared-field-keys.md`.
+  dropping them, are `roadmap/in-progress/undeclared-field-keys.md`.
 
 ## Prior art
 
@@ -65,7 +65,7 @@ nothing moves them. Raised on 2026-10-03; decided 2026-10-04.
     - Before `--apply`, a local database is dumped; on D1 the command prints the
       Time Travel restore point.
 - **Saves keep undeclared keys; public reads drop them**
-  (`roadmap/planned/undeclared-field-keys.md`). This closes the gap between
+  (`roadmap/in-progress/undeclared-field-keys.md`). This closes the gap between
   deploying the config and running the command, and the privacy leak.
 - **`fields:remove <path>`** ships with it, since it is the same code with
   `unset` in place of the move. Changing a field's type stays a hand-written
