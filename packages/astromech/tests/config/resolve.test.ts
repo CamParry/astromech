@@ -5,7 +5,7 @@ import type {
     Field,
     PluginDefinition,
 } from '@/types/index';
-import { noopStorage } from '@tests/fixtures';
+import { noMigrations, noopStorage } from '@tests/fixtures';
 import { describe, expect, it } from 'vitest';
 import { resolveConfig } from '@/config/resolve';
 import { block, blocks, group, repeater, tab, tabs, text, tree } from '@/fields/builder';
@@ -27,6 +27,7 @@ const entryType = (single: string): EntryType => ({
 const baseConfig = (plugins: PluginDefinition[]): AstromechConfig => ({
     db: driver,
     storage: noopStorage,
+    migrations: noMigrations,
     entries: [entryType('Post')],
     plugins,
 });
@@ -99,6 +100,7 @@ describe('resolveConfig flat fields', () => {
     const flatConfig = (): AstromechConfig => ({
         db: driver,
         storage: noopStorage,
+        migrations: noMigrations,
         entries: [
             {
                 type: 'post',
@@ -134,6 +136,7 @@ describe('resolveConfig { main, sidebar } fields shape', () => {
         const resolved = resolveConfig({
             db: driver,
             storage: noopStorage,
+            migrations: noMigrations,
             entries: [
                 {
                     type: 'post',
@@ -157,6 +160,7 @@ describe('resolveConfig { main, sidebar } fields shape', () => {
         const resolved = resolveConfig({
             db: driver,
             storage: noopStorage,
+            migrations: noMigrations,
             entries: [
                 {
                     type: 'post',
@@ -176,6 +180,7 @@ describe('resolveConfig undefined fields', () => {
         const resolved = resolveConfig({
             db: driver,
             storage: noopStorage,
+            migrations: noMigrations,
             entries: [{ type: 'post', single: 'Post', plural: 'Posts' }],
             plugins: [],
         });
@@ -188,6 +193,7 @@ describe('resolveConfig structural validation', () => {
         resolveConfig({
             db: driver,
             storage: noopStorage,
+            migrations: noMigrations,
             entries: [{ type: 'post', single: 'Post', plural: 'Posts', fields }],
             plugins: [],
         });
@@ -197,6 +203,7 @@ describe('resolveConfig structural validation', () => {
             resolveConfig({
                 db: driver,
                 storage: noopStorage,
+                migrations: noMigrations,
                 entries: [
                     {
                         type: 'post',
@@ -215,6 +222,7 @@ describe('resolveConfig structural validation', () => {
             resolveConfig({
                 db: driver,
                 storage: noopStorage,
+                migrations: noMigrations,
                 entries: [
                     {
                         type: 'post',
@@ -238,6 +246,7 @@ describe('resolveConfig structural validation', () => {
             resolveConfig({
                 db: driver,
                 storage: noopStorage,
+                migrations: noMigrations,
                 entries: [
                     {
                         type: 'post',
@@ -259,6 +268,7 @@ describe('resolveConfig structural validation', () => {
             resolveConfig({
                 db: driver,
                 storage: noopStorage,
+                migrations: noMigrations,
                 entries: [
                     {
                         type: 'post',
@@ -291,6 +301,7 @@ describe('resolveConfig structural validation', () => {
             resolveConfig({
                 db: driver,
                 storage: noopStorage,
+                migrations: noMigrations,
                 entries: [
                     {
                         type: 'post',
@@ -312,6 +323,7 @@ describe('resolveConfig structural validation', () => {
             resolveConfig({
                 db: driver,
                 storage: noopStorage,
+                migrations: noMigrations,
                 entries: [
                     {
                         type: 'post',
@@ -516,6 +528,7 @@ describe('resolveConfig structural validation', () => {
             resolveConfig({
                 db: driver,
                 storage: noopStorage,
+                migrations: noMigrations,
                 entries: [
                     {
                         type: 'post',

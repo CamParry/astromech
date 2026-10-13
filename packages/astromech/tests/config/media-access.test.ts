@@ -8,7 +8,7 @@ import type {
     ImageDriver,
     MediaConfig,
 } from '@/types/index';
-import { noopStorage } from '@tests/fixtures';
+import { noMigrations, noopStorage } from '@tests/fixtures';
 import { describe, expect, it } from 'vitest';
 import { resolveConfig } from '@/config/resolve';
 import { cloudflareImages } from '@/media/serving/image/drivers/cloudflare';
@@ -42,6 +42,7 @@ const configWith = (
     return {
         db: dbDriver,
         storage: noopStorage,
+        migrations: noMigrations,
         ...(resolvedMedia === undefined ? {} : { media: resolvedMedia }),
     };
 };

@@ -51,7 +51,7 @@ import type { Kysely } from 'kysely';
 import * as fs from 'node:fs/promises';
 import * as path from 'node:path';
 import { noopStorage } from '@tests/fixtures';
-import { testMigrationProvider } from '@tests/test-db';
+import { appMigrationProvider, testMigrationProvider } from '@tests/test-db';
 import { sql } from 'kysely';
 import { inject } from 'vitest';
 import { createAppContext } from '@/app-context/app-context';
@@ -142,6 +142,7 @@ const testDatabase: DatabaseDriver = {
 
 /**
  * Build a representative config:
+ * - `migrations`: the demo's app chain, which the template database applied.
  * - `post`: titled, versioning on, translatable on, slug on, with a text field,
  *   a non-translatable field, and a relationship field targeting `post`.
  * - `note`: titled, versioning off, translatable off.
@@ -155,6 +156,7 @@ export function makeTestConfig(): TestConfig {
     return {
         db: testDatabase,
         storage: noopStorage,
+        migrations: appMigrationProvider,
         defaultLocale: 'en',
         locales: ['en', 'de'],
         entries: [

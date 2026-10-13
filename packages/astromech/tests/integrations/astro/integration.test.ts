@@ -5,7 +5,7 @@
 import type { DB } from '@/database/types';
 import type { VirtualModulePlugin } from '@/integrations/astro/virtual-module';
 import type { HookParameters } from 'astro';
-import { mkdir, mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
+import { mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { pathToFileURL } from 'node:url';
@@ -13,7 +13,7 @@ import { LibsqlDialect } from '@libsql/kysely-libsql';
 import { createTempSite, runOk, writeSiteConfig } from '@tests/cli';
 import { findMissingExportTargets } from '@tests/package-exports';
 import { Kysely, sql } from 'kysely';
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { AstromechError } from '@/errors/astromech-error';
 import { astromech } from '@/integrations/astro/integration';
 import dbGenerate from '@/transport/cli/commands/db-generate';
@@ -25,6 +25,7 @@ type Recorded = {
     injectTypes: { filename: string; content: string }[];
     infos: string[];
     warnings: string[];
+    errors: string[];
 };
 
 type ViteUpdate = {
@@ -191,34 +192,6 @@ describe('astromech()', () => {
             );
         });
 
-        it('defines the names of the migrations in migrationsDir, so a Worker can check them', async () => {
-            await mkdir(join(root, 'migrations'));
-            await writeFile(
-                join(root, 'migrations', 'index.ts'),
-                `export const migrationProvider = {
-                    async getMigrations() {
-                        return { '0000_baseline': {}, '0001_next': {} };
-                    },
-                };\n`
-            );
-            // `migrationsDir` resolves against the working directory.
-            vi.spyOn(process, 'cwd').mockReturnValue(root);
-            const { recorded } = await runSetup();
-
-            expect(
-                recorded.updateConfig[0]?.vite?.define.__ASTROMECH_MIGRATION_NAMES__
-            ).toBe('["0000_baseline","0001_next"]');
-        });
-
-        it('defines null migration names for a site with no migrations folder', async () => {
-            vi.spyOn(process, 'cwd').mockReturnValue(root);
-            const { recorded } = await runSetup();
-
-            expect(
-                recorded.updateConfig[0]?.vite?.define.__ASTROMECH_MIGRATION_NAMES__
-            ).toBe('null');
-        });
-
         it('does not warn at startup when allowedDomains is set and trustProxy is unset', async () => {
             const { integration, recorded, done } = await runSetup(undefined, {
                 allowedDomains: [{ hostname: 'example.com' }],
@@ -273,6 +246,55 @@ describe('astromech()', () => {
                 await db.destroy();
             }
         });
+
+        it('reports a site with no migrations yet and applies none', async () => {
+            await rm(root, { recursive: true, force: true });
+            root = await createTempSite();
+            const configFile = await writeSiteConfig(root, {
+                database: join(root, 'database.db'),
+            });
+            const integration = astromech({ configFile });
+            const { setup, logger, recorded } = createFakes();
+            await integration.hooks['astro:config:setup']?.(setup);
+
+            await integration.hooks['astro:build:start']?.({
+                logger,
+            } as unknown as HookParameters<'astro:build:start'>);
+
+            expect(recorded.errors).toEqual([
+                `${join(root, 'migrations')} has no migrations, so Astromech applied none. ` +
+                    'Run `astromech db:generate` and `astromech db:init`.',
+            ]);
+        });
+
+        it('refuses a config whose migrations are not the chain in migrationsDir', async () => {
+            await rm(root, { recursive: true, force: true });
+            root = await createTempSite();
+            const configFile = await writeSiteConfig(root, {
+                database: join(root, 'database.db'),
+            });
+            await runOk(dbGenerate, ['--config', configFile]);
+            // The journal names a migration the imported chain does not have.
+            await writeFile(
+                join(root, 'migrations', 'journal.json'),
+                JSON.stringify({
+                    version: 1,
+                    dialect: 'sqlite',
+                    entries: [{ idx: 0, tag: '0000_other', when: 0 }],
+                })
+            );
+            const integration = astromech({ configFile });
+            const { setup, logger } = createFakes();
+            await integration.hooks['astro:config:setup']?.(setup);
+
+            await expect(
+                integration.hooks['astro:build:start']?.({
+                    logger,
+                } as unknown as HookParameters<'astro:build:start'>)
+            ).rejects.toThrow(
+                'Only in `migrations`: 0000_migration. Only in the journal: 0000_other.'
+            );
+        });
     });
 
     describe.each(['astro:build:start', 'astro:server:setup'] as const)('%s', (hook) => {
@@ -319,11 +341,12 @@ function createFakes(
         injectTypes: [],
         infos: [],
         warnings: [],
+        errors: [],
     };
     const logger = {
         info: (message: string) => recorded.infos.push(message),
         warn: (message: string) => recorded.warnings.push(message),
-        error: () => undefined,
+        error: (message: string) => recorded.errors.push(message),
         debug: () => undefined,
     };
     const config = {

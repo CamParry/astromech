@@ -11,7 +11,6 @@ import { createTestDb, makeBootConfig } from '@tests/harness';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { currentServices } from '@/app-context/services';
 import { getAstromech } from '@/astromech';
-import { getMigrationProvider } from '@/database/migration-registry';
 import { clearEnvSource, resolveEnv, setEnvSource } from '@/env';
 import { onRequest } from '@/integrations/astro/middleware';
 
@@ -53,7 +52,6 @@ beforeEach(async () => {
 afterEach(() => {
     clearEnvSource();
     vi.unstubAllEnvs();
-    vi.unstubAllGlobals();
 });
 
 type RouteCache = APIContext['cache'] & {
@@ -188,11 +186,20 @@ describe('the Astro middleware', () => {
         expect(resolveEnv('BETTER_AUTH_SECRET')).toBe(SECRET);
     });
 
-    // A Worker has no file system to read the migrations folder from.
-    it('checks the database against the migration names bundled at build time', async () => {
+    // The chain is the config's, so a Worker checks it with no file system.
+    it("checks the database against the config's migration chain", async () => {
         setEnvSource({ NODE_ENV: 'development' });
-        const applied = Object.keys(await getMigrationProvider().getMigrations());
-        vi.stubGlobal('__ASTROMECH_MIGRATION_NAMES__', [...applied, '9999_not-applied']);
+        const base = makeBootConfig();
+        site.config = {
+            ...base,
+            scheduler: noScheduler,
+            migrations: {
+                getMigrations: async () => ({
+                    ...(await base.migrations.getMigrations()),
+                    '9999_not-applied': { up: async () => undefined },
+                }),
+            },
+        };
         expectConsole(
             'error',
             '1 migration has not been applied to this database: 9999_not-applied'

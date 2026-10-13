@@ -15,7 +15,11 @@ export async function loadConfigFile(
     rootDir: string,
     configFile?: string
 ): Promise<AstromechConfig> {
-    const jiti = createJiti(import.meta.url);
+    // No module cache: the config imports the migration chain, and
+    // `db:generate` rewrites its `index.ts`. A cached copy would hide the
+    // migrations it added from a later load in the same process, such as
+    // `astro dev` restarting after an `astro.config.mjs` edit.
+    const jiti = createJiti(import.meta.url, { moduleCache: false });
     const configModule = await jiti.import<{ default: AstromechConfig }>(
         resolveConfigPath(rootDir, configFile)
     );

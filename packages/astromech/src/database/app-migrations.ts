@@ -1,51 +1,75 @@
 /**
- * Finds and loads the app-owned migration provider in the config's `migrationsDir`.
- * Uses jiti rather than `import()`: the generated module and its siblings
- * are TypeScript, which plain Node cannot load.
+ * The app's migrations folder, for the steps that run where a file system
+ * exists (the CLI and the Astro integration): where the folder is, and whether
+ * the provider the config imports is the chain the folder's journal lists.
  */
 
+import type { AstromechConfig } from '@/types/index';
 import type { MigrationProvider } from 'kysely/migration';
-import { resolve } from 'node:path';
+import { readFile } from 'node:fs/promises';
+import { join, resolve } from 'node:path';
+import { createMergedProvider } from '@/database/migrations';
+import { AstromechError } from '@/errors/astromech-error';
 
 /** Resolve the config's `migrationsDir` against the working directory. */
 export function resolveMigrationsDir(migrationsDir: string): string {
     return resolve(process.cwd(), migrationsDir);
 }
 
-/** Import `<dir>/index.ts`. Throws if it is missing or malformed. */
-export async function loadAppMigrations(dir: string): Promise<MigrationProvider> {
-    const { createJiti } = await import('jiti');
-    // No module cache: `db:generate` rewrites `index.ts`, and a cached copy
-    // would hide the migrations it added from a later load in the same process.
-    const jiti = createJiti(import.meta.url, { moduleCache: false });
-    const file = resolve(dir, 'index.ts');
-    const mod = await jiti.import<{ migrationProvider?: MigrationProvider }>(file);
-    if (!mod.migrationProvider) {
-        throw new Error(
-            `${file} does not export "migrationProvider". Run \`astromech db:generate\` to regenerate it.`
-        );
-    }
-    return mod.migrationProvider;
+/**
+ * The config's chain merged with each plugin's, once `assertMatchesJournal`
+ * passes. Null when the app has no migrations yet: `db:generate` has not run.
+ */
+export async function checkedMigrationProvider(
+    config: Pick<AstromechConfig, 'migrations' | 'plugins'>,
+    migrationsDir: string
+): Promise<MigrationProvider | null> {
+    const names = await assertMatchesJournal(config.migrations, migrationsDir);
+    if (names.length === 0) return null;
+    return createMergedProvider(config.migrations, config.plugins ?? []);
 }
 
 /**
- * The names of the migrations in `<dir>/index.ts`, or null when there is none.
- * The Astro integration bundles them, so a runtime with no file system can
- * still check the database for pending migrations.
+ * Throw unless `provider` lists the migrations `<migrationsDir>/journal.json`
+ * does, so a config that imports another folder than `migrationsDir` cannot
+ * apply the wrong chain. A folder with no journal lists none. Returns the
+ * provider's names.
  */
-export async function listAppMigrationNames(dir: string): Promise<string[] | null> {
-    if (!(await hasAppMigrations(dir))) return null;
-    const provider = await loadAppMigrations(dir);
-    return Object.keys(await provider.getMigrations());
+export async function assertMatchesJournal(
+    provider: MigrationProvider,
+    migrationsDir: string
+): Promise<string[]> {
+    const names = Object.keys(await provider.getMigrations());
+    const journalPath = join(migrationsDir, 'journal.json');
+    const journal = await readJournalTags(resolve(process.cwd(), journalPath));
+
+    const onlyInProvider = names.filter((name) => !journal.includes(name));
+    const onlyInJournal = journal.filter((tag) => !names.includes(tag));
+    if (onlyInProvider.length === 0 && onlyInJournal.length === 0) return names;
+
+    throw new AstromechError(
+        `the config's \`migrations\` does not match ${journalPath}. ` +
+            `Only in \`migrations\`: ${list(onlyInProvider)}. ` +
+            `Only in the journal: ${list(onlyInJournal)}. ` +
+            `Import \`migrationProvider\` from the \`index.ts\` in ${migrationsDir}, ` +
+            'or set `migrationsDir` to the folder the config imports from. If the ' +
+            'journal is the newer of the two, `astromech db:generate` rewrites `index.ts` from it.'
+    );
 }
 
-/** Whether `<dir>/index.ts` exists. False where the runtime has no filesystem to look in. */
-export async function hasAppMigrations(dir: string): Promise<boolean> {
+/** The tags `journal.json` lists, or none when the file does not exist. */
+async function readJournalTags(path: string): Promise<string[]> {
+    let contents: string;
     try {
-        const { access } = await import('node:fs/promises');
-        await access(resolve(dir, 'index.ts'));
-        return true;
-    } catch {
-        return false;
+        contents = await readFile(path, 'utf-8');
+    } catch (error) {
+        if ((error as NodeJS.ErrnoException).code === 'ENOENT') return [];
+        throw error;
     }
+    const journal = JSON.parse(contents) as { entries: { tag: string }[] };
+    return journal.entries.map((entry) => entry.tag);
+}
+
+function list(names: string[]): string {
+    return names.length === 0 ? 'none' : names.join(', ');
 }

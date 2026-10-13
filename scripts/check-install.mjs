@@ -12,9 +12,10 @@
 // pnpm hoists nothing, which is where the nested `optimizeDeps` entries
 // (`astromech > @astromech/admin > x`) matter most.
 //
-// The guide is the fixture. Its config files, its install command and its `npx
-// astromech` commands are read out of the page, so the check runs the page as
-// written, and an edit that breaks the check fails naming the page. Where the
+// The guide is the fixture. Its files (the two configs and the empty
+// migrations index), its install command and its `npx astromech` commands are
+// read out of the page, so the check runs the page as written, and an edit that
+// breaks the check fails naming the page. Where the
 // guide's `security.allowedDomains` names the site's own domain, the check names
 // the address it serves the site on instead.
 //
@@ -74,7 +75,7 @@ const PACKED_PACKAGES = {
 };
 
 /** The files the guide must give a code block for, named in its first line. */
-const GUIDE_FILES = ['astro.config.mjs', 'astromech.config.ts'];
+const GUIDE_FILES = ['astro.config.mjs', 'astromech.config.ts', 'migrations/index.ts'];
 
 /** The `npx astromech` commands the guide must list. */
 const GUIDE_COMMANDS = ['db:generate', 'db:init'];
@@ -259,11 +260,11 @@ function readFencedBlocks(markdown) {
     );
 }
 
-/** Every block whose first line is a `// <file name>` comment, by that name. */
+/** Every block whose first line is a `// <file path>` comment, by that path. */
 function readGuideFiles(blocks) {
     const files = new Map();
     for (const { body } of blocks) {
-        const name = body.match(/^\/\/ ([\w.-]+\.\w+)\n/)?.[1];
+        const name = body.match(/^\/\/ ([\w./-]+\.\w+)\n/)?.[1];
         if (name !== undefined) files.set(name, body);
     }
     for (const name of GUIDE_FILES) {
@@ -383,6 +384,7 @@ async function writeSite(siteDir, files, packageManager, tarballs) {
 
     await writeFile(join(siteDir, 'src', 'pages', 'index.astro'), INDEX_PAGE);
     for (const [name, contents] of files) {
+        await mkdir(dirname(join(siteDir, name)), { recursive: true });
         await writeFile(join(siteDir, name), contents);
     }
 }

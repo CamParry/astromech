@@ -16,7 +16,7 @@ import type {
     MethodManifest,
     PluginDefinition,
 } from '@/types/index';
-import { noopStorage } from '@tests/fixtures';
+import { noMigrations, noopStorage } from '@tests/fixtures';
 import { describe, expect, it, vi } from 'vitest';
 import { z } from 'zod';
 import { generateMethodManifest } from '@/codegen/method-manifest';
@@ -74,6 +74,7 @@ const testPlugin: PluginDefinition = {
 const resolved = resolveConfig({
     db: driver,
     storage: noopStorage,
+    migrations: noMigrations,
     entries: [
         {
             type: 'posts',

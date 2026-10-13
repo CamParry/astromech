@@ -9,6 +9,7 @@
  */
 
 import { createClient } from '@libsql/client';
+import { noMigrations } from '@tests/fixtures';
 import { createTestDb } from '@tests/harness';
 import { openTestDb } from '@tests/test-db';
 import { sql } from 'kysely';
@@ -29,18 +30,15 @@ describe('the foreign key check', () => {
         try {
             await sql`PRAGMA foreign_keys = OFF`.execute(db);
             const messages: string[] = [];
-            const logger = {
-                info: (message: string) => messages.push(message),
-                error: (message: string) => messages.push(message),
-            };
+            const logger = { info: (message: string) => messages.push(message) };
 
-            const run = runMigrations(db, logger, [], './migrations');
+            const run = runMigrations(db, logger, noMigrations);
 
             await expect(run).rejects.toBeInstanceOf(AstromechError);
             await expect(run).rejects.toThrow(
                 'The database does not enforce foreign keys (PRAGMA foreign_keys is 0).'
             );
-            // It threw before loading or applying any migration.
+            // It threw before applying any migration.
             expect(messages).toEqual([]);
         } finally {
             await db.destroy();

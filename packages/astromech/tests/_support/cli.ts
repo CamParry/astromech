@@ -5,7 +5,7 @@
  * reports what the command printed and the code the process would exit with.
  *
  * `createTempSite` and `writeSiteConfig` lay out a site in the run's temp dir:
- * a real `astromech.config.mjs` the CLI loads the way it loads a site's, over a
+ * a real `astromech.config.ts` the CLI loads the way it loads a site's, over a
  * real libsql file database.
  *
  * How the temp config finds its dependencies: the site's `node_modules` is a
@@ -22,7 +22,7 @@
 // Declares `testDbDir` on vitest's `ProvidedContext`, for `inject` below.
 import type {} from './global-setup';
 import type { ArgsDef, CommandDef } from 'citty';
-import { mkdtemp, symlink, writeFile } from 'node:fs/promises';
+import { access, mkdir, mkdtemp, symlink, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import { format } from 'node:util';
 import { runCommand } from 'citty';
@@ -150,7 +150,12 @@ export type SiteConfigOptions = {
      * opened and a query fails the run.
      */
     database?: string;
-    /** The config's `migrationsDir`. */
+    /**
+     * The config's `migrationsDir`, an absolute path, and the folder whose
+     * `index.ts` the config imports as `migrations`. That file is written as
+     * the installation guide's empty starter when the folder has none. Default
+     * `<site>/migrations`.
+     */
     migrationsDir?: string;
     /** The config's `entries`, as plain data. */
     entries?: unknown[];
@@ -165,7 +170,7 @@ export type SiteConfigOptions = {
 };
 
 /**
- * Write `astromech.config.mjs` in `site` and return its path. Its `db` is a
+ * Write `astromech.config.ts` in `site` and return its path. Its `db` is a
  * libsql driver built from `kysely` and `@libsql/kysely-libsql` the way core's
  * `libsql` driver builds one, opening one Kysely instance on first use.
  */
@@ -173,7 +178,9 @@ export async function writeSiteConfig(
     site: string,
     options: SiteConfigOptions
 ): Promise<string> {
-    const file = join(site, 'astromech.config.mjs');
+    const file = join(site, 'astromech.config.ts');
+    const migrationsDir = options.migrationsDir ?? join(site, 'migrations');
+    const migrationsIndex = await ensureMigrationsIndex(migrationsDir);
     const open =
         options.database === undefined
             ? `instance ??= new Proxy({}, {
@@ -186,9 +193,6 @@ export async function writeSiteConfig(
                 plugins: [new CamelCasePlugin()],
             });`;
     const optional = [
-        options.migrationsDir !== undefined
-            ? `    migrationsDir: ${JSON.stringify(options.migrationsDir)},\n`
-            : '',
         options.globals !== undefined
             ? `    globals: ${JSON.stringify(options.globals)},\n`
             : '',
@@ -200,9 +204,12 @@ export async function writeSiteConfig(
         file,
         `import { LibsqlDialect } from '@libsql/kysely-libsql';
 import { CamelCasePlugin, Kysely } from 'kysely';
+import { migrationProvider } from ${JSON.stringify(migrationsIndex)};
 
 let instance;
 export default {
+    migrations: migrationProvider,
+    migrationsDir: ${JSON.stringify(migrationsDir)},
     db: {
         name: 'libsql',
         isRemote: () => ${options.remote === true},
@@ -217,4 +224,23 @@ ${optional}    entries: ${JSON.stringify(options.entries ?? [])},
 `
     );
     return file;
+}
+
+/**
+ * The path of `index.ts` in `folder`, written first as the installation
+ * guide's empty starter when there is none, so the config can import it before
+ * `db:generate` has run.
+ */
+async function ensureMigrationsIndex(folder: string): Promise<string> {
+    const index = join(folder, 'index.ts');
+    try {
+        await access(index);
+    } catch {
+        await mkdir(folder, { recursive: true });
+        await writeFile(
+            index,
+            'export const migrationProvider = { getMigrations: async () => ({}) };\n'
+        );
+    }
+    return index;
 }

@@ -11,7 +11,7 @@ import type { Kysely } from 'kysely';
 import { expectConsole } from '@tests/console';
 import { createTestDb, makeBootConfig, resetRuntime } from '@tests/harness';
 import { sql } from 'kysely';
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { interval } from '@/cron/drivers/interval';
 import { registerCronJob } from '@/cron/registry';
 import { encodePatchWith } from '@/database/codec';
@@ -34,7 +34,6 @@ beforeEach(async () => {
 
 afterEach(() => {
     interval().stop?.();
-    vi.unstubAllGlobals();
 });
 
 /** A stand-in for the Astro adapter's worker entry. */
@@ -93,16 +92,20 @@ describe('createWorkerEntry().scheduled on an uncreated application', () => {
         expect(ran).toBe(true);
     });
 
-    // A Worker has no file system to read the migrations folder from, and a
-    // Worker woken only by a Cron Trigger has served no request.
-    it('checks the database against the migration names bundled at build time', async () => {
-        const { rows } = await sql<{
-            name: string;
-        }>`SELECT name FROM kysely_migration`.execute(db);
-        vi.stubGlobal('__ASTROMECH_MIGRATION_NAMES__', [
-            ...rows.map((row) => row.name),
-            '9999_not-applied',
-        ]);
+    // The chain is the config's, so a Worker checks it with no file system, and
+    // a Worker woken only by a Cron Trigger has served no request. The tick
+    // still runs: the warning names the fix, and the jobs are not held back.
+    it("warns of a migration the config's chain has and the database has not, then ticks", async () => {
+        const base = config.migrations;
+        config = {
+            ...config,
+            migrations: {
+                getMigrations: async () => ({
+                    ...(await base.getMigrations()),
+                    '9999_not-applied': { up: async () => undefined },
+                }),
+            },
+        };
         expectConsole(
             'error',
             '1 migration has not been applied to this database: 9999_not-applied'
@@ -114,5 +117,10 @@ describe('createWorkerEntry().scheduled on an uncreated application', () => {
                 {}
             )
         ).resolves.toBeUndefined();
+
+        const { rows } = await sql<{ name: string }>`
+            SELECT name FROM _astromech_cron
+        `.execute(db);
+        expect(rows.length).toBeGreaterThan(0);
     });
 });

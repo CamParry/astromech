@@ -65,9 +65,8 @@ not a site's database: not SQLite, failing SQLite's integrity check, or
 recording no migrations. It empties sessions and
 verification tokens rather than restoring them, so everyone is signed out. A
 backup recording the same migrations as the database restores as it is. Any
-other needs the migration files: the serving process loads them from
-`migrationsDir` at the time of the restore, so deploy that folder with the site
-and start the server from the project root.
+other is brought forward with the migrations your config's `migrations` key
+holds, which the server bundle carries.
 
 ### Where `file:./database.db` points
 

@@ -1,12 +1,13 @@
 /**
  * A new site's first `db:generate` and `db:init`: generate from `CORE_TABLES`
- * into an empty directory, apply the chain through the loader `db:init` uses,
- * and run first-run setup and a sign-in against the result. The demo's chain
+ * into an empty directory, apply the generated `migrationProvider` as a site's
+ * config imports it, and run first-run setup and a sign-in against the result. The demo's chain
  * cannot stand in for this, because it was not generated from an empty directory.
  */
 
 import type { DB } from '@/database/types';
 import type { Kysely } from 'kysely';
+import type { MigrationProvider } from 'kysely/migration';
 import { mkdtemp, rm, symlink } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
@@ -19,7 +20,6 @@ import { sql } from 'kysely';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { getAuth } from '@/auth/better-auth';
 import { createFirstAdmin } from '@/auth/setup';
-import { loadAppMigrations } from '@/database/app-migrations';
 import { libsql } from '@/database/drivers/libsql';
 import { generateMigrations } from '@/database/generate';
 import { CORE_TABLES } from '@/database/tables';
@@ -46,9 +46,10 @@ beforeAll(async () => {
 
     const driver = libsql({ url: `file:${join(siteDir, 'database.db')}` });
     db = driver.getInstance();
-    await migrateToLatest(db, await loadAppMigrations(join(siteDir, 'migrations')), {
-        allowUnorderedMigrations: true,
-    });
+    const { migrationProvider } = (await import(
+        join(siteDir, 'migrations', 'index.ts')
+    )) as { migrationProvider: MigrationProvider };
+    await migrateToLatest(db, migrationProvider, { allowUnorderedMigrations: true });
 
     resetRuntime();
     setupTestConfig({ ...makeTestConfig(), db: driver });

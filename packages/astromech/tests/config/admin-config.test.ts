@@ -5,7 +5,7 @@ import type {
     Field,
     PluginDefinition,
 } from '@/types/index';
-import { noopStorage } from '@tests/fixtures';
+import { noMigrations, noopStorage } from '@tests/fixtures';
 import { describe, expect, it } from 'vitest';
 import { z } from 'zod';
 import { buildAdminConfig, toAdminEntryType } from '@/config/admin-config';
@@ -31,6 +31,7 @@ const baseConfig = (
 ): AstromechConfig => ({
     db: driver,
     storage: noopStorage,
+    migrations: noMigrations,
     entries: [entryType('Post')],
     plugins,
     ...extra,

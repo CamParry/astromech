@@ -20,6 +20,7 @@ import type { ImageConfig } from '@/media/serving/image/driver';
 import type { ResolvedAdminResource } from '@/plugins/admin-resource';
 import type { CaptchaConfig, CaptchaWidget } from '@/security/captcha/types';
 import type { StorageDriver } from '@/storage/driver';
+import type { MigrationProvider } from 'kysely/migration';
 
 /** How the admin's entries table displays a column's value. */
 export type CellKind =
@@ -325,8 +326,18 @@ export type AstromechConfig = {
     basePath?: string;
     mediaRoute?: string;
     /**
-     * The folder `db:generate` writes the app's migrations to and every migration
-     * step reads, relative to the working directory. Default `./migrations`.
+     * The app's migration chain: the `migrationProvider` that `db:generate`
+     * writes to `index.ts` in `migrationsDir`, imported by the config
+     * (`import { migrationProvider } from './migrations'`). Every step that
+     * applies or checks migrations reads it from here, so a bundled runtime
+     * such as a Worker holds the chain without a file system.
+     */
+    migrations: MigrationProvider;
+    /**
+     * The folder `db:generate` writes the app's migrations to, relative to the
+     * working directory. Default `./migrations`. The CLI and the Astro
+     * integration refuse to migrate when `migrations` lists other migrations
+     * than its `journal.json`.
      */
     migrationsDir?: string;
     /** The site's entry types, each self-contained with its own `type`. */
@@ -400,12 +411,20 @@ export type TrustProxy = boolean | number;
 /**
  * `AstromechConfig` with its defaults applied, minus every capability that is
  * one shared resource for the whole app: those are declared in config and
- * reached from their registry, never off the config. `plugins` is not a driver
- * but is stripped too — the raw `PluginDefinition[]` carries live functions.
+ * reached from their registry, never off the config. `plugins` and `migrations`
+ * are not drivers but are stripped too: both carry live functions.
  */
 export type ResolvedConfig = Omit<
     AstromechConfig,
-    'db' | 'storage' | 'email' | 'scheduler' | 'ai' | 'plugins' | 'entries' | 'globals'
+    | 'db'
+    | 'storage'
+    | 'email'
+    | 'scheduler'
+    | 'ai'
+    | 'plugins'
+    | 'migrations'
+    | 'entries'
+    | 'globals'
 > & {
     basePath: string;
     mediaRoute: string;

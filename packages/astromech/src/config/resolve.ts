@@ -52,9 +52,10 @@ export function resolveConfig(config: AstromechConfig): ResolvedConfig {
     // `PluginConfigView`, so it is dropped here rather than only in the type.
     const { image: _image, ...media } = config.media ?? {};
 
-    // The registry-held modules, `plugins` and the authored `entries` and
-    // `globals` are destructured out to match `ResolvedConfig`'s `Omit`, so the
-    // strip holds at runtime too; the resolved maps replace them below.
+    // The registry-held modules, `plugins`, `migrations` and the authored
+    // `entries` and `globals` are destructured out to match `ResolvedConfig`'s
+    // `Omit`, so the strip holds at runtime too; the resolved maps replace them
+    // below.
     const {
         db: _db,
         storage: _storage,
@@ -62,6 +63,7 @@ export function resolveConfig(config: AstromechConfig): ResolvedConfig {
         scheduler: _scheduler,
         ai: _ai,
         plugins: _plugins,
+        migrations: _migrations,
         entries: _entries,
         globals: _globals,
         ...rest

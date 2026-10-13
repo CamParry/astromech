@@ -15,7 +15,7 @@ import type {
     ModelInstance,
     SchedulerDriver,
 } from '@/types/index';
-import { noopStorage } from '@tests/fixtures';
+import { noMigrations, noopStorage } from '@tests/fixtures';
 import { describe, expect, it } from 'vitest';
 import { resolveConfig } from '@/config/resolve';
 
@@ -47,6 +47,7 @@ function fullConfig(): AstromechConfig {
     return {
         db: dbDriver,
         storage: noopStorage,
+        migrations: noMigrations,
         email: emailDriver,
         scheduler: schedulerDriver,
         ai: { model: {} as ModelInstance },
@@ -58,7 +59,7 @@ function fullConfig(): AstromechConfig {
 describe('resolveConfig strips registry-held capabilities', () => {
     const resolved = resolveConfig(fullConfig());
 
-    it.each(['db', 'storage', 'email', 'scheduler', 'ai', 'plugins'])(
+    it.each(['db', 'storage', 'email', 'scheduler', 'ai', 'plugins', 'migrations'])(
         'drops %s',
         (key) => {
             expect(resolved).not.toHaveProperty(key);

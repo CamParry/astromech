@@ -47,6 +47,7 @@ Finished items are deleted rather than ticked; the record of what shipped is in
 - [ ] `check:install` builds and installs a scratch site but does not take the run lock.
 - [ ] Bash hook gaps left after `roadmap/completed/agent-workflow.md`: a `cd` inside `if`, `while` or `for` counts as done, so `if x; then cd <worktree>; fi; git reset --hard` is silent in the main checkout (the same class as the `&&` gap the hook's header notes); unquoted glob operands (`curl https://x?y=1`), attached short forms (`rg -g*.ts`) and `fd -g *.ts` are not refused; zsh glob qualifiers (`*(.)`) and extglob patterns in `case` do not parse, so the hook asks.
 - [ ] Re-evaluate a dependency lint (dependency-cruiser or similar) as a QA hardening layer once development shifts from building to hardening — dropped while building, `DECISIONS.md`
+- [ ] Wrangler 4.125.0 prints `[ERROR] Network connection lost.` on remote D1 runs that succeed: `db:init --allow-remote` printed it three times and `deploy:testing` once, then each exited 0 with the migrations applied (2026-10, astromech-testing). It comes from wrangler's remote proxy, not our code; no upstream issue was found. Before reporting it to `cloudflare/workers-sdk`, retry on the latest wrangler and capture `WRANGLER_LOG=debug` output. Until then a reader can mistake a successful run for a failure, so the deployment docs could say the message is harmless when the exit code is 0.
 
 ### Relationships follow-ups (from `completed/relationships-model.md`)
 

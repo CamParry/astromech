@@ -24,7 +24,6 @@ import {
 import { createServices, currentServices } from '@/app-context/services';
 import { setConfig } from '@/config/registry';
 import { setMigrationProvider } from '@/database/migration-registry';
-import { createMergedProvider } from '@/database/migrations';
 import { PermissionDeniedError } from '@/errors/permission';
 import { createPluginContext } from '@/plugins/runtime/plugin-runtime';
 import { runInRequestScope } from '@/request-scope/request-scope';
@@ -356,12 +355,15 @@ describe('database.restore', () => {
             },
             { allowUnorderedMigrations: true }
         );
-        setMigrationProvider(createMergedProvider([], '/no/such/migrations'));
+        setMigrationProvider({
+            getMigrations: () =>
+                Promise.reject(new Error('a migration failed to import')),
+        });
 
         await expect(database.restore(backup.stream, { preserve: [] })).rejects.toThrow(
             "the site's migration files are needed to restore a backup taken at " +
-                'another schema version, and they could not be loaded: could not load ' +
-                'the migrations from /no/such/migrations'
+                'another schema version, and they could not be loaded: a migration ' +
+                'failed to import'
         );
         await backup.cleanup();
     });

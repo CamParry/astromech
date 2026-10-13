@@ -104,10 +104,12 @@ import { defineConfig } from 'astromech';
 import { libsql } from 'astromech/database/libsql';
 import * as fields from 'astromech/fields';
 import { filesystem } from 'astromech/storage/filesystem';
+import { migrationProvider } from './migrations';
 
 export default defineConfig({
     db: libsql({ url: 'file:./database.db' }),
     storage: filesystem({ dir: './uploads' }),
+    migrations: migrationProvider,
     entries: [
         {
             type: 'post',
@@ -119,8 +121,26 @@ export default defineConfig({
 });
 ```
 
-`db` and `storage` are the two keys every config needs, and `entries` declares
-your content. To choose them:
+`db`, `storage` and `migrations` are the keys every config needs, and
+`entries` declares your content. `migrations` is the list of migrations that
+creates Astromech's tables. The config imports it, so a server bundle, such as
+a Cloudflare Worker's, carries it with no files to read.
+
+`./migrations` does not exist yet. `db:generate` writes it in step 5, but it
+loads this config first, so create the folder's `index.ts` now with no
+migrations in it:
+
+```ts
+// migrations/index.ts
+import type { MigrationProvider } from 'kysely/migration';
+
+// `astromech db:generate` replaces this file.
+export const migrationProvider: MigrationProvider = {
+    getMigrations: async () => ({}),
+};
+```
+
+To choose the other keys:
 
 - [configuration/database.md](configuration/database.md) for the database
   drivers.
@@ -164,11 +184,12 @@ npx astromech db:generate
 npx astromech db:init
 ```
 
-`db:generate` writes the migrations for Astromech's tables into `./migrations`.
-Commit that folder. `db:init` applies the migrations to the database in your
-config. `astro dev` and `astro build` also apply any that are pending, but only
-once `db:generate` has created the folder. To keep the folder somewhere else,
-set `migrationsDir` in your config, as
+`db:generate` writes the migrations for Astromech's tables into `./migrations`
+and rewrites its `index.ts` to list them. Commit that folder. `db:init` applies
+the migrations to the database in your config. `astro dev` and `astro build`
+also apply any that are pending, but only once `db:generate` has written one.
+To keep the folder somewhere else, set `migrationsDir` in your config and
+import `migrationProvider` from that folder, as
 [data/migrations.md](data/migrations.md#the-migrations-folder) describes.
 
 [data/migrations.md](data/migrations.md) covers what the generator writes and

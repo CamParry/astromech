@@ -8,6 +8,7 @@ import { consoleEmail } from 'astromech/email/console';
 import * as fields from 'astromech/fields';
 import { cloudflareImages } from 'astromech/media/image/cloudflare';
 import { r2 } from 'astromech/storage/r2';
+import { migrationProvider } from './migrations';
 
 /**
  * A captcha only when the environment names one, so the testing deployment has
@@ -30,6 +31,8 @@ const captcha = captchaFromEnv();
 export default defineConfig({
     db: d1({ binding: 'DB' }),
     storage: r2({ binding: 'MEDIA' }),
+    // The Worker bundles the chain from here, as it has no file system.
+    migrations: migrationProvider,
     media: { image: { driver: cloudflareImages() } },
     email: consoleEmail({ from: 'demo@astromech.dev' }),
     ...(captcha === undefined ? {} : { security: { captcha } }),
