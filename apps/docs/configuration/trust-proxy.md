@@ -9,7 +9,8 @@ sits behind a proxy, and what the address is used for.
 Astromech only reads sources a client cannot set for itself:
 
 - On Cloudflare Workers, `cf-connecting-ip`, which Cloudflare overwrites on
-  every request it proxies. It needs no configuration.
+  every request it proxies. It needs no configuration. A value that is not an
+  IP address counts as no address.
 - With `trustProxy` set, the entry of `x-forwarded-for` your proxies vouch for
   (below).
 - Otherwise, on Node, the address of the connection itself, which Astro passes

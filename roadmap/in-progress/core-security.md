@@ -93,6 +93,11 @@ is `DECISIONS.md`, "Security in core is defaults and shared mechanisms".
       Security screen shows no events until then.
 - [x] The Security screen and its permission.
 - [x] Docs: the defaults, the settings, and the CSP sources a captcha needs.
+- [x] `cf-connecting-ip` on workerd goes through the IP check the other address
+      sources get, so a value that is not an IP address counts as no address
+      (2026-10-13). A forged value cannot be refused in code: a deployed Worker
+      receives the value Cloudflare wrote over the client's, and only wrangler's
+      local proxy passes a client's own through.
 
 ## Testing
 
@@ -183,9 +188,6 @@ screen in chromium. These need real keys or a deployed Worker:
 
 ## Left open
 
-- **`cf-connecting-ip` is trusted on workerd unchecked**
-  (`roadmap/completed/auth-rate-limit-defects.md`), so a forged value could
-  dodge a block there.
 - **A blocked shared address blocks everyone behind it** for the hour; the
   allow list is the remedy.
 - **The captcha check runs before Better Auth's limiter**, so a client can

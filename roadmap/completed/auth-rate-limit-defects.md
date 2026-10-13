@@ -48,8 +48,6 @@ Better Auth and the forms limit did not use it.
 
 ## Left open
 
-- `cf-connecting-ip` on workerd is used without the IP check other sources
-  get; Cloudflare sets it, so the risk is low.
 - An IPv6 zone id (`fe80::1%eth0`) passes the check but Better Auth rejects it,
   so such a client shares the no-address count for sign-in.
 - The forms upsert was run by hand on local D1 only; `apps/demo-cloudflare`

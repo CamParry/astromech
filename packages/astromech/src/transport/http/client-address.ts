@@ -37,11 +37,14 @@ export function resolveClientAddress(
     remoteAddress: string | undefined
 ): string | undefined {
     // Trustworthy only on the runtime Cloudflare serves. A Node deployment
-    // behind Cloudflare takes the `trustProxy` route below instead.
+    // behind Cloudflare takes the `trustProxy` route below instead. A value that
+    // is not an IP address counts as no address.
     const workerd = getRuntimeKey() === 'workerd';
     if (workerd) {
         const connectingIp = request.headers.get('cf-connecting-ip');
-        if (connectingIp !== null && connectingIp !== '') return connectingIp;
+        if (connectingIp !== null && connectingIp !== '') {
+            return parseAddress(connectingIp, CONNECTING_IP_ADVICE);
+        }
     }
 
     const trustProxy: TrustProxy = getConfig().security?.trustProxy ?? false;
@@ -99,12 +102,20 @@ function forwardedAddress(header: string | undefined, hops: number): string | un
     return parseAddress(entry);
 }
 
+/** What to check when an address from `x-forwarded-for` or the connection is dropped. */
+const TRUST_PROXY_ADVICE =
+    'Check that `security.trustProxy` matches the proxies in front of the server.';
+
+/** What to check when `cf-connecting-ip` is dropped: Cloudflare sets it, not the site. */
+const CONNECTING_IP_ADVICE =
+    'It came from `cf-connecting-ip`, which Cloudflare sets on a deployed Worker.';
+
 /**
  * The IP address in `value`, without a port (`1.2.3.4:80`) or IPv6 brackets
  * (`[::1]`, `[::1]:443`), or undefined when it holds none. A value that is
- * dropped is logged, once per process.
+ * dropped is logged with `advice`, once per process.
  */
-function parseAddress(value: string): string | undefined {
+function parseAddress(value: string, advice = TRUST_PROXY_ADVICE): string | undefined {
     const address = stripPort(value);
     if (address !== undefined && isIP(address) !== 0) return address;
 
@@ -112,7 +123,7 @@ function parseAddress(value: string): string | undefined {
     if (state.clientAddressDropLogged !== true) {
         state.clientAddressDropLogged = true;
         log.warn(
-            `Ignored the client address ${JSON.stringify(value)}, which is not an IP address. Check that \`security.trustProxy\` matches the proxies in front of the server. Further values are dropped without a message.`
+            `Ignored the client address ${JSON.stringify(value)}, which is not an IP address. ${advice} Further values are dropped without a message.`
         );
     }
     return undefined;
