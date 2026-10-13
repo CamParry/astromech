@@ -16,7 +16,7 @@ nothing moves them. Raised on 2026-10-03; decided 2026-10-04.
   (`packages/astromech/src/fields/parse-fields.ts`), and nested keys are never
   checked.
 - A save keeping the stored values of an undeclared field, and a public read
-  dropping them, are `roadmap/in-progress/undeclared-field-keys.md`.
+  dropping them, are `roadmap/completed/undeclared-field-keys.md`.
 
 ## Prior art
 
@@ -26,9 +26,17 @@ nothing moves them. Raised on 2026-10-03; decided 2026-10-04.
   `craft fields/merge` merges two fields. **Contentful** separates a field's id
   from its name; contentful-migration's `changeFieldId` is a schema call and it
   has no type change.
-- **No rename:** Directus (`updateField` has no rename path), Strapi (a rename
-  creates a new field, and the old values stay in the database out of reach),
-  Payload (hand-written migrations).
+- **Column stores rename through a migration:** Strapi 5's Content-Type
+  Builder writes a `renameColumn` migration and refuses when the target
+  column already holds data (`target-occupied`); Payload on SQL generates
+  one with drizzle-kit, which asks whether a column was renamed or is new.
+  Strapi drops a removed field's column at boot. Directus has no rename
+  (`updateField` has no rename path). From source, 2026-10-13.
+- **Kept values are shown:** Sanity's Studio marks "Unknown field found"
+  with a remove button, and Storyblok shows "out of schema" with add-field
+  and delete-field actions (from source and docs, 2026-10-13). No system has
+  a command that prunes every undeclared value at once; Craft's `resave`
+  prunes as a side effect.
 
 ## Decided
 
@@ -65,7 +73,7 @@ nothing moves them. Raised on 2026-10-03; decided 2026-10-04.
     - Before `--apply`, a local database is dumped; on D1 the command prints the
       Time Travel restore point.
 - **Saves keep undeclared keys; public reads drop them**
-  (`roadmap/in-progress/undeclared-field-keys.md`). This closes the gap between
+  (`roadmap/completed/undeclared-field-keys.md`). This closes the gap between
   deploying the config and running the command, and the privacy leak.
 - **`fields:remove <path>`** ships with it, since it is the same code with
   `unset` in place of the move. Changing a field's type stays a hand-written
@@ -85,6 +93,10 @@ nothing moves them. Raised on 2026-10-03; decided 2026-10-04.
       text for changed rows.
 - [ ] The audit row and the cache clear.
 - [ ] `validate` reports undeclared keys at every depth.
+- [ ] Removing every undeclared value at once (for example
+      `fields:remove --undeclared`), a dry run unless given `--apply`.
+- [ ] The admin's edit screen marks stored values outside the schema, as
+      Sanity and Storyblok do, with an action that removes them.
 - [ ] `apps/docs`: fields and the CLI.
 
 ## Testing

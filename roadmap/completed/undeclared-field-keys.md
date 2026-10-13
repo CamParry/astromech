@@ -31,9 +31,9 @@ The rest of the comparison is in `roadmap/planned/field-rename-command.md`.
 
 ## The work
 
-- [ ] A save keeps the stored row's undeclared root keys and their values. The
+- [x] A save keeps the stored row's undeclared root keys and their values. The
       parse and validators still see only declared fields.
-- [ ] `TERMINOLOGY.md` or `apps/docs/content/fields.md` says a rename leaves the
+- [x] `TERMINOLOGY.md` or `apps/docs/content/fields.md` says a rename leaves the
       old values stored and unreachable until a migration moves them.
 
 ## Testing

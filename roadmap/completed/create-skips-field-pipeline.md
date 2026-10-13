@@ -58,7 +58,7 @@ alone). Strapi has no custom media fields.
 - [x] First-run setup (`auth/setup.ts`) runs the user field pipeline, through
       the same `createUserRows` write as `users.create`, and answers "closed"
       before it reads any field.
-- [ ] Check the rest of the class and fix what fails: a new locale added to an
+- [x] Check the rest of the class and fix what fails: a new locale added to an
       existing entry, global, user or media item (an update to a locale with no
       content row, where `parse-fields.ts` fills no defaults), and a user created
       through Better Auth sign-up rather than `users.create`. Checked
