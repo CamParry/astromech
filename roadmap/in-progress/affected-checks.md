@@ -63,14 +63,17 @@ source; merge rules come from each repo's public GitHub settings.
       `package.json`, `pnpm-lock.yaml`, `tsconfig*`, `eslint.config.js`,
       `scripts/`, `.github/` or a vitest config, or when the diff cannot be
       computed.
-    - It prints which checks it chose and why, and `--full` still runs
-      everything.
+    - It prints which checks it chose and why, and `--all` still runs
+      everything (`--full` already names a mode). CI runs with `--all`,
+      since on `main` the merge base is HEAD.
 - [ ] **`format:check` joins the gate.** Today the gate leaves it to the
       pre-commit hook, and the hook's Prettier glob skipped `.js` until
       2026-10-13, so `eslint.config.js` reached CI unformatted.
 - [ ] **`pnpm run land` takes the scoped gate's stamp and no longer requires
       the branch to contain `origin/main`.** It merges when there is no
-      conflict, and CI's full run on `main`, which it already waits for, is
+      conflict, writing the merged tree with `git merge-tree --write-tree`
+      (today the merge commit takes HEAD's tree, which is only right when the
+      branch contains main), and CI's full run on `main`, which it already waits for, is
       the check on the merge result. A setting turns the full local gate and
       the up-to-date rule back on for after 1.0.
 - [ ] **`AGENTS.md` and `.claude/_agents/coder.md` give the narrow
