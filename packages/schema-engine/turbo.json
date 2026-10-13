@@ -1,16 +1,20 @@
 {
     // The schema engine sits below core and reads no other package, so its
-    // tasks read only its own files. The root `turbo.json` has the rest.
+    // tasks read only its own files and wait for nothing, not even the
+    // admin's route generation. The root `turbo.json` has the rest.
     "$schema": "../../node_modules/turbo/schema.json",
     "extends": ["//"],
     "tasks": {
         "typecheck": {
+            "dependsOn": [],
             "inputs": ["$TURBO_DEFAULT$", "!**/*.md"]
         },
         "lint": {
+            "dependsOn": [],
             "inputs": ["$TURBO_DEFAULT$", "!**/*.md"]
         },
         "test:coverage": {
+            "dependsOn": [],
             "inputs": ["$TURBO_DEFAULT$", "!**/*.md"]
         }
     }
