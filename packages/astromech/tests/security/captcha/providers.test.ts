@@ -11,7 +11,6 @@ import { verifyCaptcha } from '@/security/captcha/verify';
 
 const TURNSTILE_URL = 'https://challenges.cloudflare.com/turnstile/v0/siteverify';
 const RECAPTCHA_URL = 'https://www.google.com/recaptcha/api/siteverify';
-const HCAPTCHA_URL = 'https://api.hcaptcha.com/siteverify';
 
 /** The URL and form body of each siteverify request. */
 let requests: { url: string; body: URLSearchParams }[];
@@ -323,37 +322,5 @@ describe('reCAPTCHA', () => {
         });
 
         expect(verdict.ok).toBe(false);
-    });
-});
-
-describe('hCaptcha', () => {
-    it('sends hCaptcha the site key and checks the hostname', async () => {
-        configure({ provider: 'hcaptcha', siteKey: 'h-site-key' });
-        stubFetch(() => jsonResponse({ success: true, hostname: 'example.test' }));
-
-        const accepted = await verifyCaptcha({
-            token: 'a-token',
-            action: 'sign_in',
-            hostname: 'example.test',
-        });
-        const refused = await verifyCaptcha({
-            token: 'a-token',
-            action: 'sign_in',
-            hostname: 'other.test',
-        });
-
-        expect(accepted).toEqual({ ok: true });
-        expect(refused.ok).toBe(false);
-        expect(requests[0]?.url).toBe(HCAPTCHA_URL);
-        expect(requests[0]?.body.get('sitekey')).toBe('h-site-key');
-    });
-
-    it('checks no action, which hCaptcha does not return', async () => {
-        configure({ provider: 'hcaptcha', siteKey: 'h-site-key' });
-        stubFetch(() => jsonResponse({ success: true }));
-
-        const verdict = await verifyCaptcha({ token: 'a-token', action: 'sign_in' });
-
-        expect(verdict).toEqual({ ok: true });
     });
 });

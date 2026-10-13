@@ -466,7 +466,7 @@ const CHECKS = [
  * The providers `--captcha <provider>` can turn on: the env file's names for
  * the real keys, where the widget's frames load from, and the provider's
  * published test keys for the checks that use them. Only Turnstile's entry has
- * been run; the others wait for keys.
+ * been run; reCAPTCHA's waits for keys.
  */
 const CAPTCHA_PROVIDERS = {
     turnstile: {
@@ -490,11 +490,6 @@ const CAPTCHA_PROVIDERS = {
         siteKeyVar: 'RECAPTCHA_SITE_KEY',
         secretVar: 'RECAPTCHA_SECRET',
         frameOrigin: 'https://www.google.com',
-    },
-    hcaptcha: {
-        siteKeyVar: 'HCAPTCHA_SITE_KEY',
-        secretVar: 'HCAPTCHA_SECRET',
-        frameOrigin: 'https://newassets.hcaptcha.com',
     },
 };
 

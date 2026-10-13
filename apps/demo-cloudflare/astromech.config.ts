@@ -19,7 +19,7 @@ import { r2 } from 'astromech/storage/r2';
 function captchaFromEnv(): CaptchaConfig | undefined {
     const { CAPTCHA_PROVIDER: provider, CAPTCHA_SITE_KEY: siteKey } = process.env;
     if (!provider || !siteKey) return undefined;
-    if (provider !== 'turnstile' && provider !== 'recaptcha' && provider !== 'hcaptcha') {
+    if (provider !== 'turnstile' && provider !== 'recaptcha') {
         throw new Error(`CAPTCHA_PROVIDER names no captcha provider: ${provider}`);
     }
     return { provider, siteKey };

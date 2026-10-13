@@ -27,18 +27,6 @@ const CAPTCHA_CSP = {
             'frame-src https://www.google.com/recaptcha/ https://recaptcha.google.com/recaptcha/',
         ],
     },
-    hcaptcha: {
-        scriptDirective: {
-            resources: ["'self'", 'https://hcaptcha.com', 'https://*.hcaptcha.com'],
-        },
-        styleDirective: {
-            resources: ["'self'", 'https://hcaptcha.com', 'https://*.hcaptcha.com'],
-        },
-        directives: [
-            'frame-src https://hcaptcha.com https://*.hcaptcha.com',
-            "connect-src 'self' https://hcaptcha.com https://*.hcaptcha.com",
-        ],
-    },
 };
 
 // With a captcha on (`astromech.config.ts`), the site sends the policy the

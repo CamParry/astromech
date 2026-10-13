@@ -111,26 +111,6 @@ describe('renderCaptcha', () => {
         expect(await handle.getToken()).toBe('v3-token');
         expect(execute).toHaveBeenCalledWith('v3-key', { action: 'sign_in' });
     });
-
-    it('sends hCaptcha no action, which it does not return', async () => {
-        const hcaptcha = {
-            render: vi.fn((_container: HTMLElement, _options: RenderOptions) => 'h'),
-            reset: vi.fn(),
-            remove: vi.fn(),
-        };
-        vi.stubGlobal('hcaptcha', hcaptcha);
-
-        await renderCaptcha(document.createElement('div'), {
-            provider: 'hcaptcha',
-            siteKey: 'h-key',
-            action: 'sign_in',
-        });
-
-        const options = hcaptcha.render.mock.calls[0]?.[1];
-        if (options === undefined) throw new Error('hcaptcha.render was not called');
-        expect(options['sitekey']).toBe('h-key');
-        expect('action' in options).toBe(false);
-    });
 });
 
 /** The options the last `turnstile.render` call received. */

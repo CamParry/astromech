@@ -10,7 +10,6 @@ import { AstromechError } from '@/errors/astromech-error';
 import { globals } from '@/registry';
 import { getRequestScope } from '@/request-scope/request-scope';
 import { log } from '@/utilities/log';
-import { verifyHcaptcha } from './providers/hcaptcha';
 import { verifyRecaptcha } from './providers/recaptcha';
 import { verifyTurnstile } from './providers/turnstile';
 
@@ -53,7 +52,6 @@ export async function verifyCaptcha(input: {
     const hostnames = captcha.hostnames ?? (hostname === undefined ? [] : [hostname]);
     const check = {
         secret,
-        siteKey: captcha.siteKey,
         action,
         hostnames,
         clientAddress,
@@ -65,8 +63,6 @@ export async function verifyCaptcha(input: {
             return verifyTurnstile(token, check);
         case 'recaptcha':
             return verifyRecaptcha(token, check);
-        case 'hcaptcha':
-            return verifyHcaptcha(token, check);
     }
 }
 

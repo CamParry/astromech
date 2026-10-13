@@ -9,7 +9,6 @@ import type { CaptchaVerdict } from '../types';
 /** One provider check. `hostnames` empty means any hostname passes. */
 export type ProviderInput = {
     secret: string;
-    siteKey: string;
     action: string;
     hostnames: string[];
     clientAddress?: string | undefined;
