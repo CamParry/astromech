@@ -12,6 +12,7 @@ import { randomUUID } from 'node:crypto';
 import { mkdir, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
+import { expectConsole } from '@tests/console';
 import { makeTestConfig } from '@tests/harness';
 import { createPluginTestApp } from '@tests/plugin-app';
 import { testMigrationProvider } from '@tests/test-db';
@@ -294,6 +295,49 @@ describe('performBackup — failure', () => {
         // No artifact should be written to storage.
         const artifacts = await storage.list('');
         expect(artifacts).toHaveLength(0);
+    });
+
+    // A store that refuses the write up front never reads the dump, and the
+    // dump's file is gone once `cleanup` has run, so reading it then fails.
+    it('records the storage failure when the write rejects without reading the dump', async () => {
+        expectConsole('error', 'Backup failed');
+        let markCleanedUp = (): void => undefined;
+        const cleanedUp = new Promise<void>((resolve) => {
+            markCleanedUp = resolve;
+        });
+        const context = app.context();
+        const ctx: PluginContext = {
+            ...context,
+            database: {
+                dialect: 'test-dump',
+                dump: () =>
+                    Promise.resolve({
+                        stream: new ReadableStream<Uint8Array>({
+                            async pull() {
+                                await cleanedUp;
+                                throw new Error('ENOENT: the dump file was removed');
+                            },
+                        }),
+                        cleanup: () => {
+                            markCleanedUp();
+                            return Promise.resolve();
+                        },
+                    }),
+            },
+            storage: {
+                ...context.storage,
+                put: () => Promise.reject(new Error('storage refused the write')),
+            },
+        };
+
+        const row = await performBackup(ctx, 'manual', { keep: 10 });
+        // A stream error nothing handles surfaces before this resolves.
+        await new Promise((resolve) => setImmediate(resolve));
+
+        expect(row).toMatchObject({
+            status: 'failed',
+            error: 'Error: storage refused the write',
+        });
     });
 });
 

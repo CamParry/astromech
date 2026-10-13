@@ -5,11 +5,11 @@
  */
 import type { BackupRunRow } from '../tables/runs';
 import type { PluginContext, PluginRawRoute } from 'astromech';
-import { Readable } from 'node:stream';
 import { createGunzip } from 'node:zlib';
 import { InvalidBackupError, RestoreRefusedError } from 'astromech';
 import { isBackupRunning, performBackup, resolveKeep } from '../backup';
 import { createBackupRunsRepository } from '../repository';
+import { pipelineTo } from '../streams';
 import { backupRunsTable } from '../tables/runs';
 
 /**
@@ -77,8 +77,21 @@ async function restoreFromBackup(
 
     try {
         // Safety snapshot before restore — makes this operation reversible.
+        // `performBackup` records a failure on the run rather than throwing, and
+        // returns another run's row when one started meanwhile, so the run's
+        // status decides whether the restore may go ahead.
         const resolvedKeep = await resolveKeep(ctx, keep);
-        await performBackup(ctx, 'pre-restore', { keep: resolvedKeep });
+        const snapshot = await performBackup(ctx, 'pre-restore', { keep: resolvedKeep });
+        if (snapshot.status !== 'success') {
+            return Response.json(
+                {
+                    error:
+                        'The safety backup before the restore failed, so nothing was ' +
+                        `restored: ${snapshot.error ?? 'another backup is running'}`,
+                },
+                { status: 500 }
+            );
+        }
 
         const obj = await ctx.storage.get(row.key as string);
         if (obj === null) {
@@ -88,17 +101,11 @@ async function restoreFromBackup(
             );
         }
 
-        // Gunzip the stored stream before handing it to the restore driver.
-        const gunzip = createGunzip();
-        const nodeReadable = Readable.fromWeb(
-            obj.body as Parameters<typeof Readable.fromWeb>[0]
+        // Gunzip the stored stream on its way to the restore driver.
+        const { restore } = ctx.database;
+        await pipelineTo(obj.body, createGunzip(), (plain) =>
+            restore(plain, { preserve: [RUNS_TABLE, '_astromech_cron'] })
         );
-        nodeReadable.pipe(gunzip);
-        const plain = Readable.toWeb(gunzip) as ReadableStream<Uint8Array>;
-
-        await ctx.database.restore(plain, {
-            preserve: [RUNS_TABLE, '_astromech_cron'],
-        });
 
         return Response.json({ data: { restored: row.id } });
     } catch (err) {

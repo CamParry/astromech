@@ -22,6 +22,7 @@ backups/
   migrations/                   generated — never hand-edited
   src/repository.ts             createRepository over the table — the only DB access
   src/backup.ts                 performBackup / rotate / resolveKeep — the core work
+  src/streams.ts                pipelineTo — gzip and gunzip on the way to storage or restore
   src/service/backups.ts        list, run, delete (JSON, over RPC), and their output schemas
   src/routes/backups.ts         download + restore (raw routes — they stream)
   src/permissions/backups.ts    definePermissions — the grantable permission keys
@@ -132,7 +133,8 @@ Two endpoints stream, so they are `rawRoutes` rather than service methods:
 | `POST /api/plugins/backups/runs/:id/restore` | `restore`  | streams a gunzipped dump back in |
 
 Restore takes a safety snapshot of the current database **before** overwriting
-it, so the operation is reversible, and preserves the plugin's own run table
+it, so the operation is reversible, and stops with a 500 naming the cause,
+changing nothing, when that snapshot fails. It preserves the plugin's own run table
 and the cron table across the restore. Otherwise a restore would erase the
 record of itself. The libsql driver runs the site's migrations forward on a copy
 of the backup, so an older backup restores into the current schema, then
