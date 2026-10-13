@@ -37,6 +37,14 @@ describe('resolveRole', () => {
             expect(resolveRole(config, slug)).toBeNull();
         }
     });
+
+    // The resolved map is a plain object, so `constructor` and the like are
+    // inherited properties of it, not roles.
+    it('answers null for a name only Object.prototype holds', () => {
+        for (const slug of ['constructor', 'toString', 'hasOwnProperty', '__proto__']) {
+            expect(resolveRole(config, slug)).toBeNull();
+        }
+    });
 });
 
 describe('resolveRoles', () => {
