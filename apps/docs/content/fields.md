@@ -55,8 +55,11 @@ date.
 
 A `datetime` written with a zone is stored in UTC:
 `2026-10-10T10:00:00+02:00` is stored and read back as
-`2026-10-10T08:00:00.000Z`. One written without a zone keeps its wall time:
-`2026-10-10T10:00` stays `2026-10-10T10:00`. Either sorts in time order.
+`2026-10-10T08:00:00.000Z`, and so is `2026-10-10T10:00:00+0200`. One written
+without a zone keeps its wall time: `2026-10-10T10:00` stays
+`2026-10-10T10:00`. Either sorts in time order. A date-time already stored with
+an offset such as `+0200` is valid as it is: an update that leaves the field
+out keeps it, and one that sends it stores it in UTC.
 
 The admin's input shows a UTC value in the editor's local time and saves an
 edit to it in UTC. It sends a new value, or an edit to a wall time, without a

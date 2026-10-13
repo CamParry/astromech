@@ -1,8 +1,8 @@
 /**
  * The field pipeline as entries add to it: completeness follows the status the
- * row will hold, an email field is checked, a date stored in an older form is
- * rewritten when sent again and kept when left out, and a refused update
- * writes no version. The rules
+ * row will hold, an email field is checked, a date or date-time stored in an
+ * older form is rewritten when sent again and kept when left out, and a refused
+ * update writes no version. The rules
  * every resource shares are in
  * `tests/content/resource-field-validation.test.ts`.
  */
@@ -54,6 +54,7 @@ function makeValidationConfig(): AstromechConfig {
                 // Slug field (coerces to slugified string)
                 { name: 'page_slug', type: 'slug', label: 'Page Slug' },
                 { name: 'day', type: 'date', label: 'Day' },
+                { name: 'starts', type: 'datetime', label: 'Starts' },
             ],
         }),
     };
@@ -374,6 +375,50 @@ describe('update — a date stored as a full ISO date-time', () => {
             title_text: 'Changed',
             day: '2026-10-10T23:30:00.000-05:00',
         });
+    });
+});
+
+// A date-time stored before core kept ISO forms only, written here behind the
+// pipeline's back: `Date.parse` reads a basic-format offset, `z.iso.datetime`
+// does not.
+describe('update — a date-time stored with a basic-format offset', () => {
+    async function createWithStarts(): Promise<string> {
+        const entry = await api.create({
+            type: 'post',
+            data: { title: 'T', fields: { title_text: 'Hello' } },
+        });
+        await createRepository(entryContentTable).updateMany(
+            { entryId: entry.id },
+            { fields: { title_text: 'Hello', starts: '2026-10-10T10:00:00+0200' } }
+        );
+        return entry.id;
+    }
+
+    it('keeps it as stored when a patch leaves the field out', async () => {
+        const id = await createWithStarts();
+
+        const updated = await api.update({
+            type: 'post',
+            id,
+            data: { fields: { title_text: 'Changed' } },
+        });
+        const result = Array.isArray(updated) ? updated[0]! : updated;
+        expect(result.fields).toMatchObject({
+            title_text: 'Changed',
+            starts: '2026-10-10T10:00:00+0200',
+        });
+    });
+
+    it('stores it in UTC when the field is sent again', async () => {
+        const id = await createWithStarts();
+
+        const updated = await api.update({
+            type: 'post',
+            id,
+            data: { fields: { title_text: 'Hello', starts: '2026-10-10T10:00:00+0200' } },
+        });
+        const result = Array.isArray(updated) ? updated[0]! : updated;
+        expect(result.fields.starts).toBe('2026-10-10T08:00:00.000Z');
     });
 });
 

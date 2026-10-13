@@ -153,6 +153,16 @@ const isoDatetime = z.iso.datetime({ offset: true, local: true });
 /** The zone a date-time ends with: `Z` or an offset such as `+02:00`. */
 const ZONE_RE = /(?:Z|[+-]\d{2}:\d{2})$/;
 
+/**
+ * A basic-format offset, `+0200`, which `z.iso.datetime` refuses. Core stored
+ * any value `Date.parse` read before it kept these forms, so a row can hold one.
+ */
+const BASIC_OFFSET_RE = /([+-]\d{2})(\d{2})$/;
+
+/** `value` with a basic-format offset written as `+02:00`, the form the ISO check reads. */
+const withExtendedOffset = (value: string): string =>
+    value.replace(BASIC_OFFSET_RE, '$1:$2');
+
 /** A fraction of a second past milliseconds, which a `Date` cannot hold. */
 const SUB_MILLISECOND_RE = /(\.\d{3})\d+$/;
 
@@ -191,22 +201,31 @@ export const validateDate: FieldValidator = async (ctx) => {
 
 /**
  * A `Date`, or a string with a zone, is stored as UTC to the millisecond:
- * `2026-10-10T10:00:00+02:00` becomes `2026-10-10T08:00:00.000Z`. A string
- * without a zone keeps its wall time, cut to the millisecond, and a bare date
- * is kept as it is. Anything else is left for the validator to reject.
+ * `2026-10-10T10:00:00+02:00` and `2026-10-10T10:00:00+0200` become
+ * `2026-10-10T08:00:00.000Z`. A string without a zone keeps its wall time, cut
+ * to the millisecond, and a bare date is kept as it is. Anything else is left
+ * for the validator to reject.
  */
 export const coerceDatetime = (value: unknown): unknown => {
     if (isValidDate(value)) return value.toISOString();
-    if (typeof value !== 'string' || !isoDatetime.safeParse(value).success) return value;
-    return ZONE_RE.test(value)
-        ? new Date(value).toISOString()
-        : value.replace(SUB_MILLISECOND_RE, '$1');
+    if (typeof value !== 'string') return value;
+    const extended = withExtendedOffset(value);
+    if (!isoDatetime.safeParse(extended).success) return value;
+    return ZONE_RE.test(extended)
+        ? new Date(extended).toISOString()
+        : extended.replace(SUB_MILLISECOND_RE, '$1');
 };
 
-/** An ISO 8601 date and time, with or without a zone, or a bare date. */
+/**
+ * An ISO 8601 date and time, with or without a zone, or a bare date. This also
+ * accepts a basic-format offset (`+0200`), because a patch validates the fields
+ * it leaves out without coercing them: such a value reaches this rule only when
+ * it is stored and not sent, and refusing it would fail every patch to the row
+ * until a caller sent the field again. A sent one is coerced to UTC first.
+ */
 export const validateDatetime: FieldValidator = async (ctx) => {
     if (typeof ctx.value !== 'string') return 'Must be a date and time';
-    return isoDatetime.safeParse(ctx.value).success ||
+    return isoDatetime.safeParse(withExtendedOffset(ctx.value)).success ||
         isoDate.safeParse(ctx.value).success
         ? true
         : 'Must be an ISO 8601 date and time, such as 2026-10-10T14:30';
