@@ -10,7 +10,7 @@ migration chain in one transaction (`DECISIONS.md`, "A libsql migration run is
 one transaction"). D1 has no interactive transactions, so Kysely's `Migrator`
 runs each statement of `up(db)` on its own, and `PRAGMA defer_foreign_keys`
 ends with the statement that set it. The open item in
-[schema-engine-defects](../planned/schema-engine-defects.md) has the history.
+[schema-engine-defects](../in-progress/schema-engine-defects.md) has the history.
 
 ## Evidence
 

@@ -702,7 +702,7 @@ describe('diffSnapshots properties', () => {
     // table whose children keep an `ON DELETE` action in `b`, but not when the
     // child is rebuilt too: the parent's rebuild comes first, so its `DROP
     // TABLE` fires the action on the old child rows before the child's rebuild
-    // removes the key (`roadmap/planned/schema-engine-defects.md`).
+    // removes the key (`roadmap/in-progress/schema-engine-defects.md`).
     const actionDropped = (onDelete: string) => ({
         onDelete,
         a: snap(
