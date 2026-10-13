@@ -45,7 +45,7 @@ Finished items are deleted rather than ticked; the record of what shipped is in
 
 ### Tooling
 
-- [ ] Under the gate, `check:boot:cloudflare` starts the build and wrangler in process groups of their own, which no lock record lists (`scripts/run-lock.mjs` keeps one owner's record). If the gate and the check are both killed outright, wrangler keeps running. Fixing it needs the lock to accept groups from more than one process. `check:boot`'s Chromium is not recorded either, since playwright does not expose its pid.
+- [ ] Under the gate, `check:boot:cloudflare` starts the build and wrangler in process groups of their own, which no lock record lists (`scripts/lib/run-lock.ts` keeps one owner's record). If the gate and the check are both killed outright, wrangler keeps running. Fixing it needs the lock to accept groups from more than one process. `check:boot`'s Chromium is not recorded either, since playwright does not expose its pid.
 - [ ] `check:install` builds and installs a scratch site but does not take the run lock.
 - [ ] Bash hook gaps left after `roadmap/completed/agent-workflow.md`: a `cd` inside `if`, `while` or `for` counts as done, so `if x; then cd <worktree>; fi; git reset --hard` is silent in the main checkout (the same class as the `&&` gap the hook's header notes); unquoted glob operands (`curl https://x?y=1`), attached short forms (`rg -g*.ts`) and `fd -g *.ts` are not refused; zsh glob qualifiers (`*(.)`) and extglob patterns in `case` do not parse, so the hook asks.
 - [ ] Re-evaluate a dependency lint (dependency-cruiser or similar) as a QA hardening layer once development shifts from building to hardening — dropped while building, [Only the browser boundary is checked](../decisions/only-browser-boundary-is-checked.md)

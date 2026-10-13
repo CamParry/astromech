@@ -1,14 +1,14 @@
 /**
- * What the gate (`scripts/verify.mjs`) runs, how it calls Turborepo, where it
+ * What the gate (`scripts/verify.ts`) runs, how it calls Turborepo, where it
  * leaves its logs, and whether a run would be all cache hits.
  *
  * Each mode is one `turbo run` over the tasks in `turbo.json`:
  *
  * - `fast` runs no build: the packages' `typecheck`, `test:coverage` and
- *   `lint`, and `check:unused`, `check:hooks`, `check:scripts`, `lint:scripts`
+ *   `lint`, the scripts package's `test`, and `check:unused`, `check:hooks`
  *   and `format:check`. The demo apps' `typecheck` reads the builds, so fast
  *   mode names each package's `typecheck` (`<package>#typecheck`) for every
- *   package that is not private, read from the workspace. A `--filter` that
+ *   package outside `apps/`, read from the workspace. A `--filter` that
  *   leaves out the apps does not do it: with `--affected`, Turborepo drops the
  *   apps' tasks but keeps the builds they depend on.
  * - `full` runs every task, the builds, the apps' typecheck and the boot
@@ -40,28 +40,44 @@
  * lock. It matches when every task the mode would run is a cache hit.
  * `pnpm run verify:status` prints it and `pnpm run land` refuses without it.
  */
-import { execFileSync, spawnSync } from 'node:child_process';
+import { spawnSync } from 'node:child_process';
 import { mkdirSync, readdirSync, rmSync } from 'node:fs';
-import { join } from 'node:path';
+import { availableParallelism } from 'node:os';
+import { join, sep } from 'node:path';
 import process from 'node:process';
-import { workspacePackages } from './workspace-packages.mjs';
+import { cpuLimitsApply, WORKSPACE_CONCURRENCY } from './cpu-limits.ts';
+import { capture } from './run.ts';
+import { workspacePackages } from './workspace-packages.ts';
 
-export const MODES = ['fast', 'full', 'runtime'];
+export const MODES = ['fast', 'full', 'runtime'] as const;
+export type Mode = (typeof MODES)[number];
+
+/** Whether a run is scoped with `--affected`, and the line that says so. */
+export type Scope =
+    | { affected: true; base: string; line?: string }
+    | { affected: false; line?: string };
+
+/** A task of a planned run, from `turbo run --dry=json`. */
+export type PlannedTask = {
+    taskId: string;
+    status: 'HIT' | 'MISS';
+    dependencies: string[];
+    logFile: string;
+};
 
 /**
  * The tasks each mode asks for. Turborepo adds the tasks they depend on.
  * `PACKAGE_TYPECHECKS` stands for each package's `typecheck` (the header).
  */
 const PACKAGE_TYPECHECKS = Symbol('package typechecks');
-const TASKS = {
+const TASKS: Record<Mode, (string | typeof PACKAGE_TYPECHECKS)[]> = {
     fast: [
         PACKAGE_TYPECHECKS,
         'test:coverage',
         'lint',
+        '@astromech/scripts#test',
         '//#check:unused',
         '//#check:hooks',
-        '//#check:scripts',
-        '//#lint:scripts',
         '//#format:check',
     ],
     full: [
@@ -69,10 +85,9 @@ const TASKS = {
         'typecheck',
         'test:coverage',
         'lint',
+        '@astromech/scripts#test',
         '//#check:unused',
         '//#check:hooks',
-        '//#check:scripts',
-        '//#lint:scripts',
         '//#format:check',
         '//#check:docs',
         '//#check:exports',
@@ -90,15 +105,14 @@ const DEFAULT_BASE = 'origin/main';
 const NO_COMMAND = '<NONEXISTENT>';
 
 /** The tasks `mode` asks Turborepo for. */
-export function tasksForMode(repoRoot, mode) {
-    const tasks = TASKS[mode];
-    if (tasks === undefined) throw new Error(`unknown gate mode: ${mode}`);
-    return tasks.flatMap((task) =>
+export function tasksForMode(repoRoot: string, mode: Mode): string[] {
+    const apps = join(repoRoot, 'apps') + sep;
+    return TASKS[mode].flatMap((task) =>
         task === PACKAGE_TYPECHECKS
             ? workspacePackages(repoRoot)
                   .filter(
-                      ({ manifest }) =>
-                          manifest.private !== true &&
+                      ({ directory, manifest }) =>
+                          !directory.startsWith(apps) &&
                           manifest.scripts?.typecheck !== undefined
                   )
                   .map(({ name }) => `${name}#typecheck`)
@@ -107,14 +121,14 @@ export function tasksForMode(repoRoot, mode) {
 }
 
 /** The worktree's `verify/` directory. It may not exist yet. */
-export function verifyDirectory(repoRoot) {
+export function verifyDirectory(repoRoot: string): string {
     return join(git(repoRoot, 'rev-parse', '--absolute-git-dir'), 'verify');
 }
 
 /**
  * Creates the `verify/` directory and removes what an earlier run left in it.
  */
-export function prepareVerifyDirectory(repoRoot) {
+export function prepareVerifyDirectory(repoRoot: string): string {
     const directory = verifyDirectory(repoRoot);
     mkdirSync(directory, { recursive: true });
     for (const entry of readdirSync(directory)) {
@@ -126,13 +140,13 @@ export function prepareVerifyDirectory(repoRoot) {
 }
 
 /** Where a task's log goes: `@astromech/admin#lint` to `@astromech-admin#lint.log`. */
-export function logPath(directory, taskId) {
+export function logPath(directory: string, taskId: string): string {
     const name = taskId.replace(/^\/\/#/, 'root#').replaceAll('/', '-');
     return join(directory, `${name}.log`);
 }
 
 /** The one cache every worktree shares, unless `TURBO_CACHE_DIR` names another. */
-export function turboCacheDirectory(repoRoot) {
+export function turboCacheDirectory(repoRoot: string): string {
     return (
         process.env.TURBO_CACHE_DIR ||
         join(
@@ -146,10 +160,13 @@ export function turboCacheDirectory(repoRoot) {
  * Whether a run is scoped with `--affected`, and the line that says so.
  * `all` is the `--all` flag.
  */
-export function gateScope(repoRoot, { all = false } = {}) {
+export function gateScope(
+    repoRoot: string,
+    { all = false }: { all?: boolean } = {}
+): Scope & { line: string } {
     if (all) return { affected: false, line: 'scope: every task (--all)' };
     const base = process.env.TURBO_SCM_BASE || DEFAULT_BASE;
-    let mergeBase;
+    let mergeBase: string;
     try {
         mergeBase = git(repoRoot, 'merge-base', base, 'HEAD');
     } catch {
@@ -167,23 +184,28 @@ export function gateScope(repoRoot, { all = false } = {}) {
 
 /**
  * The environment a turbo call runs in: `base` without `NODE_ENV`, which
- * each tool sets for itself (`scripts/check-helpers.mjs`), plus the variables
+ * each tool sets for itself (`scripts/lib/check-helpers.ts`), plus the variables
  * the header names.
  */
-export function turboEnvironment(repoRoot, mode, scope, base = process.env) {
+export function turboEnvironment(
+    repoRoot: string,
+    mode: Mode,
+    scope: Scope,
+    base: NodeJS.ProcessEnv = process.env
+): NodeJS.ProcessEnv {
     const { NODE_ENV: _nodeEnv, ASTROMECH_NO_DTS: _noDts, ...environment } = base;
     return {
         ...environment,
         TURBO_CACHE_DIR: turboCacheDirectory(repoRoot),
         TURBO_TELEMETRY_DISABLED: '1',
-        ASTROMECH_NODE_MAJOR: process.versions.node.split('.')[0],
+        ASTROMECH_NODE_MAJOR: process.versions.node.split('.')[0] ?? '',
         ...(scope.affected ? { TURBO_SCM_BASE: scope.base } : {}),
         ...(mode === 'runtime' ? { ASTROMECH_NO_DTS: '1' } : {}),
     };
 }
 
 /** `turbo run` and the mode's tasks, with `--affected` when the scope says so. */
-export function turboRunArguments(repoRoot, mode, scope) {
+export function turboRunArguments(repoRoot: string, mode: Mode, scope: Scope): string[] {
     return [
         'run',
         ...tasksForMode(repoRoot, mode),
@@ -191,8 +213,21 @@ export function turboRunArguments(repoRoot, mode, scope) {
     ];
 }
 
+/**
+ * How many tasks a run starts at once (Turborepo's `--concurrency`). Locally,
+ * as many as pnpm ran packages at once before; at full speed, one per two
+ * cores. Each test suite already runs a vitest worker per core, so one task per
+ * core put four suites beside each other on a 4-core CI runner and slowed the
+ * crafted-file GPS tests past their 3 s limit.
+ */
+export function gateConcurrency(): number {
+    return cpuLimitsApply
+        ? WORKSPACE_CONCURRENCY
+        : Math.max(2, Math.floor(availableParallelism() / 2));
+}
+
 /** The repository's own turbo binary. */
-export function turboBinary(repoRoot) {
+export function turboBinary(repoRoot: string): string {
     return join(repoRoot, 'node_modules', '.bin', 'turbo');
 }
 
@@ -202,7 +237,11 @@ export function turboBinary(repoRoot) {
  * log file relative to the repository root. Tasks with no command are left out.
  * `scope` defaults to every task.
  */
-export function dryRun(repoRoot, mode, scope = { affected: false }) {
+export function dryRun(
+    repoRoot: string,
+    mode: Mode,
+    scope: Scope = { affected: false }
+): PlannedTask[] {
     const result = spawnSync(
         turboBinary(repoRoot),
         [...turboRunArguments(repoRoot, mode, scope), '--dry=json'],
@@ -218,8 +257,14 @@ export function dryRun(repoRoot, mode, scope = { affected: false }) {
             `turbo --dry=json failed (exit ${result.status ?? result.signal}):\n${result.stderr}`
         );
     }
-    return JSON.parse(result.stdout)
-        .tasks.filter((task) => task.command !== NO_COMMAND)
+    const { tasks } = JSON.parse(result.stdout) as {
+        tasks: (Omit<PlannedTask, 'status'> & {
+            command: string;
+            cache: { status: PlannedTask['status'] };
+        })[];
+    };
+    return tasks
+        .filter((task) => task.command !== NO_COMMAND)
         .map((task) => ({
             taskId: task.taskId,
             status: task.cache.status,
@@ -232,7 +277,11 @@ export function dryRun(repoRoot, mode, scope = { affected: false }) {
  * Whether every task a run of `mode` would run is already a cache hit, with a
  * line saying why. `all` is the `--all` flag.
  */
-export function gateStatus(repoRoot, mode, { all = false } = {}) {
+export function gateStatus(
+    repoRoot: string,
+    mode: Mode,
+    { all = false }: { all?: boolean } = {}
+): { matches: boolean; tasks: PlannedTask[]; message: string } {
     const scope = gateScope(repoRoot, { all });
     const tasks = dryRun(repoRoot, mode, scope);
     const misses = tasks.filter((task) => task.status !== 'HIT');
@@ -265,9 +314,16 @@ export function gateStatus(repoRoot, mode, { all = false } = {}) {
  * A task with no failed task among its dependencies, as after a run that
  * stopped early, traces to undefined.
  */
-export function skippedTasks(plan, executed, failed) {
+export function skippedTasks(
+    plan: readonly Pick<PlannedTask, 'taskId' | 'dependencies'>[],
+    executed: ReadonlySet<string>,
+    failed: ReadonlySet<string>
+): { taskId: string; needs: string | undefined }[] {
     const byId = new Map(plan.map((task) => [task.taskId, task]));
-    const failedDependency = (taskId, seen = new Set()) => {
+    const failedDependency = (
+        taskId: string,
+        seen = new Set<string>()
+    ): string | undefined => {
         if (seen.has(taskId)) return undefined;
         seen.add(taskId);
         for (const dependency of byId.get(taskId)?.dependencies ?? []) {
@@ -282,10 +338,6 @@ export function skippedTasks(plan, executed, failed) {
         .map((task) => ({ taskId: task.taskId, needs: failedDependency(task.taskId) }));
 }
 
-function git(repoRoot, ...args) {
-    return execFileSync('git', args, {
-        cwd: repoRoot,
-        encoding: 'utf8',
-        stdio: ['ignore', 'pipe', 'ignore'],
-    }).trim();
+function git(repoRoot: string, ...args: string[]): string {
+    return capture('git', args, { cwd: repoRoot, stdio: ['ignore', 'pipe', 'ignore'] });
 }

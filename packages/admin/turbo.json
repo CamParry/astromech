@@ -1,7 +1,8 @@
 {
     // The admin's tasks read its own files and the source of core and the
-    // schema engine, through `paths` and vitest aliases. The root `turbo.json`
-    // has the rest.
+    // schema engine, through `paths` and vitest aliases, and its tests and
+    // type checks `scripts/lib/cpu-limits.ts`, which core's shared vitest
+    // settings import. The root `turbo.json` has the rest.
     "$schema": "../../node_modules/turbo/schema.json",
     "extends": ["//"],
     "tasks": {
@@ -27,7 +28,8 @@
                 "$TURBO_ROOT$/packages/schema-engine/src/**",
                 "$TURBO_ROOT$/packages/astromech/src/**",
                 "$TURBO_ROOT$/packages/astromech/tests/_support/**",
-                "$TURBO_ROOT$/packages/astromech/tsconfig.json"
+                "$TURBO_ROOT$/packages/astromech/tsconfig.json",
+                "$TURBO_ROOT$/scripts/lib/cpu-limits.ts"
             ]
         },
         "lint": {
@@ -47,7 +49,8 @@
                 "$TURBO_ROOT$/packages/schema-engine/src/**",
                 "$TURBO_ROOT$/packages/astromech/src/**",
                 "$TURBO_ROOT$/packages/astromech/tests/_support/**",
-                "$TURBO_ROOT$/packages/astromech/tsconfig.json"
+                "$TURBO_ROOT$/packages/astromech/tsconfig.json",
+                "$TURBO_ROOT$/scripts/lib/cpu-limits.ts"
             ]
         }
     }

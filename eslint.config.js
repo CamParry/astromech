@@ -359,7 +359,7 @@ export default tseslint.config(
     },
     {
         // Repo tooling: plain Node, run by npm scripts rather than bundled.
-        files: ['scripts/**/*.mjs'],
+        files: ['scripts/**/*.{mjs,ts}'],
         languageOptions: {
             globals: {
                 console: 'readonly',
@@ -403,11 +403,11 @@ export default tseslint.config(
         // `BETTER_AUTH_SECRET` is in the boot checks' `env`, in the demo apps'
         // `turbo.json`, which the rule does not match to files under
         // `scripts/`. `NODE_ENV` is dropped on purpose
-        // (`scripts/check-helpers.mjs`). pnpm sets `INIT_CWD` and
+        // (`scripts/lib/check-helpers.ts`). pnpm sets `INIT_CWD` and
         // `npm_lifecycle_event`, the `TURBO_` ones configure Turborepo, and
         // the `GIT_` ones are git's, which a test sets for a throwaway
         // repository.
-        files: ['scripts/**/*.mjs'],
+        files: ['scripts/**/*.{mjs,ts}'],
         rules: {
             'turbo/no-undeclared-env-vars': [
                 'error',

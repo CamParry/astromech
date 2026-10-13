@@ -128,7 +128,7 @@ import { createRequire, stripTypeScriptTypes } from 'node:module';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath, URL, URLSearchParams } from 'node:url';
 import { parseEnv } from 'node:util';
-import { REQUEST_TIMEOUT_MS, sleep } from './check-helpers.mjs';
+import { REQUEST_TIMEOUT_MS, sleep } from './lib/check-helpers.ts';
 
 // The captcha checks pass functions to chromium, which run in the page.
 /* global window, document */

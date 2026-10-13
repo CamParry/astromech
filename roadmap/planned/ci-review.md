@@ -47,7 +47,7 @@ and cancels superseded runs.
   `check:unused`, `check:docs`, `check:exports`), and a build job (build,
   `check:node-imports`, both boot checks). The verdict waits on the slowest job,
   not the sum.
-- **CI still runs only `verify.mjs`.** It gains `--only <group>`; each job runs
+- **CI still runs only `verify.ts`.** It gains `--only <group>`; each job runs
   one group, and a test checks the groups together equal the full mode, so the
   rule in `ci.yml`'s header holds. Rejected: CI calling package scripts
   directly, which is the drift that header rules out.
@@ -68,7 +68,7 @@ and cancels superseded runs.
 - [ ] **Does each check earn its time?** For each check in `verify` and each CI
       job, what defect it has caught (git history, CI failures), and whether
       another check would have caught it too. Propose cuts; don't make them.
-- [ ] `verify.mjs --only <group>`, and the test that the groups cover the full
+- [ ] `verify.ts --only <group>`, and the test that the groups cover the full
       mode.
 - [ ] Split `ci.yml` into the jobs above, with the Node matrix.
 - [ ] The Playwright cache action, used by the build and install jobs.

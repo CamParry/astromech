@@ -5,7 +5,7 @@
 import { readdir, stat } from 'node:fs/promises';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { workspaceDependencies, workspacePackages } from './workspace-packages.mjs';
+import { workspaceDependencies, workspacePackages } from './lib/workspace-packages.ts';
 
 const repoRoot = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 

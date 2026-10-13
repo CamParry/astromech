@@ -17,7 +17,7 @@ concurrency:
     group: ${{ github.workflow }}-${{ github.event_name }}-${{ github.ref }}
     cancel-in-progress: true
 
-# The gate is one script, scripts/verify.mjs, so CI and a developer run the same
+# The gate is one script, scripts/verify.ts, so CI and a developer run the same
 # checks and the two cannot drift. It runs the tasks in turbo.json through
 # Turborepo. `pnpm run verify --all` runs the whole gate on the Active LTS;
 # `verify:runtime --all` runs only the version-sensitive subset, the test
@@ -36,8 +36,11 @@ concurrency:
 # package.json, so the toolchain is pinned in one place. It runs before
 # `setup-node`, which needs pnpm on PATH already to resolve `cache: pnpm`.
 #
-# 22 is `engines.node`, the floor a consumer may install on; 24 is the Active
-# LTS most of them run. Node 20 cannot be here: pnpm 11 requires at least
+# 22 is the published packages' `engines.node`, the floor a consumer may
+# install on; 24 is the Active LTS most of them run. `22` resolves to the
+# newest 22.x release, which is at least the root `engines.node`, 22.18: the
+# scripts are TypeScript run by plain `node`, which strips types without a flag
+# from that release. Node 20 cannot be here: pnpm 11 requires at least
 # v22.13, and `cache: pnpm` makes `setup-node` run `pnpm store path`, so a
 # Node 20 job dies at that step before installing anything. Node 20 reached end
 # of life in April 2026 in any case.

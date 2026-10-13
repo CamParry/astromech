@@ -20,7 +20,7 @@
  * else `/tmp` (`/private/tmp` on macOS). The hook compares real paths and needs the `scratchpad`
  * segment, so `<tmp>/claude-<uid>` itself and a session's other directories (its `tasks` output)
  * do not count. Agents build throwaway repositories there (bare remotes and clones to test
- * `land.mjs` and Worktrunk), so destroying their work loses nothing. A push that rewrites or
+ * `land.ts` and Worktrunk), so destroying their work loses nothing. A push that rewrites or
  * deletes remote refs still asks, since a scratch clone's remote can be a real one.
  *
  * A function body (`name() { …; }`, `function name { …; }`) is judged where it is defined, in a
@@ -463,7 +463,7 @@ function inspectCommand(words, shellDirectory, findings) {
         findings.push({
             kind: 'refused',
             label: truncate(args.map((word) => word.text).join(' ')),
-            why: '`--no-gate-check` skips the check that the gate passed on the tree being landed, and is only for the throwaway repositories `scripts/land.mjs` is tested on. Run `pnpm run verify`, then `pnpm run land` without the flag',
+            why: '`--no-gate-check` skips the check that the gate passed on the tree being landed, and is only for the throwaway repositories `scripts/land.ts` is tested on. Run `pnpm run verify`, then `pnpm run land` without the flag',
         });
     }
     return undefined;
@@ -479,12 +479,12 @@ const PACKAGE_MANAGER_VALUE_OPTIONS = new Set([
 ]);
 
 /**
- * Whether a command runs `scripts/land.mjs`: `pnpm run land`, `pnpm land`, `npm run land`,
- * `node <path>/land.mjs` or the script itself.
+ * Whether a command runs `scripts/land.ts`: `pnpm run land`, `pnpm land`, `npm run land`,
+ * `node <path>/land.ts` or the script itself.
  */
 function runsLandScript(name, args) {
-    if (name === 'land.mjs') return true;
-    if (name === 'node') return args.some((word) => basename(word.text) === 'land.mjs');
+    if (name === 'land.ts') return true;
+    if (name === 'node') return args.some((word) => basename(word.text) === 'land.ts');
     if (name !== 'pnpm' && name !== 'npm') return false;
     const operands = [];
     for (let index = 0; index < args.length; index += 1) {

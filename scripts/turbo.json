@@ -1,0 +1,32 @@
+{
+    // The scripts package's own tasks read only its own files, and wait for
+    // nothing: no script imports a package's source or `dist`. The tests also
+    // read the workspace's manifests and the root `turbo.json`
+    // (`lib/gate.test.ts`, `lib/workspace-packages.test.ts`). The package has
+    // no build and no coverage run, so it leaves out those tasks, which would
+    // otherwise wait for `//#routes:generate`.
+    "$schema": "../node_modules/turbo/schema.json",
+    "extends": ["//"],
+    "tasks": {
+        "build": { "extends": false },
+        "test:coverage": { "extends": false },
+        "typecheck": {
+            "dependsOn": [],
+            "inputs": ["$TURBO_DEFAULT$", "!**/*.md"]
+        },
+        "lint": {
+            "dependsOn": [],
+            "inputs": ["$TURBO_DEFAULT$", "!**/*.md"]
+        },
+        "test": {
+            "inputs": [
+                "$TURBO_DEFAULT$",
+                "!**/*.md",
+                "$TURBO_ROOT$/turbo.json",
+                "$TURBO_ROOT$/packages/*/package.json",
+                "$TURBO_ROOT$/packages/plugins/*/package.json",
+                "$TURBO_ROOT$/apps/*/package.json"
+            ]
+        }
+    }
+}

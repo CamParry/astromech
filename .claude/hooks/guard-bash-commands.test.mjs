@@ -667,10 +667,10 @@ describe('landing without the gate check', () => {
             'pnpm land --no-gate-check',
             'pnpm run land -- --no-gate-check --no-ci',
             'pnpm -C ../site-worktrees/feature run land --message-file m.txt --no-gate-check',
-            'node scripts/land.mjs --no-gate-check',
-            `node "${site}/scripts/land.mjs" --dry-run --no-gate-check`,
+            'node scripts/land.ts --no-gate-check',
+            `node "${site}/scripts/land.ts" --dry-run --no-gate-check`,
             `cd "${worktree}" && pnpm run land --no-gate-check`,
-            `cd "${scratchRepository}" && node ../../scripts/land.mjs --no-gate-check`,
+            `cd "${scratchRepository}" && node ../../scripts/land.ts --no-gate-check`,
             "bash -c 'pnpm run land --no-gate-check'",
         ]) {
             const result = runHook(command);
@@ -683,7 +683,7 @@ describe('landing without the gate check', () => {
         for (const command of [
             'pnpm run land',
             `cd "${worktree}" && pnpm run land --message-file m.txt --no-ci`,
-            'node scripts/land.mjs --dry-run',
+            'node scripts/land.ts --dry-run',
             'pnpm run verify && pnpm run verify:status',
             'echo "never pnpm run land --no-gate-check"',
             'pnpm run other --no-gate-check',

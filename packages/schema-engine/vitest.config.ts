@@ -1,5 +1,5 @@
 import { defineConfig } from 'vitest/config';
-import { cpuLimitsApply, TEST_WORKERS } from '../../scripts/cpu-limits.mjs';
+import { cpuLimitsApply, TEST_WORKERS } from '../../scripts/lib/cpu-limits';
 
 // The schema engine sits below core and is published on its own, so its tests
 // do not reach into core's test support. This config copies what

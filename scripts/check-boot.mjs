@@ -37,7 +37,7 @@
 //
 // The server runs as it does when deployed: with `NODE_ENV` unset, and with
 // `BETTER_AUTH_SECRET` from the environment or a throwaway value
-// (`scripts/check-helpers.mjs`), so the check needs nothing set by hand.
+// (`scripts/lib/check-helpers.ts`), so the check needs nothing set by hand.
 //
 // Slow (a full Astro build plus a browser), so it is run on demand and in CI,
 // never from the pre-commit hook. It is not skippable: a check that can be
@@ -53,20 +53,20 @@ import {
     environmentWithoutNodeEnv,
     expectStatus,
     freePort,
-    run,
     step,
     waitForServer,
-} from './check-helpers.mjs';
-import { relaunchAtLowerPriority } from './cpu-limits.mjs';
-import { stopProcessGroup } from './process-group.mjs';
+} from './lib/check-helpers.ts';
+import { relaunchAtLowerPriority } from './lib/cpu-limits.ts';
+import { stopProcessGroup } from './lib/process-group.ts';
+import { recordProcessGroups, waitForRunLock } from './lib/run-lock.ts';
+import { run } from './lib/run.ts';
 import { requireFreshDist } from './require-fresh-dist.mjs';
-import { recordProcessGroups, waitForRunLock } from './run-lock.mjs';
 
 // First, before anything prints: the build, server and browser inherit the
-// priority (`scripts/cpu-limits.mjs`).
+// priority (`scripts/lib/cpu-limits.ts`).
 relaunchAtLowerPriority();
 
-// One heavy run at a time on this machine (`scripts/run-lock.mjs`). Under
+// One heavy run at a time on this machine (`scripts/lib/run-lock.ts`). Under
 // `verify`, the gate holds the lock and this goes ahead.
 const ownsLock = await waitForRunLock('check:boot');
 
@@ -132,15 +132,20 @@ async function main() {
     };
 
     step('migrating a scratch database');
-    await run(
-        'pnpm',
-        ['-F', 'astromech-demo', 'db:init'],
-        { cwd: repoRoot, env, ...groupOptions },
-        started
-    );
+    await run('pnpm', ['-F', 'astromech-demo', 'db:init'], {
+        cwd: repoRoot,
+        env,
+        ...groupOptions,
+        onSpawn: started,
+    });
 
     step('building apps/demo');
-    await run('pnpm', ['build'], { cwd: demoDir, env, ...groupOptions }, started);
+    await run('pnpm', ['build'], {
+        cwd: demoDir,
+        env,
+        ...groupOptions,
+        onSpawn: started,
+    });
 
     const port = await freePort();
     const base = `http://127.0.0.1:${port}`;

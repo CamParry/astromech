@@ -1,9 +1,12 @@
 /**
- * Helpers the check scripts share: step lines, child processes, the environment
- * they run in, a free port, and requests with a deadline.
+ * Helpers the check scripts share: step lines, the environment their child
+ * processes run in, a free port, and requests with a deadline. Child processes
+ * start through `run.ts`.
  */
-import { spawn } from 'node:child_process';
+import type { AddressInfo } from 'node:net';
+import console from 'node:console';
 import { createServer } from 'node:net';
+import process from 'node:process';
 
 /** Requests to give a server to open its port before giving up. */
 const READY_ATTEMPTS = 60;
@@ -24,7 +27,7 @@ export const REQUEST_TIMEOUT_MS = 10_000;
 const THROWAWAY_AUTH_SECRET = 'check-secret-0123456789abcdef0123456789abcdef';
 
 /** The `BETTER_AUTH_SECRET` a check's server runs with: the environment's, or a throwaway. */
-export function betterAuthSecret() {
+export function betterAuthSecret(): string {
     return process.env.BETTER_AUTH_SECRET || THROWAWAY_AUTH_SECRET;
 }
 
@@ -37,7 +40,7 @@ export function betterAuthSecret() {
  * server skips its production-only refusals. `name` labels the one line printed
  * when a value is dropped.
  */
-export function environmentWithoutNodeEnv(name) {
+export function environmentWithoutNodeEnv(name: string): NodeJS.ProcessEnv {
     const { NODE_ENV: nodeEnv, ...environment } = process.env;
     if (nodeEnv !== undefined) {
         console.log(
@@ -48,33 +51,17 @@ export function environmentWithoutNodeEnv(name) {
 }
 
 /** Print the line that opens a step of a check. */
-export function step(message) {
+export function step(message: string): void {
     console.log(`\n> ${message}`);
 }
 
-/**
- * Run a command to completion, failing the check on a non-zero exit.
- * `onSpawn`, when given, receives the child process once it is spawned.
- */
-export function run(command, args, options, onSpawn) {
-    return new Promise((fulfil, reject) => {
-        const child = spawn(command, args, { stdio: 'inherit', ...options });
-        onSpawn?.(child);
-        child.on('error', reject);
-        child.on('exit', (code) => {
-            if (code === 0) fulfil();
-            else reject(new Error(`${command} ${args.join(' ')} exited with ${code}`));
-        });
-    });
-}
-
 /** A port the OS just told us is free. Raced in principle, never in practice. */
-export function freePort() {
+export function freePort(): Promise<number> {
     return new Promise((fulfil, reject) => {
         const probe = createServer();
         probe.on('error', reject);
         probe.listen(0, '127.0.0.1', () => {
-            const { port } = probe.address();
+            const { port } = probe.address() as AddressInfo;
             probe.close(() => fulfil(port));
         });
     });
@@ -84,7 +71,10 @@ export function freePort() {
  * Wait until `base` answers a request with any status. `server` is the handle
  * whose `exited` field is set when the server's process exits.
  */
-export async function waitForServer(base, server) {
+export async function waitForServer(
+    base: string,
+    server: { exited?: number | string | null }
+): Promise<void> {
     // Distinguishes the two ways this loop runs out: nothing ever listened, or
     // something listened and would not answer. They have different causes and
     // the same symptom, so the message has to say which one happened.
@@ -97,7 +87,7 @@ export async function waitForServer(base, server) {
             await request(base);
             return;
         } catch (error) {
-            if (error.name === 'TimeoutError') connected = true;
+            if (error instanceof Error && error.name === 'TimeoutError') connected = true;
             await sleep(READY_INTERVAL_MS);
         }
     }
@@ -109,7 +99,7 @@ export async function waitForServer(base, server) {
 }
 
 /** `fetch` with a deadline. See REQUEST_TIMEOUT_MS. */
-export function request(url) {
+export function request(url: string | URL): Promise<Response> {
     return fetch(url, {
         redirect: 'manual',
         signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
@@ -123,10 +113,16 @@ const BODY_EXCERPT_LENGTH = 2000;
  * Fail unless `url` answers with the `expected` status. The failure carries
  * the start of the response body, which is often the only place the cause is.
  */
-export async function expectStatus(url, expected, description) {
+export async function expectStatus(
+    url: string,
+    expected: number,
+    description: string
+): Promise<void> {
     const response = await request(url);
     if (response.status !== expected) {
-        const body = await response.text().catch((error) => `(unreadable: ${error})`);
+        const body = await response
+            .text()
+            .catch((error: unknown) => `(unreadable: ${String(error)})`);
         const excerpt = body.trim().slice(0, BODY_EXCERPT_LENGTH);
         throw new Error(
             `${url} returned ${response.status}, expected ${expected} — ${description}` +
@@ -137,6 +133,6 @@ export async function expectStatus(url, expected, description) {
 }
 
 /** Resolve after `ms` milliseconds. */
-export function sleep(ms) {
+export function sleep(ms: number): Promise<void> {
     return new Promise((fulfil) => setTimeout(fulfil, ms));
 }

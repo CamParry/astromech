@@ -8,11 +8,21 @@
     "extends": ["//"],
     "tasks": {
         "build": { "extends": false },
-        // `scripts/check-boot.mjs`. The `.env` is read by the build, and git
-        // ignores it.
+        // `scripts/check-boot.mjs`, which reads the scripts listed here. The
+        // `.env` is read by the build, and git ignores it.
         "check:boot": {
             "dependsOn": ["^build", "//#routes:generate"],
-            "inputs": ["$TURBO_DEFAULT$", "!**/*.md", ".env"],
+            "inputs": [
+                "$TURBO_DEFAULT$",
+                "!**/*.md",
+                ".env",
+                "$TURBO_ROOT$/scripts/check-boot.mjs",
+                "$TURBO_ROOT$/scripts/admin-browser-check.mjs",
+                "$TURBO_ROOT$/scripts/require-fresh-dist.mjs",
+                "$TURBO_ROOT$/scripts/lib/**",
+                "!$TURBO_ROOT$/scripts/lib/**/*.test.ts",
+                "$TURBO_ROOT$/scripts/package.json"
+            ],
             "env": ["BETTER_AUTH_SECRET"]
         },
         // After the boot check, because `astro sync` here and `astro build`

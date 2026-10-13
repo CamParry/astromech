@@ -2,8 +2,9 @@
     // Core's tasks read its own files, the source of the admin and the schema
     // engine (`paths` and vitest aliases), the first-party plugins' source,
     // migrations and manifests (`tests/_support/test-db.ts`,
-    // `plugin-contract.ts`), and parts of `apps/demo`: its migrations, its
-    // local plugin and its manifest. The root `turbo.json` has the rest.
+    // `plugin-contract.ts`), parts of `apps/demo`: its migrations, its local
+    // plugin and its manifest, and `scripts/lib/cpu-limits.ts`, which the
+    // shared vitest settings import. The root `turbo.json` has the rest.
     "$schema": "../../node_modules/turbo/schema.json",
     "extends": ["//"],
     "tasks": {
@@ -20,7 +21,8 @@
                 "$TURBO_ROOT$/apps/demo/migrations/**",
                 "$TURBO_ROOT$/apps/demo/src/plugins/**",
                 "!$TURBO_ROOT$/apps/demo/src/plugins/**/*.md",
-                "$TURBO_ROOT$/apps/demo/package.json"
+                "$TURBO_ROOT$/apps/demo/package.json",
+                "$TURBO_ROOT$/scripts/lib/cpu-limits.ts"
             ]
         },
         "lint": {
@@ -47,7 +49,8 @@
                 "$TURBO_ROOT$/apps/demo/migrations/**",
                 "$TURBO_ROOT$/apps/demo/src/plugins/**",
                 "!$TURBO_ROOT$/apps/demo/src/plugins/**/*.md",
-                "$TURBO_ROOT$/apps/demo/package.json"
+                "$TURBO_ROOT$/apps/demo/package.json",
+                "$TURBO_ROOT$/scripts/lib/cpu-limits.ts"
             ]
         }
     }

@@ -1,7 +1,7 @@
 /**
  * A lock that lets one heavy run at a time go ahead on this machine: the gate
- * (`scripts/verify.mjs`), the root `build`, `build:js` and `test:run` scripts
- * and the two boot checks. Two of them at once have run a 16 GB laptop out of
+ * (`scripts/verify.ts`), the root `build`, `build:js` and `test:run` scripts
+ * (`scripts/turbo.ts --lock`) and the two boot checks. Two of them at once have run a 16 GB laptop out of
  * memory, whether they ran in the same worktree, in two worktrees or from two
  * sessions. A run that finds the lock held prints one line naming the holder,
  * waits, and starts when the lock is free.
@@ -21,8 +21,7 @@
  *
  * An owner that starts its work in process groups of its own records those
  * groups in the lock file (`recordProcessGroups`): the gate one per check, the
- * boot checks their build and server, and `run-at-lower-priority.mjs --lock`
- * its command. An owner killed outright leaves them running, so a run that
+ * boot checks their build and server, and `runCommand` its command. An owner killed outright leaves them running, so a run that
  * finds the owner gone waits until none of its recorded groups is running
  * either.
  *
@@ -40,10 +39,10 @@
  * Such a run records nothing: the lock file is its ancestor's, which lists the
  * group the run is in.
  *
- * Used by `scripts/verify.mjs`, the boot checks and
- * `scripts/run-at-lower-priority.mjs` (its `--lock` flag).
+ * Used by `scripts/verify.ts`, the boot checks and `scripts/turbo.ts` (its
+ * `--lock` flag, through `runCommand`).
  */
-import { execFileSync } from 'node:child_process';
+import { execFileSync, spawn } from 'node:child_process';
 import console from 'node:console';
 import {
     linkSync,
@@ -58,7 +57,7 @@ import { tmpdir } from 'node:os';
 import { dirname, join, resolve } from 'node:path';
 import process from 'node:process';
 import { fileURLToPath } from 'node:url';
-import { processGroupIsRunning } from './process-group.mjs';
+import { processGroupIsRunning, signalGroup } from './process-group.ts';
 
 const LOCK_PATH = join(tmpdir(), 'astromech-run.lock');
 
@@ -77,10 +76,23 @@ const POLL_MS = 5000;
  */
 const UNREADABLE_GRACE_MS = 30_000;
 
-const worktree = resolve(dirname(fileURLToPath(import.meta.url)), '..');
+const worktree = resolve(dirname(fileURLToPath(import.meta.url)), '..', '..');
+
+/** What the lock file holds. */
+type LockRecord = {
+    pid: number;
+    processStart?: string | undefined;
+    worktree: string;
+    name: string;
+    startedAt: number;
+    groups?: number[];
+};
+
+/** The lock file's text and owner, or `missing`. */
+type LockFile = 'missing' | { text: string; holder: LockRecord | undefined };
 
 /** This process's lock record, once it holds the lock. */
-let ownRecord;
+let ownRecord: LockRecord | undefined;
 
 /**
  * Waits until this process holds the lock, then returns true. `name` is the
@@ -88,9 +100,9 @@ let ownRecord;
  * (`npm_lifecycle_event`) is used when it is set. Returns false at once when an
  * ancestor holds the lock.
  */
-export async function waitForRunLock(name) {
+export async function waitForRunLock(name: string): Promise<boolean> {
     if (ancestorHoldsLock()) return false;
-    const record = {
+    const record: LockRecord = {
         pid: process.pid,
         processStart: processStart(process.pid),
         worktree,
@@ -98,8 +110,8 @@ export async function waitForRunLock(name) {
         startedAt: Date.now(),
     };
     const waitStarted = Date.now();
-    let reported;
-    const report = (key, message) => {
+    let reported: string | undefined;
+    const report = (key: string, message: string): void => {
         if (key === reported) return;
         reported = key;
         console.log(`run-lock: ${message}; checking every ${POLL_MS / 1000} s`);
@@ -156,7 +168,7 @@ export async function waitForRunLock(name) {
  * process holds the lock. The file is replaced by a rename, so a reader never
  * sees it half written.
  */
-export function recordProcessGroups(groups) {
+export function recordProcessGroups(groups: number[]): void {
     if (ownRecord === undefined) return;
     ownRecord = { ...ownRecord, groups };
     const scratch = `${LOCK_PATH}.${process.pid}.tmp`;
@@ -169,15 +181,81 @@ export function recordProcessGroups(groups) {
  * it directly only before a process stops itself with a signal, which skips
  * the `exit` event.
  */
-export function releaseRunLock() {
+export function releaseRunLock(): void {
     ownRecord = undefined;
     const lock = readLock();
     if (lock === 'missing' || lock.holder?.pid !== process.pid) return;
     try {
         unlinkSync(LOCK_PATH);
     } catch (error) {
-        if (error.code !== 'ENOENT') throw error;
+        if (errorCode(error) !== 'ENOENT') throw error;
     }
+}
+
+/** How a command ended: its exit code, or the signal that stopped it. */
+export type Ending = { code: number | null; signal: NodeJS.Signals | null };
+
+/**
+ * Runs `command` to its end, and resolves with how it ended. With `lock`, the
+ * run's name in other runs' waiting lines, it first waits for the lock and
+ * holds it while the command runs.
+ *
+ * When this process takes the lock, the command runs in a process group of its
+ * own, recorded in the lock file, with no stdin, and every signal that stops
+ * this process is passed on to that group: a Ctrl-C at a terminal reaches only
+ * this process's group. Otherwise, without `lock` or under an ancestor's lock,
+ * the command stays in this process's group, which an ancestor lists, a
+ * Ctrl-C reaches it directly, and SIGTERM and SIGHUP sent to this process
+ * alone are passed on. Not on Windows, which has no process groups.
+ */
+export async function runCommand(
+    command: string,
+    args: readonly string[],
+    { cwd, env, lock }: { cwd?: string; env: NodeJS.ProcessEnv; lock?: string }
+): Promise<Ending> {
+    const ownsLock = lock !== undefined && (await waitForRunLock(lock));
+    const ownGroup = ownsLock && process.platform !== 'win32';
+    const child = spawn(command, args, {
+        cwd,
+        env,
+        // A process outside the terminal's foreground group that reads from it
+        // is stopped, so the command gets no stdin of its own.
+        stdio: ownGroup ? ['ignore', 'inherit', 'inherit'] : 'inherit',
+        detached: ownGroup,
+    });
+    const forward = (signal: NodeJS.Signals): void => {
+        if (child.pid === undefined) return;
+        if (ownGroup) signalGroup(child.pid, signal);
+        else child.kill(signal);
+    };
+    if (ownGroup) {
+        if (child.pid !== undefined) recordProcessGroups([child.pid]);
+        for (const signal of ['SIGINT', 'SIGTERM', 'SIGHUP'] as const) {
+            process.on(signal, forward);
+        }
+    } else {
+        // Ctrl-C at a terminal reaches the command too, so this waits for it to exit.
+        process.on('SIGINT', () => undefined);
+        for (const signal of ['SIGTERM', 'SIGHUP'] as const) process.on(signal, forward);
+    }
+    return new Promise((fulfil, reject) => {
+        child.on('error', reject);
+        child.on('exit', (code, signal) => fulfil({ code, signal }));
+    });
+}
+
+/**
+ * Ends this process as `ending` says: with its exit code, or stopped by the
+ * same signal, after releasing the lock, since a signal skips the `exit` event.
+ */
+export function endAs({ code, signal }: Ending): void {
+    if (signal === null) {
+        process.exitCode = code ?? 1;
+        return;
+    }
+    releaseRunLock();
+    process.removeAllListeners(signal);
+    process.kill(process.pid, signal);
 }
 
 /**
@@ -185,7 +263,7 @@ export function releaseRunLock() {
  * running, or it was killed and the lock file still names it, as when a check
  * the gate started outlives the gate.
  */
-function ancestorHoldsLock() {
+function ancestorHoldsLock(): boolean {
     const pid = Number(process.env[HOLDER_VARIABLE]);
     if (!Number.isInteger(pid) || pid <= 0) return false;
     if (isRunning(pid)) return true;
@@ -193,12 +271,12 @@ function ancestorHoldsLock() {
     return lock !== 'missing' && lock.holder?.pid === pid;
 }
 
-function tryCreate(text) {
+function tryCreate(text: string): boolean {
     try {
         writeFileSync(LOCK_PATH, text, { flag: 'wx' });
         return true;
     } catch (error) {
-        if (error.code === 'EEXIST') return false;
+        if (errorCode(error) === 'EEXIST') return false;
         throw error;
     }
 }
@@ -207,23 +285,26 @@ function tryCreate(text) {
  * The lock file's text and owner, or `missing`. `holder` is undefined when the
  * file is unreadable, as while its owner is still writing it.
  */
-function readLock(path = LOCK_PATH) {
-    let text;
+function readLock(path = LOCK_PATH): LockFile {
+    let text: string;
     try {
         text = readFileSync(path, 'utf8');
     } catch (error) {
-        if (error.code === 'ENOENT') return 'missing';
+        if (errorCode(error) === 'ENOENT') return 'missing';
         throw error;
     }
     try {
-        const holder = JSON.parse(text);
-        return { text, holder: Number.isInteger(holder?.pid) ? holder : undefined };
+        const holder = JSON.parse(text) as LockRecord | null;
+        return {
+            text,
+            holder: holder !== null && Number.isInteger(holder.pid) ? holder : undefined,
+        };
     } catch {
         return { text, holder: undefined };
     }
 }
 
-function modifiedAt() {
+function modifiedAt(): number {
     try {
         return statSync(LOCK_PATH).mtimeMs;
     } catch {
@@ -239,12 +320,12 @@ function modifiedAt() {
  * lock in the moment the file is aside would run beside that one; that window
  * is a few system calls wide.
  */
-function takeOver(stale) {
+function takeOver(stale: string): boolean {
     const aside = `${LOCK_PATH}.${process.pid}.stale`;
     try {
         renameSync(LOCK_PATH, aside);
     } catch (error) {
-        if (error.code === 'ENOENT') return false;
+        if (errorCode(error) === 'ENOENT') return false;
         throw error;
     }
     const moved = readLock(aside);
@@ -256,7 +337,7 @@ function takeOver(stale) {
         // Unlike a rename, a link fails rather than replace a lock created meanwhile.
         linkSync(aside, LOCK_PATH);
     } catch (error) {
-        if (error.code !== 'EEXIST') throw error;
+        if (errorCode(error) !== 'EEXIST') throw error;
     }
     unlinkSync(aside);
     return false;
@@ -267,7 +348,7 @@ function takeOver(stale) {
  * system has since given to another process keeps its file until that process
  * ends; the file is only clutter.
  */
-function removeLeftoverFiles() {
+function removeLeftoverFiles(): void {
     const directory = dirname(LOCK_PATH);
     for (const file of readdirSync(directory)) {
         const pid = Number(LEFTOVER_FILE.exec(file)?.[1]);
@@ -275,7 +356,7 @@ function removeLeftoverFiles() {
         try {
             unlinkSync(join(directory, file));
         } catch (error) {
-            if (error.code !== 'ENOENT') throw error;
+            if (errorCode(error) !== 'ENOENT') throw error;
         }
     }
 }
@@ -285,7 +366,7 @@ function removeLeftoverFiles() {
  * record says. A record without a start time, or a system where `ps` gives
  * none, falls back to the pid alone.
  */
-function holderIsRunning(holder) {
+function holderIsRunning(holder: LockRecord): boolean {
     if (!isRunning(holder.pid)) return false;
     if (holder.processStart === undefined) return true;
     const started = processStart(holder.pid);
@@ -293,12 +374,12 @@ function holderIsRunning(holder) {
 }
 
 /** Signal 0 only asks whether the process exists. EPERM means it does, under another user. */
-function isRunning(pid) {
+function isRunning(pid: number): boolean {
     try {
         process.kill(pid, 0);
         return true;
     } catch (error) {
-        return error.code === 'EPERM';
+        return errorCode(error) === 'EPERM';
     }
 }
 
@@ -309,7 +390,7 @@ function isRunning(pid) {
  * boot time, which Linux reports a second off now and then. Elsewhere it is
  * what `ps` prints (`lstart`, to the second, in the C locale).
  */
-function processStart(pid) {
+function processStart(pid: number): string | undefined {
     if (process.platform === 'linux') {
         try {
             const stat = readFileSync(`/proc/${pid}/stat`, 'utf8');
@@ -332,12 +413,17 @@ function processStart(pid) {
     }
 }
 
-function describe({ name, worktree: path, pid }) {
+function describe({ name, worktree: path, pid }: LockRecord): string {
     return `${name} in ${path} (pid ${pid})`;
 }
 
-function duration(ms) {
+function duration(ms: number): string {
     const seconds = Math.max(0, Math.round(ms / 1000));
     const minutes = Math.floor(seconds / 60);
     return minutes > 0 ? `${minutes}m ${seconds % 60}s` : `${seconds}s`;
+}
+
+/** The `code` of a failed system call, such as `ENOENT`. */
+function errorCode(error: unknown): string | undefined {
+    return (error as NodeJS.ErrnoException).code;
 }

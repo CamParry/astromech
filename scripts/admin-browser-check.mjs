@@ -4,7 +4,7 @@
  * the Security screen.
  */
 import { URL } from 'node:url';
-import { REQUEST_TIMEOUT_MS, step } from './check-helpers.mjs';
+import { REQUEST_TIMEOUT_MS, step } from './lib/check-helpers.ts';
 
 // The policy check passes a function to chromium, which runs in the page.
 /* global window, document */

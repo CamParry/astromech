@@ -12,9 +12,10 @@
         "packages/plugins/backups/src/repository.ts": ["types"]
     },
     "workspaces": {
-        ".": {
-            "entry": ["scripts/*.mjs"],
-            "project": ["scripts/**/*.mjs"]
+        ".": { "project": [] },
+        "scripts": {
+            "entry": ["*.{mjs,ts}", "lib/*.test.ts"],
+            "project": ["**/*.{mjs,ts}"]
         },
         "packages/astromech": {
             "entry": [

@@ -52,11 +52,11 @@ import {
     environmentWithoutNodeEnv,
     expectStatus,
     freePort,
-    run,
     step,
     waitForServer,
-} from './check-helpers.mjs';
-import { stopProcessGroup } from './process-group.mjs';
+} from './lib/check-helpers.ts';
+import { stopProcessGroup } from './lib/process-group.ts';
+import { run } from './lib/run.ts';
 import { requireFreshDist } from './require-fresh-dist.mjs';
 
 const repoRoot = resolve(dirname(fileURLToPath(import.meta.url)), '..');

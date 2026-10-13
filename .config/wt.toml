@@ -24,7 +24,9 @@ node -e "const fs = require('fs'); const file = 'apps/demo/.env'; const line = '
 install = "pnpm install --frozen-lockfile"
 
 [[pre-start]]
-# The demo loads the integration from `dist/` (apps/demo/AGENTS.md).
+# The demo loads the integration from `dist/` (apps/demo/AGENTS.md). The build runs through
+# Turborepo with the cache every worktree shares (`scripts/turbo.ts`), so a package whose inputs
+# match an earlier build anywhere is restored rather than rebuilt.
 build = "pnpm run build"
 
 [[pre-start]]

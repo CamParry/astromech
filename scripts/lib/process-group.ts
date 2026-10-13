@@ -3,18 +3,24 @@
  * process it started, since they share its process group, and says whether a
  * group is still running. POSIX only, like the checks.
  */
+import type { ChildProcess } from 'node:child_process';
+import process from 'node:process';
 
 /**
  * Send SIGTERM to the child's whole process group, then SIGKILL to anything
  * still running after `graceMs`. Resolves once the group is empty or killed.
  */
-export async function stopProcessGroup(child, graceMs) {
-    if (!signalGroup(child.pid, 'SIGTERM')) return;
+export async function stopProcessGroup(
+    child: ChildProcess,
+    graceMs: number
+): Promise<void> {
+    const { pid } = child;
+    if (pid === undefined || !signalGroup(pid, 'SIGTERM')) return;
     const deadline = Date.now() + graceMs;
     // Signal 0 only asks whether any process in the group is still alive.
-    while (signalGroup(child.pid, 0)) {
+    while (signalGroup(pid, 0)) {
         if (Date.now() > deadline) {
-            signalGroup(child.pid, 'SIGKILL');
+            signalGroup(pid, 'SIGKILL');
             return;
         }
         await new Promise((fulfil) => setTimeout(fulfil, 100));
@@ -22,7 +28,7 @@ export async function stopProcessGroup(child, graceMs) {
 }
 
 /** Whether any live process is left in the process group `id`. */
-export function processGroupIsRunning(id) {
+export function processGroupIsRunning(id: number): boolean {
     return signalGroup(id, 0);
 }
 
@@ -32,12 +38,13 @@ export function processGroupIsRunning(id) {
  * parents have not reaped yet, and every process here runs as this user, so
  * EPERM means the same as ESRCH.
  */
-export function signalGroup(pid, signal) {
+export function signalGroup(pid: number, signal: NodeJS.Signals | 0): boolean {
     try {
         process.kill(-pid, signal);
         return true;
     } catch (error) {
-        if (error.code === 'ESRCH' || error.code === 'EPERM') return false;
+        const { code } = error as NodeJS.ErrnoException;
+        if (code === 'ESRCH' || code === 'EPERM') return false;
         throw error;
     }
 }

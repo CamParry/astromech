@@ -1,7 +1,7 @@
 /**
  * The tree a merge of two commits gives, written with
  * `git merge-tree --write-tree` (git 2.38 or later). It writes objects only:
- * no worktree, index or ref changes. `scripts/land.mjs` makes its merge
+ * no worktree, index or ref changes. `scripts/land.ts` makes its merge
  * commit with this tree.
  */
 import { spawnSync } from 'node:child_process';
@@ -16,7 +16,11 @@ const OBJECT_ID = /^(?:[0-9a-f]{40}|[0-9a-f]{64})$/;
  * anything else, such as an unknown commit or a git too old for
  * `--write-tree`.
  */
-export function mergedTree(cwd, base, tip) {
+export function mergedTree(
+    cwd: string,
+    base: string,
+    tip: string
+): { tree: string; conflicts: [] } | { tree: undefined; conflicts: string[] } {
     const result = spawnSync(
         'git',
         ['merge-tree', '--write-tree', '--name-only', base, tip],
@@ -28,8 +32,9 @@ export function mergedTree(cwd, base, tip) {
     // a blank line and git's messages. git also exits 1 on an unknown commit,
     // printing nothing on stdout, so a conflict is told by its tree id.
     const lines = result.stdout.split('\n');
-    const hasTree = OBJECT_ID.test(lines[0]);
-    if (result.status === 0 && hasTree) return { tree: lines[0], conflicts: [] };
+    const first = lines[0] ?? '';
+    const hasTree = OBJECT_ID.test(first);
+    if (result.status === 0 && hasTree) return { tree: first, conflicts: [] };
     if (result.status === 1 && hasTree) {
         const end = lines.indexOf('', 1);
         const conflicts = lines.slice(1, end === -1 ? undefined : end);
