@@ -1,7 +1,8 @@
 /**
  * The field pipeline as entries add to it: completeness follows the status the
  * row will hold, an email field is checked, a date stored in an older form is
- * rewritten when sent again, and a refused update writes no version. The rules
+ * rewritten when sent again and kept when left out, and a refused update
+ * writes no version. The rules
  * every resource shares are in
  * `tests/content/resource-field-validation.test.ts`.
  */
@@ -349,6 +350,30 @@ describe('update — a date stored as a full ISO date-time', () => {
         });
         const result = Array.isArray(updated) ? updated[0]! : updated;
         expect(result.fields.day).toBe('2026-10-10');
+    });
+
+    // An API patch need not send every field. One that leaves the old date
+    // out neither fails on it nor rewrites it.
+    it('keeps it as stored when a patch leaves the field out', async () => {
+        const entry = await api.create({
+            type: 'post',
+            data: { title: 'T', fields: { title_text: 'Hello' } },
+        });
+        await createRepository(entryContentTable).updateMany(
+            { entryId: entry.id },
+            { fields: { title_text: 'Hello', day: '2026-10-10T23:30:00.000-05:00' } }
+        );
+
+        const updated = await api.update({
+            type: 'post',
+            id: entry.id,
+            data: { fields: { title_text: 'Changed' } },
+        });
+        const result = Array.isArray(updated) ? updated[0]! : updated;
+        expect(result.fields).toMatchObject({
+            title_text: 'Changed',
+            day: '2026-10-10T23:30:00.000-05:00',
+        });
     });
 });
 

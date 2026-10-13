@@ -174,10 +174,19 @@ export const coerceDate = (value: unknown): unknown => {
         : value;
 };
 
-/** A date is stored as `YYYY-MM-DD`, so this accepts that form only. */
+/**
+ * A date is stored as `YYYY-MM-DD`. This also accepts an ISO date-time, the
+ * form a date was stored in before, because a patch validates the fields it
+ * leaves out without coercing them: such a value reaches this rule only when
+ * it is stored and not sent, and refusing it would fail every patch to the row
+ * until a caller sent the date again. A sent one is coerced to its date first.
+ */
 export const validateDate: FieldValidator = async (ctx) => {
     if (typeof ctx.value !== 'string') return 'Must be a date';
-    return isoDate.safeParse(ctx.value).success ? true : 'Must be a date as YYYY-MM-DD';
+    return isoDate.safeParse(ctx.value).success ||
+        isoDatetime.safeParse(ctx.value).success
+        ? true
+        : 'Must be a date as YYYY-MM-DD';
 };
 
 /**

@@ -420,11 +420,18 @@ describe('validateDate', () => {
         expect(await validateDate(ctx('2028-02-29'))).toBe(true);
     });
 
+    // The form a date was stored in before. A sent one is coerced to its date
+    // first, so the rule sees it only as a stored value a patch left out.
+    it('accepts an ISO date-time', async () => {
+        expect(await validateDate(ctx('2026-01-02T03:04:05.000Z'))).toBe(true);
+        expect(await validateDate(ctx('2026-10-10T23:30:00-05:00'))).toBe(true);
+    });
+
     it('rejects any other form, including ones Date.parse reads', async () => {
         for (const value of [
             'not a date',
             'Oct 10 2026',
-            '2026-01-02T03:04:05.000Z',
+            '2026-10-10 10:00Z',
             '2026-02-30',
         ]) {
             expect(await validateDate(ctx(value))).toBe('Must be a date as YYYY-MM-DD');
