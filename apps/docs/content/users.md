@@ -199,6 +199,9 @@ one writes the credential account the user signs in with; without one the user
 sets a password through the reset link. Outside development a site with no
 `email` driver has no way to deliver that link, so give a password on create.
 
+`create` and `update` refuse an email another user already holds with 422
+`VALIDATION_FAILED`, naming `email` in `details.fields`.
+
 The reset link goes out through the config's `email` driver. With no driver,
 Astromech logs the link instead when `NODE_ENV` is `development`. Anywhere
 else it logs only that the email was not sent, because the link lets anyone who

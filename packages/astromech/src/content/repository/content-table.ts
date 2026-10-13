@@ -38,6 +38,7 @@ import { createRepository } from '@/database/repository/create-repository';
 import { compareTimestamps } from '@/database/timestamps';
 import { transaction } from '@/database/transaction';
 import { AstromechError } from '@/errors/astromech-error';
+import { ResourceNotFoundError } from '@/errors/resource';
 import { createVersionsRepository } from './versions';
 
 /**
@@ -773,12 +774,9 @@ export function createContentRepository<
         guard?: WriteGuard
     ): Promise<R | null> {
         if (guard === undefined) {
-            const canonical = await findCanonical(
-                ref.id,
-                ref.locale ?? defaultLocale(),
-                false
-            );
-            if (!canonical) throw missing(ref.id);
+            const locale = ref.locale ?? defaultLocale();
+            const canonical = await findCanonical(ref.id, locale, false);
+            if (!canonical) throw missing(ref.id, locale);
             const { contentRow } = split(canonical);
             const contentId = String(contentRow['id']) as ContentRowId;
             return required(await createStagedRow(ref, data, { contentId }), ref.id);
@@ -812,12 +810,12 @@ export function createContentRepository<
         }
         const locale = ref.locale ?? defaultLocale();
         const existing = await findStaged(ref.id, locale);
-        if (!existing) throw noStaged(ref.id);
+        if (!existing) throw noStaged(ref.id, locale);
 
         const { contentRow } = split(existing);
         await contents.update(String(contentRow['id']), patchValues(data) as never);
         const updated = await staging.findOne({ id: ref.id, locale });
-        if (!updated) throw noStaged(ref.id);
+        if (!updated) throw noStaged(ref.id, locale);
         return updated;
     }
 
@@ -908,12 +906,14 @@ export function createContentRepository<
         },
     };
 
-    function missing(id: string): AstromechError {
-        return new AstromechError(`${shape.table.name} row '${id}' not found`);
+    // A row deleted between a caller's read and this write is the caller's 404,
+    // as the guarded writes answer it (`content/write-guard.ts`).
+    function missing(id: string, locale?: string): ResourceNotFoundError {
+        return new ResourceNotFoundError(shape.kind, { id, locale });
     }
 
-    function noStaged(id: string): AstromechError {
-        return new AstromechError(`No staged change for ${shape.table.name} row '${id}'`);
+    function noStaged(id: string, locale: string): ResourceNotFoundError {
+        return new ResourceNotFoundError(shape.kind, { id, locale, staged: true });
     }
 
     function required(row: R | null, id: string): R {

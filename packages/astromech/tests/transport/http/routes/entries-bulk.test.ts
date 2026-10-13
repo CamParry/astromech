@@ -197,6 +197,22 @@ describe('POST /entries/:type/bulk-update', () => {
         expect(live.data.map((entry) => entry.title)).toEqual(['One']);
     });
 
+    it('422s a slug for more than one id, naming `slug`, before any write', async () => {
+        const res = await post('/post/bulk-update', {
+            ids,
+            data: { title: 'Renamed', slug: 'same' },
+        });
+
+        expect(res.status).toBe(422);
+        const body = (await res.json()) as {
+            error: { code: string; details: { fields: Record<string, string[]> } };
+        };
+        expect(body.error.code).toBe('VALIDATION_FAILED');
+        expect(Object.keys(body.error.details.fields)).toEqual(['slug']);
+        const after = await api.query({ type: 'post', full: true });
+        expect(after.data.map((entry) => entry.title).sort()).toEqual(['One', 'Two']);
+    });
+
     it('409s a status change on a type without the statuses capability', async () => {
         const snippet = await api.create({
             type: 'snippet',

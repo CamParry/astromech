@@ -20,7 +20,7 @@ import { resolveValidationMode } from '@/content/validation-mode';
 import { changesVersionedContent, snapshotVersion } from '@/content/versions';
 import { assertGuardHolds, writeGuarded } from '@/content/write-guard';
 import { resolveEntryType } from '@/entries/entry-types';
-import { ResourceNotFoundError } from '@/errors/resource';
+import { ResourceNotFoundError, ResourceValidationError } from '@/errors/resource';
 import { parseInput } from '@/errors/validation';
 import { parseHookOutput, parseOutput } from '@/services/parse-method-output';
 import { assertWritableFields } from '../capabilities';
@@ -78,11 +78,15 @@ export async function updateEntryBatch(
     // Parsed before a hook sees it, so a failure here is the caller's 422.
     const data = parseInput(schema, params.data);
     assertWritableFields(entryType, data);
+    // Refused rather than renamed per id (`same-1`), which would succeed with
+    // slugs the caller never sent.
     if (ids.length > 1 && data.slug !== undefined) {
-        throw new Error(
-            'Bulk update cannot set `slug`: a single value across multiple ids ' +
-                'would violate (type, locale) slug uniqueness. Update slugs individually.'
-        );
+        throw new ResourceValidationError([], {
+            slug: [
+                'Cannot be set on more than one entry at once: slugs are unique ' +
+                    'per type and locale. Update slugs one entry at a time.',
+            ],
+        });
     }
     const locale = resolveResourceLocale('entry', config, entryType.id, params.locale);
 

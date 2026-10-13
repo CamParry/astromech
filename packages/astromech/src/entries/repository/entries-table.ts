@@ -254,6 +254,7 @@ function createEntryRepository() {
 
     const content = createContentRepository(
         {
+            kind: 'entry',
             table: entriesTable,
             contentTable: entryContentTable,
             versionsTable: entryVersionsTable,

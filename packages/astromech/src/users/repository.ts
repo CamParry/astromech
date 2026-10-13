@@ -93,6 +93,7 @@ function createUserRepository() {
     const accounts = createRepository(accountsTable);
     const content = createContentRepository(
         {
+            kind: 'user',
             table: usersTable,
             contentTable: userContentTable,
             versionsTable: userVersionsTable,
@@ -288,6 +289,9 @@ function createUserRepository() {
         /** The `users` row alone, the one better-auth writes, or null. */
         findUserRow: (id: string): Promise<UserTableRow | null> =>
             resourceRows.findOne({ id }),
+        /** The id of the user holding `email`, or null. */
+        findIdByEmail: async (email: string): Promise<string | null> =>
+            (await resourceRows.findOne({ email }))?.id ?? null,
         /** The `users` rows for `ids`. */
         findUserRows: content.findResourceRows,
         /** How many `users` rows exist, whether or not they have a content row. */

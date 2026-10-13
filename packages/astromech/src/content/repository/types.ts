@@ -14,6 +14,7 @@ import type { GuardFailure, WriteGuard } from '@/content/write-guard';
 import type { Table, TableSelect } from '@/database/define-table';
 import type { GenericDb } from '@/database/repository/create-repository';
 import type { Db } from '@/database/types';
+import type { ResourceType } from '@/types/domain';
 import type { EntryStatus, JsonObject } from '@/types/index';
 import type { Expression, ExpressionBuilder, SqlBool } from 'kysely';
 
@@ -27,6 +28,8 @@ export type ContentShape<
     C extends Table = Table,
     V extends Table = Table,
 > = {
+    /** Which resource the tables hold, named by the not-found errors the writes throw. */
+    kind: ResourceType;
     /**
      * The resource row: `entries`, `globals`. Its `updatedAt` declares
      * `onUpdate`, and every canonical write stamps it.

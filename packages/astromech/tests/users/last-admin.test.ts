@@ -169,11 +169,9 @@ describe('a user deleted while an update runs', () => {
         expect(await usersService.get({ id })).toBeNull();
     });
 
-    // Unchanged fields write no version, so the unguarded content write meets the
-    // deleted row and throws the repository's `AstromechError` (a 500). The
-    // "Caller errors" item in `roadmap/in-progress/write-race-and-data-loss-defects.md`
-    // makes it a 404. Media's update has the same path.
-    it.fails('is not found by an update that keeps its fields', async () => {
+    // Unchanged fields write no version, so the content write is the first to
+    // meet the deleted row.
+    it('is not found by an update that keeps its fields', async () => {
         const id = await deletedAfterRead();
 
         await expect(

@@ -9,6 +9,7 @@ import { ResourceNotFoundError } from '@/errors/resource';
 import { defineServiceMethod } from '@/services/define-service-method';
 import { defaultContentLocale } from '@/utilities/locale';
 import { assertKeepsAnAdmin, lastAdminError } from '../internal/last-admin';
+import { asEmailTakenError, assertEmailFree } from '../internal/unique-email';
 import { syncUserRelationships } from '../relationships';
 import { userRepository } from '../repository';
 import { updateUserSchema, userSchema } from '../schema';
@@ -16,8 +17,8 @@ import { updateUserSchema, userSchema } from '../schema';
 /**
  * `name`, `email` and `role` are written whatever the locale. `fields` merges into
  * one locale's content row, and a locale with none is seeded from the default
- * locale's. Demoting the last admin is refused, and a user deleted while the
- * call runs answers 404.
+ * locale's. Demoting the last admin is refused, an email another user holds
+ * answers 422, and a user deleted while the call runs answers 404.
  */
 export const updateUser = defineServiceMethod({
     summary:
@@ -45,6 +46,7 @@ export const updateUser = defineServiceMethod({
         const base = current ?? (await userRepository.findOne(id, { fallbackLocale }));
         if (!base) throw new ResourceNotFoundError('user', { id });
         if (role !== undefined) await assertKeepsAnAdmin(base, role);
+        if (email !== undefined) await assertEmailFree(email, id);
 
         const fields =
             patch === undefined
@@ -64,11 +66,11 @@ export const updateUser = defineServiceMethod({
             // The `users` row first: its `WHERE` repeats the last-admin check, so
             // a refusal writes nothing even where `transaction()` opens none (D1).
             if (name !== undefined || email !== undefined || role !== undefined) {
-                const written = await userRepository.updateUserRow(id, {
-                    name,
-                    email,
-                    role,
-                });
+                const written = await userRepository
+                    .updateUserRow(id, { name, email, role })
+                    .catch((err: unknown) => {
+                        throw asEmailTakenError(err);
+                    });
                 if (written === 'missing')
                     throw new ResourceNotFoundError('user', { id });
                 if (written === 'last-admin') throw lastAdminError('demote');
