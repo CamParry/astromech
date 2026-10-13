@@ -1,5 +1,5 @@
 ---
-milestone: 1.0
+milestone: later
 ---
 
 # Renaming a field's stored values
@@ -15,14 +15,8 @@ nothing moves them. Raised on 2026-10-03; decided 2026-10-04.
   keys before it checks anything
   (`packages/astromech/src/fields/parse-fields.ts`), and nested keys are never
   checked.
-- A save drops undeclared root keys (`projectToSchema` in
-  `packages/astromech/src/fields/values.ts`, called from
-  `packages/astromech/src/content/prepare-fields.ts`) but keeps undeclared
-  nested ones. So a save between deploying the renamed config and moving the
-  values loses the old value.
-- Public reads keep undeclared keys
-  (`packages/astromech/src/content/visibility.ts`), so a renamed or removed
-  `private: true` field is served publicly (`roadmap/completed/operations-defects.md`).
+- A save keeping the stored values of an undeclared field, and a public read
+  dropping them, are `roadmap/planned/undeclared-field-keys.md`.
 
 ## Prior art
 
@@ -70,8 +64,9 @@ nothing moves them. Raised on 2026-10-03; decided 2026-10-04.
       nothing already moved.
     - Before `--apply`, a local database is dumped; on D1 the command prints the
       Time Travel restore point.
-- **Saves keep undeclared keys; public reads drop them.** This closes the gap
-  between deploying the config and running the command, and the privacy leak.
+- **Saves keep undeclared keys; public reads drop them**
+  (`roadmap/planned/undeclared-field-keys.md`). This closes the gap between
+  deploying the config and running the command, and the privacy leak.
 - **`fields:remove <path>`** ships with it, since it is the same code with
   `unset` in place of the move. Changing a field's type stays a hand-written
   migration (`DECISIONS.md`).
@@ -84,7 +79,6 @@ nothing moves them. Raised on 2026-10-03; decided 2026-10-04.
 
 ## The work
 
-- [ ] Keep undeclared keys on save; drop them on public reads.
 - [ ] `fields:rename` and `fields:remove`: paths, the dry run, `--apply`,
       `--overwrite`, value checks, the dump or restore point.
 - [ ] Rewrite content, drafts and history; rebuild relationships and search
