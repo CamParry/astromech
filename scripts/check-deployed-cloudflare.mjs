@@ -465,8 +465,8 @@ const CHECKS = [
 /**
  * The providers `--captcha <provider>` can turn on: the env file's names for
  * the real keys, where the widget's frames load from, and the provider's
- * published test keys for the checks that use them. Only Turnstile's entry has
- * been run; reCAPTCHA's waits for keys.
+ * published test keys for the checks that use them. reCAPTCHA v3 has no test
+ * keys, so its test-key checks are skipped.
  */
 const CAPTCHA_PROVIDERS = {
     turnstile: {
