@@ -132,7 +132,8 @@ Two endpoints stream, so they are `rawRoutes` rather than service methods:
 | `POST /api/plugins/backups/runs/:id/restore` | `restore`  | streams a gunzipped dump back in |
 
 Restore takes a safety snapshot of the current database **before** overwriting
-it, so the operation is reversible, and preserves the plugin's own run table
+it, so the operation is reversible, and stops with a 500 naming the cause,
+changing nothing, when that snapshot fails. It preserves the plugin's own run table
 and the cron table across the restore. Otherwise a restore would erase the
 record of itself. The libsql driver runs the site's migrations forward on a copy
 of the backup, so an older backup restores into the current schema, then

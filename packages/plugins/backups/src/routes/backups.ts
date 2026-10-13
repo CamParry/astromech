@@ -77,8 +77,21 @@ async function restoreFromBackup(
 
     try {
         // Safety snapshot before restore — makes this operation reversible.
+        // `performBackup` records a failure on the run rather than throwing, and
+        // returns another run's row when one started meanwhile, so the run's
+        // status decides whether the restore may go ahead.
         const resolvedKeep = await resolveKeep(ctx, keep);
-        await performBackup(ctx, 'pre-restore', { keep: resolvedKeep });
+        const snapshot = await performBackup(ctx, 'pre-restore', { keep: resolvedKeep });
+        if (snapshot.status !== 'success') {
+            return Response.json(
+                {
+                    error:
+                        'The safety backup before the restore failed, so nothing was ' +
+                        `restored: ${snapshot.error ?? 'another backup is running'}`,
+                },
+                { status: 500 }
+            );
+        }
 
         const obj = await ctx.storage.get(row.key as string);
         if (obj === null) {

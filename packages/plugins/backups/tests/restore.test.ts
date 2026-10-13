@@ -12,7 +12,8 @@ import { makeUser, roleWith } from '@tests/fixtures';
 import { testMigrationProvider } from '@tests/test-db';
 import { sql } from 'kysely';
 import { Migrator } from 'kysely/migration';
-import { beforeEach, describe, expect, it } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { getDatabaseDriverOrThrow } from '@/database/driver-registry';
 import { setMigrationProvider } from '@/database/migration-registry';
 import { purgePlugin } from '@/transport/cli/commands/plugin-purge';
 import { backups } from '../src/index';
@@ -262,6 +263,34 @@ describe('POST /plugins/backups/runs/:id/restore', () => {
         expect(
             (await app.entries.get({ type: 'note', id: note.id, full: true }))?.title
         ).toBe('Original');
+    });
+
+    it('answers 500 and changes nothing when the safety backup fails', async () => {
+        expectConsole('error', 'Backup failed');
+        const note = await app.entries.create({
+            type: 'note',
+            data: { title: 'Original' },
+        });
+        const backupId = (await takeBackup(app)).id;
+        await app.entries.update({
+            type: 'note',
+            id: note.id,
+            data: { title: 'Changed' },
+        });
+        // The dump rather than the storage write: a write that rejects without
+        // reading the dump stream leaves that stream to fail on its own.
+        const driver = getDatabaseDriverOrThrow();
+        vi.spyOn(driver, 'dump').mockRejectedValueOnce(new Error('disk full'));
+
+        const res = await restore(backupId);
+
+        expect(res.status).toBe(500);
+        expect(await res.json()).toEqual({
+            error: 'The safety backup before the restore failed, so nothing was restored: Error: disk full',
+        });
+        expect(
+            (await app.entries.get({ type: 'note', id: note.id, full: true }))?.title
+        ).toBe('Changed');
     });
 
     it('answers 404 for a run that does not exist', async () => {
