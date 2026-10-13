@@ -30,6 +30,11 @@
 // `pages/_protected` are not loaded here. The browser steps are `scripts/admin-browser-check.mjs`,
 // which `check:install` runs too.
 //
+// The demo is built with Astro's default `security.csp`
+// (`apps/demo/astro.config.mjs`), so anything the admin does that the policy
+// blocks, such as adding a style element from script, fails the browser
+// steps. `check:install` runs them without a policy.
+//
 // The server runs as it does when deployed: with `NODE_ENV` unset, and with
 // `BETTER_AUTH_SECRET` from the environment or a throwaway value
 // (`scripts/check-helpers.mjs`), so the check needs nothing set by hand.
@@ -122,6 +127,8 @@ async function main() {
         // This check is non-interactive by definition; say so.
         CI: 'true',
         ASTROMECH_LOG_CONFIG_EVAL: '1',
+        // Builds with Astro's `security.csp` on (`apps/demo/astro.config.mjs`).
+        SECURITY_CSP: '1',
     };
 
     step('migrating a scratch database');

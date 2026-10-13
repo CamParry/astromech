@@ -6,6 +6,9 @@
 import { URL } from 'node:url';
 import { REQUEST_TIMEOUT_MS, step } from './check-helpers.mjs';
 
+// The policy check passes a function to chromium, which runs in the page.
+/* global window, document */
+
 // The admin fetches its session before it can decide which screen to show, so
 // the mounted-app selector arrives a round trip after navigation, not with it.
 const MOUNT_TIMEOUT_MS = 30_000;
@@ -40,7 +43,7 @@ let browser = null;
  * sign-up, then load the app shell, the `post` list and one post's edit page.
  * `pluginPage` adds the backups plugin's page, and `adminResource` the redirects
  * plugin's admin resource. `failOnWarnings` fails on a console warning as well
- * as a console error.
+ * as a console error. Anything a content security policy blocks fails it too.
  *
  * Runs against a server the caller started on an empty database. The browser
  * outlives a failure, so the caller runs `closeAdminBrowser` on every exit path.
@@ -95,6 +98,20 @@ export async function expectAdminWorks(
         else errors.push(line);
     });
     page.on('pageerror', (error) => errors.push(`pageerror: ${error.message}`));
+
+    // Under a content security policy (`check:boot` builds with Astro's
+    // default one), anything the policy blocks fails the check on every
+    // screen. Chromium logs a violation as an argument-less console error,
+    // which before sign-in is only a note, so the page's
+    // `securitypolicyviolation` events are collected on their own.
+    await page.exposeFunction('reportCspViolation', (line) => errors.push(line));
+    await page.addInitScript(() => {
+        document.addEventListener('securitypolicyviolation', (event) => {
+            window.reportCspViolation(
+                `csp: ${event.effectiveDirective} blocked ${event.blockedURI} at ${event.sourceFile || event.documentURI}:${event.lineNumber}:${event.columnNumber}`
+            );
+        });
+    });
 
     /** Wait for `locator` to be visible, naming what it stands for if that fails. */
     async function waitFor(locator, description, timeout = SCREEN_TIMEOUT_MS) {
@@ -363,8 +380,8 @@ export async function expectAdminWorks(
     }
     console.log(
         failOnWarnings
-            ? '  ok  the admin logs no console warnings, console errors or page errors'
-            : '  ok  the admin logs no console or page errors'
+            ? '  ok  the admin logs no console warnings, console errors, page errors or policy violations'
+            : '  ok  the admin logs no console errors, page errors or policy violations'
     );
 }
 

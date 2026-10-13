@@ -31,7 +31,7 @@ While working, run the test file you touched (`pnpm -F <package> exec vitest run
 | `pnpm run check:exports`             | `exports` and `publishConfig.exports` agree                                                                                                            |
 | `pnpm run check:docs`                | every repo-relative link and backticked path in markdown, `eslint.config.js` and doc comments resolves, and no source comment carries a history marker |
 | `pnpm run check:unused`              | knip: unused files, exports and dependencies, and undeclared imports; then exports only tests use                                                      |
-| `pnpm run check:boot`                | boots the built demo and drives the admin in chromium; needs `build`                                                                                   |
+| `pnpm run check:boot`                | boots the built demo under Astro's default `security.csp` and drives the admin in chromium; needs `build`                                              |
 | `pnpm run check:boot:cloudflare`     | serves `apps/demo-cloudflare` on workerd (see its `AGENTS.md`)                                                                                         |
 | `pnpm run check:deployed:cloudflare` | runs the checks only a deployed Worker can answer against the testing deployment (see `apps/demo-cloudflare/AGENTS.md`)                                |
 | `pnpm run check:install`             | installs packed tarballs into a scratch site per `apps/docs/installation.md`, plus `@astromech/backups`                                                |
