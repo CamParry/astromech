@@ -113,7 +113,7 @@ Merged on 2026-10-05. The tests stub `fetch` for siteverify, and
 `check:boot:cloudflare` runs on local workerd; `check:boot` opens the Security
 screen in chromium. These need real keys or a deployed Worker:
 
-- [ ] Each provider's real siteverify answer with a real site key and secret:
+- [x] Each provider's real siteverify answer with a real site key and secret:
       Turnstile's `action` and `hostname`, and reCAPTCHA v3's `action`, `score`
       and `hostname`. Checked for Turnstile on 2026-10-13:
       the managed widget `astromech-testing` asks automated chromium to tick a
@@ -125,9 +125,17 @@ screen in chromium. These need real keys or a deployed Worker:
       sign-in page's (action `sign_in`) answered 403 `CAPTCHA_FAILED`. With
       the default `hostnames`, the 200 means siteverify answered the action
       `password_reset` and the hostname `astromech-testing.paragramagency.com`.
-      The accepted token sent a second time answered 403. Left: reCAPTCHA v3,
-      which waits for keys.
-- [ ] The widgets in a browser: two Turnstile widgets on one page with
+      The accepted token sent a second time answered 403. Checked for
+      reCAPTCHA v3 the same day, in a real Chrome against the testing
+      deployment with the captcha on: a token from `grecaptcha.execute` with
+      the action `password_reset`, posted to siteverify with the secret,
+      answered `success` true, the action `password_reset`, the hostname
+      `astromech-testing.paragramagency.com` and a score of 0.9. On the
+      forgot-password page, another such token sent to
+      `POST /cms/api/auth/request-password-reset` answered 200; the same token
+      again, a `sign_in` token and no token each answered 403
+      `CAPTCHA_FAILED`.
+- [x] The widgets in a browser: two Turnstile widgets on one page with
       `render=explicit`, token expiry and reset, reCAPTCHA v3's `execute`; the
       admin sign-in, setup and forgot-password pages with a captcha on and
       Astro `security.csp` set to the documented sources. Checked 2026-10-13
@@ -152,7 +160,16 @@ screen in chromium. These need real keys or a deployed Worker:
       seconds had renewed its own token (the response field changed and
       `turnstile.isExpired()` was false), its first token sent then answered
       403, and the page's form submitted then succeeded ("Check your email").
-      Left: reCAPTCHA v3's `execute`.
+      reCAPTCHA v3 was checked the same day on the testing deployment
+      (`check:deployed:cloudflare --captcha recaptcha`): the sign-in and
+      forgot-password pages load `api.js?render=<site key>` and its badge frame
+      from `https://www.google.com` under the documented policy, which blocks
+      nothing, and `execute` gives each page's token (the item above). The
+      first run found no frame on `/cms/login` within 30 seconds; a probe of
+      the same deployment and a second run found it, so the page was probably
+      served by the version before the deploy. reCAPTCHA has no test keys, so
+      the setup page, which renders through the same `useCaptcha`, was not
+      checked with it.
 - [x] The hostname check behind a real proxy or CDN, and `hostnames` with
       Turnstile's test secret, which answers `example.com`. Checked
       2026-10-13: the test secret answers `success`, the hostname
