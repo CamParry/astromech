@@ -15,7 +15,8 @@
 import { execFileSync } from 'node:child_process';
 import { existsSync, mkdirSync } from 'node:fs';
 import { basename, dirname, join } from 'node:path';
-import { run, step } from './check-helpers.mjs';
+import { step } from './lib/check-helpers.ts';
+import { run } from './lib/run.ts';
 
 // Name and repository, one project a line. Each URL was checked with
 // `git ls-remote --symref <url> HEAD`.

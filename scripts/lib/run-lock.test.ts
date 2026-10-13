@@ -1,9 +1,10 @@
 /**
- * Tests of the run lock (`scripts/run-lock.mjs`) through the processes that
+ * Tests of the run lock (`scripts/lib/run-lock.ts`) through the processes that
  * take it. Each test points `TMPDIR` at a directory of its own, so it takes a
  * lock of its own and never waits on, or disturbs, a real run on this machine.
  * POSIX only, like the lock's process groups.
  */
+import type { ChildProcess } from 'node:child_process';
 import assert from 'node:assert/strict';
 import { spawn } from 'node:child_process';
 import {
@@ -20,13 +21,26 @@ import process from 'node:process';
 import { afterEach, test } from 'node:test';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 
-const scripts = dirname(fileURLToPath(import.meta.url));
-const runLockUrl = pathToFileURL(join(scripts, 'run-lock.mjs')).href;
+const lib = dirname(fileURLToPath(import.meta.url));
+const runLockUrl = pathToFileURL(join(lib, 'run-lock.ts')).href;
+
+/**
+ * The arguments to `node` that run `command` through `runCommand` holding the
+ * lock, and end as it ended, as `scripts/turbo.ts --lock` does.
+ */
+function runCommandArgs(command: string, ...args: string[]): string[] {
+    return [
+        '--input-type=module',
+        '-e',
+        `import { endAs, runCommand } from '${runLockUrl}';
+endAs(await runCommand(${JSON.stringify(command)}, ${JSON.stringify(args)}, { env: process.env, lock: 'test' }));`,
+    ];
+}
 
 /** Processes, process groups and directories to remove after each test. */
-let processes = [];
-let groups = [];
-let directories = [];
+let processes: ChildProcess[] = [];
+let groups: number[] = [];
+let directories: string[] = [];
 
 afterEach(() => {
     for (const child of processes) child.kill('SIGKILL');
@@ -43,7 +57,11 @@ afterEach(() => {
  * at it. The variables a gate running this test would pass on are removed: the
  * holder variable would make every run here go ahead without the lock.
  */
-function lockDirectory() {
+function lockDirectory(): {
+    directory: string;
+    env: NodeJS.ProcessEnv;
+    lockPath: string;
+} {
     const directory = mkdtempSync(join(tmpdir(), 'astromech-run-lock-test-'));
     directories.push(directory);
     const { ASTROMECH_RUN_LOCK_PID: _holder, ...inherited } = process.env;
@@ -52,7 +70,12 @@ function lockDirectory() {
 }
 
 /** Starts `node <args>`, collecting its output, and resolves its exit with it. */
-function start(args, env) {
+type Exit = { code: number | null; signal: NodeJS.Signals | null; output: string };
+
+function start(
+    args: string[],
+    env: NodeJS.ProcessEnv
+): { child: ChildProcess; exited: Promise<Exit>; output: () => string } {
     const child = spawn(process.execPath, args, {
         env,
         stdio: ['ignore', 'pipe', 'pipe'],
@@ -61,21 +84,26 @@ function start(args, env) {
     let output = '';
     child.stdout.on('data', (chunk) => (output += chunk));
     child.stderr.on('data', (chunk) => (output += chunk));
-    const exited = new Promise((fulfil) =>
+    const exited = new Promise<Exit>((fulfil) =>
         child.on('exit', (code, signal) => fulfil({ code, signal, output }))
     );
     return { child, exited, output: () => output };
 }
 
 /** A pid no process has: one that has just exited. */
-async function exitedPid() {
+async function exitedPid(): Promise<number> {
     const { child, exited } = start(['-e', ''], process.env);
     await exited;
+    assert.ok(child.pid !== undefined);
     return child.pid;
 }
 
 /** Polls `read` until it returns something, or fails after `ms`. */
-async function waitFor(read, ms, describe) {
+async function waitFor<T>(
+    read: () => T | undefined | false,
+    ms: number,
+    describe: string
+): Promise<T> {
     const deadline = Date.now() + ms;
     for (;;) {
         const value = read();
@@ -85,15 +113,16 @@ async function waitFor(read, ms, describe) {
     }
 }
 
-function readGroups(lockPath) {
+function readGroups(lockPath: string): number[] | undefined {
     try {
-        return JSON.parse(readFileSync(lockPath, 'utf8')).groups;
+        return (JSON.parse(readFileSync(lockPath, 'utf8')) as { groups?: number[] })
+            .groups;
     } catch {
         return undefined;
     }
 }
 
-function signalGroup(group, signal) {
+function signalGroup(group: number, signal: NodeJS.Signals | 0): boolean {
     try {
         process.kill(-group, signal);
         return true;
@@ -126,12 +155,9 @@ test('taking the lock removes the leftover files of runs that are not running', 
     assert.deepEqual(readdirSync(directory), [live]);
 });
 
-test('run-at-lower-priority --lock records its command, which a run waits for after it is killed', async () => {
+test('runCommand with the lock records its command, which a run waits for after it is killed', async () => {
     const { env, lockPath } = lockDirectory();
-    const wrapper = start(
-        [join(scripts, 'run-at-lower-priority.mjs'), '--lock', 'sleep', '30'],
-        env
-    );
+    const wrapper = start(runCommandArgs('sleep', '30'), env);
     const [group] = await waitFor(
         () => readGroups(lockPath),
         5000,
@@ -159,15 +185,15 @@ test('run-at-lower-priority --lock records its command, which a run waits for af
     );
 });
 
-test('run-at-lower-priority --lock under an ancestor leaves its lock file as it is', async () => {
+test('runCommand with the lock under an ancestor leaves its lock file as it is', async () => {
     const { env, lockPath } = lockDirectory();
     const record = JSON.stringify({ pid: process.pid, name: 'ancestor', groups: [1] });
     writeFileSync(lockPath, record);
 
-    const wrapper = start(
-        [join(scripts, 'run-at-lower-priority.mjs'), '--lock', 'true'],
-        { ...env, ASTROMECH_RUN_LOCK_PID: String(process.pid) }
-    );
+    const wrapper = start(runCommandArgs('true'), {
+        ...env,
+        ASTROMECH_RUN_LOCK_PID: String(process.pid),
+    });
     const { code, output } = await wrapper.exited;
 
     assert.equal(code, 0, output);
@@ -175,12 +201,9 @@ test('run-at-lower-priority --lock under an ancestor leaves its lock file as it 
     assert.equal(readFileSync(lockPath, 'utf8'), record);
 });
 
-test('run-at-lower-priority --lock passes Ctrl-C on to its command and releases the lock', async () => {
+test('runCommand with the lock passes Ctrl-C on to its command and releases the lock', async () => {
     const { env, lockPath } = lockDirectory();
-    const wrapper = start(
-        [join(scripts, 'run-at-lower-priority.mjs'), '--lock', 'sleep', '30'],
-        env
-    );
+    const wrapper = start(runCommandArgs('sleep', '30'), env);
     const [group] = await waitFor(
         () => readGroups(lockPath),
         5000,

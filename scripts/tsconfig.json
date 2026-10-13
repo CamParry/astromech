@@ -1,0 +1,19 @@
+{
+    // Node's recommended settings for running TypeScript by type stripping
+    // (https://nodejs.org/api/typescript.html): `tsc` only checks, and Node
+    // runs each `.ts` file as it is, so every import names its `.ts` file and
+    // nothing may need compiling, such as an enum or a parameter property.
+    "$schema": "https://json.schemastore.org/tsconfig",
+    "compilerOptions": {
+        "target": "esnext",
+        "module": "nodenext",
+        "noEmit": true,
+        "strict": true,
+        "erasableSyntaxOnly": true,
+        "verbatimModuleSyntax": true,
+        "allowImportingTsExtensions": true,
+        "types": ["node"]
+    },
+    "include": ["**/*.ts"],
+    "exclude": ["node_modules"]
+}

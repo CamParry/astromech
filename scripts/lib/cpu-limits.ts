@@ -7,12 +7,12 @@
  *
  * - It runs at macOS's utility QoS (`taskpolicy -c utility`), so the
  *   scheduler gives the user's own work the cores first. The run still uses
- *   any core left idle. `verify.mjs` and the boot checks relaunch themselves
- *   with `relaunchAtLowerPriority`, and the root `package.json` scripts that
- *   test, build, typecheck and lint start through
- *   `scripts/run-at-lower-priority.mjs`.
+ *   any core left idle. `scripts/verify.ts`, the boot checks and
+ *   `scripts/turbo.ts`, which the root `package.json` scripts that test,
+ *   build, typecheck and lint start through, relaunch themselves with
+ *   `relaunchAtLowerPriority`.
  * - It runs fewer workers: `TEST_WORKERS`, and `WORKSPACE_CONCURRENCY` tasks
- *   of the gate at once.
+ *   of a Turborepo run at once (`gateConcurrency` in `scripts/lib/gate.ts`).
  *
  * A vitest command run directly (`pnpm -F <package> exec vitest run`) gets
  * the fewer workers but not the lower priority: its config could only lower it
@@ -22,10 +22,12 @@
  * Linux or on Windows, or when `ASTROMECH_FULL_SPEED` is set, for the fastest
  * run on an idle machine.
  *
- * Used by `scripts/verify.mjs`, the boot checks,
- * `scripts/run-at-lower-priority.mjs`, core's shared vitest settings
+ * Used by `scripts/verify.ts`, `scripts/turbo.ts`, the boot checks, the gate's
+ * concurrency, core's shared vitest settings
  * (`packages/astromech/tests/_support/vitest-base-config.ts`) and the schema
- * engine's vitest config.
+ * engine's vitest config. The vitest configs import it without an extension,
+ * as the packages' bundler resolution does: `tsc` refuses a `.ts` specifier
+ * unless `allowImportingTsExtensions` is set.
  */
 import console from 'node:console';
 import process from 'node:process';
@@ -65,7 +67,7 @@ const TASKPOLICY = '/usr/sbin/taskpolicy';
  * process, hence the relaunch. When it fails the run carries on at normal
  * priority, after one line saying so.
  */
-export function relaunchAtLowerPriority() {
+export function relaunchAtLowerPriority(): void {
     execAtLowerPriority(process.execPath, [
         ...process.execArgv,
         ...process.argv.slice(1),
@@ -78,7 +80,7 @@ export function relaunchAtLowerPriority() {
  * done nothing, when the limits do not apply or the priority is already
  * lowered, and after one line saying so when the replacement fails.
  */
-export function execAtLowerPriority(command, args) {
+function execAtLowerPriority(command: string, args: readonly string[]): void {
     if (!cpuLimitsApply || process.env[LOWERED_PRIORITY] !== undefined) return;
     if (typeof process.execve !== 'function') {
         console.log(
@@ -92,6 +94,8 @@ export function execAtLowerPriority(command, args) {
             [LOWERED_PRIORITY]: '1',
         });
     } catch (error) {
-        console.log(`cpu-limits: running at normal priority (${error.message})`);
+        console.log(
+            `cpu-limits: running at normal priority (${(error as Error).message})`
+        );
     }
 }

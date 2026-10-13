@@ -24,7 +24,7 @@
 // one gets it: a deployment sets it with `wrangler secret put`, and `wrangler
 // dev` reads it from `.dev.vars`. The check takes `BETTER_AUTH_SECRET` from its
 // own environment, or a throwaway value when that sets none, as `check:boot`
-// does (`scripts/check-helpers.mjs`), and hands it over in a scratch env file
+// does (`scripts/lib/check-helpers.ts`), and hands it over in a scratch env file
 // passed with `--env-file`, so no value is written into the app or committed.
 // Without one the Worker refuses every request and `/` answers 500.
 //
@@ -46,17 +46,17 @@ import {
     request,
     REQUEST_TIMEOUT_MS,
     sleep,
-} from './check-helpers.mjs';
-import { relaunchAtLowerPriority } from './cpu-limits.mjs';
-import { stopProcessGroup } from './process-group.mjs';
+} from './lib/check-helpers.ts';
+import { relaunchAtLowerPriority } from './lib/cpu-limits.ts';
+import { stopProcessGroup } from './lib/process-group.ts';
+import { recordProcessGroups, waitForRunLock } from './lib/run-lock.ts';
 import { requireFreshDist } from './require-fresh-dist.mjs';
-import { recordProcessGroups, waitForRunLock } from './run-lock.mjs';
 
 // First, before anything prints: the build and the server inherit the priority
-// (`scripts/cpu-limits.mjs`).
+// (`scripts/lib/cpu-limits.ts`).
 relaunchAtLowerPriority();
 
-// One heavy run at a time on this machine (`scripts/run-lock.mjs`). Under
+// One heavy run at a time on this machine (`scripts/lib/run-lock.ts`). Under
 // `verify`, the gate holds the lock and this goes ahead.
 await waitForRunLock('check:boot:cloudflare');
 

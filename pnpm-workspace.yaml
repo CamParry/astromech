@@ -4,6 +4,7 @@ packages:
     - 'packages/astromech'
     - 'packages/plugins/*'
     - 'apps/*'
+    - 'scripts'
 
 # Native postinstall scripts. pnpm blocks these by default; all three ship
 # platform binaries that do not work unless their install script runs.

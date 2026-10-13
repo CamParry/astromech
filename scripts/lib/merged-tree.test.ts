@@ -1,5 +1,5 @@
 /**
- * Tests of `scripts/merged-tree.mjs` on throwaway git repositories.
+ * Tests of `scripts/lib/merged-tree.ts` on throwaway git repositories.
  */
 import assert from 'node:assert/strict';
 import { execFileSync } from 'node:child_process';
@@ -8,7 +8,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import process from 'node:process';
 import { afterEach, test } from 'node:test';
-import { mergedTree } from './merged-tree.mjs';
+import { mergedTree } from './merged-tree.ts';
 
 // A git hook runs these tests with `GIT_INDEX_FILE` and `GIT_DIR` naming the
 // repository being committed to. Inherited, they would send the throwaway
@@ -20,7 +20,7 @@ for (const name of Object.keys(process.env)) {
 process.env.GIT_CONFIG_GLOBAL = '/dev/null';
 process.env.GIT_CONFIG_NOSYSTEM = '1';
 
-let directories = [];
+let directories: string[] = [];
 
 afterEach(() => {
     for (const directory of directories) {
@@ -36,13 +36,13 @@ afterEach(() => {
 function repository() {
     const directory = mkdtempSync(join(tmpdir(), 'astromech-merged-tree-test-'));
     directories.push(directory);
-    const git = (...args) =>
+    const git = (...args: string[]): string =>
         execFileSync('git', args, {
             cwd: directory,
             encoding: 'utf8',
             stdio: ['ignore', 'pipe', 'ignore'],
         }).trim();
-    const commit = (branch, files) => {
+    const commit = (branch: string, files: Record<string, string>): void => {
         git('switch', '-q', branch);
         for (const [path, content] of Object.entries(files)) {
             writeFileSync(join(directory, path), content);
@@ -62,7 +62,7 @@ function repository() {
 }
 
 /** The content of `path` in `tree`. */
-function show(git, tree, path) {
+function show(git: (...args: string[]) => string, tree: string, path: string): string {
     return git('cat-file', 'blob', `${tree}:${path}`);
 }
 
@@ -72,6 +72,7 @@ test('a branch behind main with no conflict gets a tree holding both sides', () 
     commit('topic', { 'b.txt': 'b from topic\n' });
     const { tree, conflicts } = mergedTree(directory, 'main', 'topic');
     assert.deepEqual(conflicts, []);
+    assert.ok(tree);
     assert.equal(show(git, tree, 'a.txt'), 'a from main');
     assert.equal(show(git, tree, 'b.txt'), 'b from topic');
     // Not the branch's own tree, which would revert main's commit.

@@ -1,22 +1,27 @@
 /**
- * Tests of `scripts/workspace-packages.mjs` against this repository's own
+ * Tests of `scripts/lib/workspace-packages.ts` against this repository's own
  * workspace.
  */
+import type { WorkspacePackage } from './workspace-packages.ts';
 import assert from 'node:assert/strict';
 import { dirname, join } from 'node:path';
 import { test } from 'node:test';
 import { fileURLToPath } from 'node:url';
-import { workspaceDependencies, workspacePackages } from './workspace-packages.mjs';
+import { workspaceDependencies, workspacePackages } from './workspace-packages.ts';
 
-const repoRoot = join(dirname(fileURLToPath(import.meta.url)), '..');
+const repoRoot = join(dirname(fileURLToPath(import.meta.url)), '..', '..');
 const packages = workspacePackages(repoRoot);
-const named = (name) => packages.find((each) => each.name === name);
-const dependencyNames = (name) =>
+const named = (name: string): WorkspacePackage => {
+    const found = packages.find((each) => each.name === name);
+    assert.ok(found, name);
+    return found;
+};
+const dependencyNames = (name: string): string[] =>
     workspaceDependencies(packages, named(name))
         .map((each) => each.name)
         .toSorted();
 
-test('every glob in pnpm-workspace.yaml is read', () => {
+test('every package in pnpm-workspace.yaml is listed, and the root is not', () => {
     for (const name of [
         'astromech',
         '@astromech/admin',
@@ -24,9 +29,14 @@ test('every glob in pnpm-workspace.yaml is read', () => {
         '@astromech/seo',
         'astromech-demo',
         'astromech-demo-cloudflare',
+        '@astromech/scripts',
     ]) {
         assert.ok(named(name), name);
     }
+    assert.equal(
+        packages.some((each) => each.name === 'astromech-monorepo'),
+        false
+    );
 });
 
 test('the dependencies of a package include those of its dependencies', () => {

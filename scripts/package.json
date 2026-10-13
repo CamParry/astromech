@@ -1,0 +1,16 @@
+{
+    "name": "@astromech/scripts",
+    "private": true,
+    "type": "module",
+    "description": "The repository's own tooling: the gate, landing, the boot checks and the rest. Never published.",
+    "scripts": {
+        "typecheck": "tsc -p .",
+        "lint": "eslint .",
+        "test": "node --test"
+    },
+    "devDependencies": {
+        "@types/node": "^22.20.1",
+        "eslint": "^10.8.1",
+        "typescript": "^5.9.3"
+    }
+}

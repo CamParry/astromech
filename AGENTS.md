@@ -4,7 +4,7 @@ Astromech is a lightweight TypeScript CMS: a framework-agnostic core plus an Ast
 
 ## Where things live
 
-- `packages/*` is published to npm; `apps/*` never is. `apps/demo` is the app to run and browser-verify against.
+- `packages/*` is published to npm; `apps/*` never is. `apps/demo` is the app to run and browser-verify against. `scripts/` is the repository's own tooling, a private workspace package of TypeScript run by plain `node`; test a file there with `node --test "scripts/lib/<file>.test.ts"`.
 - `ARCHITECTURE.md`: where code lives and what it may import. `TERMINOLOGY.md`: what a term means.
 - `decisions/`: one file per choice and what it beat. Read the `DECISIONS.md` index, open only the decision you need, and cite it by its file path.
 - `roadmap/`: one file per feature. Status is the directory (`proposed/`, `planned/`, `in-progress/`, `completed/`).
@@ -16,7 +16,7 @@ Astromech is a lightweight TypeScript CMS: a framework-agnostic core plus an Ast
 - **The gate (`pnpm run verify`) runs through Turborepo**: only the tasks a change affects since `origin/main`, reusing cached passes. `--all` checks everything. Run it once before handing work back or landing, after the last change. Don't rerun it to confirm a pass: `verify:status` reads the cache. A failing check's `FAIL` line names its log: search the log rather than rerun the check.
 - **Never `--no-verify`.** If the pre-commit hook fails, fix the cause.
 - **Run the boot checks by hand**, since no hook does: `check:boot` after touching boot, the config path or the injected middleware, and `check:boot:cloudflare` after touching bindings, the environment or the Worker entry. Run `check:config` after editing the config path.
-- **One heavy run at a time.** The gate, the boot checks and the root `build`, `build:js` and `test:run` share a lock across worktrees and sessions (`scripts/run-lock.mjs`). When another run may hold it, start yours in the background: the wait can outlast a 2-minute tool timeout.
+- **One heavy run at a time.** The gate, the boot checks and the root `build`, `build:js` and `test:run` share a lock across worktrees and sessions (`scripts/lib/run-lock.ts`). When another run may hold it, start yours in the background: the wait can outlast a 2-minute tool timeout.
 - **A core table change needs a migration.** When `packages/astromech/tests/database/drift.test.ts` fails, run `pnpm run db:generate` and commit the result. It does not cover plugin tables.
 - **Use pnpm**, never `npm install`: a flat tree hides undeclared dependencies.
 - Each script's header has the detail. `verify` skips `check:install` (CI runs it) and `check:deployed:cloudflare` (`apps/demo-cloudflare/AGENTS.md`).

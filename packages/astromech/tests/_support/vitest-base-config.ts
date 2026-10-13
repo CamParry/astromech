@@ -9,7 +9,7 @@
  */
 import type { TestUserConfig } from 'vitest/config';
 import { fileURLToPath } from 'node:url';
-import { cpuLimitsApply, TEST_WORKERS } from '../../../../scripts/cpu-limits.mjs';
+import { cpuLimitsApply, TEST_WORKERS } from '../../../../scripts/lib/cpu-limits';
 
 /**
  * Options each project spreads into its own `test`. An inline project does not
@@ -48,7 +48,7 @@ export const baseRootTestOptions = {
     // `--sequence.seed=<n>` replays that order.
     sequence: { shuffle: true },
     // Fewer workers on a laptop, so a run leaves it usable. A direct vitest
-    // run gets these but not the lower priority (`scripts/cpu-limits.mjs`).
+    // run gets these but not the lower priority (`scripts/lib/cpu-limits.ts`).
     ...(cpuLimitsApply ? { maxWorkers: TEST_WORKERS } : {}),
 } satisfies TestUserConfig;
 

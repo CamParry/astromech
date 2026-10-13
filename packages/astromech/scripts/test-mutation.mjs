@@ -25,7 +25,7 @@ import { existsSync, statSync } from 'node:fs';
 import { dirname, join, relative, resolve } from 'node:path';
 import process from 'node:process';
 import { fileURLToPath } from 'node:url';
-import { environmentWithoutNodeEnv } from '../../../scripts/check-helpers.mjs';
+import { environmentWithoutNodeEnv } from '../../../scripts/lib/check-helpers.ts';
 
 const packageDir = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const strykerBin = join(packageDir, 'node_modules/@stryker-mutator/core/bin/stryker.js');

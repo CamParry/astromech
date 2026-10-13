@@ -1,5 +1,5 @@
 /**
- * Tests of the gate's helpers (`scripts/gate.mjs`) that need no Turborepo run:
+ * Tests of the gate's helpers (`scripts/lib/gate.ts`) that need no Turborepo run:
  * the scope, each mode's tasks, the environment, the arguments, the log names
  * and the skipped tasks, and the builds `check:node-imports` waits for. The
  * scope tests use throwaway git repositories; the task tests read this
@@ -20,10 +20,10 @@ import {
     tasksForMode,
     turboEnvironment,
     turboRunArguments,
-} from './gate.mjs';
-import { workspacePackages } from './workspace-packages.mjs';
+} from './gate.ts';
+import { workspacePackages } from './workspace-packages.ts';
 
-const repoRoot = join(dirname(fileURLToPath(import.meta.url)), '..');
+const repoRoot = join(dirname(fileURLToPath(import.meta.url)), '..', '..');
 
 // A git hook runs these tests with `GIT_INDEX_FILE` and `GIT_DIR` naming the
 // repository being committed to. Inherited, they would send the throwaway
@@ -35,7 +35,7 @@ for (const name of Object.keys(process.env)) {
 process.env.GIT_CONFIG_GLOBAL = '/dev/null';
 process.env.GIT_CONFIG_NOSYSTEM = '1';
 
-let directories = [];
+let directories: string[] = [];
 const savedBase = process.env.TURBO_SCM_BASE;
 
 afterEach(() => {
@@ -48,10 +48,10 @@ afterEach(() => {
 });
 
 /** A repository with one commit on `main`, and `topic` one commit ahead of it. */
-function repository() {
+function repository(): string {
     const directory = mkdtempSync(join(tmpdir(), 'astromech-gate-test-'));
     directories.push(directory);
-    const git = (...args) =>
+    const git = (...args: string[]): Buffer =>
         execFileSync('git', args, {
             cwd: directory,
             stdio: ['ignore', 'pipe', 'ignore'],
@@ -126,15 +126,19 @@ test('fast mode asks for no build, and full asks for every task fast does', () =
     }
 });
 
-test('fast mode type-checks every package that is not private, and not the apps', () => {
+test('fast mode type-checks every package outside apps/, and not the apps', () => {
     const typechecks = tasksForMode(repoRoot, 'fast').filter((task) =>
         task.endsWith('#typecheck')
     );
     const expected = workspacePackages(repoRoot)
-        .filter(({ manifest }) => manifest.private !== true)
+        .filter(
+            ({ manifest }) =>
+                manifest.private !== true || manifest.name === '@astromech/scripts'
+        )
         .map(({ name }) => `${name}#typecheck`);
     assert.deepEqual(typechecks.toSorted(), expected.toSorted());
     assert.ok(typechecks.includes('astromech#typecheck'));
+    assert.ok(typechecks.includes('@astromech/scripts#typecheck'));
     assert.equal(
         typechecks.some((task) => task.startsWith('astromech-demo')),
         false

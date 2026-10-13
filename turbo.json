@@ -1,5 +1,5 @@
 {
-    // The gate's tasks (`scripts/verify.mjs`). Each task lists the files it
+    // The gate's tasks (`scripts/verify.ts`). Each task lists the files it
     // reads in `inputs`, so `--affected` selects it only when one of them
     // changed, and its cache entry is reused when none did. A task that reads
     // another task's output says so in `dependsOn`, which also puts that
@@ -20,6 +20,9 @@
     },
     // A change to any of these reruns every task, as does a change to the
     // root package.json, this file or the lockfile, which Turborepo adds itself.
+    // `scripts/` and `.github/` are not here: each task that reads a script
+    // lists it in its `inputs`, so a change to `scripts/land.ts` or to CI's
+    // workflow reruns only the tasks that read it.
     "globalDependencies": [
         "pnpm-workspace.yaml",
         ".nvmrc",
@@ -27,11 +30,9 @@
         "eslint.config.js",
         ".prettierrc",
         ".prettierignore",
-        "knip.json",
-        "scripts/**",
-        ".github/**"
+        "knip.json"
     ],
-    // Set by `scripts/gate.mjs`, so a result from one Node major is never
+    // Set by `scripts/lib/gate.ts`, so a result from one Node major is never
     // reused on another: CI's runtime job runs the tests on Node 22.
     "globalEnv": ["ASTROMECH_NODE_MAJOR"],
     // Available to every task, and no part of any hash: none changes a result.
@@ -39,11 +40,11 @@
         // Turborepo passes `TMP` and `TEMP` but not `TMPDIR`, which macOS sets
         // per user. `os.tmpdir()` reads it, and the run lock lives there.
         "TMPDIR",
-        // `scripts/cpu-limits.mjs`: how many workers, and at what priority.
+        // `scripts/lib/cpu-limits.ts`: how many workers, and at what priority.
         "CI",
         "ASTROMECH_FULL_SPEED",
         "ASTROMECH_LOWERED_PRIORITY",
-        // `scripts/run-lock.mjs`: lets a check the gate starts skip the lock.
+        // `scripts/lib/run-lock.ts`: lets a check the gate starts skip the lock.
         "ASTROMECH_RUN_LOCK_PID",
         "pnpm_config_*",
         "PLAYWRIGHT_BROWSERS_PATH",
@@ -54,15 +55,17 @@
         // The package tasks. These definitions are what a plugin reads: its own
         // files, and the source of the schema engine, core and the admin,
         // which its tests and type checks resolve to through `paths` and
-        // vitest aliases. The admin's source imports `routeTree.gen.ts`, which
-        // git ignores, so each waits for `//#routes:generate`. The schema
-        // engine, the admin and core have their own `turbo.json`. Markdown
-        // changes no result here.
+        // vitest aliases. Core's shared vitest settings import
+        // `scripts/lib/cpu-limits.ts`. The admin's source imports
+        // `routeTree.gen.ts`, which git ignores, so each waits for
+        // `//#routes:generate`. The schema engine, the admin, core and the
+        // scripts package have their own `turbo.json`. Markdown changes no
+        // result here.
         "build": {
             "dependsOn": ["^build"],
             "inputs": ["$TURBO_DEFAULT$", "!**/*.md", "!tests/**"],
             "outputs": ["dist/**"],
-            // Set, a build writes no declarations: `scripts/gate.mjs` sets it in
+            // Set, a build writes no declarations: `scripts/lib/gate.ts` sets it in
             // runtime mode, which reads none, and each `build:js` script sets it.
             "env": ["ASTROMECH_NO_DTS"]
         },
@@ -77,7 +80,8 @@
                 "$TURBO_ROOT$/packages/astromech/tsconfig.json",
                 "$TURBO_ROOT$/packages/admin/src/**",
                 "!$TURBO_ROOT$/packages/admin/src/routeTree.gen.ts",
-                "$TURBO_ROOT$/packages/admin/tests/_support/**"
+                "$TURBO_ROOT$/packages/admin/tests/_support/**",
+                "$TURBO_ROOT$/scripts/lib/cpu-limits.ts"
             ]
         },
         "lint": {
@@ -105,7 +109,8 @@
                 "$TURBO_ROOT$/packages/astromech/tsconfig.json",
                 "$TURBO_ROOT$/packages/admin/src/**",
                 "!$TURBO_ROOT$/packages/admin/src/routeTree.gen.ts",
-                "$TURBO_ROOT$/packages/admin/tests/_support/**"
+                "$TURBO_ROOT$/packages/admin/tests/_support/**",
+                "$TURBO_ROOT$/scripts/lib/cpu-limits.ts"
             ],
             "outputs": ["coverage/**"]
         },
@@ -166,12 +171,6 @@
         },
         "//#check:hooks": {
             "inputs": [".claude/hooks/**"]
-        },
-        "//#check:scripts": {
-            "inputs": ["scripts/**"]
-        },
-        "//#lint:scripts": {
-            "inputs": ["scripts/**"]
         }
     }
 }
