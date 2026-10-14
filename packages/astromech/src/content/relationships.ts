@@ -34,7 +34,11 @@ type ContentRelationshipsShape = {
  * The columns the merge reads; every other column of a content row is ignored.
  * `stagedFor` is absent on a resource without staging.
  */
-type ContentFields = { fields?: unknown; stagedFor?: string | null };
+type ContentFields = {
+    locale: string;
+    fields?: unknown;
+    stagedFor?: string | null | undefined;
+};
 
 /**
  * The write seam and the rebuild side of one resource's relationship index,
@@ -49,10 +53,10 @@ export function createContentRelationships(shape: ContentRelationshipsShape): {
 } {
     /**
      * Replace one resource's rows in the index with the references its stored
-     * content now holds. The index is keyed on the resource, so every locale it
-     * holds contributes: a write to one locale re-reads the rest rather than
-     * replacing their references with its own. Call it inside the transaction
-     * that wrote the row, after that write, so the re-read sees it.
+     * content now holds, in every locale. The replace covers the whole resource,
+     * so a write to one locale re-reads the rest rather than dropping their rows.
+     * Call it inside the transaction that wrote the row, after that write and
+     * after its shared fields reach the other locales, so the re-read sees both.
      */
     async function sync(config: ResolvedConfig, id: string): Promise<void> {
         const [indexed] = await sources(config, [id]);
@@ -62,7 +66,7 @@ export function createContentRelationships(shape: ContentRelationshipsShape): {
 
     /**
      * Every resource of this kind as a relationship source, with the references
-     * its STORED content holds across all locales. The rebuild side of `sync`,
+     * its STORED content holds in each locale. The rebuild side of `sync`,
      * read as stored rows rather than through a repository `findMany()`, whose
      * join is pinned to one locale. Stored data has already been through
      * `parseFields`, so the traversal mints no ids here. `type` keeps only the
@@ -89,9 +93,14 @@ export function createContentRelationships(shape: ContentRelationshipsShape): {
         const contentRowsById = new Map<string, ContentFields[]>();
         for (const row of contents) {
             const resourceId = String(row[shape.resourceIdColumn]);
+            const fields: ContentFields = {
+                locale: String(row['locale']),
+                fields: row['fields'],
+                stagedFor: row['stagedFor'] as string | null | undefined,
+            };
             const held = contentRowsById.get(resourceId);
-            if (held) held.push(row);
-            else contentRowsById.set(resourceId, [row]);
+            if (held) held.push(fields);
+            else contentRowsById.set(resourceId, [fields]);
         }
 
         const kept =
@@ -142,11 +151,12 @@ export function createContentRelationships(shape: ContentRelationshipsShape): {
 }
 
 /**
- * One reference per (instancePath, target) across a resource's content rows:
- * two locales holding the same reference are one row, and the index's primary
- * key would reject the second. A reference any canonical row carries is
- * canonical; one only a staged row carries is staged, so a pending merge's new
- * reference blocks a delete without appearing in a reverse lookup.
+ * One reference per (locale, instancePath, target) across a resource's content
+ * rows. A locale's canonical and staged rows share the locale, and the index's
+ * primary key would reject the second copy. Within a locale, a reference the
+ * canonical row carries is canonical; one only the staged row carries is
+ * staged, so a pending merge's new reference blocks a delete without appearing
+ * in a reverse lookup.
  */
 export function mergeContentReferences(
     rows: readonly ContentFields[],
@@ -156,10 +166,16 @@ export function mergeContentReferences(
     for (const row of rows) {
         const staged = row.stagedFor !== undefined && row.stagedFor !== null;
         for (const reference of referencesOf((row.fields ?? {}) as JsonObject)) {
-            const key = `${reference.instancePath}\0${reference.targetKind}\0${reference.targetId}`;
+            const key = [
+                row.locale,
+                reference.instancePath,
+                reference.targetKind,
+                reference.targetId,
+            ].join('\0');
             const held = byKey.get(key);
-            if (held === undefined) byKey.set(key, { ...reference, staged });
-            else if (!staged) held.staged = false;
+            if (held === undefined) {
+                byKey.set(key, { ...reference, locale: row.locale, staged });
+            } else if (!staged) held.staged = false;
         }
     }
     return Array.from(byKey.values());

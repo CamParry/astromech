@@ -98,8 +98,9 @@ export function versionSchema<S extends z.ZodObject>(name: string, snapshot: S) 
 }
 
 /**
- * One reference in the relationships index pointing at a resource: a row of a
- * `usedBy` answer, which the delete check and the media "used by" panel read.
+ * One reference pointing at a resource, across the locales that hold it: a row
+ * of a `usedBy` answer, which the delete check and the media "used by" panel
+ * read.
  */
 export const usageSchema = z
     .object({
@@ -117,7 +118,15 @@ export const usageSchema = z
         schemaPath: z.string(),
         /** Instance path, which deep-links to the exact item. Never pattern-matched. */
         instancePath: z.string(),
-        /** True when only the source's staged (pending-merge) change holds it. */
+        /**
+         * The locales whose content holds the reference, sorted. A shared field's
+         * reference is held by every locale the source has.
+         */
+        locales: z.array(z.string()),
+        /**
+         * True when every locale holding the reference holds it only in its staged
+         * (pending-merge) change.
+         */
         sourceStaged: z.boolean(),
     })
     .openapi('Usage');

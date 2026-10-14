@@ -97,6 +97,7 @@ describe.each(paths)('$name', ({ kind, arrange, act }) => {
             { id: doomed, kind, type: kind === 'entry' ? 'post' : null },
             [
                 {
+                    locale: 'en',
                     schemaPath: 'related',
                     instancePath: 'related',
                     targetId: survivor,
@@ -108,12 +109,14 @@ describe.each(paths)('$name', ({ kind, arrange, act }) => {
             { id: survivor, kind: 'entry', type: 'post' },
             [
                 {
+                    locale: 'en',
                     schemaPath: 'related',
                     instancePath: 'related[0]',
                     targetId: doomed,
                     targetKind: kind,
                 },
                 {
+                    locale: 'en',
                     schemaPath: 'related',
                     instancePath: 'related[1]',
                     targetId: survivor,

@@ -1613,6 +1613,14 @@
           "primaryKey": false
         },
         {
+          "key": "locale",
+          "name": "locale",
+          "kind": "text",
+          "type": "text",
+          "notNull": true,
+          "primaryKey": false
+        },
+        {
           "key": "schemaPath",
           "name": "schema_path",
           "kind": "text",
@@ -1662,6 +1670,7 @@
       "primaryKey": [
         "source_id",
         "source_kind",
+        "locale",
         "instance_path",
         "target_id",
         "target_kind"

@@ -3,16 +3,17 @@
  * file) database. Covers the wholesale replace and its INSERT chunking.
  */
 
-import type { FieldReference } from '@/fields/references';
+import type { IndexedReference } from '@/content/repository/relationships';
 import { createTestDb } from '@tests/harness';
 import { beforeEach, describe, expect, it } from 'vitest';
 import { relationshipRepository } from '@/content/repository/relationships';
 
 const SOURCE = { id: 'src-1', kind: 'entry', type: 'post' } as const;
 
-/** `n` distinct references under one schema path. */
-function references(n: number): FieldReference[] {
+/** `n` distinct references under one schema path, held in `locale`. */
+function references(n: number, locale = 'en'): IndexedReference[] {
     return Array.from({ length: n }, (_, i) => ({
+        locale,
         schemaPath: 'related',
         instancePath: 'related',
         targetId: `t${i}`,
@@ -34,6 +35,7 @@ describe('replaceForSource', () => {
             sourceId: 'src-1',
             sourceKind: 'entry',
             sourceType: 'post',
+            locale: 'en',
             schemaPath: 'related',
             instancePath: 'related',
             targetId: 't0',
@@ -72,7 +74,17 @@ describe('replaceForSource', () => {
         );
     });
 
-    // 12 rows per INSERT is the largest statement that fits D1's parameter cap.
+    it('keeps the same reference held by two locales as two rows', async () => {
+        await relationshipRepository.replaceForSource(SOURCE, [
+            ...references(1, 'en'),
+            ...references(1, 'de'),
+        ]);
+
+        const rows = await relationshipRepository.findBySource(SOURCE.id, 'entry');
+        expect(rows.map((r) => r.locale).sort()).toEqual(['de', 'en']);
+    });
+
+    // 11 rows per INSERT is the largest statement that fits D1's parameter cap.
     it('lands every row when the references span multiple INSERT chunks', async () => {
         await relationshipRepository.replaceForSource(SOURCE, references(29));
 
@@ -101,6 +113,7 @@ describe('deleteByResource', () => {
         await relationshipRepository.replaceForSource(SOURCE, references(1));
         await relationshipRepository.replaceForSource({ id: 'other', kind: 'entry' }, [
             {
+                locale: 'en',
                 schemaPath: 'related',
                 instancePath: 'related',
                 targetId: 'src-1',

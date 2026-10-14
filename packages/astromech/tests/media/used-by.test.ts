@@ -87,6 +87,7 @@ describe('mediaService.usedBy', () => {
                 sourceTitle: 'Article',
                 schemaPath: 'cover',
                 instancePath: 'cover',
+                locales: ['en'],
                 sourceStaged: false,
             },
         ]);
@@ -180,6 +181,7 @@ describe('mediaService.usedBy', () => {
                 sourceTitle: 'Avatar Owner',
                 schemaPath: 'avatar',
                 instancePath: 'avatar',
+                locales: ['en'],
                 sourceStaged: false,
             },
         ]);
@@ -212,6 +214,7 @@ describe('mediaService.usedBy', () => {
                 { id: sourceId, kind: 'media' },
                 [
                     {
+                        locale: 'en',
                         schemaPath: 'credit',
                         instancePath: 'credit',
                         targetId: mediaId,

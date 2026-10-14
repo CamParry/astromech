@@ -17,9 +17,10 @@ const relationships = createContentRelationships({
 });
 
 /**
- * Replace one entry's rows in the index with the references every locale of its
+ * Replace one entry's rows in the index with the references each locale of its
  * stored content holds, staged rows included. Call it inside the transaction
- * that wrote the row, after that write, so the re-read sees it. An entry of a
+ * that wrote the row, after that write and its shared-field propagation, so the
+ * re-read sees both. An entry of a
  * type no longer configured keeps its rows: there is no schema to read
  * references from, and the rebuild reports them as drift.
  */

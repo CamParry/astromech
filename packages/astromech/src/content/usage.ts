@@ -1,7 +1,8 @@
 /**
  * The reverse lookup every resource's `usedBy` answers: each reference in the
- * relationships index pointing at one target, named through its source's own
- * rows. Staged sources count, since a pending merge is a reason not to delete.
+ * relationships index pointing at one target, in any locale, named through its
+ * source's own rows. Staged sources count, since a pending merge is a reason not
+ * to delete.
  */
 
 import type { RelationshipRow } from '@/database/tables';
@@ -14,8 +15,9 @@ import { userRepository } from '@/users/repository';
 
 /**
  * Every reference pointing at one target, one row per reference: a source using
- * the target at two paths yields two rows. The caller has already answered a
- * missing target with a 404.
+ * the target at two paths yields two rows. The index holds a row per locale, and
+ * the locales holding one reference fold into its `locales`. The caller has
+ * already answered a missing target with a 404.
  */
 export async function listUsage(
     config: ResolvedConfig,
@@ -25,19 +27,32 @@ export async function listUsage(
         includeStaged: true,
     });
     const titles = await loadSourceTitles(config, rows);
-    return rows
-        .map(
-            (row): Usage => ({
+
+    const byReference = new Map<string, Usage>();
+    for (const row of rows) {
+        const key = `${sourceKey(row)}\0${row.instancePath}`;
+        const held = byReference.get(key);
+        if (held === undefined) {
+            byReference.set(key, {
                 sourceId: row.sourceId,
                 sourceKind: row.sourceKind,
                 sourceType: row.sourceType,
                 sourceTitle: titles.get(sourceKey(row)) ?? '',
                 schemaPath: row.schemaPath,
                 instancePath: row.instancePath,
+                locales: [row.locale],
                 sourceStaged: row.sourceStaged,
-            })
-        )
-        .sort(compareUsage);
+            });
+            continue;
+        }
+        held.locales.push(row.locale);
+        // Staged only when no locale holding it holds it in canonical content.
+        held.sourceStaged &&= row.sourceStaged;
+    }
+
+    const usage = Array.from(byReference.values());
+    for (const row of usage) row.locales.sort();
+    return usage.sort(compareUsage);
 }
 
 /**

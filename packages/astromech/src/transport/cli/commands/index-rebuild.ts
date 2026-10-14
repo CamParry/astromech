@@ -70,11 +70,12 @@ function reportDrift(report: DriftReport): void {
     process.exitCode = 1;
 }
 
-/** One drift row on one line: which source, which path, which target. */
+/** One drift row on one line: which source and locale, which path, which target. */
 function describe(row: {
     sourceKind: string;
     sourceType: string | null;
     sourceId: string;
+    locale: string;
     instancePath: string;
     targetKind: string;
     targetId: string;
@@ -82,5 +83,5 @@ function describe(row: {
 }): string {
     const source = row.sourceType ?? row.sourceKind;
     const staged = row.sourceStaged ? ' (staged)' : '';
-    return `${source} ${row.sourceId}${staged} ${row.instancePath} -> ${row.targetKind} ${row.targetId}`;
+    return `${source} ${row.sourceId} [${row.locale}]${staged} ${row.instancePath} -> ${row.targetKind} ${row.targetId}`;
 }

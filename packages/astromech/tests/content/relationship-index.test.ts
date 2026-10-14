@@ -28,8 +28,8 @@ const usersService = currentServices.users;
 
 /**
  * `article` holds a relation flat and two more inside a repeater (one of them a
- * multi media relation); users and media hold relations too, so all three source
- * kinds are reachable.
+ * multi media relation), and is translatable; users and media hold relations
+ * too, so all three source kinds are reachable.
  */
 function makeIndexConfig(): AstromechConfig {
     const base = makeTestConfig();
@@ -42,6 +42,7 @@ function makeIndexConfig(): AstromechConfig {
                 single: 'Article',
                 plural: 'Articles',
                 staging: true,
+                translatable: true,
                 fields: [
                     {
                         name: 'author',
@@ -312,6 +313,7 @@ describe('rebuildRelationshipIndex', () => {
             sourceId: article,
             sourceKind: 'entry',
             sourceType: 'article',
+            locale: 'en',
             schemaPath: 'author',
             instancePath: 'author',
             targetId: 'ghost',
@@ -355,6 +357,7 @@ describe('rebuildRelationshipIndex', () => {
             sourceId: 'purged-entry',
             sourceKind: 'entry',
             sourceType: 'article',
+            locale: 'en',
             schemaPath: 'author',
             instancePath: 'author',
             targetId: 'anything',
@@ -399,6 +402,7 @@ describe('rebuildRelationshipIndex(getConfig(), { type })', () => {
             sourceId: post,
             sourceKind: 'entry',
             sourceType: 'post',
+            locale: 'en',
             schemaPath: 'related',
             instancePath: 'related',
             targetId: 'ghost',
@@ -409,6 +413,7 @@ describe('rebuildRelationshipIndex(getConfig(), { type })', () => {
             sourceId: media,
             sourceKind: 'media',
             sourceType: null,
+            locale: 'en',
             schemaPath: 'credit',
             instancePath: 'credit',
             targetId: 'ghost',
@@ -425,5 +430,85 @@ describe('rebuildRelationshipIndex(getConfig(), { type })', () => {
 
         const rows = await relationshipRepository.findMany();
         expect(rows.filter((row) => row.targetId === 'ghost')).toHaveLength(2);
+    });
+});
+
+describe('the index across locales', () => {
+    /** An article whose English and German rows reference different posts. */
+    async function seedTranslated(): Promise<{
+        article: string;
+        english: string;
+        german: string;
+    }> {
+        const english = await api.create({ type: 'post', data: { title: 'English' } });
+        const german = await api.create({ type: 'post', data: { title: 'German' } });
+        const article = await api.create({
+            type: 'article',
+            data: { title: 'EN', fields: { author: english.id } },
+        });
+        await api.update({
+            type: 'article',
+            id: article.id,
+            locale: 'de',
+            data: { title: 'DE', fields: { author: german.id } },
+        });
+        return { article: article.id, english: english.id, german: german.id };
+    }
+
+    it('records each reference under the locale holding it, with no drift', async () => {
+        const { article, english, german } = await seedTranslated();
+
+        const rows = await relationshipRepository.findBySource(article, 'entry');
+        expect(
+            rows
+                .map((row) => [row.locale, row.targetId])
+                .sort(([a], [b]) => String(a).localeCompare(String(b)))
+        ).toEqual([
+            ['de', german],
+            ['en', english],
+        ]);
+        expect(driftCount(await checkRelationshipIndex(getConfig()))).toBe(0);
+    });
+
+    it("reports a locale's deleted row as missing and restores it", async () => {
+        const { article, german } = await seedTranslated();
+        await createRepository(relationshipsTable).deleteMany({
+            sourceId: article,
+            locale: 'de',
+        });
+
+        const before = await checkRelationshipIndex(getConfig());
+        expect(before.missing.map((row) => [row.locale, row.targetId])).toEqual([
+            ['de', german],
+        ]);
+
+        await rebuildRelationshipIndex(getConfig());
+
+        expect(driftCount(await checkRelationshipIndex(getConfig()))).toBe(0);
+    });
+
+    it('reports a reference recorded under a locale that does not hold it', async () => {
+        const { article, english } = await seedTranslated();
+        await createRepository(relationshipsTable).create({
+            sourceId: article,
+            sourceKind: 'entry',
+            sourceType: 'article',
+            locale: 'de',
+            schemaPath: 'author',
+            instancePath: 'author',
+            targetId: english,
+            targetKind: 'entry',
+            sourceStaged: false,
+        });
+
+        const before = await checkRelationshipIndex(getConfig());
+        expect(before.missing).toEqual([]);
+        expect(before.unexpected.map((row) => [row.locale, row.targetId])).toEqual([
+            ['de', english],
+        ]);
+
+        await rebuildRelationshipIndex(getConfig());
+
+        expect(driftCount(await checkRelationshipIndex(getConfig()))).toBe(0);
     });
 });

@@ -143,8 +143,9 @@ astromech permissions --json          # full catalogue entries (description, sou
 
 The `relationships` table is a derived index over your field data, so it can be
 regenerated at any time. Rebuild it after a config change that adds or moves a
-relationship field — nothing repopulates it automatically, and there is
-deliberately no repair at startup.
+relationship field, and after a migration that recreates the table empty:
+nothing repopulates it automatically, and there is deliberately no repair at
+startup.
 
 ```sh
 astromech index:rebuild                    # rebuild every source

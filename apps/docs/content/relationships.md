@@ -60,9 +60,18 @@ const author = await Astromech.entries.get({
 `get` does not fall back: a locale the target has no content for returns `null`,
 and it is yours to decide what to show instead.
 
-`where: { references }` compares entry ids too, so it answers for the entry
-across every locale. `usedBy` returns resource ids in `sourceId`, one row per
-reference, with an entry's `sourceTitle` read in the default locale.
+The index records each reference under the locale whose content holds it, so
+the two reverse lookups differ:
+
+- `where: { references }` answers for the locale the query reads. Each row it
+  returns matches on its own references: if the English version of an entry
+  references A and the French version references B, a French query for A does
+  not return the entry. A shared field (`translatable: false`) is stored in
+  every locale's content, so its reference matches in every locale.
+- `usedBy` spans every locale, since it answers whether a delete would leave a
+  dangling reference. It returns resource ids in `sourceId`, one row per
+  reference, with the locales holding it in `locales` and an entry's
+  `sourceTitle` read in the default locale.
 
 ## Querying the reverse direction
 
@@ -93,12 +102,15 @@ media alike. It lists every reference, whichever resource holds it:
 ```ts
 await Astromech.entries.usedBy({ type: 'post', id });
 await Astromech.media.usedBy({ id });
-// → [{ sourceId, sourceKind, sourceType, sourceTitle, schemaPath, instancePath, sourceStaged }]
+// → [{ sourceId, sourceKind, sourceType, sourceTitle, schemaPath, instancePath, locales, sourceStaged }]
 ```
 
 `sourceKind` is `'entry'`, `'global'`, `'user'` or `'media'`. `sourceType` is an
 entry's type or a global's key, and null for a user or a media item.
-`sourceStaged` is true when only a pending staged change holds the reference.
+`locales` lists, sorted, the locales whose content holds the reference.
+`sourceStaged` is true when every one of them holds it only in a pending staged
+change. `where: { references }` never matches a reference only a staged change
+holds.
 
 ## How it is stored, and what you owe it
 

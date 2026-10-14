@@ -1,5 +1,5 @@
 /**
- * The shape guard both entry repositories apply to `where: { references }`.
+ * The shape guard the entry repository applies to `where: { references }`.
  * `entries.query` validates the filter and its schema path first and throws on
  * a malformed one, so the guard has nothing to report.
  */
