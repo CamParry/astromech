@@ -19,8 +19,11 @@ export {
 export { resolveValidationMode } from '@/content/validation-mode';
 export { fileExtension } from '@/media/file-extension';
 export { buildVariantUrl } from '@/media/serving/image/url';
-export { entryPermission } from '@/permissions/entry-permission';
-export { globalPermission } from '@/permissions/global-permission';
+export { entryPermission } from '@/entries/permissions';
+export { globalPermission } from '@/globals/permissions';
+export { mediaPermission } from '@/media/permissions';
+export { securityPermission } from '@/security/permissions';
+export { userPermission } from '@/users/permissions';
 export { formatAiContextMessage } from '@/ai/context-message';
 export { deepEqual } from '@/utilities/deep-equal';
 export { defaultContentLocale, resolveContentLocale } from '@/utilities/locale';

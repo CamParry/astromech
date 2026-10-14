@@ -1,6 +1,6 @@
 import type { Permission, Role } from '@/types/index';
 import { describe, expect, it } from 'vitest';
-import { entryPermissions } from '@/permissions/entry-permission';
+import { entryPermissions } from '@/entries/permissions';
 import { definePermissions, hasPermission } from '@/permissions/permission';
 import { permissionsFor } from '@/permissions/permissions-for';
 import {

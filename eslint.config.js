@@ -134,7 +134,20 @@ const noResourceConfigImport = {
         "RESOURCE_CONFIG is internal to content/. Pass the resource by name (`resource: 'user'`) to a content/ helper, or add a named accessor to content/resources.ts.",
 };
 
-function restrictedCoreImports(modules, { allowResourceConfig = false } = {}) {
+// `permissions/` holds what no resource owns: the grammar and matcher, roles
+// and access. Each resource's own permissions sit beside it in its
+// `permissions.ts`, above `permissions/` in the layer model, so
+// `permissions/` imports no content module.
+const noContentModuleImport = {
+    regex: `^(@/|(\\.{1,2}/)+)(${contentModules.join('|')})(/|$)`,
+    message:
+        'permissions/ holds what no resource owns and imports no content module. A resource\'s permissions live in its own permissions.ts (see `ARCHITECTURE.md`, "Content modules").',
+};
+
+function restrictedCoreImports(
+    modules,
+    { allowResourceConfig = false, banContentModules = false } = {}
+) {
     return [
         'error',
         {
@@ -145,6 +158,7 @@ function restrictedCoreImports(modules, { allowResourceConfig = false } = {}) {
                         "A module's internal/ is private to it. Import from the module root, or move the helper there if another module needs it (see `decisions/module-internal-is-private.md`).",
                 },
                 ...(allowResourceConfig ? [] : [noResourceConfigImport]),
+                ...(banContentModules ? [noContentModuleImport] : []),
             ],
         },
     ];
@@ -314,6 +328,15 @@ export default tseslint.config(
             '@typescript-eslint/no-restricted-imports': restrictedCoreImports(
                 modulesWithInternal,
                 { allowResourceConfig: true }
+            ),
+        },
+    },
+    {
+        files: ['packages/astromech/src/permissions/**/*.ts'],
+        rules: {
+            '@typescript-eslint/no-restricted-imports': restrictedCoreImports(
+                modulesWithInternal,
+                { banContentModules: true }
             ),
         },
     },

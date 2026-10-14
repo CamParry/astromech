@@ -128,7 +128,8 @@ export function CommandPalette(): React.ReactElement {
     const [activeIndex, setActiveIndex] = useState(0);
     const inputRef = useRef<HTMLInputElement>(null);
 
-    const { hasPermission, canReadUsers, canReadMedia } = usePermissions();
+    const permissions = usePermissions();
+    const { hasPermission } = permissions;
 
     // Debounce the typed query for live search
     const debouncedQuery = useDebounce(query.trim(), 200);
@@ -165,14 +166,14 @@ export function CommandPalette(): React.ReactElement {
                           .catch(() => [])
                     : Promise.resolve([]);
 
-            const usersPromise: Promise<User[]> = canReadUsers()
+            const usersPromise: Promise<User[]> = permissions.users.can('read')
                 ? astromechUntypedClient.users
                       .query({ search: q2, limit: 5 })
                       .then((r) => r.data)
                       .catch(() => [])
                 : Promise.resolve([]);
 
-            const mediaPromise: Promise<Media[]> = canReadMedia()
+            const mediaPromise: Promise<Media[]> = permissions.media.can('read')
                 ? astromechUntypedClient.media
                       .query({ search: q2, limit: 5 })
                       .then((r) => r.data)

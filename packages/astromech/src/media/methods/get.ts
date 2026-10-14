@@ -1,6 +1,7 @@
 import type { MediaResource } from '../repository';
 import { z } from '@hono/zod-openapi';
 import { resolveResourceLocale } from '@/content/locale';
+import { mediaPermission } from '@/media/permissions';
 import { defineServiceMethod } from '@/services/define-service-method';
 import { defaultContentLocale } from '@/utilities/locale';
 import { mediaRepository } from '../repository';
@@ -14,7 +15,7 @@ export const getMedia = defineServiceMethod({
     summary: 'Read one media item by id.',
     input: z.strictObject({ id: z.string(), locale: z.string().optional() }),
     output: mediaSchema.nullable(),
-    access: 'media:read',
+    access: mediaPermission('read'),
     mutates: false,
     async handler(params, ctx): Promise<MediaResource | null> {
         const { id } = params;

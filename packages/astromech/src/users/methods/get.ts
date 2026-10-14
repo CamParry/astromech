@@ -2,6 +2,7 @@ import type { UserResource } from '../repository';
 import { z } from '@hono/zod-openapi';
 import { resolveResourceLocale } from '@/content/locale';
 import { defineServiceMethod } from '@/services/define-service-method';
+import { userPermission } from '@/users/permissions';
 import { defaultContentLocale } from '@/utilities/locale';
 import { userRepository } from '../repository';
 import { userSchema } from '../schema';
@@ -15,7 +16,7 @@ export const getUser = defineServiceMethod({
     summary: 'Read one user by id.',
     input: z.strictObject({ id: z.string(), locale: z.string().optional() }),
     output: userSchema.nullable(),
-    access: 'users:read',
+    access: userPermission('read'),
     mutates: false,
     async handler(params, ctx): Promise<UserResource | null> {
         const { id } = params;

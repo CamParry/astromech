@@ -3,6 +3,7 @@ import { z } from '@hono/zod-openapi';
 import { getResourceInLocale } from '@/content/locale';
 import { readVersion } from '@/content/versions';
 import { defineServiceMethod } from '@/services/define-service-method';
+import { userPermission } from '@/users/permissions';
 import { userRepository } from '../../repository';
 import { userVersionSchema } from '../../schema';
 
@@ -18,7 +19,7 @@ export const getUserVersion = defineServiceMethod({
         version: z.number().int(),
     }),
     output: userVersionSchema,
-    access: 'users:read',
+    access: userPermission('read'),
     mutates: false,
     async handler(params, ctx): Promise<UserVersion> {
         const { id, version } = params;

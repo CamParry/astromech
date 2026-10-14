@@ -5,7 +5,7 @@
  */
 
 import type { DataField, Field, ResolvedEntryFields } from '@/types/fields';
-import { PROTOTYPE_KEY } from '@/entries/entry-types';
+import { PROTOTYPE_KEY } from '@/utilities/is-record';
 import { getFieldType } from './field-type-registry';
 import { fieldAffectsData, isLayoutField } from './flatten';
 import { traverseFields } from './traverse';

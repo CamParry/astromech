@@ -12,8 +12,8 @@ import type {
     ResolvedConfig,
     ResolvedPluginIdentity,
 } from '@/types/index';
-import { entryPermission } from '@/permissions/entry-permission';
-import { globalPermission } from '@/permissions/global-permission';
+import { entryPermission } from '@/entries/permissions';
+import { globalPermission } from '@/globals/permissions';
 import { resolvePluginPermission, titleCaseNamespace } from './plugin-identity';
 import { resolveResourceMethod } from './plugin-resources';
 

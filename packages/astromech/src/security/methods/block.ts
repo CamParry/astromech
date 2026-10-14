@@ -2,6 +2,7 @@ import type { BlockedAddress } from '@/types/index';
 import { z } from '@hono/zod-openapi';
 import { ApiError } from '@/errors/api-error';
 import { clearAddressListCache } from '@/security/address-lists';
+import { securityPermission } from '@/security/permissions';
 import { blockedAddressRepository } from '@/security/repository/blocked-addresses';
 import {
     addressRangeInput,
@@ -26,7 +27,7 @@ export const blockAddress = defineServiceMethod({
         }),
     }),
     output: blockedAddressSchema,
-    access: 'security:manage',
+    access: securityPermission('manage'),
     mutates: true,
     async handler(params, ctx): Promise<BlockedAddress> {
         const { data } = params;

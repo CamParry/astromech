@@ -1,5 +1,6 @@
 import { z } from '@hono/zod-openapi';
 import { clearAddressListCache } from '@/security/address-lists';
+import { securityPermission } from '@/security/permissions';
 import { blockedAddressRepository } from '@/security/repository/blocked-addresses';
 import { defineServiceMethod } from '@/services/define-service-method';
 
@@ -11,7 +12,7 @@ export const unblockAddress = defineServiceMethod({
     summary: 'Remove a block.',
     input: z.strictObject({ id: z.string() }),
     output: z.void(),
-    access: 'security:manage',
+    access: securityPermission('manage'),
     mutates: true,
     destructive: true,
     idempotent: true,

@@ -44,12 +44,12 @@ const ADDRESS_FORM_ID = 'security-address-form';
 
 export function SecurityPage(): React.ReactElement {
     const { t } = useTranslation();
-    const { canManageSecurity } = usePermissions();
+    const { security } = usePermissions();
     const [tab, setTab] = useState<SecurityTab>('blocked');
     const [adding, setAdding] = useState<SecurityTab | null>(null);
 
     // The lists load in the panels, so a refused user's page makes no request.
-    if (!canManageSecurity()) return <ForbiddenPage />;
+    if (!security.can('manage')) return <ForbiddenPage />;
 
     return (
         <Page>

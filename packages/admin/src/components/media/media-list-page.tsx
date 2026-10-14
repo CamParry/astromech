@@ -68,8 +68,8 @@ export function validateMediaListSearch(
 }
 
 export function MediaListPage(): React.ReactElement {
-    const { canReadMedia } = usePermissions();
-    if (!canReadMedia()) return <ForbiddenPage />;
+    const { media } = usePermissions();
+    if (!media.can('read')) return <ForbiddenPage />;
     return <MediaListBody />;
 }
 
@@ -81,9 +81,9 @@ function MediaListBody(): React.ReactElement {
     const { type: typeFilter = 'all', item } = validateMediaListSearch(raw);
     const [viewMode, setViewMode] = useViewMode('media');
 
-    const { canUploadMedia, canUpdateMedia, canDeleteMedia } = usePermissions();
+    const { media } = usePermissions();
     const { upload, isUploading, uploadDialog } = useUploadMedia();
-    const canUpload = canUploadMedia();
+    const canUpload = media.can('upload');
 
     useAiContext({ kind: 'media', label: t('media.title') }, { depth: 0 });
 
@@ -126,7 +126,7 @@ function MediaListBody(): React.ReactElement {
         },
     });
 
-    const bulkActions: DataListBulkAction[] = canDeleteMedia()
+    const bulkActions: DataListBulkAction[] = media.can('delete')
         ? [
               {
                   label: t('common.delete'),
@@ -291,8 +291,8 @@ function MediaListBody(): React.ReactElement {
                 mediaId={item ?? null}
                 onClose={closeItem}
                 onDeleted={handleItemDeleted}
-                canDelete={canDeleteMedia()}
-                canUpdate={canUpdateMedia()}
+                canDelete={media.can('delete')}
+                canUpdate={media.can('update')}
                 canUpload={canUpload}
             />
 

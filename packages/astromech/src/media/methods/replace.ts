@@ -2,6 +2,7 @@ import type { MediaResource } from '../repository';
 import type { StorageDriver } from '@/storage/driver';
 import { z } from '@hono/zod-openapi';
 import { ResourceNotFoundError } from '@/errors/resource';
+import { mediaPermission } from '@/media/permissions';
 import { defineServiceMethod } from '@/services/define-service-method';
 import { getStorageDriver } from '@/storage/registry';
 import { log } from '@/utilities/log';
@@ -21,7 +22,7 @@ export const replaceMedia = defineServiceMethod({
     input: z.strictObject({ id: z.string(), file: z.instanceof(File) }),
     binaryInput: true,
     output: mediaSchema,
-    access: 'media:upload',
+    access: mediaPermission('upload'),
     mutates: true,
     destructive: true,
     async handler(params, ctx): Promise<MediaResource> {

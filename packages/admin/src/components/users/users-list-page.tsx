@@ -27,8 +27,8 @@ import { useListState } from '../ui/use-list-state';
 const PER_PAGE = 20;
 
 export function UsersListPage(): React.ReactElement {
-    const { canReadUsers } = usePermissions();
-    if (!canReadUsers()) return <ForbiddenPage />;
+    const { users } = usePermissions();
+    if (!users.can('read')) return <ForbiddenPage />;
     return <UsersListBody />;
 }
 
@@ -36,7 +36,7 @@ function UsersListBody(): React.ReactElement {
     const { t } = useTranslation();
     const confirm = useConfirm();
     const navigate = useNavigate();
-    const { canCreateUsers, canDeleteUsers } = usePermissions();
+    const { users } = usePermissions();
     const list = useListState({ pageSize: PER_PAGE });
 
     useAiContext({ kind: 'users', label: t('users.title') }, { depth: 0 });
@@ -88,7 +88,7 @@ function UsersListBody(): React.ReactElement {
         <Page>
             <PageHeader>
                 <PageTitle>{t('users.title')}</PageTitle>
-                {canCreateUsers() && (
+                {users.can('create') && (
                     <Button
                         variant="secondary"
                         onClick={() => void navigate({ to: '/users/new' })}
@@ -122,7 +122,7 @@ function UsersListBody(): React.ReactElement {
                             href: `/users/${user.id}`,
                             icon: <Pencil size={14} />,
                         },
-                        ...(canDeleteUsers()
+                        ...(users.can('delete')
                             ? [
                                   {
                                       label: t('common.delete'),

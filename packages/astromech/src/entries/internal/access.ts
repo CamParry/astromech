@@ -1,9 +1,8 @@
+import type { EntryAction } from '@/entries/permissions';
 import type { AccessRule } from '@/permissions/access';
-import type { EntryAction } from '@/permissions/entry-permission';
 import type { Permission } from '@/permissions/permission';
 import { needsPublish } from '@/content/publish-access';
-import { PERMISSION_ENTRY_READ_FULL } from '@/permissions/core-permissions';
-import { entryPermission } from '@/permissions/entry-permission';
+import { entryPermission, PERMISSION_ENTRY_READ_FULL } from '@/entries/permissions';
 
 /**
  * The permissions an entries method needs: `action` on each type the call names,

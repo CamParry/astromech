@@ -46,12 +46,12 @@ export function MediaPicker({
     perPage = DEFAULT_PER_PAGE,
 }: MediaPickerProps): React.ReactElement {
     const { t } = useTranslation();
-    const { canUploadMedia } = usePermissions();
+    const { media } = usePermissions();
     const { upload, isUploading, uploadDialog } = useUploadMedia();
     const { items, totalItems, totalPages, currentPage, isLoading, isError } =
         useMediaBrowser(query, perPage);
 
-    const canUpload = canUploadMedia();
+    const canUpload = media.can('upload');
 
     return (
         <div className="am-media-browser">

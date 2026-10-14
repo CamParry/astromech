@@ -1,8 +1,8 @@
+import type { GlobalAction } from '@/globals/permissions';
 import type { AccessRule } from '@/permissions/access';
-import type { GlobalAction } from '@/permissions/global-permission';
 import { getConfig } from '@/config/registry';
 import { needsPublish } from '@/content/publish-access';
-import { globalPermission } from '@/permissions/global-permission';
+import { globalPermission } from '@/globals/permissions';
 import { resolveGlobal } from '../resolve-global';
 
 /** A globals access rule: always a function of the call's input. */

@@ -13,6 +13,7 @@ import {
     fromZodError,
     notFound,
 } from '@/transport/http/middleware/errors';
+import { userPermission } from '@/users/permissions';
 import { usersDefinition } from '@/users/service';
 import { USERS_ROUTE_SPECS } from './http-routes';
 import { isMethodInputError, mountRestRoutes } from './rest-route';
@@ -61,11 +62,17 @@ router.put('/:id', async (c) => {
     if (raw === undefined) return badRequest(c, 'Invalid JSON body');
     const body = typeof raw === 'object' && raw !== null ? raw : {};
     if (!canUpdateUsers && 'role' in body && body.role !== undefined)
-        return forbidden(c, 'Changing your role requires the "users:update" permission');
+        return forbidden(
+            c,
+            `Changing your role requires the "${userPermission('update')}" permission`
+        );
     // A stolen session could change the email and then reset the password, so
     // self-access cannot change it until the change asks for the password.
     if (!canUpdateUsers && 'email' in body && body.email !== undefined)
-        return forbidden(c, 'Changing your email requires the "users:update" permission');
+        return forbidden(
+            c,
+            `Changing your email requires the "${userPermission('update')}" permission`
+        );
 
     try {
         const user = await c.var.ctx.users.update({
