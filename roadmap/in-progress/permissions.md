@@ -72,13 +72,13 @@ Groups 1 to 4 change no behaviour.
       `permissions/permission.ts`; one `AccessRule` in `permissions/access.ts`;
       delete core `can()` in `permissions/roles.ts`, and have
       `annotate-manifest.ts` use `permissionsFor`.
-- [ ] **Permissions beside each resource.** `entries/permissions.ts`,
+- [x] **Permissions beside each resource.** `entries/permissions.ts`,
       `globals/permissions.ts`, and new `media/permissions.ts` and
       `users/permissions.ts` (moved from `core-permissions.ts`, which keeps only
       `admin:access`). This removes the upward imports from `permissions/` into
       `entries/`. The admin gets `can(action)` for media and users in place of
       the nine `canXxx` helpers. Strings unchanged.
-- [ ] **One access shape in the method manifest:** `access`, `permissions[]`
+- [x] **One access shape in the method manifest:** `access`, `permissions[]`
       and `dynamic` for core and plugin methods alike
       (`codegen/method-manifest.ts`, `policies/annotate-manifest.ts`). The
       entry catalogue keeps every permission a method can demand, not only the

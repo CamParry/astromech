@@ -99,7 +99,7 @@ One agent and one landing per step. Staging keeps working until step 7.
       `get({ draft: true })` and `hasDraft`; publish, `discardDraft` and
       unpublish as decided; slug and `unique` checks on save and publish;
       hooks on publish.
-- [ ] Step 3: Globals: the same, through the shared code in `content/`.
+- [x] Step 3: Globals: the same, through the shared code in `content/`.
       Also: the live-row guard checks the status as read, so an update that
       read an unpublished locale cannot write live after a concurrent
       publish; an update that changes nothing saves no draft.
