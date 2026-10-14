@@ -45,9 +45,11 @@ export const TEST_WORKERS = 4;
 /**
  * How many tasks a limited run of the gate runs at once (Turborepo's
  * `--concurrency`, whose default is ten). Each test suite runs `TEST_WORKERS`
- * workers of its own.
+ * workers of its own. The run lock lets one gate run at a time, so the limit
+ * is set for one gate beside other sessions' lighter work: at 2, the gate left
+ * the machine at about 40% CPU.
  */
-export const WORKSPACE_CONCURRENCY = 2;
+export const WORKSPACE_CONCURRENCY = 4;
 
 /**
  * Set on a process that already runs at the lower priority. Every process it

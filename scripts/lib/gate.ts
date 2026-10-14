@@ -215,7 +215,7 @@ export function turboRunArguments(repoRoot: string, mode: Mode, scope: Scope): s
 
 /**
  * How many tasks a run starts at once (Turborepo's `--concurrency`). Locally,
- * as many as pnpm ran packages at once before; at full speed, one per two
+ * `WORKSPACE_CONCURRENCY`; at full speed, one per two
  * cores. Each test suite already runs a vitest worker per core, so one task per
  * core put four suites beside each other on a 4-core CI runner and slowed the
  * crafted-file GPS tests past their 3 s limit.
