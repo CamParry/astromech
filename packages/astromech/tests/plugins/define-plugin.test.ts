@@ -5,7 +5,7 @@
 
 import type { PluginFactory, ResolvedPluginIdentity } from '@/types/index';
 import { describe, expect, expectTypeOf, it, vi } from 'vitest';
-import { definePermissions } from '@/permissions/define';
+import { definePermissions } from '@/permissions/permission';
 import { definePlugin } from '@/plugins/define-plugin';
 
 type Options = { suffix?: string };

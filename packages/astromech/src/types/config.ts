@@ -4,7 +4,7 @@
  */
 
 import type { AiConfig } from './ai';
-import type { Permission, Role } from './domain';
+import type { Role } from './domain';
 import type {
     EntryFields,
     Field,
@@ -17,6 +17,7 @@ import type { SchedulerDriver } from '@/cron/driver';
 import type { DatabaseDriver } from '@/database/driver';
 import type { EmailDriver } from '@/email/driver';
 import type { ImageConfig } from '@/media/serving/image/driver';
+import type { Permission } from '@/permissions/permission';
 import type { ResolvedAdminResource } from '@/plugins/admin-resource';
 import type { CaptchaConfig, CaptchaWidget } from '@/security/captcha/types';
 import type { StorageDriver } from '@/storage/driver';
@@ -159,7 +160,10 @@ export type GlobalConfig = {
     statuses?: boolean;
     /** Default false. Requires `statuses`. */
     staging?: boolean;
-    /** Unauthenticated `get` returns the published content. Default false. */
+    /**
+     * Over HTTP, a signed-in caller may `get` the published content without the
+     * global's read permission. Default false.
+     */
     public?: boolean;
     /** Show in the sidebar. Default true. */
     nav?: boolean;

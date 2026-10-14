@@ -1,15 +1,14 @@
 import type { Permission, Role } from '@/types/index';
 import { describe, expect, it } from 'vitest';
-import { definePermissions } from '@/permissions/define';
 import { entryPermissions } from '@/permissions/entry-permission';
+import { definePermissions, hasPermission } from '@/permissions/permission';
+import { permissionsFor } from '@/permissions/permissions-for';
 import {
     BUILT_IN_ROLES,
-    can,
     permissionsForBuiltInRole,
     resolveRoles,
 } from '@/permissions/roles';
 import { definePlugin } from '@/plugins/define-plugin';
-import { hasPermission } from '@/utilities/permission-match';
 
 // hasPermission — new grammar (resource[:identifier]:action, action last)
 
@@ -91,40 +90,40 @@ describe('hasPermission', () => {
     });
 });
 
-// can() — built-in roles secure-by-default
+// permissionsFor().allows — built-in roles secure-by-default
 
-describe('can — built-in roles', () => {
+describe('permissionsFor — built-in roles', () => {
     const roles = resolveRoles({});
-    const editorRole = roles['editor'] as Role;
-    const adminRole = roles['admin'] as Role;
+    const editorRole = permissionsFor(roles['editor'] as Role);
+    const adminRole = permissionsFor(roles['admin'] as Role);
 
     describe('editor role', () => {
         it('can publish entries', () => {
-            expect(can(editorRole, 'entry:posts:publish')).toBe(true);
+            expect(editorRole.allows('entry:posts:publish')).toBe(true);
         });
 
         it('can upload media', () => {
-            expect(can(editorRole, 'media:upload')).toBe(true);
+            expect(editorRole.allows('media:upload')).toBe(true);
         });
 
         it('can update media metadata', () => {
-            expect(can(editorRole, 'media:update')).toBe(true);
+            expect(editorRole.allows('media:update')).toBe(true);
         });
 
         it('cannot read users', () => {
-            expect(can(editorRole, 'users:read')).toBe(false);
+            expect(editorRole.allows('users:read')).toBe(false);
         });
 
         it('cannot access plugin permissions', () => {
-            expect(can(editorRole, 'plugin:seo:view' as Permission)).toBe(false);
+            expect(editorRole.allows('plugin:seo:view' as Permission)).toBe(false);
         });
     });
 
     describe('admin role', () => {
         it('grants everything via * wildcard', () => {
-            expect(can(adminRole, 'entry:posts:publish')).toBe(true);
-            expect(can(adminRole, 'users:delete')).toBe(true);
-            expect(can(adminRole, 'plugin:seo:view' as Permission)).toBe(true);
+            expect(adminRole.allows('entry:posts:publish')).toBe(true);
+            expect(adminRole.allows('users:delete')).toBe(true);
+            expect(adminRole.allows('plugin:seo:view' as Permission)).toBe(true);
         });
     });
 });

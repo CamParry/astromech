@@ -7,7 +7,7 @@ import { isGlobalCapability } from '@/globals/capabilities';
 import { globalsDefinition } from '@/globals/service';
 import { resolveAccess } from '@/permissions/access';
 import { CORE_PERMISSIONS } from '@/permissions/core-permissions';
-import { definePermissions } from '@/permissions/define';
+import { definePermissions } from '@/permissions/permission';
 import { definePlugin } from '@/plugins/define-plugin';
 import { buildPermissionCatalogue } from '@/policies/permission-catalogue';
 

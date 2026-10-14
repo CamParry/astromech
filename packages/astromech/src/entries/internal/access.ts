@@ -1,5 +1,6 @@
+import type { AccessRule } from '@/permissions/access';
 import type { EntryAction } from '@/permissions/entry-permission';
-import type { Permission, ServiceMethodAccess } from '@/types/index';
+import type { Permission } from '@/permissions/permission';
 import { needsPublish } from '@/content/publish-access';
 import { PERMISSION_ENTRY_READ_FULL } from '@/permissions/core-permissions';
 import { entryPermission } from '@/permissions/entry-permission';
@@ -9,7 +10,7 @@ import { entryPermission } from '@/permissions/entry-permission';
  * plus `publish` when a create's or update's `data` or `overrides` sets a status
  * or date (`needsPublish`), and `entry:read:full` when it asks for `full`.
  */
-export function entryAccess(action: EntryAction): ServiceMethodAccess {
+export function entryAccess(action: EntryAction): AccessRule {
     return (input) => {
         const types = typesOf(input);
         const demanded: Permission[] = types.map((type) => entryPermission(type, action));

@@ -4,9 +4,9 @@
  * each declared resource's methods demand) and `plugin` (its declaration).
  */
 
-import type { PermissionDeclarations } from '@/permissions/define';
 import type { EntryAction } from '@/permissions/entry-permission';
 import type { GlobalAction } from '@/permissions/global-permission';
+import type { PermissionDeclarations } from '@/permissions/permission';
 import type { PluginDefinition, ResolvedConfig } from '@/types/index';
 import { entryMethodPermissions } from '@/entries/catalogue';
 import { globalMethodPermissions } from '@/globals/catalogue';

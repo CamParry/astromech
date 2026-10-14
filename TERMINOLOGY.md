@@ -2,6 +2,18 @@
 
 What each word means in this codebase. Why a term won is in `DECISIONS.md`.
 
+**Access.** The rule a service method or a plugin's raw route declares for who
+may call it (an `AccessRule`: `'public'`, `'authenticated'`, a permission, or a
+function of the call's input naming the permissions it needs), and the check of
+a caller against that rule (`allowsAccess`). `media.access` is a different thing: how media is
+delivered.
+
+**Action.** The verb a permission ends with: `read`, `create`, `update`,
+`delete`, `publish`, and a few of a resource's own (`media:upload`,
+`security:manage`, `admin:access`). `ENTRY_ACTIONS` and `GLOBAL_ACTIONS` list an
+entry type's and a global's. A CAPTCHA action (`CAPTCHA_ACTIONS`) is a different
+thing: the operation a CAPTCHA token is issued for.
+
 **Adapter.** Code that reshapes one internal interface into another. A driver
 reaches an external system instead.
 
@@ -87,7 +99,12 @@ and notifications are the content modules; `content` is what four of them share.
 **Nested field.** A field that owns one data key and nests its children under it:
 named groups, repeaters, blocks, trees. A field neither nested nor layout is a leaf.
 
-**Permission.** The vocabulary of what may be done to what. "Access" means this.
+**Permission.** A string a role grants, `<kind>[:<id>]:<action>`:
+`entry:post:publish`, `global:site:read`, `media:upload`, `plugin:seo:read`.
+`*` alone grants everything, a `*` segment matches one segment, and a trailing
+`*` matches the rest. `hasPermission` is the bare matcher; on the server
+`permissionsFor(role).allows` checks one. Entry and global permissions are
+derived from the config; a plugin declares its own with `definePermissions`.
 
 **Plugin, plugin context.** A plugin is a separate package that extends a site.
 Its plugin context is the app context plus its identity, prefixed storage, other
@@ -96,10 +113,20 @@ plugins' methods and a restricted config view.
 **Plugin helper.** A function a site calls off a plugin's factory in its config
 (`seo.section()`), with the plugin's identity applied.
 
-**Policy.** Code that decides what an actor may do, not how the request arrives.
+**Policy.** Not an authorisation term here: say permission, role or access.
+Laravel, Strapi and Directus each mean a different thing by it, and the
+`policies/` directory is none of them.
 
 **Preview token.** A secret that lets a public route show unpublished or staged
 content. It never widens what the response contains.
+
+**Public.** One audience, anonymous visitors, in two uses: what they may call
+(`access: 'public'`, which needs no role or permission; a
+`public: true` global's plain read needs no permission) and what they see (the
+`public` read shape, which removes private fields). The shape decides which
+fields a read returns, not which rows: a preview returns unpublished or staged
+content in the public shape. `media.access: 'public'` is a delivery mode, not
+this.
 
 **Relationship.** A link from one resource (the source) to another (the target),
 authored as a field. Field data is the truth; a rebuildable index holds one row per
@@ -120,6 +147,10 @@ the plain name (`User`).
 helpers read. Code that holds one names it `type`. An entry's type or a
 global's key, named beside it, is its **subtype** (`sourceSubtype` in the
 relationships index); users and media have none.
+
+**Role.** Who holds permissions: a slug, a name and a list of permissions. A
+user has one. The built-in `admin` (`*`) and `editor` merge with the config's
+`roles`, which may replace them. A caller with no role holds nothing.
 
 **Schema.** Request validation or a whole-shape aggregate, never table
 declarations. A method's output schema is the public shape it returns.

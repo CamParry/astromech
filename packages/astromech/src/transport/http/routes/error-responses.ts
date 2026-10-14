@@ -4,7 +4,7 @@
  * responses, so every route describes a refusal the same way.
  */
 
-import type { ServiceMethodAccess } from '@/types/index';
+import type { AccessRule } from '@/permissions/access';
 import type { RouteConfig } from '@hono/zod-openapi';
 import { z } from '@hono/zod-openapi';
 import {
@@ -79,7 +79,7 @@ function errorResponse(description: string): RouteConfig['responses'][string] {
  * refuse a signed-in caller too.
  */
 export function accessRefusals(
-    access: ServiceMethodAccess<never>
+    access: AccessRule<never>
 ): Pick<Refusals, 'session' | 'permission'> {
     return {
         session: access !== 'public',

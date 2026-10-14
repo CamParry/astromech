@@ -4,8 +4,9 @@
  * in `policies/scoped-services.ts` is, and holds regardless of this.
  */
 
+import type { ResolvedAccess } from '@/permissions/access';
 import type { ManifestMethod, Role } from '@/types/index';
-import { can } from '@/permissions/roles';
+import { permissionsFor } from '@/permissions/permissions-for';
 
 export type AnnotatedManifestMethod = ManifestMethod & {
     /** true = the role holds it; false = denied; null = input-derived, decidable only at call time. */
@@ -13,28 +14,30 @@ export type AnnotatedManifestMethod = ManifestMethod & {
 };
 
 /**
- * Whether one role may call one method — `null` where only a call can tell
- * (a dynamic permission resolves from the call input). A missing role holds
- * nothing, so every gated method is denied, the same rule `permissionsFor` applies.
+ * What a manifest entry records of a method's access, or null where only a
+ * call can tell (a dynamic permission resolves from the call input).
  */
-function allowedFor(
-    method: ManifestMethod,
-    role: Role | null | undefined
-): boolean | null {
+function manifestAccess(method: ManifestMethod): ResolvedAccess | null {
     if (method.permissionDynamic === true) return null;
     // A plugin's `authenticated` access carries no permission but still needs a role.
     if (method.source === 'plugin' && method.access === 'authenticated') {
-        return role !== null && role !== undefined;
+        return { kind: 'authenticated' };
     }
-    if (method.permission === null) return true; // ungated
-    if (!role) return false;
-    return can(role, method.permission);
+    if (method.permission === null) return { kind: 'public' };
+    return { kind: 'permission', permissions: [method.permission] };
 }
 
-/** Annotate every method with whether `role` may call it. */
+/** Annotate every method with whether `role` may call it. A missing role holds nothing. */
 export function annotateManifest(
     methods: ManifestMethod[],
     role: Role | null | undefined
 ): AnnotatedManifestMethod[] {
-    return methods.map((method) => ({ ...method, allowed: allowedFor(method, role) }));
+    const permissions = permissionsFor(role);
+    return methods.map((method) => {
+        const access = manifestAccess(method);
+        return {
+            ...method,
+            allowed: access === null ? null : permissions.allowsAccess(access),
+        };
+    });
 }

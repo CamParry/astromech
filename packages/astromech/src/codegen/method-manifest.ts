@@ -4,6 +4,7 @@
  * function — a method's `input` is its ARGUMENT object, not the HTTP body.
  */
 import type {
+    AccessRule,
     CoreManifestMethod,
     EntriesManifestMethod,
     JsonSchemaObject,
@@ -14,7 +15,6 @@ import type {
     PluginManifestMethod,
     ResolvedConfig,
     ResolvedEntryType,
-    ServiceMethodAccess,
     ServiceMethodContract,
 } from '@/types/index';
 import type { z } from '@hono/zod-openapi';
@@ -164,7 +164,7 @@ function projectEntryMethod(
     return method;
 }
 
-function normaliseAccess(access: ServiceMethodAccess<never>): ManifestAccess {
+function normaliseAccess(access: AccessRule<never>): ManifestAccess {
     if (access === 'public') return 'public';
     if (access === 'authenticated') return 'authenticated';
     return 'permission';

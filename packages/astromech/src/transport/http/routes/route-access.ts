@@ -7,8 +7,8 @@
  * to one with it, so a caller cannot enumerate what it has no grant for.
  */
 
+import type { AccessRule } from '@/permissions/access';
 import type { AuthVariables } from '@/transport/http/middleware/auth';
-import type { ServiceMethodAccess } from '@/types/index';
 import type { Context } from 'hono';
 import { getConfig } from '@/config/registry';
 import { resolveEntryType } from '@/entries/entry-types';
@@ -29,7 +29,7 @@ export type MissingTarget = (args: Record<string, unknown>) => string | null;
  */
 export function routeAccess(
     c: Context<Env>,
-    access: ServiceMethodAccess<never>,
+    access: AccessRule<never>,
     args: Record<string, unknown>,
     missingTarget?: MissingTarget
 ): Response | null {

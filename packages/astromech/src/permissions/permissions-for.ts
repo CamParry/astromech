@@ -1,13 +1,15 @@
 /**
- * `permissionsFor(role)` — a role composed into a permission guard, the single
- * enforcement seam. The HTTP API composes it; trusted transports (the Local API
- * for SSR/hooks, the CLI) compose nothing and never check.
+ * `permissionsFor(role)` — a role's permission checks. The scoped
+ * handle (`policies/scoped-services.ts`) runs it on every method call, and a few
+ * HTTP routes run it directly; trusted callers (SSR, hooks, the CLI) compose
+ * nothing and never check.
  */
 
 import type { ResolvedAccess } from '@/permissions/access';
-import type { Permission, Role, ServiceMethodContract } from '@/types/index';
+import type { Permission } from '@/permissions/permission';
+import type { Role, ServiceMethodContract } from '@/types/index';
 import { resolveAccess } from '@/permissions/access';
-import { can } from '@/permissions/roles';
+import { hasPermission } from '@/permissions/permission';
 
 export type Permissions = {
     /** True if the role holds `permission`. A missing role holds nothing. */
@@ -26,12 +28,12 @@ export type Permissions = {
 };
 
 /**
- * Compose a permission guard over a role. A missing role (an unauthenticated
+ * Compose the permission checks for a role. A missing role (an unauthenticated
  * request on an optional-auth route) is allowed nothing.
  */
 export function permissionsFor(role: Role | null | undefined): Permissions {
     const allows = (permission: Permission): boolean =>
-        role != null ? can(role, permission) : false;
+        role != null ? hasPermission(role.permissions, permission) : false;
 
     const allowsAccess = (access: ResolvedAccess): boolean => {
         if (access.kind === 'public') return true;

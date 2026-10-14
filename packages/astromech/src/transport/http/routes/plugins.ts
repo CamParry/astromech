@@ -4,8 +4,9 @@
  * `access`; a raw route (binary, multipart, streaming) goes through `enforceAccess`.
  */
 
+import type { AccessRule } from '@/permissions/access';
 import type { AuthVariables } from '@/transport/http/middleware/auth';
-import type { ResolvedPluginIdentity, ServiceMethodAccess } from '@/types/index';
+import type { ResolvedPluginIdentity } from '@/types/index';
 import type { Context } from 'hono';
 import { Hono } from 'hono';
 import { createServices } from '@/app-context/services';
@@ -28,7 +29,7 @@ type PluginEnv = { Variables: AuthVariables };
  */
 function enforceAccess(
     c: Context<PluginEnv>,
-    access: ServiceMethodAccess<never>,
+    access: AccessRule<never>,
     identity: ResolvedPluginIdentity
 ): Response | null {
     const resolved = resolveAccess(access, undefined, identity.permissionNamespace);
@@ -52,8 +53,8 @@ export function createPluginsRouter(): Hono<PluginEnv> {
 
     // Raw escape-hatch routes, registered before the RPC catch-all.
     // Not in a route table: the verb and path are plugin-declared, the handler
-    // takes a Web `Request`, and access is `PluginAccess` rather than a contract
-    // permission — so the scoped handle has nothing to scope.
+    // takes a Web `Request`, and its `access` belongs to the route rather than
+    // to a method contract — so the scoped handle has nothing to scope.
     for (const { identity, route } of getPluginRawRoutes()) {
         const method = (route.method ?? 'GET').toUpperCase();
         const path = `/${identity.serviceKey}${route.path}`;

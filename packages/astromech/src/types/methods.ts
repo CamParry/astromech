@@ -5,7 +5,7 @@
  */
 
 import type { AppContext } from './app-context';
-import type { Permission } from './domain';
+import type { AccessRule } from '@/permissions/access';
 import type { z } from '@hono/zod-openapi';
 
 /**
@@ -20,28 +20,6 @@ export type ServiceMethodEffect = {
     /** Repeating the call lands the same end-state. MCP idempotentHint. */
     idempotent?: boolean;
 };
-
-/**
- * What a method demands of its caller. `'authenticated'` holds when the caller
- * has a role, `Permission` is the bare core form, `{ permission }` is the plugin
- * form resolved under the plugin's namespace, and the function form answers per
- * input: `null` for none, or a list the caller must hold every one of.
- */
-export type ServiceMethodAccess<Input = unknown> =
-    | 'public'
-    | 'authenticated'
-    | Permission
-    | { permission: string }
-    | ((input: Input) => Permission | readonly Permission[] | null);
-
-/**
- * The two core forms of {@link ServiceMethodAccess}: a fixed permission string,
- * or one resolved from the call input (e.g. globals, where the permission
- * depends on the target key).
- */
-export type PermissionRule<Input = unknown> =
-    | Permission
-    | ((input: Input) => Permission | readonly Permission[] | null);
 
 /** The one fact a handler learns about itself: the id it was assembled under. */
 export type MethodContext = {
@@ -84,7 +62,7 @@ export type ServiceMethod<
     Result = Output,
 > = {
     /** What the caller must hold to call this method. */
-    access: ServiceMethodAccess<Input>;
+    access: AccessRule<Input>;
     handler: (input: Parsed, ctx: Ctx & MethodContext) => Promise<Result> | Result;
     /** One-line summary for humans / the AI tool-loop. */
     summary?: string;

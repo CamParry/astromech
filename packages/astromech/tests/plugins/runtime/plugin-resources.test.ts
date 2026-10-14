@@ -4,11 +4,7 @@
  */
 
 import type { AdminResource } from '@/plugins/admin-resource';
-import type {
-    AnyServiceMethod,
-    PluginDefinition,
-    ServiceMethodAccess,
-} from '@/types/index';
+import type { AccessRule, AnyServiceMethod, PluginDefinition } from '@/types/index';
 import { describe, expect, it } from 'vitest';
 import { z } from 'zod';
 import { assertPluginsValid } from '@/config/plugins';
@@ -16,7 +12,7 @@ import { defineAdminResource } from '@/plugins/define-admin-resource';
 import { resolvePluginIdentity } from '@/plugins/runtime/plugin-identity';
 import { resolveAdminResources } from '@/plugins/runtime/plugin-resources';
 
-const method = (access: ServiceMethodAccess<never>): AnyServiceMethod => ({
+const method = (access: AccessRule<never>): AnyServiceMethod => ({
     access,
     input: z.looseObject({}),
     mutates: false,
