@@ -61,7 +61,7 @@ describe('scopeMethods', () => {
         const scoped = scopeMethods(
             service,
             contracts,
-            { permissions: permissionsFor(role('users:read')), user: null },
+            { role: role('users:read'), user: null },
             'users'
         );
 
@@ -73,7 +73,7 @@ describe('scopeMethods', () => {
         const scoped = scopeMethods(
             makeService(),
             contracts,
-            { permissions: permissionsFor(role('users:read')), user: null },
+            { role: role('users:read'), user: null },
             'users'
         );
 
@@ -93,10 +93,7 @@ describe('scopeMethods', () => {
         const scoped = scopeMethods(
             service,
             contracts,
-            {
-                permissions: permissionsFor(role('users:read', 'users:update')),
-                user: null,
-            },
+            { role: role('users:read', 'users:update'), user: null },
             'users'
         );
 
@@ -109,7 +106,7 @@ describe('scopeMethods', () => {
         const scoped = scopeMethods(
             service,
             contracts,
-            { permissions: permissionsFor(role('users:read')), user: null },
+            { role: role('users:read'), user: null },
             'users'
         );
 
@@ -122,7 +119,7 @@ describe('scopeMethods', () => {
         const scoped = scopeMethods(
             service,
             contracts,
-            { permissions: permissionsFor(role('*')), user: null },
+            { role: role('*'), user: null },
             'users'
         );
 
@@ -140,7 +137,7 @@ describe('scopeMethods', () => {
         const scoped = scopeMethods(
             makeService(),
             contracts,
-            { permissions: permissionsFor(undefined), user: null },
+            { role: null, user: null },
             'users'
         );
 
@@ -155,7 +152,7 @@ describe('scopeMethods', () => {
         const scoped = scopeMethods(
             makeService(),
             contracts,
-            { permissions: permissions, user: null },
+            { role: null, user: null },
             'users'
         );
         expect(() => scoped.read()).toThrow(PermissionDeniedError);
@@ -165,7 +162,7 @@ describe('scopeMethods', () => {
         const scoped = scopeMethods(
             makeService(),
             contracts,
-            { permissions: permissionsFor(role('*')), user: null },
+            { role: role('*'), user: null },
             'users'
         );
 
@@ -183,12 +180,7 @@ const sessionContracts = {
  */
 function scopeSession(service: ReturnType<typeof makeService>, userId?: string) {
     const user = userId === undefined ? null : makeUser({ id: userId });
-    return scopeMethods(
-        service,
-        sessionContracts,
-        { permissions: permissionsFor(role()), user },
-        'inbox'
-    );
+    return scopeMethods(service, sessionContracts, { role: role(), user }, 'inbox');
 }
 
 describe('scopeMethods — session-scoped', () => {
@@ -213,7 +205,7 @@ describe('scopeMethods — session-scoped', () => {
         const scoped = scopeMethods(
             service,
             contracts,
-            { permissions: permissionsFor(role('users:read')), user: null },
+            { role: role('users:read'), user: null },
             'users'
         );
 
@@ -238,7 +230,7 @@ function scopeStub(stub: object, actingRole: Role | undefined): Record<string, n
     return scopeMethods(
         stub as unknown as EntriesService,
         entriesDefinition.catalogue,
-        { permissions: permissionsFor(actingRole), user: null },
+        { role: actingRole ?? null, user: null },
         'entries'
     ) as unknown as Record<string, never>;
 }

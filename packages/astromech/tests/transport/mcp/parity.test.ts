@@ -136,9 +136,9 @@ describe('contract ↔ MCP tool schema parity', () => {
             };
         };
 
-        expect(access('users.update')).toEqual({
+        expect(access('users.create')).toEqual({
             access: 'permission',
-            permissions: ['users:update'],
+            permissions: ['users:create'],
             dynamic: false,
         });
         expect(access('plugins.testMyPlugin.doSomething')).toEqual({

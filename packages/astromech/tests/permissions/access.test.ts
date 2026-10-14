@@ -5,7 +5,7 @@
 
 import type { Permission } from '@/types/index';
 import { describe, expect, it } from 'vitest';
-import { deniedPermission, resolveAccess } from '@/permissions/access';
+import { deniedPermission, NO_CALLER, resolveAccess } from '@/permissions/access';
 
 describe('resolveAccess', () => {
     it('answers public for the public form', () => {
@@ -39,14 +39,18 @@ describe('resolveAccess', () => {
     });
 
     it('resolves the object form under the plugin namespace it is given', () => {
-        expect(resolveAccess({ permission: 'view' }, undefined, 'seo')).toEqual({
+        expect(
+            resolveAccess({ permission: 'view' }, undefined, NO_CALLER, 'seo')
+        ).toEqual({
             kind: 'permission',
             permissions: ['plugin:seo:view'],
         });
     });
 
     it('passes a namespaced key in the object form through unchanged', () => {
-        expect(resolveAccess({ permission: 'users:read' }, undefined, 'seo')).toEqual({
+        expect(
+            resolveAccess({ permission: 'users:read' }, undefined, NO_CALLER, 'seo')
+        ).toEqual({
             kind: 'permission',
             permissions: ['users:read'],
         });

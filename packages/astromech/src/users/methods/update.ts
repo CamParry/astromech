@@ -7,8 +7,8 @@ import { changesVersionedContent, snapshotVersion } from '@/content/versions';
 import { transaction } from '@/database/transaction';
 import { ResourceNotFoundError } from '@/errors/resource';
 import { defineServiceMethod } from '@/services/define-service-method';
-import { userPermission } from '@/users/permissions';
 import { defaultContentLocale } from '@/utilities/locale';
+import { userUpdateAccess } from '../internal/access';
 import { assertKeepsAnAdmin, lastAdminError } from '../internal/last-admin';
 import { asEmailTakenError, assertEmailFree } from '../internal/unique-email';
 import { syncUserRelationships } from '../relationships';
@@ -19,7 +19,9 @@ import { updateUserSchema, userSchema } from '../schema';
  * `name`, `email` and `role` are written whatever the locale. `fields` merges into
  * one locale's content row, and a locale with none is seeded from the default
  * locale's. Demoting the last admin is refused, an email another user holds
- * answers 422, and a user deleted while the call runs answers 404.
+ * answers 422, and a user deleted while the call runs answers 404. A caller
+ * changes their own `name` and `fields` without `users:update`
+ * (`userUpdateAccess`).
  */
 export const updateUser = defineServiceMethod({
     summary:
@@ -31,7 +33,7 @@ export const updateUser = defineServiceMethod({
         data: updateUserSchema,
     }),
     output: userSchema,
-    access: userPermission('update'),
+    access: userUpdateAccess,
     mutates: true,
     idempotent: true,
     async handler(params, ctx): Promise<UserResource> {

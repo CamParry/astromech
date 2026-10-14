@@ -1449,10 +1449,12 @@ a string) answers `400` before the method runs.
 - `'authenticated'`: any caller with a role.
 - `{ permission: 'export' }`: resolved to `plugin:<namespace>:export`, so you
   write the bare key you declared with `definePermissions` and never a prefix.
-- `(input) => Permission | null`: the permission this call needs, worked out
-  from its arguments, or `null` for none. It sees the arguments as the caller
-  sent them, before the method parses its input, so check a value's type
-  before trusting it.
+- `(input, caller) => Permission | null`: the permission this call needs,
+  worked out from its arguments and from `caller` (`{ user, role }`, each
+  `null` when there is none), or `null` for none. It sees the arguments as the
+  caller sent them, before the method parses its input, so check a value's
+  type before trusting it. A rule that reads `caller` is `dynamic` in the
+  method manifest.
 
 `ctx` is the app context every service method in Astromech runs with, plus your
 plugin's own layer over it:

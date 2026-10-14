@@ -147,8 +147,8 @@ async function readFilePart(
     c: Context<Env>,
     method: ServiceMethodContract
 ): Promise<{ file: File; formData: FormData } | Response> {
-    const permissions = permissionsFor(c.var.ctx.role);
-    if (!permissions.allowsMethod(method)) return forbidden(c);
+    const { user, role } = c.var.ctx;
+    if (!permissionsFor(role).allowsMethod(method, undefined, user)) return forbidden(c);
 
     const formData = await c.req.formData();
     const file = formData.get('file');

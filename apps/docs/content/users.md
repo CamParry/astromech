@@ -185,13 +185,15 @@ Users have four permissions:
 reading or updating their own user row passes without `users:read` or
 `users:update`. The rule covers `name` and `fields` only. A change to the
 caller's own `role` or `email` still needs `users:update`, and without it
-`PUT /api/users/:id` answers 403 `FORBIDDEN`: a stolen session could otherwise
-change the email and then reset the password. The version methods have no such
-rule and always need the permission, even for the caller's own row.
+the call answers 403 `FORBIDDEN`: a stolen session could otherwise change the
+email and then reset the password. The version methods have no such rule and
+always need the permission, even for the caller's own row.
 
-The rule belongs to the REST route. The same method called through the RPC
-route, MCP or a plugin's scoped handle always needs `users:update`. Better
-Auth's own `/api/auth/change-email` route is turned off, and its
+The rule belongs to the methods (`users/internal/access.ts`), so REST, the RPC
+route, a plugin's scoped handle and `ctx.methods.tools()` all allow the same
+calls. MCP is a trusted transport with no caller, so it checks no permission.
+The method manifest marks `get` and `update` `dynamic`: only the call can tell
+whether it names the caller's own row. Better Auth's own `/api/auth/change-email` route is turned off, and its
 `/api/auth/update-user` refuses an email.
 
 `create` takes an optional `password` of at least eight characters, and with

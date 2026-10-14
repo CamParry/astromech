@@ -7,6 +7,7 @@
 import { createTestDb, setupTestConfig } from '@tests/harness';
 import { beforeEach, describe, expect, it } from 'vitest';
 import { globalAccess, globalGetAccess } from '@/globals/internal/access';
+import { NO_CALLER } from '@/permissions/access';
 import { makeGlobalsConfig } from './globals-config';
 
 beforeEach(async () => {
@@ -16,10 +17,10 @@ beforeEach(async () => {
 
 describe.each([null, undefined, 'site'])('a call whose input is %j', (input) => {
     it('needs the empty key update permission alone', () => {
-        expect(globalAccess('update')(input)).toBe('global::update');
+        expect(globalAccess('update')(input, NO_CALLER)).toBe('global::update');
     });
 
     it('needs the empty key read permission to get', () => {
-        expect(globalGetAccess(input)).toBe('global::read');
+        expect(globalGetAccess(input, NO_CALLER)).toBe('global::read');
     });
 });

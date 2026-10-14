@@ -1,12 +1,12 @@
 import type { GlobalAction } from '@/globals/permissions';
-import type { AccessRule } from '@/permissions/access';
+import type { AccessFunction } from '@/permissions/access';
 import { getConfig } from '@/config/registry';
 import { needsPublish } from '@/content/publish-access';
 import { globalPermission } from '@/globals/permissions';
 import { resolveGlobal } from '../resolve-global';
 
 /** A globals access rule: always a function of the call's input. */
-type GlobalRule = Extract<AccessRule, (input: never) => unknown>;
+type GlobalRule = AccessFunction;
 
 /**
  * The permissions a globals method needs, on the global the call's `key`

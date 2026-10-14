@@ -32,13 +32,23 @@ function enforceAccess(
     access: AccessRule<never>,
     identity: ResolvedPluginIdentity
 ): Response | null {
-    const resolved = resolveAccess(access, undefined, identity.permissionNamespace);
+    const { user, role } = c.var.ctx;
+    const resolved = resolveAccess(
+        access,
+        undefined,
+        { user, role },
+        identity.permissionNamespace
+    );
     if (resolved.kind === 'public') return null;
 
-    if (c.var.ctx.user === null) return unauthorized(c);
+    if (user === null) return unauthorized(c);
     if (resolved.kind === 'authenticated') return null;
 
-    if (!permissionsFor(c.var.ctx.role).allowsAccess(resolved)) return forbidden(c);
+    if (!permissionsFor(role).allowsAccess(resolved)) {
+        return resolved.message === undefined
+            ? forbidden(c)
+            : forbidden(c, resolved.message);
+    }
     return null;
 }
 

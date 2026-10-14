@@ -10,7 +10,6 @@ import { entriesDefinition } from '@/entries/service';
 import { globalsDefinition } from '@/globals/service';
 import { mediaDefinition } from '@/media/service';
 import { notificationsDefinition } from '@/notifications/service';
-import { permissionsFor } from '@/permissions/permissions-for';
 import {
     createPluginServices,
     pluginServicesFor,
@@ -84,15 +83,16 @@ function bindServices(ctx: AppContext): Services {
 /** The trusted services for `ctx`, each method wrapped in its role check. */
 function scopeServices(ctx: AppContext): Services {
     const trusted = createServices(ctx);
-    const caller = { permissions: permissionsFor(ctx.role), user: ctx.user };
+    const caller = { user: ctx.user, role: ctx.role };
     // An entry's and a global's permissions depend on the call's `type` or
-    // `key`, and each contract states that in the function form, the `full`
-    // and publish gates included.
+    // `key`, and a user's on whether the call names the caller's own account;
+    // each contract states that in the function form, the `full` and publish
+    // gates included.
     return {
         ...mapContentServices((key) =>
             scopeMethods(trusted[key], DEFINITIONS[key].catalogue, caller, key)
         ),
-        plugins: scopePlugins(trusted.plugins, caller.permissions),
+        plugins: scopePlugins(trusted.plugins, caller),
     };
 }
 

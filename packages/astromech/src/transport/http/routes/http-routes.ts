@@ -425,14 +425,12 @@ export const USERS_ROUTE_SPECS = [
         path: '/:id',
         id: 'users.get',
         notFound: 'User',
-        handler: 'bespoke',
     },
     {
         verb: 'put',
         path: '/:id',
         id: 'users.update',
         bodyKey: 'data',
-        handler: 'bespoke',
         queryArgs: ['locale'],
         refusals: {
             conflict:

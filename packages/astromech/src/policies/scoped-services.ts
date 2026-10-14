@@ -4,11 +4,12 @@
  * handed that handle instead of the raw services, so authority is a property
  * of the handle, not of checks each caller remembered to write. Fails CLOSED.
  */
-import type { ResolvedAccess } from '@/permissions/access';
+import type { Caller, ResolvedAccess } from '@/permissions/access';
 import type { Permissions } from '@/permissions/permissions-for';
-import type { PluginServiceNamespace, ServiceMethodContract, User } from '@/types/index';
+import type { PluginServiceNamespace, ServiceMethodContract } from '@/types/index';
 import { PermissionDeniedError } from '@/errors/permission';
 import { deniedPermission, resolveAccess } from '@/permissions/access';
+import { permissionsFor } from '@/permissions/permissions-for';
 import {
     getPluginIdentities,
     getPluginServiceMethods,
@@ -27,12 +28,10 @@ type ServiceRecord = Record<string, unknown>;
 /** A method as this wrapper calls it: one parameter object, any return. */
 type ServiceFn = (...args: unknown[]) => unknown;
 
-/** Who a scoped handle acts for: the role's guard, and the signed-in user if any. */
-export type ScopedCaller = { permissions: Permissions; user: User | null };
-
 /**
  * The error for a call of `id` that `permissions` refuses: the missing
- * permission, or a signed-in caller for an `authenticated` method.
+ * permission, in the rule's own words when it gave some, or a signed-in caller
+ * for an `authenticated` method.
  */
 function refusal(
     id: string,
@@ -41,24 +40,31 @@ function refusal(
 ): PermissionDeniedError {
     // `public` always passes, so the other kind refused here is `authenticated`.
     if (resolved.kind !== 'permission') {
-        return new PermissionDeniedError(id, null, 'requires a signed-in caller.');
+        return new PermissionDeniedError(id, null, {
+            detail: 'requires a signed-in caller.',
+        });
     }
-    return new PermissionDeniedError(id, deniedPermission(resolved, permissions.allows));
+    const denied = deniedPermission(resolved, permissions.allows);
+    return resolved.message === undefined
+        ? new PermissionDeniedError(id, denied)
+        : new PermissionDeniedError(id, denied, { message: resolved.message });
 }
 
 /**
- * Wrap every method of `service` in its declared permission check. A denied
- * method still EXISTS on the returned object and throws, rather than
- * disappearing as if it were never there. A session-scoped method is refused
- * when `caller` has no signed-in user, since there is no subject to act as.
+ * Wrap every method of `service` in its declared permission check, resolved
+ * for `caller`: its role's permissions, and its user for a rule that answers
+ * per caller. A denied method still EXISTS on the returned object and throws,
+ * rather than disappearing as if it were never there. A session-scoped method
+ * is refused when `caller` has no signed-in user, since there is no subject to
+ * act as.
  */
 export function scopeMethods<S extends object>(
     service: S,
     contracts: ContractCatalogue,
-    caller: ScopedCaller,
+    caller: Caller,
     module: string
 ): S {
-    const { permissions } = caller;
+    const permissions = permissionsFor(caller.role);
     const scoped: ServiceRecord = {};
 
     for (const [key, value] of Object.entries(service as ServiceRecord)) {
@@ -74,16 +80,14 @@ export function scopeMethods<S extends object>(
             if (contract === undefined) throw new PermissionDeniedError(id, null);
 
             const input = args[0];
-            const resolved = resolveAccess(contract.access, input);
+            const resolved = resolveAccess(contract.access, input, caller);
             if (!permissions.allowsAccess(resolved)) {
                 throw refusal(id, resolved, permissions);
             }
             if (contract.sessionScoped === true && caller.user === null) {
-                throw new PermissionDeniedError(
-                    id,
-                    null,
-                    'is session-scoped, and this caller has no signed-in user to act as.'
-                );
+                throw new PermissionDeniedError(id, null, {
+                    detail: 'is session-scoped, and this caller has no signed-in user to act as.',
+                });
             }
             // Called on the service so a method reaching for a sibling through
             // `this` keeps working.
@@ -99,13 +103,15 @@ type PluginMethodMap = Record<string, (input?: unknown) => Promise<unknown>>;
 
 /**
  * Wrap every registered plugin's service methods in their declared `access`,
- * resolved under the plugin's permission namespace, each calling on to
- * `services`. A denied method still exists on the returned object and rejects.
+ * resolved for `caller` under the plugin's permission namespace, each calling
+ * on to `services`. A denied method still exists on the returned object and
+ * rejects.
  */
 export function scopePlugins(
     services: PluginServiceNamespace,
-    permissions: Permissions
+    caller: Caller
 ): PluginServiceNamespace {
+    const permissions = permissionsFor(caller.role);
     const scoped: Record<string, PluginMethodMap> = {};
 
     for (const identity of getPluginIdentities()) {
@@ -121,6 +127,7 @@ export function scopePlugins(
                 const resolved = resolveAccess(
                     method.access,
                     input,
+                    caller,
                     identity.permissionNamespace
                 );
                 if (!permissions.allowsAccess(resolved)) {

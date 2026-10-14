@@ -4,7 +4,8 @@ What each word means in this codebase. Why a term won is in `DECISIONS.md`.
 
 **Access.** The rule a service method or a plugin's raw route declares for who
 may call it (an `AccessRule`: `'public'`, `'authenticated'`, a permission, or a
-function of the call's input naming the permissions it needs), and the check of
+function of the call's input and its caller (`{ user, role }`) naming the
+permissions it needs), and the check of
 a caller against that rule (`allowsAccess`). `media.access` is a different thing: how media is
 delivered.
 

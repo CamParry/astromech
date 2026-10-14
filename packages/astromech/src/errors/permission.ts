@@ -16,16 +16,26 @@ export class PermissionDeniedError extends ApiError {
     readonly permission: string | null;
 
     /**
-     * @param detail A complete phrase (ending in a period) replacing the default
-     *   reason, for a refusal the `method`/`permission` pair does not explain on
-     *   its own — e.g. a call that named no entry type.
+     * @param wording `detail` is a complete phrase (ending in a period)
+     *   replacing the default reason, for a refusal the `method`/`permission`
+     *   pair does not explain on its own, e.g. a call that named no entry type.
+     *   `message` replaces the whole message, for an access rule that words its
+     *   own refusal.
      */
-    constructor(method: string, permission: string | null, detail?: string) {
+    constructor(
+        method: string,
+        permission: string | null,
+        wording?: { detail: string } | { message: string }
+    ) {
         const reason =
             permission === null
                 ? 'carries no method descriptor, so a scoped handle cannot grant it.'
                 : `requires "${permission}".`;
-        super(`Permission denied: "${method}" ${detail ?? reason}`, {
+        const message =
+            wording !== undefined && 'message' in wording
+                ? wording.message
+                : `Permission denied: "${method}" ${wording?.detail ?? reason}`;
+        super(message, {
             status: 403,
             code: 'FORBIDDEN',
         });

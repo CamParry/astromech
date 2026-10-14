@@ -29,11 +29,9 @@ export async function callMethod(
     caller: MethodCaller
 ): Promise<unknown> {
     if (caller === 'trusted' && method.sessionScoped === true) {
-        throw new PermissionDeniedError(
-            method.id,
-            null,
-            'is session-scoped, and a trusted caller has no signed-in user to act as.'
-        );
+        throw new PermissionDeniedError(method.id, null, {
+            detail: 'is session-scoped, and a trusted caller has no signed-in user to act as.',
+        });
     }
 
     const handle =

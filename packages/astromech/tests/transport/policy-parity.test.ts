@@ -92,9 +92,12 @@ beforeEach(async () => {
     app = createHttpApp(resolved);
 });
 
-/** The transports, each calling one manifest method with `args` as `role`. */
+/** Who a call acts for: the signed-in user and the role checked. */
+type Caller = { user: User; role: Role };
+
+/** The transports, each calling one manifest method with `args` as `caller`. */
 type Transport = (
-    role: Role,
+    caller: Caller,
     id: string,
     args: Record<string, unknown>
 ) => Promise<Outcome>;
@@ -124,28 +127,35 @@ function method(id: string): ManifestMethod {
 }
 
 /** The context an in-process transport acts as. */
-function contextFor(role: Role): AppContext {
-    return createAppContext({ user: admin, role });
+function contextFor(caller: Caller): AppContext {
+    return createAppContext(caller);
 }
 
-const rpc: Transport = async (role, id, args) => {
-    const res = await requestAs(
-        app,
-        { user: admin, role },
-        `${api}/rpc/${encodeURIComponent(id)}`,
-        {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(args),
-        }
-    );
+const rpc: Transport = async (caller, id, args) => {
+    const res = await requestAs(app, caller, `${api}/rpc/${encodeURIComponent(id)}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(args),
+    });
     return fromResponse(res);
 };
 
-const toolLoop: Transport = (role, id, args) => {
-    const dispatch = buildScopedDispatch(method(id), contextFor(role));
+const toolLoop: Transport = (caller, id, args) => {
+    const dispatch = buildScopedDispatch(method(id), contextFor(caller));
     if (!dispatch.ok) throw new Error(dispatch.reason);
     return fromCall(() => dispatch.tool.invoke(args));
+};
+
+/**
+ * The tool list a plugin hands a model (`ctx.methods.tools()`): `absent` when
+ * the list leaves the method out, else what its `invoke` comes to.
+ */
+const toolList: Transport = (caller, id, args) => {
+    const tool = contextFor(caller)
+        .methods.tools()
+        .find((entry) => entry.id === id);
+    if (tool === undefined) return Promise.resolve('absent');
+    return fromCall(() => tool.invoke(args));
 };
 
 const trusted: Transport = (_role, id, args) =>
@@ -153,8 +163,8 @@ const trusted: Transport = (_role, id, args) =>
 
 /** A REST call: `path` under the API, with a JSON body for a write. */
 function rest(verb: string, path: string, body?: unknown): Transport {
-    return async (role) => {
-        const res = await requestAs(app, { user: admin, role }, `${api}${path}`, {
+    return async (caller) => {
+        const res = await requestAs(app, caller, `${api}${path}`, {
             method: verb,
             headers: { 'Content-Type': 'application/json' },
             ...(body !== undefined ? { body: JSON.stringify(body) } : {}),
@@ -169,22 +179,26 @@ function rest(verb: string, path: string, body?: unknown): Transport {
 function pluginCtx(
     call: (ctx: ReturnType<typeof createPluginContext>) => Promise<unknown>
 ): Transport {
-    return (role) =>
+    return (caller) =>
         fromCall(() =>
-            call(createPluginContext(resolvePluginIdentity(probe), contextFor(role)))
+            call(createPluginContext(resolvePluginIdentity(probe), contextFor(caller)))
         );
 }
 
-/** Run `id` with `args` through each transport, and every outcome. */
+/**
+ * Run `id` with `args` through each transport as `role`, signed in as `user`
+ * (the admin unless named), and every outcome.
+ */
 async function outcomes(
     role: Role,
     id: string,
     args: Record<string, unknown>,
-    transports: Record<string, Transport>
+    transports: Record<string, Transport>,
+    user: User = admin
 ): Promise<Record<string, Outcome>> {
     const results: Record<string, Outcome> = {};
     for (const [name, transport] of Object.entries(transports)) {
-        results[name] = await transport(role, id, args);
+        results[name] = await transport({ user, role }, id, args);
     }
     return results;
 }
@@ -301,6 +315,118 @@ describe('one answer on every transport', () => {
 
         const results = await outcomes(adminRole, 'globals.get', args, transports);
         expect(results).toEqual(every(transports, 'capability_not_supported'));
+    });
+});
+
+/**
+ * A signed-in user whose role holds no user permission may read their own
+ * account and change its `name` and `fields`, and nothing on another account.
+ * MCP is not here: it is a trusted transport with no caller, so it checks no
+ * role and has no "own account" to compare.
+ */
+describe('a user’s own account, on every transport', () => {
+    /** No `users:*` permission at all. */
+    const noUserPermissions = roleWith([entryPermission('post', 'read')]);
+    let self: User;
+
+    beforeEach(async () => {
+        self = await currentServices.users.create({
+            data: { email: 'self@test.dev', name: 'Self', role: 'editor' },
+        });
+    });
+
+    /** Every transport that checks a caller, calling `id`. */
+    function checked(rest: Transport): Record<string, Transport> {
+        return { rest, rpc, toolLoop, toolList };
+    }
+
+    it('reads their own account without `users:read`', async () => {
+        const transports = checked(rest('GET', `/users/${self.id}`));
+
+        const results = await outcomes(
+            noUserPermissions,
+            'users.get',
+            { id: self.id },
+            transports,
+            self
+        );
+        expect(results).toEqual(every(transports, 'ok'));
+    });
+
+    it('reads no other account without `users:read`', async () => {
+        const transports = checked(rest('GET', `/users/${admin.id}`));
+
+        const results = await outcomes(
+            noUserPermissions,
+            'users.get',
+            { id: admin.id },
+            transports,
+            self
+        );
+        expect(results).toEqual(every(transports, 'FORBIDDEN'));
+    });
+
+    it('changes their own name and fields without `users:update`', async () => {
+        const data = { name: 'Myself', fields: {} };
+        const transports = checked(rest('PUT', `/users/${self.id}`, data));
+
+        const results = await outcomes(
+            noUserPermissions,
+            'users.update',
+            { id: self.id, data },
+            transports,
+            self
+        );
+        expect(results).toEqual(every(transports, 'ok'));
+        expect((await currentServices.users.get({ id: self.id }))?.name).toBe('Myself');
+    });
+
+    it.each([
+        ['role', { role: 'admin' }],
+        ['email', { email: 'taken-over@test.dev' }],
+    ])('refuses a change of their own %s without `users:update`', async (_, data) => {
+        const transports = checked(rest('PUT', `/users/${self.id}`, data));
+
+        const results = await outcomes(
+            noUserPermissions,
+            'users.update',
+            { id: self.id, data },
+            transports,
+            self
+        );
+        expect(results).toEqual(every(transports, 'FORBIDDEN'));
+        expect(await currentServices.users.get({ id: self.id })).toMatchObject({
+            role: 'editor',
+            email: 'self@test.dev',
+        });
+    });
+
+    it('changes no other account without `users:update`', async () => {
+        const data = { name: 'Taken over' };
+        const transports = checked(rest('PUT', `/users/${admin.id}`, data));
+
+        const results = await outcomes(
+            noUserPermissions,
+            'users.update',
+            { id: admin.id, data },
+            transports,
+            self
+        );
+        expect(results).toEqual(every(transports, 'FORBIDDEN'));
+        expect((await currentServices.users.get({ id: admin.id }))?.name).toBe('Admin');
+    });
+
+    it('leaves the call to decide, since the answer depends on the caller', () => {
+        for (const id of ['users.get', 'users.update']) {
+            expect(method(id)).toMatchObject({
+                access: 'permission',
+                permissions: [],
+                dynamic: true,
+            });
+            expect(
+                annotateManifest([method(id)], noUserPermissions)[0]?.allowed
+            ).toBeNull();
+        }
     });
 });
 

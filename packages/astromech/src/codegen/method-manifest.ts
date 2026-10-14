@@ -3,6 +3,7 @@
  * methods, per-type entry methods, and plugin service methods. Pure
  * function — a method's `input` is its ARGUMENT object, not the HTTP body.
  */
+import type { Caller } from '@/permissions/access';
 import type {
     AccessRule,
     CoreManifestMethod,
@@ -51,22 +52,44 @@ function toJSONSchema(
     }
 }
 
+/** A function form the manifest cannot resolve ahead of a call. */
+const DYNAMIC_ACCESS: ManifestMethodAccess = {
+    access: 'permission',
+    permissions: [],
+    dynamic: true,
+};
+
 /**
  * What `access` demands, as the manifest records it. `call` is the input that
  * fixes the method's target, when its id fixes one (an entry method's type): a
  * function form is resolved against it. With no call, a function form's
  * permission depends on an input the manifest does not have, so it is dynamic.
- * `namespace` resolves a plugin's `{ permission }` form.
+ * A function form that reads the caller (a user's own account) is dynamic too,
+ * since the manifest has no caller. `namespace` resolves a plugin's
+ * `{ permission }` form.
  */
 function describeAccess(
     access: AccessRule<never>,
     call: { input: unknown } | null,
     namespace?: string
 ): ManifestMethodAccess {
-    if (typeof access === 'function' && call === null) {
-        return { access: 'permission', permissions: [], dynamic: true };
-    }
-    const resolved = resolveAccess(access, call?.input, namespace);
+    if (typeof access === 'function' && call === null) return DYNAMIC_ACCESS;
+
+    // A caller whose every read is recorded: a rule that answered without
+    // reading it gives the same answer to every caller.
+    let readsCaller = false;
+    const probe: Caller = {
+        get user() {
+            readsCaller = true;
+            return null;
+        },
+        get role() {
+            readsCaller = true;
+            return null;
+        },
+    };
+    const resolved = resolveAccess(access, call?.input, probe, namespace);
+    if (readsCaller) return DYNAMIC_ACCESS;
     return {
         access: resolved.kind,
         permissions: resolved.kind === 'permission' ? [...resolved.permissions] : [],

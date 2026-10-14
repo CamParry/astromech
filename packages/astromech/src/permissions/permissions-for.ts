@@ -7,7 +7,7 @@
 
 import type { ResolvedAccess } from '@/permissions/access';
 import type { Permission } from '@/permissions/permission';
-import type { Role, ServiceMethodContract } from '@/types/index';
+import type { Role, ServiceMethodContract, User } from '@/types/index';
 import { resolveAccess } from '@/permissions/access';
 import { hasPermission } from '@/permissions/permission';
 
@@ -20,11 +20,16 @@ export type Permissions = {
      */
     allowsAccess(access: ResolvedAccess): boolean;
     /**
-     * True if the role may call `method` with `input`. Reads the method's
-     * declared `access`: a public method is always allowed, an authenticated
-     * one needs a role, and a permission one needs that permission.
+     * True if the role may call `method` with `input`, signed in as `user`.
+     * Reads the method's declared `access`: a public method is always allowed,
+     * an authenticated one needs a role, a permission one needs that
+     * permission, and a function one answers for this input and caller.
      */
-    allowsMethod(method: ServiceMethodContract, input?: unknown): boolean;
+    allowsMethod(
+        method: ServiceMethodContract,
+        input?: unknown,
+        user?: User | null
+    ): boolean;
 };
 
 /**
@@ -44,7 +49,9 @@ export function permissionsFor(role: Role | null | undefined): Permissions {
     return {
         allows,
         allowsAccess,
-        allowsMethod: (method, input) =>
-            allowsAccess(resolveAccess(method.access, input)),
+        allowsMethod: (method, input, user = null) =>
+            allowsAccess(
+                resolveAccess(method.access, input, { user, role: role ?? null })
+            ),
     };
 }

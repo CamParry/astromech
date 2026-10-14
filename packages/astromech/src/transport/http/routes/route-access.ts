@@ -23,9 +23,9 @@ type Env = { Variables: AuthVariables };
 export type MissingTarget = (args: Record<string, unknown>) => string | null;
 
 /**
- * 403 when the caller's role may not make this call, 404 when `missingTarget`
- * finds nothing, null to go on. `args` are what the URL carries, since the body
- * is not read yet.
+ * 403 when the caller may not make this call, 404 when `missingTarget` finds
+ * nothing, null to go on. `args` are what the URL carries, since the body is
+ * not read yet, and the rule sees the request's user and role.
  */
 export function routeAccess(
     c: Context<Env>,
@@ -33,8 +33,13 @@ export function routeAccess(
     args: Record<string, unknown>,
     missingTarget?: MissingTarget
 ): Response | null {
-    const resolved = resolveAccess(access, args);
-    if (!permissionsFor(c.var.ctx.role).allowsAccess(resolved)) return forbidden(c);
+    const { user, role } = c.var.ctx;
+    const resolved = resolveAccess(access, args, { user, role });
+    if (!permissionsFor(role).allowsAccess(resolved)) {
+        return resolved.kind === 'permission' && resolved.message !== undefined
+            ? forbidden(c, resolved.message)
+            : forbidden(c);
+    }
     const missing = missingTarget?.(args);
     return missing ? notFound(c, missing) : null;
 }
