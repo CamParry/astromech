@@ -12,7 +12,7 @@
         // here. The `.env` and `.dev.vars` are read by the build and the
         // Worker, and git ignores them.
         "check:boot:cloudflare": {
-            "dependsOn": ["^build", "//#routes:generate"],
+            "dependsOn": ["^build", "@astromech/admin#routes:generate"],
             "inputs": [
                 "$TURBO_DEFAULT$",
                 "!**/*.md",
@@ -29,7 +29,11 @@
         // there write the same `.astro/` files.
         "typecheck": {
             "extends": false,
-            "dependsOn": ["^build", "//#routes:generate", "check:boot:cloudflare"],
+            "dependsOn": [
+                "^build",
+                "@astromech/admin#routes:generate",
+                "check:boot:cloudflare"
+            ],
             "inputs": ["$TURBO_DEFAULT$", "!**/*.md"]
         }
     }

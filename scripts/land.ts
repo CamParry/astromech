@@ -65,7 +65,7 @@ import { step } from './lib/check-helpers.ts';
 import { CiUnknown, watchCi } from './lib/ci.ts';
 import { gateStatus } from './lib/gate.ts';
 import { mergedTree } from './lib/merged-tree.ts';
-import { capture, run } from './lib/run.ts';
+import { capture, run, succeeds } from './lib/run.ts';
 
 const USAGE =
     'usage: pnpm run land [--message-file <path>] [--no-ci] [--dry-run] [--no-gate-check]';
@@ -379,11 +379,7 @@ async function waitForCi(sha: string, mainCheckout: string): Promise<void> {
     let passed: boolean;
     try {
         passed = await watchCi(sha, {
-            capture: (args) =>
-                capture('gh', args, {
-                    cwd: mainCheckout,
-                    stdio: ['ignore', 'pipe', 'inherit'],
-                }),
+            capture: (args) => capture('gh', args, { cwd: mainCheckout }),
             run: (args) => run('gh', args, { cwd: mainCheckout }),
         });
     } catch (error) {
@@ -404,19 +400,14 @@ function git(args: string[]): string {
 
 function gitOrNull(args: string[]): string | null {
     try {
-        return capture('git', args, { stdio: ['ignore', 'pipe', 'ignore'] }) || null;
+        return capture('git', args, { stderr: 'ignore' }) || null;
     } catch {
         return null;
     }
 }
 
 function gitSucceeds(args: string[]): boolean {
-    try {
-        capture('git', args, { stdio: 'ignore' });
-        return true;
-    } catch {
-        return false;
-    }
+    return succeeds('git', args);
 }
 
 /**

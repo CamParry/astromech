@@ -11,7 +11,7 @@
         // `scripts/check-boot.ts`, which reads the scripts listed here. The
         // `.env` is read by the build, and git ignores it.
         "check:boot": {
-            "dependsOn": ["^build", "//#routes:generate"],
+            "dependsOn": ["^build", "@astromech/admin#routes:generate"],
             "inputs": [
                 "$TURBO_DEFAULT$",
                 "!**/*.md",
@@ -27,7 +27,7 @@
         // there write the same `.astro/` files.
         "typecheck": {
             "extends": false,
-            "dependsOn": ["^build", "//#routes:generate", "check:boot"],
+            "dependsOn": ["^build", "@astromech/admin#routes:generate", "check:boot"],
             "inputs": ["$TURBO_DEFAULT$", "!**/*.md"]
         }
     }

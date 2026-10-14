@@ -339,5 +339,5 @@ export function skippedTasks(
 }
 
 function git(repoRoot: string, ...args: string[]): string {
-    return capture('git', args, { cwd: repoRoot, stdio: ['ignore', 'pipe', 'ignore'] });
+    return capture('git', args, { cwd: repoRoot, stderr: 'ignore' });
 }

@@ -58,7 +58,7 @@
         // vitest aliases. Core's shared vitest settings import
         // `scripts/lib/cpu-limits.ts`. The admin's source imports
         // `routeTree.gen.ts`, which git ignores, so each waits for
-        // `//#routes:generate`. The schema engine, the admin, core and the
+        // `@astromech/admin#routes:generate`. The schema engine, the admin, core and the
         // scripts package have their own `turbo.json`. Markdown changes no
         // result here.
         "build": {
@@ -70,7 +70,7 @@
             "env": ["ASTROMECH_NO_DTS"]
         },
         "typecheck": {
-            "dependsOn": ["//#routes:generate"],
+            "dependsOn": ["@astromech/admin#routes:generate"],
             "inputs": [
                 "$TURBO_DEFAULT$",
                 "!**/*.md",
@@ -85,7 +85,7 @@
             ]
         },
         "lint": {
-            "dependsOn": ["//#routes:generate"],
+            "dependsOn": ["@astromech/admin#routes:generate"],
             "inputs": [
                 "$TURBO_DEFAULT$",
                 "!**/*.md",
@@ -99,7 +99,7 @@
             ]
         },
         "test:coverage": {
-            "dependsOn": ["//#routes:generate"],
+            "dependsOn": ["@astromech/admin#routes:generate"],
             "inputs": [
                 "$TURBO_DEFAULT$",
                 "!**/*.md",
@@ -115,18 +115,19 @@
             "outputs": ["coverage/**"]
         },
 
+        // Writes the admin's `routeTree.gen.ts` before anything that reads it:
+        // the app builds, the admin's typecheck and lint. The generator skips
+        // the write when the file is current, so once this has run nothing
+        // writes it again, and two builds reading it at once cannot race a
+        // write. Its paths are the admin package's.
+        "@astromech/admin#routes:generate": {
+            "inputs": ["src/pages/**", "tsr.config.json"],
+            "outputs": ["src/routeTree.gen.ts"]
+        },
+
         // The root tasks. `$TURBO_DEFAULT$` here is every file git tracks or
         // does not ignore, in the whole repository, so a task that reads a
         // part of it starts from that and excludes the rest.
-
-        // Writes `routeTree.gen.ts` before anything that reads it: the app
-        // builds, the admin's typecheck and lint. The generator skips the write
-        // when the file is current, so once this has run nothing writes it
-        // again, and two builds reading it at once cannot race a write.
-        "//#routes:generate": {
-            "inputs": ["packages/admin/src/pages/**", "packages/admin/tsr.config.json"],
-            "outputs": ["packages/admin/src/routeTree.gen.ts"]
-        },
         // The boot checks and the demo apps' typecheck are package tasks, in
         // `apps/demo/turbo.json` and `apps/demo-cloudflare/turbo.json`.
 
@@ -147,14 +148,15 @@
                 "@astromech/seo#build"
             ],
             "inputs": [
-                "packages/astromech/scripts/check-node-imports.mjs",
+                "scripts/check-node-imports.ts",
+                "scripts/lib/run.ts",
                 "packages/*/package.json",
                 "packages/plugins/*/package.json"
             ]
         },
         "//#check:exports": {
             "inputs": [
-                "packages/astromech/scripts/check-exports-parity.mjs",
+                "scripts/check-exports-parity.ts",
                 "packages/astromech/package.json",
                 "packages/admin/package.json"
             ]

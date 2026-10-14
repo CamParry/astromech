@@ -1,4 +1,3 @@
-#!/usr/bin/env node
 /**
  * Prints where a branch adds a known drift pattern or a copy of existing code, and where it
  * weakens the tests, for a person to read at review. It compares the merge base of `--base`
@@ -7,14 +6,57 @@
  * package's `src`, test files (anything under a `tests` directory or named `*.test.*`), and
  * `vitest.config.*` files, whose coverage thresholds it compares with the merge base's.
  *
- * It never fails on what it finds: it exits 0 whatever the report says, and non-zero only on bad
- * arguments or its own crash. `--no-copies` skips the jscpd scan.
+ *     pnpm run report:drift [--base <ref>] [--no-copies]
+ *
+ * `--no-copies` skips the jscpd scan.
+ *
+ * Exit codes: 0 whatever the report says, since it never fails on what it finds; 1 when it
+ * crashes; 2 on a usage error, such as a `--base` with no merge base with HEAD.
  */
-import { execFileSync } from 'node:child_process';
+import console from 'node:console';
 import { existsSync, mkdtempSync, readdirSync, readFileSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join, relative } from 'node:path';
+import process from 'node:process';
 import { fileURLToPath } from 'node:url';
+import { parseArgs } from 'node:util';
+import { capture, run } from './lib/run.ts';
+
+const USAGE = 'usage: pnpm run report:drift [--base <ref>] [--no-copies]';
+
+/** The kinds of file the report reads (`fileKind`). */
+type FileKind = 'source' | 'tests' | 'vitest-config';
+
+/** A path prefix from the repo root, or a regular expression over that path. */
+type Scope = string | RegExp;
+
+type Pattern = {
+    name: string;
+    pattern: RegExp;
+    files?: 'source' | 'tests';
+    lines?: 'added' | 'removed';
+    only?: Scope[];
+    except?: Scope[];
+    body?: (body: string) => boolean;
+    why: string;
+};
+
+/** A line on one side of the diff: its number on that side, and its text. */
+type DiffLine = { line: number; text: string };
+
+/** A file the diff changes, with its added and removed lines. */
+type ChangedFile = {
+    path: string;
+    kind: FileKind;
+    added: DiffLine[];
+    removed: DiffLine[];
+};
+
+/** A glob's coverage thresholds, by metric. */
+type Metrics = Record<string, number>;
+
+/** One side of a clone in jscpd's JSON report. */
+type CloneSide = { name: string; start: number; end: number };
 
 // The core container and layout field types (`fields/core-field-types.ts`).
 // Code outside the fields directories that branches on one of them usually
@@ -29,7 +71,7 @@ const STRUCTURAL_TYPES = 'group|accordion|tabs|tab|repeater|blocks|tree';
  * opens, read by `testBody`; the line is listed only when it returns true) and `why` (printed
  * under the name). Add a pattern by adding a line.
  */
-const PATTERNS = [
+const PATTERNS: Pattern[] = [
     {
         name: '`as unknown as` cast',
         pattern: /\bas unknown as\b/,
@@ -116,9 +158,9 @@ const TEST_START = /^\s*(it|test|describe|suite)(\.\w+)*\(/;
  * `toThrowError()` with no argument, or a `.rejects` with no matcher after it, and there is at
  * least one of them.
  */
-function passesOnAnyError(body) {
+function passesOnAnyError(body: string): boolean {
     const matchers = [...body.matchAll(/\.(to[A-Z]\w*)\(\s*(\))?/g)];
-    const bareThrow = ([, name, closed]) =>
+    const bareThrow = ([, name, closed]: RegExpExecArray): boolean =>
         (name === 'toThrow' || name === 'toThrowError') && closed !== undefined;
     const bareRejects = /\.rejects\b(?!\s*\.)/.test(body);
     return (matchers.some(bareThrow) || bareRejects) && matchers.every(bareThrow);
@@ -140,85 +182,91 @@ const VITEST_CONFIG = /(^|\/)vitest\.config\.[cm]?[jt]s$/;
 const COPY_MIN_LINES = 5;
 const COPY_MIN_TOKENS = 50;
 
-const args = parseArgs(process.argv.slice(2));
-const repoRoot = execFileSync('git', ['rev-parse', '--show-toplevel'], {
-    encoding: 'utf8',
-}).trim();
-const mergeBase = resolveMergeBase(args.base);
-const files = readChanges(mergeBase);
+const repoRoot = capture('git', ['rev-parse', '--show-toplevel']);
 
-const lines = [
-    `Drift report: ${args.base} (merge base ${mergeBase.slice(0, 8)}) to the working tree`,
-];
-const patternSection = reportPatterns(files);
-const thresholdSection = reportThresholds(
-    files.filter(({ kind }) => kind === 'vitest-config'),
-    mergeBase
-);
-const copySection = args.copies
-    ? await reportCopies(files.filter(({ kind }) => kind === 'source'))
-    : [];
-
-if (
-    patternSection.length === 0 &&
-    thresholdSection.length === 0 &&
-    copySection.length === 0
-) {
-    lines.push('', args.copies ? 'Nothing found.' : 'Nothing found (copies skipped).');
+const options = parseArguments();
+if (options === undefined) {
+    process.exitCode = 2;
 } else {
-    lines.push('', 'Patterns', '');
-    lines.push(...(patternSection.length > 0 ? patternSection : ['  none']));
-    lines.push('', 'Lowered coverage thresholds', '');
-    lines.push(...(thresholdSection.length > 0 ? thresholdSection : ['  none']));
-    if (args.copies) {
-        lines.push('', 'Copies', '');
-        lines.push(...(copySection.length > 0 ? copySection : ['  none']));
-    }
-    lines.push(
-        '',
-        'For each item: share it now, add it to a roadmap file, or leave it with a reason.'
-    );
-}
-console.log(lines.join('\n'));
-
-function parseArgs(argv) {
-    const parsed = { base: 'main', copies: true };
-    for (let index = 0; index < argv.length; index += 1) {
-        const arg = argv[index];
-        if (arg === '--') {
-            // pnpm passes the separator through to the script.
-            continue;
-        } else if (arg === '--base' && argv[index + 1] !== undefined) {
-            parsed.base = argv[++index];
-        } else if (arg.startsWith('--base=')) {
-            parsed.base = arg.slice('--base='.length);
-        } else if (arg === '--no-copies') {
-            parsed.copies = false;
-        } else {
-            console.error(
-                `Unknown argument: ${arg}\nUsage: report-drift [--base <ref>] [--no-copies]`
-            );
-            process.exit(2);
-        }
-    }
-    return parsed;
+    process.exitCode = await report(options);
 }
 
-function git(gitArgs) {
-    return execFileSync('git', gitArgs, {
-        cwd: repoRoot,
-        encoding: 'utf8',
-        maxBuffer: 256 * 1024 * 1024,
-    });
-}
-
-function resolveMergeBase(base) {
+/**
+ * The flags, or undefined after printing the usage. pnpm passes a `--` on to
+ * the script, and this takes no positional arguments, so every `--` is dropped.
+ */
+function parseArguments(): { base: string; copies: boolean } | undefined {
     try {
-        return git(['merge-base', base, 'HEAD']).trim();
-    } catch {
-        console.error(`Cannot find a merge base between ${base} and HEAD.`);
-        process.exit(2);
+        const { values } = parseArgs({
+            args: process.argv.slice(2).filter((arg) => arg !== '--'),
+            strict: true,
+            allowNegative: true,
+            options: {
+                base: { type: 'string', default: 'main' },
+                copies: { type: 'boolean', default: true },
+            },
+        });
+        return { base: values.base, copies: values.copies };
+    } catch (error) {
+        console.error(`${(error as Error).message}\n${USAGE}`);
+        return undefined;
     }
+}
+
+/** Prints the report, and returns the exit code. */
+async function report(args: { base: string; copies: boolean }): Promise<number> {
+    let mergeBase: string;
+    try {
+        mergeBase = git(['merge-base', args.base, 'HEAD']);
+    } catch {
+        console.error(
+            `Cannot find a merge base between ${args.base} and HEAD.\n${USAGE}`
+        );
+        return 2;
+    }
+    const files = readChanges(mergeBase);
+
+    const lines = [
+        `Drift report: ${args.base} (merge base ${mergeBase.slice(0, 8)}) to the working tree`,
+    ];
+    const patternSection = reportPatterns(files);
+    const thresholdSection = reportThresholds(
+        files.filter(({ kind }) => kind === 'vitest-config'),
+        mergeBase
+    );
+    const copySection = args.copies
+        ? await reportCopies(files.filter(({ kind }) => kind === 'source'))
+        : [];
+
+    if (
+        patternSection.length === 0 &&
+        thresholdSection.length === 0 &&
+        copySection.length === 0
+    ) {
+        lines.push(
+            '',
+            args.copies ? 'Nothing found.' : 'Nothing found (copies skipped).'
+        );
+    } else {
+        lines.push('', 'Patterns', '');
+        lines.push(...(patternSection.length > 0 ? patternSection : ['  none']));
+        lines.push('', 'Lowered coverage thresholds', '');
+        lines.push(...(thresholdSection.length > 0 ? thresholdSection : ['  none']));
+        if (args.copies) {
+            lines.push('', 'Copies', '');
+            lines.push(...(copySection.length > 0 ? copySection : ['  none']));
+        }
+        lines.push(
+            '',
+            'For each item: share it now, add it to a roadmap file, or leave it with a reason.'
+        );
+    }
+    console.log(lines.join('\n'));
+    return 0;
+}
+
+function git(gitArgs: string[]): string {
+    return capture('git', gitArgs, { cwd: repoRoot, stderr: 'ignore' });
 }
 
 /**
@@ -226,11 +274,15 @@ function resolveMergeBase(base) {
  * lines (new-file line numbers) and its removed lines (old-file line numbers). Untracked files
  * count as wholly added.
  */
-function readChanges(base) {
-    const changes = new Map();
-    const fileFor = (path, kind) => {
-        if (!changes.has(path)) changes.set(path, { path, kind, added: [], removed: [] });
-        return changes.get(path);
+function readChanges(base: string): ChangedFile[] {
+    const changes = new Map<string, ChangedFile>();
+    const fileFor = (path: string, kind: FileKind): ChangedFile => {
+        let file = changes.get(path);
+        if (file === undefined) {
+            file = { path, kind, added: [], removed: [] };
+            changes.set(path, file);
+        }
+        return file;
     };
 
     const diff = git([
@@ -243,7 +295,9 @@ function readChanges(base) {
         'packages',
         'apps',
     ]);
-    let current;
+    // The file the lines belong to; between a `---` and a `+++` header, the
+    // removed side's path alone.
+    let current: ChangedFile | { oldPath: string } | undefined;
     let oldLine = 0;
     let newLine = 0;
     // A file's `---`/`+++` header comes before its first hunk; inside a hunk,
@@ -259,17 +313,25 @@ function readChanges(base) {
             current = oldPath === '/dev/null' ? undefined : { oldPath };
         } else if (inHeader && line.startsWith('+++ ')) {
             const newPath = line.slice(4).replace(/^b\//, '');
-            const path = newPath === '/dev/null' ? current?.oldPath : newPath;
+            const path =
+                newPath === '/dev/null'
+                    ? current !== undefined && 'oldPath' in current
+                        ? current.oldPath
+                        : undefined
+                    : newPath;
             const kind = path === undefined ? undefined : fileKind(path);
-            current = kind === undefined ? undefined : fileFor(path, kind);
+            current =
+                path === undefined || kind === undefined
+                    ? undefined
+                    : fileFor(path, kind);
         } else if (line.startsWith('@@')) {
             inHeader = false;
             oldLine = Number(/-(\d+)/.exec(line)?.[1] ?? 0);
             newLine = Number(/\+(\d+)/.exec(line)?.[1] ?? 0);
-        } else if (current !== undefined && line.startsWith('+')) {
+        } else if (current !== undefined && 'added' in current && line.startsWith('+')) {
             current.added.push({ line: newLine, text: line.slice(1) });
             newLine += 1;
-        } else if (current !== undefined && line.startsWith('-')) {
+        } else if (current !== undefined && 'added' in current && line.startsWith('-')) {
             current.removed.push({ line: oldLine, text: line.slice(1) });
             oldLine += 1;
         }
@@ -284,6 +346,7 @@ function readChanges(base) {
         'apps',
     ]);
     for (const path of untracked.split('\n')) {
+        if (path === '') continue;
         const kind = fileKind(path);
         if (kind === undefined) continue;
         const text = readFileSync(join(repoRoot, path), 'utf8');
@@ -297,14 +360,14 @@ function readChanges(base) {
 }
 
 /** `'source'`, `'tests'` or `'vitest-config'`, or undefined for a file the report skips. */
-function fileKind(path) {
+function fileKind(path: string): FileKind | undefined {
     if (VITEST_CONFIG.test(path)) return 'vitest-config';
     if (TEST_FILE.test(path)) return CODE_FILE.test(path) ? 'tests' : undefined;
     if (SOURCE_FILE.test(path)) return 'source';
     return undefined;
 }
 
-function inPath(path, scope) {
+function inPath(path: string, scope: Scope): boolean {
     return typeof scope === 'string' ? path.startsWith(scope) : scope.test(path);
 }
 
@@ -314,12 +377,15 @@ function inPath(path, scope) {
  * next test or suite, so a call whose end it cannot find (a string or regular expression with an
  * unbalanced parenthesis, or a body the diff only partly holds) gives the lines it did read.
  */
-function testBody(side, index) {
-    const parts = [];
+function testBody(side: DiffLine[], index: number): string {
+    const parts: string[] = [];
     let depth = 0;
     for (let at = index; at < side.length; at += 1) {
-        const { line, text } = side[at];
-        if (at > index && (line !== side[at - 1].line + 1 || TEST_START.test(text)))
+        const { line, text } = side[at] as DiffLine;
+        if (
+            at > index &&
+            (line !== (side[at - 1] as DiffLine).line + 1 || TEST_START.test(text))
+        )
             break;
         parts.push(text);
         // Quoted strings and template literals on one line, so a test title
@@ -334,8 +400,8 @@ function testBody(side, index) {
     return parts.join('\n');
 }
 
-function reportPatterns(changed) {
-    const out = [];
+function reportPatterns(changed: ChangedFile[]): string[] {
+    const out: string[] = [];
     for (const {
         name,
         pattern,
@@ -346,8 +412,8 @@ function reportPatterns(changed) {
         body,
         why,
     } of PATTERNS) {
-        const matchAt = (side, index) => {
-            const match = pattern.exec(side[index].text)?.[0];
+        const matchAt = (side: DiffLine[], index: number): string | undefined => {
+            const match = pattern.exec((side[index] as DiffLine).text)?.[0];
             if (match === undefined || body === undefined) return match;
             return body(testBody(side, index)) ? match : undefined;
         };
@@ -359,10 +425,12 @@ function reportPatterns(changed) {
         );
         // The side whose matches are listed, and the side that cancels them.
         const [listedSide, otherSide] =
-            lines === 'added' ? ['added', 'removed'] : ['removed', 'added'];
+            lines === 'added'
+                ? (['added', 'removed'] as const)
+                : (['removed', 'added'] as const);
         let listedCount = 0;
         let otherCount = 0;
-        const listed = [];
+        const listed: string[] = [];
         for (const file of inScope) {
             // A match the same file also has on the other side is an edited or
             // moved line (a class whose `extends` changed, an assertion
@@ -375,7 +443,7 @@ function reportPatterns(changed) {
                 }))
                 .filter(({ match }) => match !== undefined);
             otherCount += others.length;
-            const candidates = [];
+            const candidates: (DiffLine & { match: string })[] = [];
             for (const [index, { line, text }] of file[listedSide].entries()) {
                 const match = matchAt(file[listedSide], index);
                 if (match === undefined) continue;
@@ -414,8 +482,8 @@ function reportPatterns(changed) {
  * Coverage thresholds a changed vitest config lowers or drops, against the same file at the
  * merge base.
  */
-function reportThresholds(configs, base) {
-    const out = [];
+function reportThresholds(configs: ChangedFile[], base: string): string[] {
+    const out: string[] = [];
     for (const { path } of configs) {
         const before = readThresholds(gitShow(base, path));
         const after = readThresholds(
@@ -443,13 +511,13 @@ function reportThresholds(configs, base) {
  * `coverageThresholds`), as a map from each glob to its metrics. Reads the text rather than
  * loading the config, so the base side needs no checkout.
  */
-function readThresholds(text) {
-    const thresholds = new Map();
+function readThresholds(text: string): Map<string, Metrics> {
+    const thresholds = new Map<string, Metrics>();
     const start = text.search(/\b(?:coverageThresholds|thresholds)\s*:/);
     if (start === -1) return thresholds;
     const entry = /['"]([^'"]+)['"]\s*:\s*\{([^{}]*)\}/g;
-    for (const [, key, body] of text.slice(start).matchAll(entry)) {
-        const metrics = Object.fromEntries(
+    for (const [, key = '', body = ''] of text.slice(start).matchAll(entry)) {
+        const metrics: Metrics = Object.fromEntries(
             [...body.matchAll(THRESHOLD_METRIC)].map(([, metric, value]) => [
                 metric,
                 Number(value),
@@ -461,20 +529,16 @@ function readThresholds(text) {
 }
 
 /** A file's text at a commit, or '' when the file did not exist there. */
-function gitShow(commit, path) {
+function gitShow(commit: string, path: string): string {
     try {
-        return execFileSync('git', ['show', `${commit}:${path}`], {
-            cwd: repoRoot,
-            encoding: 'utf8',
-            stdio: ['ignore', 'pipe', 'ignore'],
-        });
+        return git(['show', `${commit}:${path}`]);
     } catch {
         return '';
     }
 }
 
 /** Clones jscpd finds in the source directories with a side on a line this diff added. */
-async function reportCopies(changed) {
+async function reportCopies(changed: ChangedFile[]): Promise<string[]> {
     const addedLines = new Map(
         changed.map(({ path, added }) => [path, new Set(added.map(({ line }) => line))])
     );
@@ -488,12 +552,12 @@ async function reportCopies(changed) {
         )
         .filter((dir) => existsSync(dir));
     const output = mkdtempSync(join(tmpdir(), 'report-drift-'));
-    let clones;
+    let clones: { firstFile: CloneSide; secondFile: CloneSide }[];
     try {
         // jscpd is resolved from this script, not the repo being reported on,
         // so the script can report on another checkout.
         const cli = fileURLToPath(import.meta.resolve('jscpd/run-jscpd.js'));
-        execFileSync(
+        await run(
             process.execPath,
             [
                 cli,
@@ -518,29 +582,30 @@ async function reportCopies(changed) {
             ],
             { cwd: repoRoot, stdio: 'ignore' }
         );
-        clones = JSON.parse(
+        ({ duplicates: clones } = JSON.parse(
             readFileSync(join(output, 'jscpd-report.json'), 'utf8')
-        ).duplicates;
+        ) as { duplicates: typeof clones });
     } finally {
         rmSync(output, { recursive: true, force: true });
     }
 
-    const out = [];
-    const seen = new Set();
+    const out: string[] = [];
+    const seen = new Set<string>();
     for (const { firstFile, secondFile } of clones) {
-        const sides = [firstFile, secondFile].map((side) => ({
+        const [first, second] = [firstFile, secondFile].map((side) => ({
             path: relative(repoRoot, side.name),
             start: side.start,
             end: side.end,
         }));
-        const touched = sides.some(({ path, start, end }) => {
+        if (first === undefined || second === undefined) continue;
+        const touched = [first, second].some(({ path, start, end }) => {
             const set = addedLines.get(path);
             if (set === undefined) return false;
             for (let line = start; line <= end; line += 1) if (set.has(line)) return true;
             return false;
         });
         if (!touched) continue;
-        const text = `  ${sides[0].path}:${sides[0].start}-${sides[0].end}  ↔  ${sides[1].path}:${sides[1].start}-${sides[1].end}  (${sides[0].end - sides[0].start + 1} lines)`;
+        const text = `  ${first.path}:${first.start}-${first.end}  ↔  ${second.path}:${second.start}-${second.end}  (${first.end - first.start + 1} lines)`;
         if (seen.has(text)) continue;
         seen.add(text);
         out.push(text);
@@ -548,7 +613,7 @@ async function reportCopies(changed) {
     return out;
 }
 
-function listDirs(dir) {
+function listDirs(dir: string): string[] {
     if (!existsSync(dir)) return [];
     return readdirSync(dir, { withFileTypes: true })
         .filter((entry) => entry.isDirectory() && entry.name !== 'plugins')

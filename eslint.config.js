@@ -359,7 +359,7 @@ export default tseslint.config(
     },
     {
         // Repo tooling: plain Node, run by npm scripts rather than bundled.
-        files: ['scripts/**/*.{mjs,ts}'],
+        files: ['scripts/**/*.ts'],
         languageOptions: {
             globals: {
                 console: 'readonly',
@@ -407,7 +407,7 @@ export default tseslint.config(
         // `npm_lifecycle_event`, the `TURBO_` ones configure Turborepo, and
         // the `GIT_` ones are git's, which a test sets for a throwaway
         // repository.
-        files: ['scripts/**/*.{mjs,ts}'],
+        files: ['scripts/**/*.ts'],
         rules: {
             'turbo/no-undeclared-env-vars': [
                 'error',
@@ -427,7 +427,6 @@ export default tseslint.config(
     {
         // Scripts no task runs: each is run by hand, against a site or a deployment.
         files: [
-            'packages/astromech/scripts/seed.ts',
             'packages/plugins/assistant/scripts/**',
             'scripts/check-deployed-cloudflare.ts',
         ],

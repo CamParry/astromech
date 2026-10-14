@@ -267,16 +267,11 @@
         "build": "tsup",
         "build:js": "ASTROMECH_NO_DTS=1 tsup",
         "typecheck": "tsc -p tsconfig.test.json",
-        "lint": "eslint src tests scripts",
-        "check:node-imports": "node scripts/check-node-imports.mjs",
-        "check:exports": "node scripts/check-exports-parity.mjs",
-        "format": "prettier --write src",
-        "format:check": "prettier --check src",
+        "lint": "eslint src tests",
         "test": "vitest",
         "test:run": "vitest run",
         "test:coverage": "vitest run --coverage",
-        "test:mutation": "node scripts/test-mutation.mjs",
-        "db:seed": "tsx scripts/seed.ts"
+        "test:mutation": "env -u NODE_ENV stryker run --mutate"
     },
     "dependencies": {
         "@ai-sdk/provider": "^4.0.5",
@@ -358,7 +353,6 @@
         "fast-check": "^4.10.2",
         "kysely": "^0.29.1",
         "nodemailer": "^7.0.13",
-        "prettier": "3.8.1",
         "react": "^19.0.0",
         "react-dom": "^19.0.0",
         "sharp": "^0.35.1",

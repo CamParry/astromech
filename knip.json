@@ -14,22 +14,17 @@
     "workspaces": {
         ".": { "project": [] },
         "scripts": {
-            "entry": ["*.{mjs,ts}", "lib/*.test.ts"],
-            "project": ["**/*.{mjs,ts}"]
+            "entry": ["*.ts", "lib/*.test.ts"],
+            "project": ["**/*.ts"]
         },
         "packages/astromech": {
             "entry": [
                 "src/exports/*.ts!",
-                "scripts/*.{mjs,ts}!",
                 "tests/**/*.test.{ts,tsx}",
                 "tests/**/*.test-d.ts",
                 "tests/_support/**/*.{ts,tsx}"
             ],
-            "project": [
-                "src/**/*.{ts,tsx,astro}!",
-                "tests/**/*.{ts,tsx}",
-                "scripts/**/*.{mjs,ts}!"
-            ],
+            "project": ["src/**/*.{ts,tsx,astro}!", "tests/**/*.{ts,tsx}"],
             "ignoreDependencies": ["wrangler"]
         },
         "packages/admin": {

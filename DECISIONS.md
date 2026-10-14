@@ -1,6 +1,6 @@
 # Decisions
 
-Each decision is a file in `decisions/`, stating a live choice and what it beat. A file holds the current state and is rewritten when the choice is reversed; git holds the history. To add or retitle one, write the file, then run `pnpm run decisions` to rebuild this index.
+Each decision is a file in `decisions/`, stating a live choice and what it beat. A file holds the current state and is rewritten when the choice is reversed; git holds the history. To add or retitle one, write the file, then run `pnpm run decisions` to rebuild this index; the pre-commit hook rebuilds it too.
 
 <!-- decisions-index:start -->
 

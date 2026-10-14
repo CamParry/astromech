@@ -4,7 +4,7 @@
     // The tests also read the workspace's manifests and the root `turbo.json`
     // (`lib/gate.test.ts`, `lib/workspace-packages.test.ts`). The package has
     // no build and no coverage run, so it leaves out those tasks, which would
-    // otherwise wait for `//#routes:generate`.
+    // otherwise wait for `@astromech/admin#routes:generate`.
     "$schema": "../node_modules/turbo/schema.json",
     "extends": ["//"],
     "tasks": {

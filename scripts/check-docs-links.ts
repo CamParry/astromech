@@ -1,15 +1,47 @@
-#!/usr/bin/env node
 /**
  * Fails when a markdown link or backticked path in the docs, `eslint.config.js` or a package's doc
  * comments no longer resolves, or a source comment carries a history marker. A path resolves only
  * if git tracks it, so a local-only file cannot hide a broken reference.
+ *
+ *     pnpm run check:docs
+ *
+ * `check:docs` runs this, then `docs-index.ts --check`. The pre-commit hook runs both.
+ *
+ * Exit codes: 0 when every reference resolves, 1 when one does not, 2 on a usage error.
  */
-import { execFileSync } from 'node:child_process';
+import console from 'node:console';
 import { readdirSync, readFileSync } from 'node:fs';
 import { dirname, extname, join, relative, resolve, sep } from 'node:path';
+import process from 'node:process';
 import { fileURLToPath } from 'node:url';
+import { parseArgs } from 'node:util';
+import { capture } from './lib/run.ts';
+
+const NAME = 'check:docs';
+const USAGE = 'usage: pnpm run check:docs';
 
 const repoRoot = resolve(dirname(fileURLToPath(import.meta.url)), '..');
+
+/** A reference that does not resolve: the file it is in, as written, and what it names. */
+type Failure = { file: string; raw: string; target: string };
+
+/**
+ * Whether the arguments are valid: there are none. pnpm passes a `--` on to
+ * the script, so every `--` is dropped.
+ */
+function parseArguments(): boolean {
+    try {
+        parseArgs({
+            args: process.argv.slice(2).filter((arg) => arg !== '--'),
+            strict: true,
+            options: {},
+        });
+        return true;
+    } catch (error) {
+        console.error(`${(error as Error).message}\n${USAGE}`);
+        return false;
+    }
+}
 
 const { trackedFiles, trackedDirs } = readTrackedPaths();
 
@@ -90,80 +122,90 @@ const HISTORY_MARKERS = [
     /\bpre-extraction\b/,
 ];
 
-const failures = [];
-
-for (const file of markdownFiles(repoRoot)) {
-    const local = relative(repoRoot, file);
-
-    const source = readFileSync(file, 'utf8');
-    const body = withoutFencedBlocks(source);
-
-    for (const { target, raw } of markdownLinks(body)) {
-        if (!resolvesIn([dirname(file), repoRoot], target)) {
-            failures.push({ file, raw, target });
-        }
-    }
-
-    if (PATHS_UNCHECKED_TREES.some((tree) => local.startsWith(tree))) continue;
-
-    // User docs name files in the reader's own project, not in this repo's packages.
-    const bases = local.startsWith(join('apps', 'docs', ''))
-        ? [dirname(file), repoRoot]
-        : [dirname(file), repoRoot, ...ownPackageBases(file), ...PACKAGE_SRC_DIRS];
-    for (const token of backtickedPaths(body)) {
-        if (!isPathCandidate(bases, token)) continue;
-        if (!resolvesIn(bases, token)) {
-            failures.push({ file, raw: `\`${token}\``, target: token });
-        }
-    }
+if (!parseArguments()) {
+    process.exitCode = 2;
+} else {
+    process.exitCode = check();
 }
 
-for (const local of trackedFiles) {
-    const isLintConfig = local === LINT_CONFIG;
-    if (!isLintConfig && !SOURCE_FILE.test(local)) continue;
-    const file = resolve(repoRoot, local);
-    const source = readFileSync(file, 'utf8');
-    const bases = [
-        dirname(file),
-        repoRoot,
-        ...ownPackageBases(file),
-        ...PACKAGE_SRC_DIRS,
-    ];
+/** Runs the check, and returns its exit code. */
+function check(): number {
+    const failures: Failure[] = [];
 
-    const checked = isLintConfig ? allComments(source) : docComments(source);
-    for (const token of backtickedPaths(checked.join('\n'))) {
-        if (!isSourcePathCandidate(bases, token)) continue;
-        if (!resolvesIn(bases, token)) {
-            failures.push({ file, raw: `\`${token}\``, target: token });
+    for (const file of markdownFiles(repoRoot)) {
+        const local = relative(repoRoot, file);
+
+        const source = readFileSync(file, 'utf8');
+        const body = withoutFencedBlocks(source);
+
+        for (const { target, raw } of markdownLinks(body)) {
+            if (!resolvesIn([dirname(file), repoRoot], target)) {
+                failures.push({ file, raw, target });
+            }
         }
-    }
 
-    for (const comment of allComments(source)) {
-        for (const marker of HISTORY_MARKERS) {
-            const match = comment.match(marker);
-            if (match) {
-                failures.push({
-                    file,
-                    raw: `history marker "${match[0].trim()}"`,
-                    target: 'a comment says what the code does now',
-                });
+        if (PATHS_UNCHECKED_TREES.some((tree) => local.startsWith(tree))) continue;
+
+        // User docs name files in the reader's own project, not in this repo's packages.
+        const bases = local.startsWith(join('apps', 'docs', ''))
+            ? [dirname(file), repoRoot]
+            : [dirname(file), repoRoot, ...ownPackageBases(file), ...PACKAGE_SRC_DIRS];
+        for (const token of backtickedPaths(body)) {
+            if (!isPathCandidate(bases, token)) continue;
+            if (!resolvesIn(bases, token)) {
+                failures.push({ file, raw: `\`${token}\``, target: token });
             }
         }
     }
-}
 
-if (failures.length > 0) {
-    console.error(`check:docs — ${failures.length} problem(s):\n`);
-    for (const { file, raw, target } of failures) {
-        console.error(`  ${relative(repoRoot, file)}\n    ${raw} → ${target}`);
+    for (const local of trackedFiles) {
+        const isLintConfig = local === LINT_CONFIG;
+        if (!isLintConfig && !SOURCE_FILE.test(local)) continue;
+        const file = resolve(repoRoot, local);
+        const source = readFileSync(file, 'utf8');
+        const bases = [
+            dirname(file),
+            repoRoot,
+            ...ownPackageBases(file),
+            ...PACKAGE_SRC_DIRS,
+        ];
+
+        const checked = isLintConfig ? allComments(source) : docComments(source);
+        for (const token of backtickedPaths(checked.join('\n'))) {
+            if (!isSourcePathCandidate(bases, token)) continue;
+            if (!resolvesIn(bases, token)) {
+                failures.push({ file, raw: `\`${token}\``, target: token });
+            }
+        }
+
+        for (const comment of allComments(source)) {
+            for (const marker of HISTORY_MARKERS) {
+                const match = comment.match(marker);
+                if (match) {
+                    failures.push({
+                        file,
+                        raw: `history marker "${match[0].trim()}"`,
+                        target: 'a comment says what the code does now',
+                    });
+                }
+            }
+        }
     }
-    console.error('\nFix the reference, or the thing it points at.');
-    process.exit(1);
+
+    if (failures.length > 0) {
+        console.error(`FAIL ${NAME}: ${failures.length} problem(s):\n`);
+        for (const { file, raw, target } of failures) {
+            console.error(`  ${relative(repoRoot, file)}\n    ${raw} → ${target}`);
+        }
+        console.error('\nFix the reference, or the thing it points at.');
+        return 1;
+    }
+
+    console.log(`ok   ${NAME}: every reference in markdown and source comments resolves`);
+    return 0;
 }
 
-console.log('check:docs — all references in markdown and source comments resolve');
-
-function* markdownFiles(dir) {
+function* markdownFiles(dir: string): Generator<string> {
     for (const entry of readdirSync(dir, { withFileTypes: true })) {
         if (entry.isDirectory()) {
             if (SKIP_DIRS.has(entry.name)) continue;
@@ -176,52 +218,54 @@ function* markdownFiles(dir) {
 
 // Fenced code blocks hold illustrative paths and directory trees that are not
 // expected to resolve, so they never reach the checks.
-function withoutFencedBlocks(source) {
+function withoutFencedBlocks(source: string): string {
     return source.replace(/^```[\s\S]*?^```/gm, '');
 }
 
-function* markdownLinks(body) {
+function* markdownLinks(body: string): Generator<{ target: string; raw: string }> {
     for (const match of body.matchAll(/\[[^\]]*\]\(([^)\s]+)\)/g)) {
-        const target = stripAnchor(match[1]);
+        const target = stripAnchor(match[1] ?? '');
         if (!target) continue;
         if (/^(https?:|mailto:|#|\/)/.test(target)) continue;
         yield { target, raw: match[0] };
     }
 }
 
-function* backtickedPaths(body) {
-    const seen = new Set();
+function* backtickedPaths(body: string): Generator<string> {
+    const seen = new Set<string>();
     for (const match of body.matchAll(/`([^`\n]+)`/g)) {
-        const token = stripAnchor(match[1].trim().replace(/[.,;:]+$/, ''));
+        const token = stripAnchor((match[1] ?? '').trim().replace(/[.,;:]+$/, ''));
         if (!token || seen.has(token)) continue;
         seen.add(token);
         yield token;
     }
 }
 
-function stripAnchor(value) {
-    return value.split('#')[0].trim();
+function stripAnchor(value: string): string {
+    return (value.split('#')[0] ?? '').trim();
 }
 
 /** The `/** … *\/` blocks of a source file. */
-function docComments(source) {
+function docComments(source: string): string[] {
     return source.match(/\/\*\*[\s\S]*?\*\//g) ?? [];
 }
 
 /** Every block and line comment. A `//` inside a string or URL is skipped by the leading-space rule. */
-function allComments(source) {
+function allComments(source: string): string[] {
     const blocks = source.match(/\/\*[\s\S]*?\*\//g) ?? [];
-    const lines = [...source.matchAll(/(?:^|\s)(\/\/[^\n]*)/g)].map((match) => match[1]);
+    const lines = [...source.matchAll(/(?:^|\s)(\/\/[^\n]*)/g)].map(
+        (match) => match[1] ?? ''
+    );
     return [...blocks, ...lines];
 }
 
 /** A `./` or `../` path is relative to the file itself (the first base), and nothing else. */
-function basesFor(bases, token) {
+function basesFor(bases: string[], token: string): string[] {
     return token.startsWith('./') || token.startsWith('../') ? bases.slice(0, 1) : bases;
 }
 
 /** The root and `src` of the package a file sits in, if any. */
-function ownPackageBases(file) {
+function ownPackageBases(file: string): string[] {
     const root = PACKAGE_ROOTS.find((dir) => file.startsWith(dir + sep));
     return root === undefined ? [] : [root, join(root, 'src')];
 }
@@ -229,12 +273,12 @@ function ownPackageBases(file) {
 // A source comment names many things that are not repo paths (package
 // subpaths, MIME types, URL routes, example layouts), so only a token with a
 // slash whose first segment exists under one of the bases is checked.
-function isSourcePathCandidate(bases, token) {
+function isSourcePathCandidate(bases: string[], token: string): boolean {
     if (!token.includes('/')) return false;
     return isPathCandidate(bases, token);
 }
 
-function isPathCandidate(allBases, token) {
+function isPathCandidate(allBases: string[], token: string): boolean {
     if (/[\s*<>(){}|?=,'"$!]/.test(token)) return false;
     if (/^(https?:|mailto:|@|#|\/|~)/.test(token)) return false;
     if (token.includes(':')) return false;
@@ -248,7 +292,7 @@ function isPathCandidate(allBases, token) {
     return basesFor(allBases, token).some((base) => isTracked(resolve(base, head)));
 }
 
-function resolvesIn(allBases, target) {
+function resolvesIn(allBases: string[], target: string): boolean {
     const bases = basesFor(allBases, target);
     const clean = target.replace(/\/$/, '');
     const suffixes = extname(clean) === '' ? MODULE_SUFFIXES : [''];
@@ -260,14 +304,10 @@ function resolvesIn(allBases, target) {
 // Every path in the git index, which includes files staged but not yet committed,
 // so the pre-commit hook sees the files a commit adds. A directory counts when it
 // holds at least one tracked file.
-function readTrackedPaths() {
-    const output = execFileSync('git', ['ls-files', '-z'], {
-        cwd: repoRoot,
-        encoding: 'utf8',
-        maxBuffer: 64 * 1024 * 1024,
-    });
+function readTrackedPaths(): { trackedFiles: Set<string>; trackedDirs: Set<string> } {
+    const output = capture('git', ['ls-files', '-z'], { cwd: repoRoot });
     const files = new Set(output.split('\0').filter(Boolean));
-    const dirs = new Set();
+    const dirs = new Set<string>();
     for (const file of files) {
         const segments = file.split('/');
         for (let end = 1; end < segments.length; end++) {
@@ -277,7 +317,7 @@ function readTrackedPaths() {
     return { trackedFiles: files, trackedDirs: dirs };
 }
 
-function isTracked(absolute) {
+function isTracked(absolute: string): boolean {
     const local = relative(repoRoot, absolute).split(sep).join('/');
     if (local === '') return true;
     if (local === '..' || local.startsWith('../')) return false;

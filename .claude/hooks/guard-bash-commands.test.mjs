@@ -1,8 +1,9 @@
 /**
- * Runs the Bash hook as Claude Code does, with the input JSON on stdin, against a throwaway
- * repository laid out like this one: a main checkout and a sibling `-worktrees` directory. A
- * second repository sits in a Claude Code scratchpad, under a temporary directory the tests point
- * `CLAUDE_CODE_TMPDIR` at.
+ * Tests of the Bash hook against a throwaway repository laid out like this one: a main checkout
+ * and a sibling `-worktrees` directory. A second repository sits in a Claude Code scratchpad,
+ * under a temporary directory the tests point `CLAUDE_CODE_TMPDIR` at. Most call the hook's
+ * `decide` in this process; the last few run the hook as Claude Code does, with the input JSON on
+ * stdin, for its stdin and stdout contract.
  */
 import assert from 'node:assert/strict';
 import { execFileSync, spawnSync } from 'node:child_process';
@@ -11,6 +12,7 @@ import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
 import { after, before, describe, it } from 'node:test';
 import { fileURLToPath } from 'node:url';
+import { decide } from './guard-bash-commands.mjs';
 
 const hook = join(dirname(fileURLToPath(import.meta.url)), 'guard-bash-commands.mjs');
 
@@ -27,6 +29,12 @@ const gitEnvironment = {
     GIT_COMMITTER_NAME: 'Test',
     GIT_COMMITTER_EMAIL: 'test@example.com',
 };
+
+// The git commands `decide` runs inherit this process's environment.
+for (const name of Object.keys(process.env)) {
+    if (name.startsWith('GIT_')) Reflect.deleteProperty(process.env, name);
+}
+Object.assign(process.env, { GIT_CONFIG_GLOBAL: '/dev/null', GIT_CONFIG_NOSYSTEM: '1' });
 
 let root;
 let site;
@@ -862,32 +870,76 @@ describe('commands that touch nothing it guards', () => {
  * Runs the hook on one command and returns its decision (`null` when it prints nothing).
  * `environment` overrides variables; `undefined` unsets one.
  */
+describe('the hook run as Claude Code runs it', () => {
+    it('prints a decision as PreToolUse hook output on stdout', () => {
+        for (const [command, decision] of [
+            ['git reset --hard', 'ask'],
+            ['pkill node', 'deny'],
+        ]) {
+            const result = spawnHook(JSON.stringify(hookInput(command)));
+            assert.equal(result.status, 0, result.stderr);
+            assert.equal(result.stderr, '');
+            assert.deepEqual(JSON.parse(result.stdout), {
+                hookSpecificOutput: {
+                    hookEventName: 'PreToolUse',
+                    permissionDecision: decision,
+                    permissionDecisionReason: decide(
+                        hookInput(command),
+                        hookEnvironment()
+                    ).reason,
+                },
+            });
+        }
+    });
+
+    it('prints nothing and exits 0 when it stays silent', () => {
+        for (const stdin of [
+            JSON.stringify(hookInput('ls -la')),
+            JSON.stringify(hookInput(`cd "${worktree}" && git reset --hard`)),
+            '',
+            'not json',
+            JSON.stringify({ tool_input: {} }),
+        ]) {
+            const result = spawnHook(stdin);
+            assert.equal(result.status, 0, result.stderr);
+            assert.equal(result.stderr, '', stdin);
+            assert.equal(result.stdout, '', stdin);
+        }
+    });
+});
+
+/** The hook's decision on `command` run in `cwd`, as `{ decision, reason }`. */
 function runHook(command, cwd = site, environment = {}) {
-    const input = {
+    const verdict = decide(hookInput(command, cwd), hookEnvironment(environment));
+    return verdict ?? { decision: null, reason: '' };
+}
+
+/** The input Claude Code passes the hook for a Bash call. */
+function hookInput(command, cwd = site) {
+    return {
         hook_event_name: 'PreToolUse',
         tool_name: 'Bash',
         cwd,
         tool_input: { command },
     };
-    const result = spawnSync(process.execPath, [hook], {
-        input: JSON.stringify(input),
-        encoding: 'utf8',
-        env: {
-            ...gitEnvironment,
-            CLAUDE_PROJECT_DIR: site,
-            CLAUDE_CODE_TMPDIR: claudeTemporary,
-            ...environment,
-        },
-    });
-    assert.equal(result.status, 0, result.stderr);
-    assert.equal(result.stderr, '');
-    if (result.stdout.trim() === '') return { decision: null, reason: '' };
-    const output = JSON.parse(result.stdout).hookSpecificOutput;
-    assert.equal(output.hookEventName, 'PreToolUse');
+}
+
+function hookEnvironment(environment = {}) {
     return {
-        decision: output.permissionDecision,
-        reason: output.permissionDecisionReason,
+        ...gitEnvironment,
+        CLAUDE_PROJECT_DIR: site,
+        CLAUDE_CODE_TMPDIR: claudeTemporary,
+        ...environment,
     };
+}
+
+/** Runs the hook as Claude Code does, with `stdin` as its input. */
+function spawnHook(stdin) {
+    return spawnSync(process.execPath, [hook], {
+        input: stdin,
+        encoding: 'utf8',
+        env: hookEnvironment(),
+    });
 }
 
 function git(cwd, ...args) {
