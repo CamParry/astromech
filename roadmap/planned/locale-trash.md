@@ -8,7 +8,7 @@ An entry's translation cannot be removed: trashing or deleting an entry takes
 every locale ([Trash is a timestamp, at two levels](../../decisions/trash-is-a-timestamp.md)). Raised on 2026-10-03;
 decided the same day.
 
-Builds on `roadmap/planned/drafts.md`, `roadmap/planned/history.md`,
+Builds on `roadmap/in-progress/drafts.md`, `roadmap/planned/history.md`,
 `roadmap/planned/schedules.md` and the relationship locale column in
 `roadmap/completed/relationship-index-defects.md`.
 

@@ -5,7 +5,7 @@ milestone: 1.0
 # Schedules
 
 Publishing and unpublishing at a set time, as records of their own rather than a
-status. Decided 2026-10-03. Builds on `roadmap/planned/drafts.md`; absorbs the
+status. Decided 2026-10-03. Builds on `roadmap/in-progress/drafts.md`; absorbs the
 former scheduled-unpublishing proposal.
 
 ## What exists

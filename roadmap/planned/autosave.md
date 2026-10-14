@@ -6,7 +6,7 @@ milestone: later
 
 The editor form saves only when the editor clicks Save; a closed tab or an
 expired session loses the work. Raised on 2026-10-03; decided the same day.
-Builds on `roadmap/planned/drafts.md` and `roadmap/planned/editor-locking.md`.
+Builds on `roadmap/in-progress/drafts.md` and `roadmap/planned/editor-locking.md`.
 
 ## What exists
 

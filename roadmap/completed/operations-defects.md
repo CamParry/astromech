@@ -41,7 +41,7 @@ a failing test first.
 - **The dashboard counts entry types the user cannot read**
   (`packages/admin/src/pages/_protected/index.tsx`), showing 0 instead of
   hiding the card, with two requests per type. The sidebar's copy is in
-  `roadmap/planned/permissions.md`.
+  `roadmap/in-progress/permissions.md`.
 - **The database driver is named by `type`** where the storage, image, email
   and scheduler drivers use `name` (`packages/astromech/src/types/config.ts`).
 

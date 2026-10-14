@@ -54,7 +54,7 @@ plugin: not every site needs it.
 
 ## Core prerequisites, in 1.0
 
-- A built-in `contributor` role (`roadmap/planned/permissions.md`).
+- A built-in `contributor` role (`roadmap/in-progress/permissions.md`).
 - `notify()` targeting users who hold a permission
   (`roadmap/planned/notifications-channels-and-events.md`).
 

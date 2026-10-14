@@ -4,7 +4,7 @@ milestone: later
 
 # Full-Text Search Indexing
 
-> **Follows `roadmap/planned/drafts.md`** (decided 2026-10-03): staged changes become drafts in their own table, so revise the staging parts of this file before building it.
+> **Follows `roadmap/in-progress/drafts.md`** (decided 2026-10-03): staged changes become drafts in their own table, so revise the staging parts of this file before building it.
 
 **Direction, decided 2026-10-02** ([Search is a derived text column](../../decisions/search-is-a-derived-text-column.md)): Craft's shape. Each content row
 carries the plain text of its searchable fields, and the database's own

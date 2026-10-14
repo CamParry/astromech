@@ -87,7 +87,7 @@ the repository copies.
       `entries/methods/staging/merge.ts` takes the staged fields as they are;
       `globals/methods/staging/merge.ts` patches them over the canonical. One
       helper in `content/staging.ts`, one rule. Superseded:
-      `roadmap/planned/drafts.md` removes staging and its merge step.
+      `roadmap/in-progress/drafts.md` removes staging and its merge step.
 - [x] **The entry catalogue restates every method.** `entries/catalogue.ts` repeats
       each summary in a switch and each input in a per-type builder. Build each
       from the method's own `input` with `safeExtend` and its `summary`.
@@ -196,7 +196,7 @@ the repository copies.
       `resources.ts` would load every resource's schema into both, which is
       the cycle.
 - [x] `utilities/` is a mixed bag: `ai-context.ts` to `ai/`, `locale.ts` to its
-      one consumer. `permission-match.ts` is in `planned/permissions.md`. The
+      one consumer. `permission-match.ts` is in `in-progress/permissions.md`. The
       AI context message is `ai/context-message.ts`. `locale.ts` stays: ten
       files across six modules import it, and the admin and the demo reach it
       through `astromech/shared`, so it is a pure leaf with no single owner.
@@ -231,7 +231,7 @@ the repository copies.
       All three went: `GET /notifications/count` is a table row and answers
       `{ data: number }`, as RPC and `POST /entries/count` already did.
 - [x] `globals.get({ staged })`, which only a test uses; the admin calls
-      `getStaged`. Superseded: `roadmap/planned/drafts.md` removes staging.
+      `getStaged`. Superseded: `roadmap/in-progress/drafts.md` removes staging.
 - [x] `CELL_KINDS`, `badRequest`'s `details`, the
       unreachable try/catch in `transport/mcp/tools.ts`, and
       `createEntriesService`'s two parameters that only ever take one value.

@@ -4,7 +4,7 @@ milestone: later
 
 # Derive from one source
 
-> **Follows `roadmap/planned/drafts.md`** (decided 2026-10-03): staged changes become drafts in their own table, so revise the staging parts of this file before building it.
+> **Follows `roadmap/in-progress/drafts.md`** (decided 2026-10-03): staged changes become drafts in their own table, so revise the staging parts of this file before building it.
 
 From a comparison with Matt Pocock's course-video-manager
 (https://github.com/mattpocock/course-video-manager, commit `58b4c0e`) on

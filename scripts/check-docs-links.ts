@@ -58,7 +58,7 @@ const SKIP_DIRS = new Set([
 
 // Trees whose backticked paths are not checked, for two different reasons.
 //
-// Planned work and in-flight designs name files that do not exist yet, so a
+// Planned and in-progress work and in-flight designs name files that do not exist yet, so a
 // path there is a proposal rather than a claim. Frozen records quote paths that
 // were accurate when written, so a later rename must not fail them — that would
 // tax a historical document for an unrelated change, and the fix would be to
@@ -71,6 +71,7 @@ const PATHS_UNCHECKED_TREES = [
     join('specs', ''),
     join('roadmap', 'proposed', ''),
     join('roadmap', 'planned', ''),
+    join('roadmap', 'in-progress', ''),
     join('roadmap', 'completed', ''),
 ];
 

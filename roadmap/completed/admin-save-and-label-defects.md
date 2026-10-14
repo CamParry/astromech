@@ -19,7 +19,7 @@ Found on 2026-10-04 while planning `roadmap/planned/sidebar-groups.md` and
   put Save in a sidebar "Actions" panel rather than the header.
 
 The sidebar listing site entry types without a read check is already a fix in
-`roadmap/planned/permissions.md`.
+`roadmap/in-progress/permissions.md`.
 
 ## The work
 

@@ -5,7 +5,7 @@ milestone: later
 # Content releases
 
 A draft holds one entry's next published state, and a schedule publishes it
-at a set time (`roadmap/planned/drafts.md`, `roadmap/planned/schedules.md`). A
+at a set time (`roadmap/in-progress/drafts.md`, `roadmap/planned/schedules.md`). A
 release groups several entries' drafts and publishes them together, now or at a
 set time. Raised on 2026-10-03.
 

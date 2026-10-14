@@ -4,7 +4,7 @@ milestone: later
 
 # Naming conventions
 
-> **Follows `roadmap/planned/drafts.md`** (decided 2026-10-03): staged changes become drafts in their own table, so revise the staging parts of this file before building it.
+> **Follows `roadmap/in-progress/drafts.md`** (decided 2026-10-03): staged changes become drafts in their own table, so revise the staging parts of this file before building it.
 
 The `code` skill fixes `get*` as "returns the thing, throws when absent". Read
 cold, a `get*` call used only for its throw looks like a read with an unused
@@ -41,7 +41,7 @@ otherwise.
       write stores, after `prepareFields` (`completed/service-method-readability.md`).
 - [ ] Audit the other verbs across `packages/` against the result, and rename
       what disagrees.
-- [ ] Call a resource's category its type, not its kind, everywhere
+- [x] Call a resource's category its type, not its kind, everywhere
       ([Index rows name a type and a subtype](../../decisions/relationship-rows-name-type-and-subtype.md)). In one commit,
       since the first rename frees the name the second takes: the index's
       `sourceType` column (the entry type or global key) becomes

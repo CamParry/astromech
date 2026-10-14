@@ -4,7 +4,7 @@ milestone: 1.0
 
 # Editorial defects
 
-Found on 2026-10-03 while planning `roadmap/planned/drafts.md`.
+Found on 2026-10-03 while planning `roadmap/in-progress/drafts.md`.
 
 - **The redirects plugin records a redirect for any slug change.** Its
   `entry:afterUpdate` hook (`packages/plugins/redirects/src/hooks/slug-change.ts`)
@@ -40,7 +40,7 @@ became live.
 
 - [x] The redirects plugin records a redirect only when a published entry's
       live slug changes; a staged merge counts as a write to the live row.
-      Recording it on publish instead belongs to `roadmap/planned/drafts.md`.
+      Recording it on publish instead belongs to `roadmap/in-progress/drafts.md`.
 - [x] Redirect paths include the locale prefix.
 - [x] A status in `update` needs `publish`, as the status methods do, for
       entries and globals.

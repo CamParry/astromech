@@ -4,7 +4,7 @@ milestone: 1.0
 
 # Relationship index defects
 
-Found on 2026-10-03 while planning `roadmap/planned/drafts.md`.
+Found on 2026-10-03 while planning `roadmap/in-progress/drafts.md`.
 
 - **The index has no locale.** `relationships` (`packages/astromech/src/database/tables.ts`)
   merges the references of every locale of a resource into one set
@@ -39,7 +39,7 @@ follows that.
       returns, in that row's locale. `usedBy` and other delete-time reads span
       every locale and report the locales holding each reference.
 - [x] Exclude staged-only references from `where: { references }` now; drafts
-      stop being indexed in `roadmap/planned/drafts.md`.
+      stop being indexed in `roadmap/in-progress/drafts.md`.
 - [x] The migration recreates the table empty; run `astromech index:rebuild`
       after it. Nothing runs a rebuild after migrating.
 - [x] Tests for both.

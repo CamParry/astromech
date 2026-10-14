@@ -4,7 +4,7 @@ milestone: 1.0
 
 # Write-race and data-loss defects
 
-> **Follows `roadmap/planned/drafts.md`** (decided 2026-10-03): staged changes become drafts in their own table, so revise the staging parts of this file before building it.
+> **Follows `roadmap/in-progress/drafts.md`** (decided 2026-10-03): staged changes become drafts in their own table, so revise the staging parts of this file before building it.
 
 Items 1 to 8 of a comparison with Matt Pocock's course-video-manager
 (https://github.com/mattpocock/course-video-manager, commit `58b4c0e`), and the
@@ -89,7 +89,7 @@ item 8 proposed, would protect libsql only.
       before "the writes, in one transaction") to match.
 - [x] **The trash is read-only**, tested for update, publish and status changes.
 - [ ] ~~**Unique indexes.**~~ Cancelled 2026-10-04: drafts
-      (`roadmap/planned/drafts.md`) remove `stagedFor`, and history replaces
+      (`roadmap/in-progress/drafts.md`) remove `stagedFor`, and history replaces
       the versions tables, so both indexes would target tables that are going.
       The guarded writes already refuse both races. Revisit on the new tables.
 - [x] **Backup restore.** Done 2026-10-03: libsql restore compares migration

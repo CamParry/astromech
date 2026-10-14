@@ -56,7 +56,7 @@ Tested on D1 on 2026-10-02:
 ## Why it matters soon
 
 The permissions work drops the unused `roles` table
-([permissions](../planned/permissions.md)). `users` has no foreign key to
+([permissions](../in-progress/permissions.md)). `users` has no foreign key to
 `roles` (its `role` column is plain text), so that drop is a plain
 `DROP TABLE`. But any change there that rebuilds `users` rebuilds the table
 most rows point at: sessions, accounts, content rows, versions and

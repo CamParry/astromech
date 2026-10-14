@@ -4,7 +4,7 @@ milestone: 1.0
 
 # Hooks
 
-> **Follows `roadmap/planned/drafts.md`** (decided 2026-10-03): staged changes become drafts in their own table, so revise the staging parts of this file before building it.
+> **Follows `roadmap/in-progress/drafts.md`** (decided 2026-10-03): staged changes become drafts in their own table, so revise the staging parts of this file before building it.
 
 Hooks are how a plugin changes or extends what a write does. Today only entries
 and globals fire them, and the two follow different rules. Every resource gets
