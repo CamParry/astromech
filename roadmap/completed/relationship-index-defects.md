@@ -31,15 +31,15 @@ follows that.
 
 ## The work
 
-- [ ] A locale on each relationship row, never null: the locale of the content
+- [x] A locale on each relationship row, never null: the locale of the content
       row holding the reference. A shared field (`translatable: false`) is
       copied into every locale's row, so its reference is indexed once per
       locale.
-- [ ] `where: { references }` matches the references of the content row it
+- [x] `where: { references }` matches the references of the content row it
       returns, in that row's locale. `usedBy` and other delete-time reads span
       every locale and report the locales holding each reference.
-- [ ] Exclude staged-only references from `where: { references }` now; drafts
+- [x] Exclude staged-only references from `where: { references }` now; drafts
       stop being indexed in `roadmap/planned/drafts.md`.
-- [ ] The migration recreates the table empty; run `astromech index:rebuild`
+- [x] The migration recreates the table empty; run `astromech index:rebuild`
       after it. Nothing runs a rebuild after migrating.
-- [ ] Tests for both.
+- [x] Tests for both.
