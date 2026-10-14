@@ -87,7 +87,7 @@ export function useFieldValidation({
             {
                 operation: operationRef.current,
                 validation,
-                resource: { kind: 'entry', record: null },
+                resource: { type: 'entry', record: null },
                 user: null,
                 collectWarnings: true,
             }

@@ -18,7 +18,7 @@ function fakeCtx(operation: 'create' | 'update' = 'create', validation?: Validat
         // `exactOptionalPropertyTypes`: an omitted validation must be absent, not
         // present-and-undefined.
         ...(validation !== undefined ? { validation } : {}),
-        resource: { kind: 'entry' as const, record: {} },
+        resource: { type: 'entry' as const, record: {} },
         user: null,
     };
 }

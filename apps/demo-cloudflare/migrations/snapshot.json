@@ -1518,8 +1518,8 @@
                     "primaryKey": false
                 },
                 {
-                    "key": "sourceKind",
-                    "name": "source_kind",
+                    "key": "sourceType",
+                    "name": "source_type",
                     "kind": "enum",
                     "type": "text",
                     "notNull": true,
@@ -1527,8 +1527,8 @@
                     "enumValues": ["entry", "global", "user", "media"]
                 },
                 {
-                    "key": "sourceType",
-                    "name": "source_type",
+                    "key": "sourceSubtype",
+                    "name": "source_subtype",
                     "kind": "text",
                     "type": "text",
                     "notNull": false,
@@ -1567,8 +1567,8 @@
                     "primaryKey": false
                 },
                 {
-                    "key": "targetKind",
-                    "name": "target_kind",
+                    "key": "targetType",
+                    "name": "target_type",
                     "kind": "enum",
                     "type": "text",
                     "notNull": true,
@@ -1587,22 +1587,22 @@
             ],
             "primaryKey": [
                 "source_id",
-                "source_kind",
+                "source_type",
                 "locale",
                 "instance_path",
                 "target_id",
-                "target_kind"
+                "target_type"
             ],
             "fks": [],
             "indexes": [
                 {
                     "name": "idx_rel_target",
-                    "columns": ["target_id", "target_kind"],
+                    "columns": ["target_id", "target_type"],
                     "unique": false
                 },
                 {
                     "name": "idx_rel_filter",
-                    "columns": ["source_type", "schema_path", "target_id"],
+                    "columns": ["source_subtype", "schema_path", "target_id"],
                     "unique": false
                 }
             ]

@@ -909,11 +909,11 @@ export function createContentRepository<
     // A row deleted between a caller's read and this write is the caller's 404,
     // as the guarded writes answer it (`content/write-guard.ts`).
     function missing(id: string, locale?: string): ResourceNotFoundError {
-        return new ResourceNotFoundError(shape.kind, { id, locale });
+        return new ResourceNotFoundError(shape.type, { id, locale });
     }
 
     function noStaged(id: string, locale: string): ResourceNotFoundError {
-        return new ResourceNotFoundError(shape.kind, { id, locale, staged: true });
+        return new ResourceNotFoundError(shape.type, { id, locale, staged: true });
     }
 
     function required(row: R | null, id: string): R {

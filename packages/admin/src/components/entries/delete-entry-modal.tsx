@@ -114,12 +114,12 @@ export function DeleteEntryModal({
                             >
                                 {(incoming ?? []).slice(0, 10).map((r: Usage) => (
                                     <li
-                                        key={`${r.sourceKind}-${r.sourceId}-${r.instancePath}`}
+                                        key={`${r.sourceType}-${r.sourceId}-${r.instancePath}`}
                                     >
                                         {r.sourceTitle || r.sourceId}{' '}
                                         <span className="am-text-mono">
-                                            ({r.sourceType ?? r.sourceKind}.{r.schemaPath}
-                                            )
+                                            ({r.sourceSubtype ?? r.sourceType}.
+                                            {r.schemaPath})
                                         </span>
                                     </li>
                                 ))}

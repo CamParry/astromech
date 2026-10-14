@@ -127,7 +127,7 @@ export type ValidationMode = 'partial' | 'complete';
  * The record a write validates: a core resource's, or a plugin's own row
  * (`'plugin'`), which lives outside the four resources.
  */
-export type ValidatedRecord = { kind: ResourceType | 'plugin'; record: unknown };
+export type ValidatedRecord = { type: ResourceType | 'plugin'; record: unknown };
 
 /**
  * Context passed to a `FieldValidator`. Resource-generic — works for entries, media

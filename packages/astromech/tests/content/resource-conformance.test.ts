@@ -172,13 +172,13 @@ async function mediaTarget(): Promise<string> {
     return row.id;
 }
 
-describe.each(RESOURCE_TYPES)('%s', (kind) => {
-    const adapter = ADAPTERS[kind];
+describe.each(RESOURCE_TYPES)('%s', (type) => {
+    const adapter = ADAPTERS[type];
 
     it('reads and writes in its public shape, with no internal keys', async () => {
         const id = await adapter.save({ title: 'One' });
         const publicKeys = Object.keys(
-            (RESOURCE_CONFIG[kind].outputSchema as z.ZodObject).shape
+            (RESOURCE_CONFIG[type].outputSchema as z.ZodObject).shape
         ).sort();
 
         for (const result of [await adapter.read(id), await adapter.update(id, {})]) {
@@ -195,7 +195,7 @@ describe.each(RESOURCE_TYPES)('%s', (kind) => {
             name: 'ResourceNotFoundError',
             status: 404,
             code: 'NOT_FOUND',
-            kind,
+            type,
         });
     });
 
@@ -208,11 +208,11 @@ describe.each(RESOURCE_TYPES)('%s', (kind) => {
 
     it('versions the columns its versions table holds, beside the fields', () => {
         const metadata = ['id', 'contentId', 'version', 'createdAt', 'createdBy'];
-        const copied = Object.keys(VERSIONS_TABLES[kind].columns).filter(
+        const copied = Object.keys(VERSIONS_TABLES[type].columns).filter(
             (column) => !metadata.includes(column) && column !== 'fields'
         );
 
-        expect(copied.sort()).toEqual([...RESOURCE_CONFIG[kind].versionedColumns].sort());
+        expect(copied.sort()).toEqual([...RESOURCE_CONFIG[type].versionedColumns].sort());
     });
 
     it('round-trips a version', async () => {
@@ -266,12 +266,12 @@ describe.each(RESOURCE_TYPES)('%s', (kind) => {
         await adapter.save({ title: 'Holder', logo: target });
 
         const usage = await mediaService.usedBy({ id: target });
-        expect(usage.map((row) => row.sourceKind)).toContain(kind);
+        expect(usage.map((row) => row.sourceType)).toContain(type);
     });
 
     it('answers an unknown sort with 400, or has no list', async () => {
         if (adapter.list === undefined) {
-            expect(RESOURCE_CONFIG[kind].sortable).toEqual([]);
+            expect(RESOURCE_CONFIG[type].sortable).toEqual([]);
             return;
         }
         await expect(adapter.list({ nope: 'asc' })).rejects.toMatchObject({

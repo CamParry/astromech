@@ -16,14 +16,14 @@ type CtxOverrides = Partial<{
     operation: 'create' | 'update';
     validation: ValidationMode;
     validate: ResourceValidator;
-    resource: { kind: ResourceType; record: unknown };
+    resource: { type: ResourceType; record: unknown };
     user: null;
 }>;
 
 function fakeCtx(overrides: CtxOverrides = {}) {
     return {
         operation: 'create' as const,
-        resource: { kind: 'entry' as const, record: {} },
+        resource: { type: 'entry' as const, record: {} },
         user: null,
         ...overrides,
     };

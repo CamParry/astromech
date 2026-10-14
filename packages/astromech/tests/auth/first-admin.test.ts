@@ -176,7 +176,7 @@ describe('first-run setup', () => {
         await createFirstAdmin({ ...ADMIN, data: { fields: { avatar: media.id } } });
 
         const usage = await currentServices.media.usedBy({ id: media.id });
-        expect(usage.map((row) => [row.sourceKind, row.sourceTitle])).toEqual([
+        expect(usage.map((row) => [row.sourceType, row.sourceTitle])).toEqual([
             ['user', ADMIN.name],
         ]);
     });

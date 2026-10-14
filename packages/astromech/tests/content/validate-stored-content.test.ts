@@ -199,8 +199,8 @@ describe('validateStoredContent', () => {
 
         expect(report.findings).toEqual([
             {
-                kind: 'entry',
-                type: 'article',
+                type: 'entry',
+                subtype: 'article',
                 id: article.id,
                 locale: 'en',
                 staged: false,
@@ -226,8 +226,8 @@ describe('validateStoredContent', () => {
 
         expect(result.findings).toEqual([
             {
-                kind: 'entry',
-                type: 'report',
+                type: 'entry',
+                subtype: 'report',
                 id: report.id,
                 locale: 'en',
                 staged: false,
@@ -264,8 +264,8 @@ describe('validateStoredContent', () => {
 
         expect((await validateStoredContent(systemAppContext())).findings).toEqual([
             {
-                kind: 'entry',
-                type: 'article',
+                type: 'entry',
+                subtype: 'article',
                 id: article.id,
                 locale: 'en',
                 staged: false,
@@ -300,8 +300,8 @@ describe('validateStoredContent', () => {
 
         expect(report.findings).toEqual([
             {
-                kind: 'user',
-                type: null,
+                type: 'user',
+                subtype: null,
                 id: user.id,
                 locale: 'en',
                 staged: false,
@@ -338,8 +338,8 @@ describe('validateStoredContent', () => {
 
         expect(report.findings).toEqual([
             {
-                kind: 'global',
-                type: null,
+                type: 'global',
+                subtype: null,
                 id: 'branding',
                 locale: 'en',
                 staged: false,
@@ -373,8 +373,8 @@ describe('validateStoredContent', () => {
 
         expect(report.findings).toEqual([
             {
-                kind: 'global',
-                type: null,
+                type: 'global',
+                subtype: null,
                 id: 'site',
                 locale: 'en',
                 staged: false,
@@ -402,8 +402,8 @@ describe('validateStoredContent and staged changes', () => {
 
         expect(report.findings).toEqual([
             {
-                kind: 'entry',
-                type: 'article',
+                type: 'entry',
+                subtype: 'article',
                 id: article.id,
                 locale: 'en',
                 staged: true,
@@ -429,8 +429,8 @@ describe('validateStoredContent and staged changes', () => {
 
         expect(report.findings).toEqual([
             {
-                kind: 'global',
-                type: null,
+                type: 'global',
+                subtype: null,
                 id: 'branding',
                 locale: 'en',
                 staged: true,

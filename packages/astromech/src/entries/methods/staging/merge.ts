@@ -74,7 +74,7 @@ export const mergeStagedEntry = defineServiceMethod({
                 });
             }
             const updated = await writeGuarded({
-                kind: 'entry',
+                type: 'entry',
                 address: { id, locale },
                 guard,
                 repository: entryRepository,

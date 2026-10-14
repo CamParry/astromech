@@ -189,33 +189,33 @@ describe('trashPurgeJob', () => {
         });
 
         await relationshipRepository.replaceForSource(
-            { id: doomed.id, kind: 'entry', type: 'post' },
+            { id: doomed.id, type: 'entry', subtype: 'post' },
             [
                 {
                     locale: 'en',
                     schemaPath: 'related',
                     instancePath: 'related',
                     targetId: survivor.id,
-                    targetKind: 'entry',
+                    targetType: 'entry',
                 },
             ]
         );
         await relationshipRepository.replaceForSource(
-            { id: survivor.id, kind: 'entry', type: 'post' },
+            { id: survivor.id, type: 'entry', subtype: 'post' },
             [
                 {
                     locale: 'en',
                     schemaPath: 'related',
                     instancePath: 'related[0]',
                     targetId: doomed.id,
-                    targetKind: 'entry',
+                    targetType: 'entry',
                 },
                 {
                     locale: 'en',
                     schemaPath: 'related',
                     instancePath: 'related[1]',
                     targetId: survivor.id,
-                    targetKind: 'entry',
+                    targetType: 'entry',
                 },
             ]
         );

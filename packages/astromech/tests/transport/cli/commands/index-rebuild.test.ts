@@ -95,7 +95,7 @@ async function endRun(): Promise<void> {
 /** The source types the public read path lists as using `id`. */
 async function usedByTypes(id: string): Promise<string[]> {
     const usage = await currentServices.entries.usedBy({ type: 'post', id });
-    return usage.map((row) => row.sourceType ?? row.sourceKind).sort();
+    return usage.map((row) => row.sourceSubtype ?? row.sourceType).sort();
 }
 
 describe('index:rebuild', () => {

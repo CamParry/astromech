@@ -158,7 +158,7 @@ export function createFormsService(
                 const definitions = compileFormFields(stored['fields']);
                 const { values, errors } = await safeParseFields(data, definitions, {
                     operation: 'create',
-                    resource: { kind: 'plugin', record: null },
+                    resource: { type: 'plugin', record: null },
                     user,
                 });
                 // Validation runs before the spam check, so a user whose token

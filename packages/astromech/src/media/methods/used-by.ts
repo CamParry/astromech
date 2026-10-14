@@ -24,6 +24,6 @@ export const listMediaUsage = defineServiceMethod({
         const row = await mediaRepository.findFile(id);
         if (!row) throw new ResourceNotFoundError('media', { id });
 
-        return listUsage(config, { id, kind: 'media' });
+        return listUsage(config, { id, type: 'media' });
     },
 });

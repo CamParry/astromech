@@ -60,21 +60,21 @@ const UNNAMED: Record<(typeof RESOURCE_TYPES)[number], string> = {
 };
 
 describe('RESOURCE_CONFIG', () => {
-    it.each(RESOURCE_TYPES)('%s answers for a target nothing declares', (kind) => {
-        const resourceConfig = RESOURCE_CONFIG[kind];
-        expect(resourceConfig.kind).toBe(kind);
+    it.each(RESOURCE_TYPES)('%s answers for a target nothing declares', (type) => {
+        const resourceConfig = RESOURCE_CONFIG[type];
+        expect(resourceConfig.type).toBe(type);
         expect(resourceConfig.fields(config, 'nope')).toEqual([]);
         expect(resourceConfig.translatable(config, 'nope')).toBe(false);
         expect(resourceConfig.validate(config, 'nope')).toBeUndefined();
     });
 
     // This config declares no user or media fields, so every list is empty.
-    it.each(RESOURCE_TYPES)('%s answers for a call that names no target', (kind) => {
-        const resourceConfig = RESOURCE_CONFIG[kind];
+    it.each(RESOURCE_TYPES)('%s answers for a call that names no target', (type) => {
+        const resourceConfig = RESOURCE_CONFIG[type];
         expect(resourceConfig.fields(config)).toEqual([]);
         expect(resourceConfig.translatable(config)).toBe(false);
         expect(resourceConfig.validate(config)).toBeUndefined();
-        expect(resourceConfig.name()).toBe(UNNAMED[kind]);
+        expect(resourceConfig.name()).toBe(UNNAMED[type]);
     });
 
     it('treats an undeclared entry type as having statuses, and a global as not', () => {
@@ -128,7 +128,7 @@ describe('the relationship helpers', () => {
             schemaPath: 'home',
             instancePath: 'home',
             targetId: 't1',
-            targetKind: 'entry' as const,
+            targetType: 'entry' as const,
         };
         const merged = mergeContentReferences(
             [
@@ -153,7 +153,7 @@ describe('the relationship helpers', () => {
             schemaPath: 'home',
             instancePath: 'home',
             targetId: 't1',
-            targetKind: 'entry' as const,
+            targetType: 'entry' as const,
         };
         const merged = mergeContentReferences(
             [
@@ -197,9 +197,9 @@ describe('version snapshots', () => {
             media: mediaSnapshotSchema,
             user: userSnapshotSchema,
         };
-        for (const kind of RESOURCE_TYPES) {
-            expect(Object.keys(snapshots[kind].shape).sort(), kind).toEqual(
-                [...RESOURCE_CONFIG[kind].versionedColumns, 'fields'].sort()
+        for (const type of RESOURCE_TYPES) {
+            expect(Object.keys(snapshots[type].shape).sort(), type).toEqual(
+                [...RESOURCE_CONFIG[type].versionedColumns, 'fields'].sort()
             );
         }
     });
@@ -239,19 +239,19 @@ describe('listUsage', () => {
             data: { title: 'T' },
         });
         await relationshipRepository.replaceForSource(
-            { id: 'gone', kind: 'entry', type: 'post' },
+            { id: 'gone', type: 'entry', subtype: 'post' },
             [
                 {
                     locale: 'en',
                     schemaPath: 'related',
                     instancePath: 'related',
                     targetId: target.id,
-                    targetKind: 'entry',
+                    targetType: 'entry',
                 },
             ]
         );
 
-        const usage = await listUsage(config, { id: target.id, kind: 'entry' });
+        const usage = await listUsage(config, { id: target.id, type: 'entry' });
         expect(usage.map((row) => [row.sourceId, row.sourceTitle])).toEqual([
             ['gone', ''],
         ]);
@@ -284,8 +284,8 @@ describe('listUsage', () => {
             data: { fields: { home: target.id } },
         });
 
-        const usage = await listUsage(config, { id: target.id, kind: 'entry' });
-        expect(usage.map((row) => [row.sourceKind, row.sourceTitle])).toEqual([
+        const usage = await listUsage(config, { id: target.id, type: 'entry' });
+        expect(usage.map((row) => [row.sourceType, row.sourceTitle])).toEqual([
             ['global', 'site'],
         ]);
     });

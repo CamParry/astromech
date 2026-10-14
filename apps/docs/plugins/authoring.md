@@ -295,13 +295,13 @@ import { safeParseFields } from 'astromech/fields';
 
 const { values, errors } = await safeParseFields(input, definitions, {
     operation: 'create',
-    resource: { kind: 'plugin', record: null },
+    resource: { type: 'plugin', record: null },
     user: ctx.user,
 });
 if (Object.keys(errors).length > 0) return { ok: false, errors };
 ```
 
-`resource` names the record being written: `kind: 'plugin'` for a row of your
+`resource` names the record being written: `type: 'plugin'` for a row of your
 plugin's own table, with `record` the stored row on an update and `null` on a
 create.
 
@@ -687,7 +687,7 @@ export const redirectsService = {
             );
             const values = await parseFields(data, definitions, {
                 operation: 'create',
-                resource: { kind: 'plugin', record: null },
+                resource: { type: 'plugin', record: null },
                 user: ctx.user,
             });
             return redirects.create({
@@ -702,7 +702,7 @@ export const redirectsService = {
 };
 ```
 
-`resource.kind` is `'plugin'` for a plugin's own row. A duplicate `from` fails
+`resource.type` is `'plugin'` for a plugin's own row. A duplicate `from` fails
 the `custom` rule and answers a 422 on that field, before the table's unique
 index is reached. `@astromech/redirects` is the full worked example: its
 `service/redirects.ts` has all five methods beside the public `lookup`.

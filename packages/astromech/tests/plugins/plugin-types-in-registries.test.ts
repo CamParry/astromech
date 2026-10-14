@@ -152,7 +152,10 @@ describe('a plugin entry type and global under `astromech validate`', () => {
         const report = await validateStoredContent(systemAppContext());
 
         expect(
-            report.findings.map((finding) => [finding.kind, finding.type ?? finding.id])
+            report.findings.map((finding) => [
+                finding.type,
+                finding.subtype ?? finding.id,
+            ])
         ).toEqual([
             ['entry', 'fixture/item'],
             ['global', 'fixture/options'],

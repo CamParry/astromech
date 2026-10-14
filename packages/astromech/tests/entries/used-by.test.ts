@@ -105,9 +105,9 @@ describe('usedBy', () => {
         expect(incoming).toEqual([
             {
                 sourceId: source.id,
-                sourceKind: 'entry',
+                sourceType: 'entry',
                 sourceTitle: 'Article',
-                sourceType: 'article',
+                sourceSubtype: 'article',
                 schemaPath: 'author',
                 instancePath: 'author',
                 locales: ['en'],
@@ -287,7 +287,7 @@ describe('usedBy', () => {
         const usage = await api.usedBy({ type: 'post', id: target.id });
 
         expect(
-            usage.map((row) => [row.sourceKind, row.sourceId, row.sourceTitle])
+            usage.map((row) => [row.sourceType, row.sourceId, row.sourceTitle])
         ).toEqual([
             ['global', global.id, 'Site'],
             ['media', media.id, 'photo.png'],

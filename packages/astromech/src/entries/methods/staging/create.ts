@@ -45,7 +45,7 @@ export const createStagedEntry = defineServiceMethod({
         return transaction(async () => {
             // The partial unique index lets the staged row keep the canonical's slug.
             const created = await writeGuarded({
-                kind: 'entry',
+                type: 'entry',
                 address: { id, locale },
                 guard,
                 repository: entryRepository,

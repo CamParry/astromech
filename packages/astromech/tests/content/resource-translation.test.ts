@@ -45,8 +45,8 @@ type Adapter = {
     sameLocaleFallback: string | null;
     /** A column of the resource row, which no locale owns, and its value. */
     rowColumn: [key: string, value: string];
-    /** The kind the relationship index files its rows under. */
-    sourceKind: 'media' | 'user';
+    /** The type the relationship index files its rows under. */
+    sourceType: 'media' | 'user';
     /** How a refused locale is explained when the resource is not translatable. */
     notTranslatable: string;
 };
@@ -68,7 +68,7 @@ const ADAPTERS = {
         findOne: (id, options) => mediaRepository.findOne(id, options),
         sameLocaleFallback: null,
         rowColumn: ['filename', 'photo.png'],
-        sourceKind: 'media',
+        sourceType: 'media',
         notTranslatable:
             "Media is not translatable, so only the 'en' locale can be written.",
     },
@@ -86,7 +86,7 @@ const ADAPTERS = {
         findOne: (id, options) => userRepository.findOne(id, options),
         sameLocaleFallback: 'en',
         rowColumn: ['email', 'ann@test.dev'],
-        sourceKind: 'user',
+        sourceType: 'user',
         notTranslatable:
             "User content is not translatable, so only the 'en' locale can be written.",
     },
@@ -240,7 +240,7 @@ describe.each(Object.entries(ADAPTERS))('%s', (_kind, adapter: Adapter) => {
         async function credits(): Promise<string[]> {
             const rows = await relationshipRepository.findBySource(
                 id,
-                adapter.sourceKind
+                adapter.sourceType
             );
             return rows.map((row) => row.targetId).sort();
         }

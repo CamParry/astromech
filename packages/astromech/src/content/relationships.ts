@@ -22,12 +22,12 @@ type ContentRelationshipsShape = {
     repository: { findStoredRows(ids?: readonly string[]): Promise<StoredRows> };
     /** The content rows' column holding the resource id: `entryId`, `userId`. */
     resourceIdColumn: string;
-    kind: ResourceType;
+    type: ResourceType;
     /**
-     * The index's `sourceType` for one resource row, and the target its fields
+     * The index's `sourceSubtype` for one resource row, and the target its fields
      * are read for (an entry's type, a global's key); absent means null.
      */
-    sourceType?: (resourceRow: Record<string, unknown>) => string | null;
+    sourceSubtype?: (resourceRow: Record<string, unknown>) => string | null;
 };
 
 /**
@@ -48,7 +48,7 @@ export function createContentRelationships(shape: ContentRelationshipsShape): {
     sync: (config: ResolvedConfig, id: string) => Promise<void>;
     all: (
         config: ResolvedConfig,
-        options?: { type?: string }
+        options?: { subtype?: string }
     ) => Promise<RelationshipIndexSource[]>;
 } {
     /**
@@ -65,28 +65,28 @@ export function createContentRelationships(shape: ContentRelationshipsShape): {
     }
 
     /**
-     * Every resource of this kind as a relationship source, with the references
+     * Every resource of this type as a relationship source, with the references
      * its STORED content holds in each locale. The rebuild side of `sync`,
      * read as stored rows rather than through a repository `findMany()`, whose
      * join is pinned to one locale. Stored data has already been through
-     * `parseFields`, so the traversal mints no ids here. `type` keeps only the
-     * resources whose `sourceType` it is.
+     * `parseFields`, so the traversal mints no ids here. `subtype` keeps only the
+     * resources whose `sourceSubtype` it is.
      */
     async function all(
         config: ResolvedConfig,
-        options?: { type?: string }
+        options?: { subtype?: string }
     ): Promise<RelationshipIndexSource[]> {
-        return sources(config, undefined, options?.type);
+        return sources(config, undefined, options?.subtype);
     }
 
     /**
      * One index source per stored resource, of `ids` or of every resource, and
-     * of `type` when given.
+     * of `subtype` when given.
      */
     async function sources(
         config: ResolvedConfig,
         ids?: readonly string[],
-        type?: string
+        subtype?: string
     ): Promise<RelationshipIndexSource[]> {
         const { resourceRows, contents } = await shape.repository.findStoredRows(ids);
 
@@ -104,10 +104,10 @@ export function createContentRelationships(shape: ContentRelationshipsShape): {
         }
 
         const kept =
-            type === undefined
+            subtype === undefined
                 ? resourceRows
                 : resourceRows.filter(
-                      (resourceRow) => sourceTypeOf(resourceRow) === type
+                      (resourceRow) => sourceSubtypeOf(resourceRow) === subtype
                   );
         return kept.map((resourceRow) =>
             indexSource(
@@ -123,18 +123,18 @@ export function createContentRelationships(shape: ContentRelationshipsShape): {
         resourceRow: Record<string, unknown>,
         rows: readonly ContentFields[]
     ): RelationshipIndexSource {
-        const sourceType = sourceTypeOf(resourceRow);
+        const sourceSubtype = sourceSubtypeOf(resourceRow);
         // A target no longer declared has no fields, so it holds no references.
         const definitions = flattenFieldNodes(
-            RESOURCE_CONFIG[shape.kind].fields(config, sourceType ?? undefined)
+            RESOURCE_CONFIG[shape.type].fields(config, sourceSubtype ?? undefined)
         );
         return {
             // A resource with a staged row is still live, so the source is
             // never itself staged; the per-reference flag carries staging.
             source: {
                 id: String(resourceRow['id']),
-                kind: shape.kind,
-                type: sourceType,
+                type: shape.type,
+                subtype: sourceSubtype,
                 staged: false,
             },
             references: mergeContentReferences(rows, (fields) =>
@@ -143,8 +143,8 @@ export function createContentRelationships(shape: ContentRelationshipsShape): {
         };
     }
 
-    function sourceTypeOf(resourceRow: Record<string, unknown>): string | null {
-        return shape.sourceType?.(resourceRow) ?? null;
+    function sourceSubtypeOf(resourceRow: Record<string, unknown>): string | null {
+        return shape.sourceSubtype?.(resourceRow) ?? null;
     }
 
     return { sync, all };
@@ -169,7 +169,7 @@ export function mergeContentReferences(
             const key = [
                 row.locale,
                 reference.instancePath,
-                reference.targetKind,
+                reference.targetType,
                 reference.targetId,
             ].join('\0');
             const held = byKey.get(key);

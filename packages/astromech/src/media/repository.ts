@@ -127,7 +127,7 @@ function createMediaRepository() {
     const resourceRows = createRepository(mediaTable);
     const content = createContentRepository(
         {
-            kind: 'media',
+            type: 'media',
             table: mediaTable,
             contentTable: mediaContentTable,
             versionsTable: mediaVersionsTable,

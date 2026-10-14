@@ -36,7 +36,7 @@ function ctx(value: unknown): FieldValidationContext {
         path: [{ kind: 'field', name: 'f' }],
         operation: 'create',
         validation: 'complete',
-        resource: { kind: 'entry', record: null },
+        resource: { type: 'entry', record: null },
         user: null,
     };
 }
@@ -44,7 +44,7 @@ function ctx(value: unknown): FieldValidationContext {
 function fakeCtx() {
     return {
         operation: 'create' as const,
-        resource: { kind: 'entry' as const, record: null },
+        resource: { type: 'entry' as const, record: null },
         user: null,
     };
 }

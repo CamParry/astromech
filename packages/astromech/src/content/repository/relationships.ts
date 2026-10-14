@@ -5,19 +5,19 @@
  */
 import type { RelationshipRow } from '@/database/tables';
 import type { FieldReference } from '@/fields/references';
-import type { ResourceType, TargetKind } from '@/types/domain';
+import type { ResourceType, TargetType } from '@/types/domain';
 import { createRepository } from '@/database/repository/create-repository';
 import { relationshipsTable } from '@/database/tables';
 
 export type RelationshipRepository = ReturnType<typeof createRelationshipRepository>;
 
-/** What holds the reference. An entry carries its entry type and a global its
- *  key; users and media carry neither, so `type` is null for them. */
+/** What holds the reference. An entry's subtype is its entry type and a
+ *  global's is its key; users and media have none, so `subtype` is null for them. */
 export type RelationshipSource = {
     id: string;
-    kind: ResourceType;
+    type: ResourceType;
     /** The entry type (qualified `<ns>/<type>` for a plugin's) or the global's key. */
-    type?: string | null;
+    subtype?: string | null;
     /** True when the source row is a staged copy of a live entry. */
     staged?: boolean;
 };
@@ -49,13 +49,13 @@ export function toRelationshipRow(
 ): RelationshipRow {
     return {
         sourceId: source.id,
-        sourceKind: source.kind,
-        sourceType: source.type ?? null,
+        sourceType: source.type,
+        sourceSubtype: source.subtype ?? null,
         locale: reference.locale,
         schemaPath: reference.schemaPath,
         instancePath: reference.instancePath,
         targetId: reference.targetId,
-        targetKind: reference.targetKind,
+        targetType: reference.targetType,
         sourceStaged: reference.staged ?? source.staged ?? false,
     };
 }
@@ -78,7 +78,7 @@ function createRelationshipRepository() {
         source: RelationshipSource,
         references: IndexedReference[]
     ): Promise<void> {
-        await repository.deleteMany({ sourceId: source.id, sourceKind: source.kind });
+        await repository.deleteMany({ sourceId: source.id, sourceType: source.type });
         if (references.length === 0) return;
 
         const rows = references.map((reference) => toRelationshipRow(source, reference));
@@ -90,9 +90,9 @@ function createRelationshipRepository() {
     /** Every reference recorded for one source, in no particular order. */
     async function findBySource(
         sourceId: string,
-        sourceKind: ResourceType
+        sourceType: ResourceType
     ): Promise<RelationshipRow[]> {
-        return repository.findMany({ where: { sourceId, sourceKind } });
+        return repository.findMany({ where: { sourceId, sourceType } });
     }
 
     /**
@@ -102,13 +102,13 @@ function createRelationshipRepository() {
      */
     async function findByTarget(
         targetId: string,
-        targetKind: TargetKind,
+        targetType: TargetType,
         opts?: { includeStaged?: boolean }
     ): Promise<RelationshipRow[]> {
         return repository.findMany({
             where: {
                 targetId,
-                targetKind,
+                targetType,
                 ...(opts?.includeStaged === true ? {} : { sourceStaged: false }),
             },
         });
@@ -117,14 +117,14 @@ function createRelationshipRepository() {
     /**
      * Every stored reference, optionally narrowed to one entry type. The rebuild and
      * drift reads use it: they must see rows whose source no longer exists, so
-     * they cannot enumerate by source. A global's key shares the `sourceType`
-     * column, so a type filter also names the entry kind.
+     * they cannot enumerate by source. A global's key shares the `sourceSubtype`
+     * column, so an entry-type filter also names the source type.
      */
     async function findMany(filter?: { entryType?: string }): Promise<RelationshipRow[]> {
         return repository.findMany({
             where:
                 filter?.entryType !== undefined
-                    ? { sourceKind: 'entry', sourceType: filter.entryType }
+                    ? { sourceType: 'entry', sourceSubtype: filter.entryType }
                     : {},
         });
     }
@@ -132,9 +132,9 @@ function createRelationshipRepository() {
     /** Drop one source's references: its row is gone, so they are meaningless. */
     async function deleteBySource(
         sourceId: string,
-        sourceKind: ResourceType
+        sourceType: ResourceType
     ): Promise<void> {
-        await repository.deleteMany({ sourceId, sourceKind });
+        await repository.deleteMany({ sourceId, sourceType });
     }
 
     /**
@@ -143,14 +143,14 @@ function createRelationshipRepository() {
      * id stays until that source is next written), but the index must not keep
      * claiming a reference to a row that no longer exists.
      */
-    async function deleteByResource(id: string, kind: TargetKind): Promise<void> {
-        await repository.deleteMany({ sourceId: id, sourceKind: kind });
-        await repository.deleteMany({ targetId: id, targetKind: kind });
+    async function deleteByResource(id: string, type: TargetType): Promise<void> {
+        await repository.deleteMany({ sourceId: id, sourceType: type });
+        await repository.deleteMany({ targetId: id, targetType: type });
     }
 
-    /** Wipe the index, optionally for one source kind. The rebuild entry point. */
-    async function deleteMany(sourceKind?: ResourceType): Promise<void> {
-        await repository.deleteMany(sourceKind ? { sourceKind } : {});
+    /** Wipe the index, optionally for one source type. The rebuild entry point. */
+    async function deleteMany(sourceType?: ResourceType): Promise<void> {
+        await repository.deleteMany(sourceType ? { sourceType } : {});
     }
 
     return {

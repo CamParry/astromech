@@ -88,16 +88,16 @@ function mountList({ trash }: { trash: boolean }): RenderAdminResult {
     });
     entries.usedBy.mockResolvedValue([
         {
-            sourceKind: 'entry',
-            sourceType: 'page',
+            sourceType: 'entry',
+            sourceSubtype: 'page',
             sourceId: 'pg1',
             sourceTitle: 'Home',
             schemaPath: 'featured',
             instancePath: 'featured',
         },
         {
-            sourceKind: 'entry',
-            sourceType: 'page',
+            sourceType: 'entry',
+            sourceSubtype: 'page',
             sourceId: 'pg2',
             sourceTitle: 'About',
             schemaPath: 'related',

@@ -29,7 +29,7 @@ export type ContentShape<
     V extends Table = Table,
 > = {
     /** Which resource the tables hold, named by the not-found errors the writes throw. */
-    kind: ResourceType;
+    type: ResourceType;
     /**
      * The resource row: `entries`, `globals`. Its `updatedAt` declares
      * `onUpdate`, and every canonical write stamps it.

@@ -9,7 +9,7 @@ import { userRepository } from '@/users/repository';
 const relationships = createContentRelationships({
     repository: userRepository,
     resourceIdColumn: 'userId',
-    kind: 'user',
+    type: 'user',
 });
 
 /**

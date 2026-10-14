@@ -8,7 +8,7 @@ import { createTestDb } from '@tests/harness';
 import { beforeEach, describe, expect, it } from 'vitest';
 import { relationshipRepository } from '@/content/repository/relationships';
 
-const SOURCE = { id: 'src-1', kind: 'entry', type: 'post' } as const;
+const SOURCE = { id: 'src-1', type: 'entry', subtype: 'post' } as const;
 
 /** `n` distinct references under one schema path, held in `locale`. */
 function references(n: number, locale = 'en'): IndexedReference[] {
@@ -17,7 +17,7 @@ function references(n: number, locale = 'en'): IndexedReference[] {
         schemaPath: 'related',
         instancePath: 'related',
         targetId: `t${i}`,
-        targetKind: 'entry' as const,
+        targetType: 'entry' as const,
     }));
 }
 
@@ -33,13 +33,13 @@ describe('replaceForSource', () => {
         expect(rows).toHaveLength(1);
         expect(rows[0]).toMatchObject({
             sourceId: 'src-1',
-            sourceKind: 'entry',
-            sourceType: 'post',
+            sourceType: 'entry',
+            sourceSubtype: 'post',
             locale: 'en',
             schemaPath: 'related',
             instancePath: 'related',
             targetId: 't0',
-            targetKind: 'entry',
+            targetType: 'entry',
             sourceStaged: false,
         });
     });
@@ -64,7 +64,7 @@ describe('replaceForSource', () => {
     it('touches no other source', async () => {
         await relationshipRepository.replaceForSource(SOURCE, references(2));
         await relationshipRepository.replaceForSource(
-            { id: 'src-2', kind: 'entry' },
+            { id: 'src-2', type: 'entry' },
             references(1)
         );
         await relationshipRepository.replaceForSource(SOURCE, []);
@@ -95,7 +95,7 @@ describe('replaceForSource', () => {
 
     it('records the staged flag so reverse lookup can exclude staged sources', async () => {
         await relationshipRepository.replaceForSource(
-            { id: 'staged-1', kind: 'entry', type: 'post', staged: true },
+            { id: 'staged-1', type: 'entry', subtype: 'post', staged: true },
             references(1)
         );
 
@@ -111,13 +111,13 @@ describe('replaceForSource', () => {
 describe('deleteByResource', () => {
     it('drops references in both directions', async () => {
         await relationshipRepository.replaceForSource(SOURCE, references(1));
-        await relationshipRepository.replaceForSource({ id: 'other', kind: 'entry' }, [
+        await relationshipRepository.replaceForSource({ id: 'other', type: 'entry' }, [
             {
                 locale: 'en',
                 schemaPath: 'related',
                 instancePath: 'related',
                 targetId: 'src-1',
-                targetKind: 'entry',
+                targetType: 'entry',
             },
         ]);
 

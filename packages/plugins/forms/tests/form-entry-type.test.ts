@@ -26,7 +26,7 @@ function definitions(): Field[] {
 function ctx() {
     return {
         operation: 'create' as const,
-        resource: { kind: 'entry' as const, record: {} },
+        resource: { type: 'entry' as const, record: {} },
         user: null,
     };
 }

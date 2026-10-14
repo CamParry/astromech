@@ -1305,14 +1305,14 @@ describe('relationships', () => {
             type: 'post',
             data: { title: 'Source', fields: { related: [target.id] } },
         });
-        // Read from the target's side, so the target id and kind are the address.
+        // Read from the target's side, so the target id and type are the address.
         const incoming = await api.usedBy({ type: 'post', id: target.id });
         expect(incoming).toHaveLength(1);
         expect(incoming[0]?.sourceId).toBe(src.id);
         expect(incoming[0]?.schemaPath).toBe('related');
         expect(incoming[0]?.instancePath).toBe('related');
-        expect(incoming[0]?.sourceKind).toBe('entry');
-        expect(incoming[0]?.sourceType).toBe('post');
+        expect(incoming[0]?.sourceType).toBe('entry');
+        expect(incoming[0]?.sourceSubtype).toBe('post');
     });
 
     // The old subsystem skipped falsy values, so clearing a relation left its
@@ -1338,9 +1338,9 @@ describe('relationships', () => {
         expect(incoming).toEqual([
             {
                 sourceId: src.id,
-                sourceKind: 'entry',
+                sourceType: 'entry',
                 sourceTitle: 'Source',
-                sourceType: 'post',
+                sourceSubtype: 'post',
                 schemaPath: 'related',
                 instancePath: 'related',
                 locales: ['en'],

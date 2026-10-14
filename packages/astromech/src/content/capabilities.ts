@@ -18,11 +18,11 @@ export function declaresCapability(
 
 /** Refuse an operation the target does not declare the capability for. */
 export function assertCapability(
-    kind: 'entry' | 'global',
+    type: 'entry' | 'global',
     target: CapabilityTarget,
     capability: string
 ): void {
     if (!declaresCapability(target, capability)) {
-        throw new CapabilityError(kind, target.id, capability);
+        throw new CapabilityError(type, target.id, capability);
     }
 }

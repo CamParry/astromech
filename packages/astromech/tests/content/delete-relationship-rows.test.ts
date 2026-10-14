@@ -4,7 +4,7 @@
  * nothing else would clear them.
  */
 
-import type { TargetKind } from '@/types/domain';
+import type { TargetType } from '@/types/domain';
 import { createTestDb, setupTestConfig } from '@tests/harness';
 import { beforeEach, describe, expect, it } from 'vitest';
 import { relationshipRepository } from '@/content/repository/relationships';
@@ -34,7 +34,7 @@ async function trashedPost(): Promise<string> {
 
 type DeletePath = {
     name: string;
-    kind: TargetKind;
+    type: TargetType;
     /** Creates the resource to delete; answers its id. */
     arrange: () => Promise<string>;
     /** Deletes it through the path under test. */
@@ -44,26 +44,26 @@ type DeletePath = {
 const paths: DeletePath[] = [
     {
         name: 'entryRepository.delete',
-        kind: 'entry',
+        type: 'entry',
         arrange: () => post('Doomed'),
         act: (id) => transaction(() => entryRepository.delete(id)),
     },
     {
         name: 'entryRepository.trash.emptyTrash',
-        kind: 'entry',
+        type: 'entry',
         arrange: trashedPost,
         act: () => entryRepository.trash.emptyTrash('post'),
     },
     {
         name: 'entryMaintenanceRepository.purgeTrashedBefore',
-        kind: 'entry',
+        type: 'entry',
         arrange: trashedPost,
         act: () =>
             entryMaintenanceRepository.purgeTrashedBefore(new Date(Date.now() + 60_000)),
     },
     {
         name: 'mediaRepository.delete',
-        kind: 'media',
+        type: 'media',
         async arrange() {
             const row = await mediaRepository.create(
                 { filename: 'a.png', mimeType: 'image/png', size: 1 },
@@ -75,7 +75,7 @@ const paths: DeletePath[] = [
     },
     {
         name: 'userRepository.delete',
-        kind: 'user',
+        type: 'user',
         async arrange() {
             const row = await userRepository.create(
                 { email: 'gone@test.dev', name: 'Gone', role: DEFAULT_ROLE_SLUG },
@@ -89,47 +89,47 @@ const paths: DeletePath[] = [
     },
 ];
 
-describe.each(paths)('$name', ({ kind, arrange, act }) => {
+describe.each(paths)('$name', ({ type, arrange, act }) => {
     it('drops the rows from and to the deleted resource, and no others', async () => {
         const doomed = await arrange();
         const survivor = await post('Survivor');
         await relationshipRepository.replaceForSource(
-            { id: doomed, kind, type: kind === 'entry' ? 'post' : null },
+            { id: doomed, type, subtype: type === 'entry' ? 'post' : null },
             [
                 {
                     locale: 'en',
                     schemaPath: 'related',
                     instancePath: 'related',
                     targetId: survivor,
-                    targetKind: 'entry',
+                    targetType: 'entry',
                 },
             ]
         );
         await relationshipRepository.replaceForSource(
-            { id: survivor, kind: 'entry', type: 'post' },
+            { id: survivor, type: 'entry', subtype: 'post' },
             [
                 {
                     locale: 'en',
                     schemaPath: 'related',
                     instancePath: 'related[0]',
                     targetId: doomed,
-                    targetKind: kind,
+                    targetType: type,
                 },
                 {
                     locale: 'en',
                     schemaPath: 'related',
                     instancePath: 'related[1]',
                     targetId: survivor,
-                    targetKind: 'entry',
+                    targetType: 'entry',
                 },
             ]
         );
 
         await act(doomed);
 
-        expect(await relationshipRepository.findBySource(doomed, kind)).toEqual([]);
+        expect(await relationshipRepository.findBySource(doomed, type)).toEqual([]);
         expect(
-            await relationshipRepository.findByTarget(doomed, kind, {
+            await relationshipRepository.findByTarget(doomed, type, {
                 includeStaged: true,
             })
         ).toEqual([]);

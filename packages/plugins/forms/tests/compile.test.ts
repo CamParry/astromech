@@ -200,7 +200,7 @@ describe('compileFormFields', () => {
         ]);
         const { errors } = await safeParseFields({ message: '' }, definitions, {
             operation: 'create',
-            resource: { kind: 'entry', record: {} },
+            resource: { type: 'entry', record: {} },
             user: null,
         });
         expect(errors).toEqual({ message: ['This field is required'] });

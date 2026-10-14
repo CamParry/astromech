@@ -102,11 +102,11 @@ media alike. It lists every reference, whichever resource holds it:
 ```ts
 await Astromech.entries.usedBy({ type: 'post', id });
 await Astromech.media.usedBy({ id });
-// → [{ sourceId, sourceKind, sourceType, sourceTitle, schemaPath, instancePath, locales, sourceStaged }]
+// → [{ sourceId, sourceType, sourceSubtype, sourceTitle, schemaPath, instancePath, locales, sourceStaged }]
 ```
 
-`sourceKind` is `'entry'`, `'global'`, `'user'` or `'media'`. `sourceType` is an
-entry's type or a global's key, and null for a user or a media item.
+`sourceType` is `'entry'`, `'global'`, `'user'` or `'media'`. `sourceSubtype`
+is an entry's type or a global's key, and null for a user or a media item.
 `locales` lists, sorted, the locales whose content holds the reference.
 `sourceStaged` is true when every one of them holds it only in a pending staged
 change. `where: { references }` never matches a reference only a staged change

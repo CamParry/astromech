@@ -55,7 +55,7 @@ function createGlobalRepository() {
     const resourceRows = createRepository(globalsTable);
     const content = createContentRepository(
         {
-            kind: 'global',
+            type: 'global',
             table: globalsTable,
             contentTable: globalContentTable,
             versionsTable: globalVersionsTable,

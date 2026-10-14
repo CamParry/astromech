@@ -72,16 +72,16 @@ function reportDrift(report: DriftReport): void {
 
 /** One drift row on one line: which source and locale, which path, which target. */
 function describe(row: {
-    sourceKind: string;
-    sourceType: string | null;
+    sourceType: string;
+    sourceSubtype: string | null;
     sourceId: string;
     locale: string;
     instancePath: string;
-    targetKind: string;
+    targetType: string;
     targetId: string;
     sourceStaged: boolean;
 }): string {
-    const source = row.sourceType ?? row.sourceKind;
+    const source = row.sourceSubtype ?? row.sourceType;
     const staged = row.sourceStaged ? ' (staged)' : '';
-    return `${source} ${row.sourceId} [${row.locale}]${staged} ${row.instancePath} -> ${row.targetKind} ${row.targetId}`;
+    return `${source} ${row.sourceId} [${row.locale}]${staged} ${row.instancePath} -> ${row.targetType} ${row.targetId}`;
 }

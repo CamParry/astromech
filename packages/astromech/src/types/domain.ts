@@ -4,7 +4,7 @@
  */
 
 import type { meSchema } from '@/auth/schema';
-import type { RESOURCE_TYPES, TARGET_KINDS } from '@/content/resource-types';
+import type { RESOURCE_TYPES, TARGET_TYPES } from '@/content/resource-types';
 import type { usageSchema, versionMetadataSchema } from '@/content/schema';
 import type { entrySchema, entryVersionSchema } from '@/entries/schema';
 import type { globalSchema, globalVersionSchema } from '@/globals/schema';
@@ -25,8 +25,8 @@ export type JsonArray = JsonValue[];
 /** An entry, a global, a user or a media item: one of `RESOURCE_TYPES`. */
 export type ResourceType = (typeof RESOURCE_TYPES)[number];
 
-/** What a relation can point at: one of `TARGET_KINDS`. */
-export type TargetKind = (typeof TARGET_KINDS)[number];
+/** What a relation can point at: one of `TARGET_TYPES`. */
+export type TargetType = (typeof TARGET_TYPES)[number];
 
 /** The publication states an entry's or a global's content row carries. */
 export const ENTRY_STATUSES = ['unpublished', 'published', 'scheduled'] as const;
