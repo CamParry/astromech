@@ -85,7 +85,8 @@ Groups 1 to 4 change no behaviour.
       first. Notifications declare `'authenticated'`, not `'public'`.
 - [ ] **Access rules see the caller.** Move users' self-access from
       `transport/http/routes/users.ts` into `users/internal/access.ts`, so RPC,
-      MCP and the AI tool loop allow what REST allows.
+      MCP and the AI tool loop allow what REST allows. Built on branch
+      `permissions-caller` (2026-10-14), not yet verified or landed.
 - [ ] **Rename `policies/` to `access/`** and stop using "gate" for
       authorisation (`gateInvoke` becomes `confirmInvoke`); update the layer map
       in `ARCHITECTURE.md`.
