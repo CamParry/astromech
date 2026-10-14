@@ -53,8 +53,8 @@ export type Global = z.output<typeof globalSchema>;
 export type VersionMetadata = z.output<typeof versionMetadataSchema>;
 
 /**
- * One reference in the relationships index pointing at a resource: a row of a
- * `usedBy` answer. Documented key by key on `usageSchema`.
+ * One reference pointing at a resource, across the locales that hold it: a row
+ * of a `usedBy` answer. Documented key by key on `usageSchema`.
  */
 export type Usage = z.output<typeof usageSchema>;
 

@@ -4,7 +4,8 @@
  *
  * The `article` type declares a relation at the top level (`author`) and two
  * inside a repeater (`sections[].related`, `sections[].gallery`) so a nested
- * schema path is exercised end to end.
+ * schema path is exercised end to end. The translatable `guide` type holds one
+ * relation per locale (`author`) and one shared across them (`topic`).
  */
 
 import type { AstromechConfig } from '@/types/index';
@@ -53,6 +54,27 @@ function makeReferencesConfig(): AstromechConfig {
                                 multiple: true,
                             },
                         ],
+                    },
+                ],
+            },
+            {
+                type: 'guide',
+                single: 'Guide',
+                plural: 'Guides',
+                translatable: true,
+                fields: [
+                    {
+                        name: 'author',
+                        type: 'relationship',
+                        label: 'Author',
+                        target: 'post',
+                    },
+                    {
+                        name: 'topic',
+                        type: 'relationship',
+                        label: 'Topic',
+                        target: 'post',
+                        translatable: false,
                     },
                 ],
             },
@@ -157,7 +179,7 @@ describe('where.references', () => {
         expect(result.data).toEqual([]);
     });
 
-    it('returns an entry whose staged change holds the reference, once', async () => {
+    it('does not return an entry whose reference only its staged change holds', async () => {
         const target = await api.create({ type: 'post', data: { title: 'Target' } });
         const canonical = await api.create({
             type: 'article',
@@ -177,8 +199,25 @@ describe('where.references', () => {
             where: { references: { path: 'author', id: target.id } },
         });
 
-        // The index is keyed on the entry, and the staged row is one of its
-        // content rows; the query still returns the canonical row alone.
+        // The live row holds no reference to the target, and the query returns
+        // the live row, so a pending change must not make it match.
+        expect(result.data).toEqual([]);
+    });
+
+    it('returns an entry whose live and staged rows both hold the reference, once', async () => {
+        const target = await api.create({ type: 'post', data: { title: 'Target' } });
+        const canonical = await api.create({
+            type: 'article',
+            data: { title: 'Canonical', fields: { author: target.id } },
+        });
+        await api.createStaged({ type: 'article', id: canonical.id });
+
+        const result = await api.query({
+            type: 'article',
+            full: true,
+            where: { references: { path: 'author', id: target.id } },
+        });
+
         expect(result.data.map((e) => e.id)).toEqual([canonical.id]);
     });
 
@@ -202,6 +241,110 @@ describe('where.references', () => {
         expect(result.data).toHaveLength(2);
         expect(result.pagination?.total).toBe(3);
         expect(result.pagination?.pages).toBe(2);
+    });
+});
+
+describe('where.references per locale', () => {
+    /** Ids of the guides a query in `locale` returns for one reference. */
+    async function guidesReferencing(
+        locale: string,
+        path: string,
+        id: string
+    ): Promise<string[]> {
+        const result = await api.query({
+            type: 'guide',
+            full: true,
+            locale,
+            where: { references: { path, id } },
+        });
+        return result.data.map((e) => e.id);
+    }
+
+    it('matches the references of the locale the query reads', async () => {
+        const a = await api.create({ type: 'post', data: { title: 'A' } });
+        const b = await api.create({ type: 'post', data: { title: 'B' } });
+        const guide = await api.create({
+            type: 'guide',
+            data: { title: 'EN', fields: { author: a.id } },
+        });
+        await api.update({
+            type: 'guide',
+            id: guide.id,
+            locale: 'de',
+            data: { title: 'DE', fields: { author: b.id } },
+        });
+
+        expect(await guidesReferencing('en', 'author', a.id)).toEqual([guide.id]);
+        expect(await guidesReferencing('de', 'author', a.id)).toEqual([]);
+        expect(await guidesReferencing('de', 'author', b.id)).toEqual([guide.id]);
+        expect(await guidesReferencing('en', 'author', b.id)).toEqual([]);
+    });
+
+    it("matches each row of an all-locales list on that row's references", async () => {
+        const a = await api.create({ type: 'post', data: { title: 'A' } });
+        const b = await api.create({ type: 'post', data: { title: 'B' } });
+        const guide = await api.create({
+            type: 'guide',
+            data: { title: 'EN', fields: { author: a.id } },
+        });
+        await api.update({
+            type: 'guide',
+            id: guide.id,
+            locale: 'de',
+            data: { title: 'DE', fields: { author: b.id } },
+        });
+
+        const result = await api.query({
+            type: 'guide',
+            full: true,
+            locale: 'all',
+            where: { references: { path: 'author', id: b.id } },
+        });
+
+        expect(result.data.map((e) => [e.id, e.locale])).toEqual([[guide.id, 'de']]);
+    });
+
+    it('matches a shared reference in every locale', async () => {
+        const topic = await api.create({ type: 'post', data: { title: 'Topic' } });
+        const guide = await api.create({
+            type: 'guide',
+            data: { title: 'EN', fields: { topic: topic.id } },
+        });
+        // The translation inherits the shared field from the default locale.
+        await api.update({
+            type: 'guide',
+            id: guide.id,
+            locale: 'de',
+            data: { title: 'DE' },
+        });
+
+        expect(await guidesReferencing('en', 'topic', topic.id)).toEqual([guide.id]);
+        expect(await guidesReferencing('de', 'topic', topic.id)).toEqual([guide.id]);
+    });
+
+    it('follows a shared reference changed in the default locale into the others', async () => {
+        const before = await api.create({ type: 'post', data: { title: 'Before' } });
+        const after = await api.create({ type: 'post', data: { title: 'After' } });
+        const guide = await api.create({
+            type: 'guide',
+            data: { title: 'EN', fields: { topic: before.id } },
+        });
+        await api.update({
+            type: 'guide',
+            id: guide.id,
+            locale: 'de',
+            data: { title: 'DE' },
+        });
+
+        await api.update({
+            type: 'guide',
+            id: guide.id,
+            data: { fields: { topic: after.id } },
+        });
+
+        // The German row takes the new value, so its index rows must follow.
+        expect(await guidesReferencing('de', 'topic', before.id)).toEqual([]);
+        expect(await guidesReferencing('de', 'topic', after.id)).toEqual([guide.id]);
     });
 });
 

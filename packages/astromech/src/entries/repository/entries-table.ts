@@ -199,11 +199,18 @@ function publiclyVisibleWhere(
 /**
  * `EXISTS` against the relationships index for one entry.
  *
+ * The filter answers for the content row the query returns: its locale, and
+ * its canonical content. It correlates on the joined row's own `locale`, so
+ * each row of a `locale: 'all'` list is matched on its own references. A
+ * reference only a staged row holds (`sourceStaged`) does not match: a pending
+ * change must not change what the live content is filtered on.
+ *
  * `relationships.sourceId` is an entry id, so this correlates on `entries.id`.
  * No `targetKind` condition — a target id is a ULID unique across resources,
  * and constraining it would force the caller to say which kind they meant.
  * `schemaPath`/`targetId` are plain TEXT and `sourceKind` is an enum the table
- * passes through, so all three bind as-is with no `encodeWith`.
+ * passes through, so all three bind as-is with no `encodeWith`; `sourceStaged`
+ * is a boolean column, stored as 0 or 1, so it binds the stored 0.
  */
 function referencesExists(eb: JoinedEb, filter: ReferencesFilter): Expression<SqlBool> {
     return eb.exists(
@@ -212,8 +219,10 @@ function referencesExists(eb: JoinedEb, filter: ReferencesFilter): Expression<Sq
             .select('relationships.sourceId')
             .whereRef('relationships.sourceId', '=', 'entries.id')
             .where('relationships.sourceKind', '=', 'entry')
+            .whereRef('relationships.locale', '=', 'entryContent.locale')
             .where('relationships.schemaPath', '=', filter.path)
             .where('relationships.targetId', '=', filter.id)
+            .where('relationships.sourceStaged', '=', 0)
     );
 }
 

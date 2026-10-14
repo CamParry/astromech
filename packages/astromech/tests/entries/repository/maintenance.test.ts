@@ -192,6 +192,7 @@ describe('trashPurgeJob', () => {
             { id: doomed.id, kind: 'entry', type: 'post' },
             [
                 {
+                    locale: 'en',
                     schemaPath: 'related',
                     instancePath: 'related',
                     targetId: survivor.id,
@@ -203,12 +204,14 @@ describe('trashPurgeJob', () => {
             { id: survivor.id, kind: 'entry', type: 'post' },
             [
                 {
+                    locale: 'en',
                     schemaPath: 'related',
                     instancePath: 'related[0]',
                     targetId: doomed.id,
                     targetKind: 'entry',
                 },
                 {
+                    locale: 'en',
                     schemaPath: 'related',
                     instancePath: 'related[1]',
                     targetId: survivor.id,

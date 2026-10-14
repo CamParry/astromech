@@ -63,6 +63,7 @@ const USAGE = [
         sourceTitle: 'Ada',
         schemaPath: 'avatar',
         instancePath: 'avatar',
+        locales: ['en'],
         sourceStaged: false,
     },
     {
@@ -72,6 +73,7 @@ const USAGE = [
         sourceTitle: 'Grace',
         schemaPath: 'avatar',
         instancePath: 'avatar',
+        locales: ['en'],
         sourceStaged: false,
     },
 ] as Usage[];

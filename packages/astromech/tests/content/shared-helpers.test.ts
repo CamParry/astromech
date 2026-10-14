@@ -132,9 +132,9 @@ describe('the relationship helpers', () => {
         };
         const merged = mergeContentReferences(
             [
-                { fields: { home: 't1' }, stagedFor: 'row-1' },
-                { fields: { home: 't1' }, stagedFor: null },
-                { fields: { other: 't2' }, stagedFor: 'row-1' },
+                { locale: 'en', fields: { home: 't1' }, stagedFor: 'row-1' },
+                { locale: 'en', fields: { home: 't1' }, stagedFor: null },
+                { locale: 'en', fields: { other: 't2' }, stagedFor: 'row-1' },
             ],
             (fields) =>
                 Object.values(fields).map((targetId) => ({
@@ -145,6 +145,26 @@ describe('the relationship helpers', () => {
         expect(merged.map((row) => [row.targetId, row.staged])).toEqual([
             ['t1', false],
             ['t2', true],
+        ]);
+    });
+
+    it("keeps one reference per locale, staged by that locale's rows alone", () => {
+        const reference = {
+            schemaPath: 'home',
+            instancePath: 'home',
+            targetId: 't1',
+            targetKind: 'entry' as const,
+        };
+        const merged = mergeContentReferences(
+            [
+                { locale: 'en', fields: { home: 't1' }, stagedFor: null },
+                { locale: 'de', fields: { home: 't1' }, stagedFor: 'row-de' },
+            ],
+            () => [reference]
+        );
+        expect(merged.map((row) => [row.locale, row.staged])).toEqual([
+            ['en', false],
+            ['de', true],
         ]);
     });
 
@@ -222,6 +242,7 @@ describe('listUsage', () => {
             { id: 'gone', kind: 'entry', type: 'post' },
             [
                 {
+                    locale: 'en',
                     schemaPath: 'related',
                     instancePath: 'related',
                     targetId: target.id,

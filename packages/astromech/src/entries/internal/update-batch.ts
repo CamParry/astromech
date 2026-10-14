@@ -287,7 +287,6 @@ async function updateOne(params: {
         });
     }
     if (fields) {
-        await syncEntryRelationships(config, entry);
         // A staged row is not one of the entry's locales, so its shared fields
         // stay with it until the merge.
         if (!staged) {
@@ -299,6 +298,9 @@ async function updateOne(params: {
                 patchedFieldNames: patchedNames,
             });
         }
+        // After the propagation: each locale is indexed from its own row, so the
+        // other locales' rows must hold the shared fields first.
+        await syncEntryRelationships(config, entry);
     }
 
     return entry;

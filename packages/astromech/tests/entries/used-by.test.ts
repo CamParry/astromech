@@ -14,7 +14,10 @@ const globalsService = currentServices.globals;
 const mediaService = currentServices.media;
 const usersService = currentServices.users;
 
-/** `article` references `post` twice — once flat, once inside a repeater. */
+/**
+ * `article` references `post` twice — once flat, once inside a repeater — and
+ * a third time through `subject`, shared across its locales.
+ */
 function makeRelationsConfig(): AstromechConfig {
     const base = makeTestConfig();
     return {
@@ -46,6 +49,13 @@ function makeRelationsConfig(): AstromechConfig {
                                 target: 'post',
                             },
                         ],
+                    },
+                    {
+                        name: 'subject',
+                        type: 'relationship',
+                        label: 'Subject',
+                        target: 'post',
+                        translatable: false,
                     },
                 ],
             },
@@ -100,6 +110,7 @@ describe('usedBy', () => {
                 sourceType: 'article',
                 schemaPath: 'author',
                 instancePath: 'author',
+                locales: ['en'],
                 sourceStaged: false,
             },
         ]);
@@ -158,6 +169,84 @@ describe('usedBy', () => {
         expect(incoming.map((r) => r.sourceId)).toEqual([source.id]);
         // Named in the default locale, whichever locale was written last.
         expect(incoming.map((r) => r.sourceTitle)).toEqual(['EN']);
+    });
+
+    it('lists every locale holding a shared reference on one row', async () => {
+        const target = await api.create({ type: 'post', data: { title: 'Target' } });
+        const source = await api.create({
+            type: 'article',
+            data: { title: 'EN', fields: { subject: target.id } },
+        });
+        await api.update({
+            type: 'article',
+            id: source.id,
+            locale: 'de',
+            data: { title: 'DE' },
+        });
+
+        const incoming = await api.usedBy({ type: 'post', id: target.id });
+
+        expect(incoming.map((r) => [r.sourceId, r.schemaPath, r.locales])).toEqual([
+            [source.id, 'subject', ['de', 'en']],
+        ]);
+    });
+
+    // The delete check reads every locale: a reference only a translation
+    // holds still blocks the delete.
+    it('reports a reference only a translation holds, under that locale', async () => {
+        const target = await api.create({ type: 'post', data: { title: 'Target' } });
+        const source = await api.create({ type: 'article', data: { title: 'EN' } });
+        await api.update({
+            type: 'article',
+            id: source.id,
+            locale: 'de',
+            data: { title: 'DE', fields: { author: target.id } },
+        });
+
+        const incoming = await api.usedBy({ type: 'post', id: target.id });
+
+        expect(incoming.map((r) => [r.sourceId, r.locales, r.sourceStaged])).toEqual([
+            [source.id, ['de'], false],
+        ]);
+    });
+
+    it('marks a reference staged only when every locale holds it staged-only', async () => {
+        const target = await api.create({ type: 'post', data: { title: 'Target' } });
+        const source = await api.create({
+            type: 'article',
+            data: { title: 'EN', fields: { author: target.id } },
+        });
+        await api.update({
+            type: 'article',
+            id: source.id,
+            locale: 'de',
+            data: { title: 'DE' },
+        });
+        await api.createStaged({ type: 'article', id: source.id, locale: 'de' });
+        await api.update({
+            type: 'article',
+            id: source.id,
+            locale: 'de',
+            staged: true,
+            data: { fields: { author: target.id } },
+        });
+
+        // English holds it live and German only in its staged change.
+        const both = await api.usedBy({ type: 'post', id: target.id });
+        expect(both.map((r) => [r.locales, r.sourceStaged])).toEqual([
+            [['de', 'en'], false],
+        ]);
+
+        await api.update({
+            type: 'article',
+            id: source.id,
+            data: { fields: { author: null } },
+        });
+
+        const stagedOnly = await api.usedBy({ type: 'post', id: target.id });
+        expect(stagedOnly.map((r) => [r.locales, r.sourceStaged])).toEqual([
+            [['de'], true],
+        ]);
     });
 
     it('includes a trashed source', async () => {

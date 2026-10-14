@@ -23,12 +23,13 @@ export type RelationshipSource = {
 };
 
 /**
- * A reference with the one source column a caller may vary row by row. `staged`
- * overrides `RelationshipSource.staged`: an entry's canonical and staged content
- * rows are a single source, so only the references the staged row alone holds
- * are staged. Absent means "whatever the source says".
+ * A reference with the columns a caller varies row by row. `locale` is the
+ * locale of the content row holding it. `staged` overrides
+ * `RelationshipSource.staged`: an entry's canonical and staged content rows are
+ * a single source, so only the references a locale's staged row alone holds are
+ * staged. Absent means "whatever the source says".
  */
-export type IndexedReference = FieldReference & { staged?: boolean };
+export type IndexedReference = FieldReference & { locale: string; staged?: boolean };
 
 /**
  * One source and the references its stored field data holds. What a domain's
@@ -41,11 +42,29 @@ export type RelationshipIndexSource = {
     references: IndexedReference[];
 };
 
+/** The index row one reference of one source is stored as. */
+export function toRelationshipRow(
+    source: RelationshipSource,
+    reference: IndexedReference
+): RelationshipRow {
+    return {
+        sourceId: source.id,
+        sourceKind: source.kind,
+        sourceType: source.type ?? null,
+        locale: reference.locale,
+        schemaPath: reference.schemaPath,
+        instancePath: reference.instancePath,
+        targetId: reference.targetId,
+        targetKind: reference.targetKind,
+        sourceStaged: reference.staged ?? source.staged ?? false,
+    };
+}
+
 /**
  * Rows per INSERT. D1 caps a query at 100 bound parameters and each row binds
- * eight columns, so twelve rows is the largest statement that always fits.
+ * nine columns, so eleven rows is the largest statement that always fits.
  */
-const INSERT_CHUNK_ROWS = 12;
+const INSERT_CHUNK_ROWS = 11;
 
 function createRelationshipRepository() {
     const repository = createRepository(relationshipsTable);
@@ -62,16 +81,7 @@ function createRelationshipRepository() {
         await repository.deleteMany({ sourceId: source.id, sourceKind: source.kind });
         if (references.length === 0) return;
 
-        const rows = references.map((reference) => ({
-            sourceId: source.id,
-            sourceKind: source.kind,
-            sourceType: source.type ?? null,
-            schemaPath: reference.schemaPath,
-            instancePath: reference.instancePath,
-            targetId: reference.targetId,
-            targetKind: reference.targetKind,
-            sourceStaged: reference.staged ?? source.staged ?? false,
-        }));
+        const rows = references.map((reference) => toRelationshipRow(source, reference));
         for (let i = 0; i < rows.length; i += INSERT_CHUNK_ROWS) {
             await repository.createMany(rows.slice(i, i + INSERT_CHUNK_ROWS));
         }
@@ -86,9 +96,9 @@ function createRelationshipRepository() {
     }
 
     /**
-     * Every reference pointing at one target. `includeStaged` is the delete-time
-     * question: a pending merge that references the target still counts, even
-     * though a reverse lookup for display would not show it.
+     * Every reference pointing at one target, in every locale. `includeStaged` is
+     * the delete-time question: a pending merge that references the target still
+     * counts, even though a reverse lookup for display would not show it.
      */
     async function findByTarget(
         targetId: string,

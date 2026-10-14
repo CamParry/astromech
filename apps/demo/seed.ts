@@ -146,7 +146,12 @@ async function upsertUser({ email, name, role }: SeedUser): Promise<string> {
     return userId;
 }
 
-type SeededEntry = { id: string; type: string; fields: Record<string, unknown> };
+type SeededEntry = {
+    id: string;
+    type: string;
+    locale: string;
+    fields: Record<string, unknown>;
+};
 
 const seededEntries: SeededEntry[] = [];
 const seededEntryIds = new Set<string>();
@@ -204,6 +209,7 @@ async function insertEntries(rows: Record<string, unknown>[]): Promise<void> {
         ...rows.map((r) => ({
             id: r.id as string,
             type: r.type as string,
+            locale: r.locale as string,
             fields: (r.fields ?? {}) as Record<string, unknown>,
         }))
     );
@@ -211,20 +217,19 @@ async function insertEntries(rows: Record<string, unknown>[]): Promise<void> {
 
 /**
  * Rows per INSERT: D1 caps a query at 100 bound parameters and a relationship
- * row binds eight columns.
+ * row binds nine columns.
  */
-const INDEX_CHUNK_ROWS = 12;
+const INDEX_CHUNK_ROWS = 11;
 
 /** Derive the relationships index from every seeded entry's field data. */
 async function indexRelationships(): Promise<void> {
-    // An entry's references are the union over its locales, deduplicated on the
-    // index key — every locale of an entry shares its id, so a translation that
-    // keeps a reference would otherwise collide on the primary key.
+    // One row per reference per locale, as the index records it. Deduplicated on
+    // the index key, since one locale's fields can hold a target twice at one path.
     const seen = new Set<string>();
     const rows = seededEntries.flatMap((entry) =>
         findReferences(entryFields(entry.type), entry.fields)
             .filter((reference) => {
-                const key = `${entry.id}|${reference.instancePath}|${reference.targetId}|${reference.targetKind}`;
+                const key = `${entry.id}|${entry.locale}|${reference.instancePath}|${reference.targetId}|${reference.targetKind}`;
                 if (seen.has(key)) return false;
                 seen.add(key);
                 return true;
@@ -234,6 +239,7 @@ async function indexRelationships(): Promise<void> {
                     sourceId: entry.id,
                     sourceKind: 'entry' as const,
                     sourceType: entry.type,
+                    locale: entry.locale,
                     schemaPath: reference.schemaPath,
                     instancePath: reference.instancePath,
                     targetId: reference.targetId,

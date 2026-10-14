@@ -258,6 +258,7 @@ describe('GET /entries/:type/:id/used-by', () => {
             sourceType: 'post',
             schemaPath: 'related',
             instancePath: 'related',
+            locales: ['en'],
             sourceStaged: false,
         });
     });

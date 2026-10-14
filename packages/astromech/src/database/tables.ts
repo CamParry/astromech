@@ -102,6 +102,11 @@ export {
  * The relationships index — DERIVED from field data, never authoritative. Used
  * for reverse lookup, filter-by-relation, and delete-time info. No surrogate
  * id: the natural key IS the row, so a rebuild repairs a wrong row safely.
+ *
+ * One row per reference per locale: each locale's content row is indexed on its
+ * own, so a reader-facing lookup answers for one locale. A shared field
+ * (`translatable: false`) is stored in every locale's row, so its reference is
+ * indexed once per locale, the same way.
  */
 export const relationshipsTable = defineTable(
     'relationships',
@@ -113,18 +118,35 @@ export const relationshipsTable = defineTable(
          * and media sources.
          */
         sourceType: col.text(),
+        /**
+         * The locale of the content row holding the reference. Never null: every
+         * content row has a locale, a shared field included, and a resource
+         * without translations holds its default-locale row.
+         */
+        locale: col.text({ notNull: true }),
         /** `sections[].gallery` — indexed, and what a query matches on. */
         schemaPath: col.text({ notNull: true }),
         /** `sections[a1].gallery` — for deep-linking; never pattern-matched. */
         instancePath: col.text({ notNull: true }),
         targetId: col.text({ notNull: true }),
         targetKind: col.enum(TARGET_KINDS, { notNull: true }),
-        /** Derived from the source row's `stagedFor`, so reverse lookup and
-         *  filter-by-relation can exclude staged sources without a join. */
+        /**
+         * True when only the locale's staged row holds the reference, not its
+         * canonical row. Derived from the content row's `stagedFor`, so reverse
+         * lookup and filter-by-relation can exclude staged references without a
+         * join.
+         */
         sourceStaged: col.boolean({ notNull: true, default: false }),
     }),
     {
-        primaryKey: ['sourceId', 'sourceKind', 'instancePath', 'targetId', 'targetKind'],
+        primaryKey: [
+            'sourceId',
+            'sourceKind',
+            'locale',
+            'instancePath',
+            'targetId',
+            'targetKind',
+        ],
         indexes: ({ index }) => [
             index('idx_rel_target', ['targetId', 'targetKind']),
             index('idx_rel_filter', ['sourceType', 'schemaPath', 'targetId']),

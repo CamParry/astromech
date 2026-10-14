@@ -1,7 +1,10 @@
 import type { RelationshipIndexSource } from '@/content/repository/relationships';
 import type { RelationshipRow } from '@/database/tables';
 import type { ResolvedConfig, ResourceType } from '@/types/index';
-import { relationshipRepository } from '@/content/repository/relationships';
+import {
+    relationshipRepository,
+    toRelationshipRow,
+} from '@/content/repository/relationships';
 import { allEntryRelationships } from '@/entries/relationships';
 import { allGlobalRelationships } from '@/globals/relationships';
 import { allMediaRelationships } from '@/media/relationships';
@@ -78,16 +81,7 @@ export async function checkRelationshipIndex(
     const computed = new Map<string, RelationshipRow>();
     for (const { source, references } of sources) {
         for (const reference of references) {
-            const row: RelationshipRow = {
-                sourceId: source.id,
-                sourceKind: source.kind,
-                sourceType: source.type ?? null,
-                schemaPath: reference.schemaPath,
-                instancePath: reference.instancePath,
-                targetId: reference.targetId,
-                targetKind: reference.targetKind,
-                sourceStaged: reference.staged ?? source.staged ?? false,
-            };
+            const row = toRelationshipRow(source, reference);
             computed.set(rowKey(row), row);
         }
     }
@@ -153,6 +147,7 @@ function rowKey(row: RelationshipRow): string {
     return [
         row.sourceId,
         row.sourceKind,
+        row.locale,
         row.instancePath,
         row.targetId,
         row.targetKind,

@@ -1343,6 +1343,7 @@ describe('relationships', () => {
                 sourceType: 'post',
                 schemaPath: 'related',
                 instancePath: 'related',
+                locales: ['en'],
                 sourceStaged: false,
             },
         ]);
