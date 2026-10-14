@@ -41,28 +41,32 @@ with `node:util` `parseArgs` and 9 read `process.argv` by hand; some shared
       `lib/run.ts`, and its tasks in Turborepo. Each root task lists the
       scripts it reads in `inputs`, so `scripts/**` and `.github/**` leave
       `globalDependencies`.
-- [ ] Every kept script converted to the pattern: the gate family
+- [x] Every kept script converted to the pattern: the gate family
       (`verify`, `gate`, `land`, `merged-tree`, `run-lock`, `process-group`,
       `check-helpers`, `cpu-limits`), then the checks (`check-boot`,
       `check-boot-cloudflare`, `admin-browser-check`, `check-install`,
       `check-deployed-cloudflare`, `check-docs-links`), then the rest
       (`report-drift`, `prior-art`), and the Bash guard hook, whose tests
-      call its decision function in process instead of spawning it.
-- [ ] Merged: `roadmap-index` and `decisions-index` into one `docs-index`;
+      call its decision function in process instead of spawning it. The
+      hook stays `.mjs`: as `.ts` it started 33 to 60 ms slower per call,
+      over the 40 ms allowed (measured 2026-10-14). Its tests call an
+      exported `decide()` in process (13.6 s to 2.0 s).
+- [x] Merged: `roadmap-index` and `decisions-index` into one `docs-index`;
       `verify-status` into `verify --status`; `run-at-lower-priority` into
       one wrapper that runs root `build`, `typecheck`, `lint` and `test:run`
       through Turborepo and its cache.
-- [ ] Moved: core's `check-exports-parity` and `check-node-imports` into
+- [x] Moved: core's `check-exports-parity` and `check-node-imports` into
       `scripts/`; the second runs its imports in parallel.
-- [ ] Replaced or deleted: `workspace-packages` reads `pnpm ls -r --json`;
+- [x] Replaced or deleted: `workspace-packages` reads `pnpm ls -r --json`;
       `test-mutation.mjs` becomes a `stryker run` script; `cpu-limits.d.mts`,
       `seed.ts` and the `package.json` entries nothing calls go;
       `require-fresh-dist` goes once `check-install` runs as a Turborepo task
       after the builds.
-- [ ] The pre-commit hook calls `pnpm exec` instead of `npx`, runs its checks
+- [x] The pre-commit hook calls `pnpm exec` instead of `npx`, runs its checks
       with `node` directly, and writes the indexes when `roadmap/**` or
       `decisions/**` changes.
-- [ ] The known defects below.
+- [x] The known defects below, except the last, which moved to the backlog
+      (Tooling).
 
 ## Known defects
 
@@ -79,7 +83,3 @@ with `node:util` `parseArgs` and 9 read `process.argv` by hand; some shared
       `.wrangler/state`, so leftover state failed it (a database that
       predated `blocked_addresses`, and the sign-in 429 flake). Each run now
       serves from a fresh `--persist-to` directory.
-- [ ] The Cloudflare demo's `astro build` still applies pending migrations
-      into the app's own `.wrangler/state` (`astro:build:start`), so a
-      broken local state can still fail the boot check's build step. It
-      needs core's `resolveBinding()` to pass `getPlatformProxy({ persist })`.
