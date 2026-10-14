@@ -10,7 +10,7 @@ decided the same day.
 
 Builds on `roadmap/planned/drafts.md`, `roadmap/planned/history.md`,
 `roadmap/planned/schedules.md` and the relationship locale column in
-`roadmap/planned/relationship-index-defects.md`.
+`roadmap/in-progress/relationship-index-defects.md`.
 
 ## Prior art
 
