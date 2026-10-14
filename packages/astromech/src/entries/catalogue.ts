@@ -1,6 +1,6 @@
 /**
  * One entry type's method catalogue. The catalogue is per type, not a constant:
- * permission, schemas and capability gating all vary with the entry type, so the
+ * summaries, schemas and capability gating all vary with the entry type, so the
  * manifest generator and the REST mount call this factory once per type.
  */
 import type { EntriesService } from './service-types';
@@ -10,7 +10,6 @@ import { z } from '@hono/zod-openapi';
 import { declaresCapability } from '@/content/capabilities';
 import { availableMethodPermissions } from '@/content/method-permissions';
 import { isCapability } from '@/entries/capabilities';
-import { resolveAccess } from '@/permissions/access';
 import { createEntrySchema, updateEntrySchema } from './schema';
 import { entriesDefinition } from './service';
 
@@ -45,11 +44,10 @@ export function entryCatalogue(params: {
     return Object.fromEntries(
         Object.entries(entriesDefinition.catalogue).map(([key, method]) => {
             const name = key as EntryMethodName;
-            // The shared declaration states the permission as a function of the
-            // call's `type`, which nothing reading a catalogue can evaluate — it
-            // guards before any argument object exists. Fixed to this type here,
-            // where a bare `{ type }` names exactly one permission.
-            const resolved = resolveAccess(method.access, { type: typeId });
+            // `access` stays the method's own rule, a function of the whole
+            // input: fixing it to one permission would drop what a call's
+            // arguments add, such as `publish` for a write that sets a status.
+            // The input below pins `type`, so the rule always sees this type.
             return [
                 name,
                 {
@@ -58,10 +56,6 @@ export function entryCatalogue(params: {
                         method.summary === undefined
                             ? typeSentence
                             : `${method.summary} ${typeSentence}`,
-                    access:
-                        resolved.kind === 'permission'
-                            ? resolved.permissions[0]
-                            : resolved.kind,
                     input: objectInput(method.input, name).safeExtend({
                         type,
                         ...payloads[name],

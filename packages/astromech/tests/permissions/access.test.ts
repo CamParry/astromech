@@ -1,11 +1,11 @@
 /**
  * `resolveAccess` — the one reader of a method's declared `access`, over each
- * of the five forms it can take.
+ * of the five forms it can take — and `deniedPermission`, what a refusal names.
  */
 
 import type { Permission } from '@/types/index';
 import { describe, expect, it } from 'vitest';
-import { resolveAccess } from '@/permissions/access';
+import { deniedPermission, resolveAccess } from '@/permissions/access';
 
 describe('resolveAccess', () => {
     it('answers public for the public form', () => {
@@ -56,5 +56,22 @@ describe('resolveAccess', () => {
         expect(() => resolveAccess({ permission: 'view' }, undefined)).toThrow(
             'cannot resolve the access'
         );
+    });
+});
+
+describe('deniedPermission', () => {
+    const access = {
+        kind: 'permission',
+        permissions: ['entry:posts:update', 'entry:posts:publish'],
+    } as const;
+
+    it('names the first permission the caller lacks, not only the first demanded', () => {
+        expect(
+            deniedPermission(access, (permission) => permission === 'entry:posts:update')
+        ).toBe('entry:posts:publish');
+    });
+
+    it('names none when the caller holds every one', () => {
+        expect(deniedPermission(access, () => true)).toBeNull();
     });
 });

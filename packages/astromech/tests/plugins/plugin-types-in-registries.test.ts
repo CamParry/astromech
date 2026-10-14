@@ -121,7 +121,7 @@ describe('a plugin entry type and global in the one registry', () => {
                 id: 'entries.fixture/item.create',
                 typeId: 'fixture/item',
                 plugin: 'fixture',
-                permission: 'plugin:fixture:entry:item:create',
+                permissions: ['plugin:fixture:entry:item:create'],
             })
         );
     });

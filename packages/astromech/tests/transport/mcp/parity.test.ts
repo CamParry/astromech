@@ -1,7 +1,8 @@
 /**
  * Contract ↔ MCP tool-schema parity.
  *
- * Every MCP tool's `inputSchema` must be exactly the manifest method's `input`.
+ * Every MCP tool's `inputSchema` must be exactly the manifest method's `input`,
+ * and its `access`, `permissions` and `dynamic` the method's own.
  *
  * A hand-written schema literal in an adapter can drift from its contract with
  * nothing noticing, and then rejects input the contract accepts.
@@ -120,6 +121,53 @@ describe('contract ↔ MCP tool schema parity', () => {
         }
 
         expect(checked.length).toBeGreaterThan(20);
+    });
+
+    it('every tool carries its method’s access as the manifest records it', () => {
+        const access = (id: string) => {
+            const method = manifest.methods.find((m) => m.id === id);
+            const result = method ? buildDispatch(method) : null;
+            if (!result?.ok) throw new Error(`no tool for ${id}`);
+            const { tool } = result;
+            return {
+                access: tool.access,
+                permissions: tool.permissions,
+                dynamic: tool.dynamic,
+            };
+        };
+
+        expect(access('users.update')).toEqual({
+            access: 'permission',
+            permissions: ['users:update'],
+            dynamic: false,
+        });
+        expect(access('plugins.testMyPlugin.doSomething')).toEqual({
+            access: 'permission',
+            permissions: ['plugins:x:do'],
+            dynamic: false,
+        });
+        expect(access('globals.update')).toEqual({
+            access: 'permission',
+            permissions: [],
+            dynamic: true,
+        });
+
+        for (const method of manifest.methods) {
+            const result = buildDispatch(method);
+            if (!result.ok) continue;
+            expect(
+                {
+                    access: result.tool.access,
+                    permissions: result.tool.permissions,
+                    dynamic: result.tool.dynamic,
+                },
+                method.id
+            ).toEqual({
+                access: method.access,
+                permissions: method.permissions,
+                dynamic: method.dynamic,
+            });
+        }
     });
 
     it('no tool is emitted without a schema from the manifest', () => {

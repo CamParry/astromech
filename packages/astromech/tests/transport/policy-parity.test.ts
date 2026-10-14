@@ -8,6 +8,9 @@
  * plugin's `ctx`) and expects one outcome from all of them: an error code, or
  * `null` for a read that finds nothing visible. A permission case skips the
  * trusted transports, which by design check no role.
+ *
+ * The manifest's record of a method's access is advice, not enforcement, so the
+ * last group checks that advice against what the transports answer.
  */
 
 import type {
@@ -22,6 +25,7 @@ import type {
 import { adminRole, roleWith } from '@tests/fixtures';
 import { createTestDb, makeTestConfig, requestAs, setupTestConfig } from '@tests/harness';
 import { beforeEach, describe, expect, it } from 'vitest';
+import { z } from 'zod';
 import { createAppContext } from '@/app-context/app-context';
 import { currentServices } from '@/app-context/services';
 import { setMethodManifest } from '@/codegen/manifest-registry';
@@ -30,6 +34,7 @@ import { entryPermission } from '@/entries/permissions';
 import { ApiError } from '@/errors/api-error';
 import { resolvePluginIdentity } from '@/plugins/runtime/plugin-identity';
 import { createPluginContext } from '@/plugins/runtime/plugin-runtime';
+import { annotateManifest } from '@/policies/annotate-manifest';
 import { callMethod } from '@/policies/call-method';
 import { createHttpApp } from '@/transport/http/app';
 import { buildScopedDispatch } from '@/transport/tools/dispatch';
@@ -37,8 +42,19 @@ import { buildScopedDispatch } from '@/transport/tools/dispatch';
 /** The composed HTTP app, typed as `createHttpApp` builds it. */
 type HttpApp = ReturnType<typeof createHttpApp>;
 
-/** A plugin with nothing of its own, so its `ctx` can be built. */
-const probe: PluginDefinition = { package: 'probe' };
+/** A plugin with one permission-gated method, so its `ctx` can be built. */
+const probe: PluginDefinition = {
+    package: 'probe',
+    service: {
+        echo: {
+            // A bare key: resolved under the plugin's namespace, `plugin:probe:read`.
+            access: { permission: 'read' },
+            input: z.strictObject({}),
+            mutates: false,
+            handler: async () => ({ echoed: true }),
+        },
+    },
+};
 
 function testConfig(): AstromechConfig {
     return {
@@ -285,5 +301,77 @@ describe('one answer on every transport', () => {
 
         const results = await outcomes(adminRole, 'globals.get', args, transports);
         expect(results).toEqual(every(transports, 'capability_not_supported'));
+    });
+});
+
+describe('the manifest’s access agrees with every transport', () => {
+    /** What the manifest says `role` may do: true, false, or null for "the call decides". */
+    function advised(role: Role, id: string): boolean | null | undefined {
+        return annotateManifest([method(id)], role)[0]?.allowed;
+    }
+
+    it('names a core method’s permission, and the role without it is refused', async () => {
+        const reader = roleWith([entryPermission('post', 'read')]);
+        const transports = { rest: rest('GET', '/users'), rpc, toolLoop };
+
+        expect(method('users.query')).toMatchObject({
+            access: 'permission',
+            permissions: ['users:read'],
+            dynamic: false,
+        });
+        expect(advised(reader, 'users.query')).toBe(false);
+        expect(await outcomes(reader, 'users.query', {}, transports)).toEqual(
+            every(transports, 'FORBIDDEN')
+        );
+        expect(advised(adminRole, 'users.query')).toBe(true);
+        expect(await outcomes(adminRole, 'users.query', {}, transports)).toEqual(
+            every(transports, 'ok')
+        );
+    });
+
+    it('names a plugin method’s permission under its namespace, as the call checks it', async () => {
+        const id = 'plugins.probe.echo';
+        const holder = roleWith(['plugin:probe:read']);
+        const transports = {
+            rest: rest('POST', '/plugins/probe/echo', {}),
+            rpc,
+            toolLoop,
+        };
+
+        expect(method(id)).toMatchObject({
+            access: 'permission',
+            permissions: ['plugin:probe:read'],
+            dynamic: false,
+        });
+        expect(advised(roleWith([]), id)).toBe(false);
+        expect(await outcomes(roleWith([]), id, {}, transports)).toEqual(
+            every(transports, 'FORBIDDEN')
+        );
+        expect(advised(holder, id)).toBe(true);
+        expect(await outcomes(holder, id, {}, transports)).toEqual(
+            every(transports, 'ok')
+        );
+    });
+
+    it('marks a permission named by the input dynamic, and leaves the call to decide', async () => {
+        const args = { key: 'site' };
+        const transports = { rest: rest('GET', '/globals/site'), rpc, toolLoop };
+        const holder = roleWith(['global:site:read']);
+        const other = roleWith(['global:footer:read']);
+
+        expect(method('globals.get')).toMatchObject({
+            access: 'permission',
+            permissions: [],
+            dynamic: true,
+        });
+        expect(advised(holder, 'globals.get')).toBeNull();
+        expect(advised(other, 'globals.get')).toBeNull();
+        // Never saved, so the read finds nothing for a role that may make it.
+        expect(await outcomes(holder, 'globals.get', args, transports)).toEqual(
+            every(transports, 'null')
+        );
+        expect(await outcomes(other, 'globals.get', args, transports)).toEqual(
+            every(transports, 'FORBIDDEN')
+        );
     });
 });

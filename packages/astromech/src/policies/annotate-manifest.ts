@@ -14,17 +14,15 @@ export type AnnotatedManifestMethod = ManifestMethod & {
 };
 
 /**
- * What a manifest entry records of a method's access, or null where only a
+ * A manifest method's access as `allowsAccess` reads it, or null when only a
  * call can tell (a dynamic permission resolves from the call input).
  */
 function manifestAccess(method: ManifestMethod): ResolvedAccess | null {
-    if (method.permissionDynamic === true) return null;
-    // A plugin's `authenticated` access carries no permission but still needs a role.
-    if (method.source === 'plugin' && method.access === 'authenticated') {
-        return { kind: 'authenticated' };
+    if (method.dynamic) return null;
+    if (method.access === 'permission') {
+        return { kind: 'permission', permissions: method.permissions };
     }
-    if (method.permission === null) return { kind: 'public' };
-    return { kind: 'permission', permissions: [method.permission] };
+    return { kind: method.access };
 }
 
 /** Annotate every method with whether `role` may call it. A missing role holds nothing. */

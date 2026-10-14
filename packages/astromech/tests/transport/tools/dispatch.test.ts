@@ -46,7 +46,7 @@ const objectSchema: JsonSchemaObject = {
 };
 
 /**
- * `permission: null` deliberately: the manifest says this method is ungated, so
+ * `access: 'public'` deliberately: the manifest says this method is ungated, so
  * any refusal below can only have come from the contract the scoped handle
  * reads, never from dispatch.ts consulting the manifest.
  */
@@ -57,7 +57,9 @@ const usersQuery: CoreManifestMethod = {
     source: 'core',
     module: 'users',
     method: 'query',
-    permission: null,
+    access: 'public',
+    permissions: [],
+    dynamic: false,
     mutates: false,
     destructive: false,
     idempotent: false,
@@ -93,7 +95,8 @@ const pluginMethod: PluginManifestMethod = {
     serviceKey: 'foo',
     method: 'bar',
     access: 'permission',
-    permission: 'plugin:foo:bar',
+    permissions: ['plugin:foo:bar'],
+    dynamic: false,
     mutates: true,
     destructive: false,
     idempotent: false,
@@ -106,7 +109,8 @@ const publicPluginMethod: PluginManifestMethod = {
     name: 'plugins.foo.baz',
     method: 'baz',
     access: 'public',
-    permission: null,
+    permissions: [],
+    dynamic: false,
     mutates: false,
 };
 

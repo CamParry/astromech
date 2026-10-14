@@ -67,7 +67,7 @@ describe('methods', () => {
             'entries.recipe.create  [mutates denied]  (permission: entry:recipe:create)'
         );
         expect(stdout).toContain('globals.get  [depends]  (permission: dynamic)');
-        expect(stdout).toContain('notifications.count  (permission: none)');
+        expect(stdout).toContain('notifications.count  (permission: none, signed in)');
         expect(stderr).toEqual([]);
     });
 

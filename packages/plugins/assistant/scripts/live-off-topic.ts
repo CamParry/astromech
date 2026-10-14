@@ -258,8 +258,9 @@ function tool(
             destructiveHint: false,
             idempotentHint: false,
         },
-        permission: null,
-        permissionDynamic: false,
+        access: 'public',
+        permissions: [],
+        dynamic: false,
         confirmMessage: () => `Run ${name}?`,
         invoke: () => Promise.resolve(result),
     };

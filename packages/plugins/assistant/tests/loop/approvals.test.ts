@@ -33,8 +33,9 @@ function toolFor(
             destructiveHint: options.destructive ?? false,
             idempotentHint: false,
         },
-        permission: null,
-        permissionDynamic: false,
+        access: 'public',
+        permissions: [],
+        dynamic: false,
         confirmMessage: (args) => `Run "${name}" with ${JSON.stringify(args)}?`,
         invoke: vi.fn(async (args) => ({ ran: name, args })),
     };

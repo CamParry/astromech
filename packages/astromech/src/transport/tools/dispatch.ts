@@ -96,8 +96,9 @@ function projectTool(manifest: ManifestMethod, caller: MethodCaller): DispatchRe
                 destructiveHint: manifest.destructive,
                 idempotentHint: manifest.idempotent,
             },
-            permission: manifest.permission,
-            permissionDynamic: manifest.permissionDynamic === true,
+            access: manifest.access,
+            permissions: manifest.permissions,
+            dynamic: manifest.dynamic,
             confirmMessage: (args) => confirmMessage(manifest, args),
             // Imported at call time: `app-context.ts` reaches this file through
             // `scoped-tools.ts`, and `call-method.ts` imports the scoped handle

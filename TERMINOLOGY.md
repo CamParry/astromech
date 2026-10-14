@@ -92,7 +92,9 @@ alt text, caption and fields. No status, staged change or trash.
 "Placeholder" is a field's input hint.
 
 **Method manifest.** The catalogue of service methods every transport dispatches
-through.
+through. Each method records its access in one shape, whatever its source: the
+rule's kind (`access`), the permissions a call needs (`permissions`), and
+whether only the call's input can name them (`dynamic`).
 
 **Module.** A directory owning one thing in core. Entries, globals, media, users
 and notifications are the content modules; `content` is what four of them share.

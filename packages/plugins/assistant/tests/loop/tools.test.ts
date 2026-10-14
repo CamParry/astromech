@@ -24,8 +24,9 @@ function dispatchFor(
             destructiveHint: false,
             idempotentHint: true,
         },
-        permission: null,
-        permissionDynamic: false,
+        access: 'public',
+        permissions: [],
+        dynamic: false,
         confirmMessage: (args) => `Run "${name}" with ${JSON.stringify(args)}?`,
         invoke: () => Promise.resolve(options.result ?? { ok: true }),
     };

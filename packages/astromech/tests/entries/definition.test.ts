@@ -1,7 +1,7 @@
 /**
  * The entries service as a definition, beyond what every resource's shares
  * (`tests/content/resource-definition.test.ts`): what one entry type's
- * catalogue fixes, and a bound update answering one entry or a list.
+ * catalogue holds, and a bound update answering one entry or a list.
  */
 
 import type { EntriesService } from '@/entries/service-types';
@@ -11,7 +11,9 @@ import { inputKeys } from '@tests/strict-input';
 import { beforeEach, describe, expect, it } from 'vitest';
 import { createAppContext } from '@/app-context/app-context';
 import { entryCatalogue } from '@/entries/catalogue';
+import { PERMISSION_ENTRY_READ_FULL } from '@/entries/permissions';
 import { entriesDefinition } from '@/entries/service';
+import { resolveAccess } from '@/permissions/access';
 
 const admin: Role = {
     slug: 'admin',
@@ -20,7 +22,7 @@ const admin: Role = {
     isBuiltIn: true,
 };
 
-/** The permission one entry type's catalogue fixes each method to. */
+/** The permission each method of one entry type's catalogue demands of a plain call. */
 const PERMISSIONS: Record<keyof EntriesService, string> = {
     query: 'entry:posts:read',
     count: 'entry:posts:read',
@@ -62,12 +64,38 @@ describe('entryCatalogue', () => {
         ).toEqual(Object.keys(entriesDefinition.catalogue).sort());
     });
 
-    it('fixes every method’s access to that type’s permission', () => {
+    it('demands that type’s permission of a call naming only the type', () => {
         const catalogue = entryCatalogue({ typeId: 'posts', titled: true });
 
         for (const [key, permission] of Object.entries(PERMISSIONS)) {
-            expect(catalogue[key as keyof EntriesService].access, key).toBe(permission);
+            expect(
+                resolveAccess(catalogue[key as keyof EntriesService].access, {
+                    type: 'posts',
+                }),
+                key
+            ).toEqual({ kind: 'permission', permissions: [permission] });
         }
+    });
+
+    it('keeps every permission a call can demand, not only the first', () => {
+        const catalogue = entryCatalogue({ typeId: 'posts', titled: true });
+
+        expect(
+            resolveAccess(catalogue.update.access, {
+                type: 'posts',
+                id: 'e1',
+                data: { status: 'published' },
+            })
+        ).toEqual({
+            kind: 'permission',
+            permissions: ['entry:posts:update', 'entry:posts:publish'],
+        });
+        expect(
+            resolveAccess(catalogue.get.access, { type: 'posts', id: 'e1', full: true })
+        ).toEqual({
+            kind: 'permission',
+            permissions: ['entry:posts:read', PERMISSION_ENTRY_READ_FULL],
+        });
     });
 
     it('declares the same keys as each method’s own input, titled or not', () => {
@@ -87,7 +115,10 @@ describe('entryCatalogue', () => {
     it('fixes a plugin type’s access to the plugin permission form', () => {
         const catalogue = entryCatalogue({ typeId: 'forms/form', titled: true });
 
-        expect(catalogue.update.access).toBe('plugin:forms:entry:form:update');
+        expect(resolveAccess(catalogue.update.access, { type: 'forms/form' })).toEqual({
+            kind: 'permission',
+            permissions: ['plugin:forms:entry:form:update'],
+        });
         expect(catalogue.update.summary).toBe(
             'Update an entry. Fields merge: omitted fields keep their current ' +
                 'value, and arrays are replaced whole. Naming `status` or ' +

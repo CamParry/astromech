@@ -8,7 +8,7 @@ export const dismissAllNotifications = defineServiceMethod({
     summary: 'Dismiss every one of your own notifications.',
     input: z.strictObject({}),
     output: z.void(),
-    access: 'public',
+    access: 'authenticated',
     sessionScoped: true,
     mutates: true,
     destructive: true,
