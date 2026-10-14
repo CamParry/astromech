@@ -7,6 +7,7 @@
 import type { GlobalsService } from './service-types';
 import { defineService } from '@/services/define-service';
 import { assertRequiredCapability } from './capabilities';
+import { discardGlobalDraft } from './methods/discard-draft';
 import { getGlobal } from './methods/get';
 import { publishGlobal } from './methods/publish';
 import { scheduleGlobal } from './methods/schedule';
@@ -28,6 +29,7 @@ export const globalsDefinition = defineService<GlobalsService>(
         publish: publishGlobal,
         unpublish: unpublishGlobal,
         schedule: scheduleGlobal,
+        discardDraft: discardGlobalDraft,
         versions: listGlobalVersions,
         getVersion: getGlobalVersion,
         restoreVersion: restoreGlobalVersion,

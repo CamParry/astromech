@@ -4,7 +4,7 @@
  * than by id. There is no list, no slug, no trash and no preview token.
  */
 
-import type { Resource } from '@/content/repository/types';
+import type { ContentRowState, Resource } from '@/content/repository/types';
 import type { GlobalContentRow, GlobalTableRow } from '@/globals/tables';
 import type { EntryStatus, JsonObject } from '@/types/index';
 import type { NotNull } from 'kysely';
@@ -27,13 +27,19 @@ export type GlobalResource = Resource & {
     key: string;
     status: EntryStatus;
     publishedAt: Date | null;
+    /**
+     * True when this locale has a draft. A read of the draft itself
+     * (`get({ draft: true })`) reports its content and its own `updatedAt`.
+     */
+    hasDraft: boolean;
 };
 
 /** The two joined rows plus the locale list, as the resource the service reads. */
 function toGlobalResource(
     resourceRow: GlobalTableRow,
     contentRow: GlobalContentRow,
-    locales: string[]
+    locales: string[],
+    { hasDraft }: ContentRowState
 ): GlobalResource {
     return {
         id: contentRow.globalId,
@@ -42,6 +48,7 @@ function toGlobalResource(
         locale: contentRow.locale,
         locales,
         staged: contentRow.stagedFor !== null,
+        hasDraft,
         fields: (contentRow.fields ?? {}) as JsonObject,
         status: contentRow.status,
         publishedAt: contentRow.publishedAt,
@@ -66,6 +73,7 @@ function createGlobalRepository() {
             contentTable: globalContentTable,
             versionsTable: globalVersionsTable,
             resourceIdColumn: 'globalId',
+            draftsTable: globalDraftsTable,
         },
         { decode: toGlobalResource }
     );
@@ -138,6 +146,7 @@ function createGlobalRepository() {
         create: content.create,
         update: content.update,
         explainConflict: content.explainConflict,
+        guardHolds: content.guardHolds,
         staging: content.staging,
         versions: content.versions,
         translatable: content.translatable,
@@ -149,9 +158,8 @@ function createGlobalRepository() {
 export const globalRepository = createGlobalRepository();
 
 /**
- * @internal The global drafts repository: the shared drafts group over
- * `global_drafts`. Only its tests call it until updates write drafts
- * (`roadmap/in-progress/drafts.md`).
+ * The global drafts repository: the shared drafts group over `global_drafts`,
+ * which an update of a published locale writes (`internal/update-global.ts`).
  */
 export const globalDraftRepository = createDraftsRepository(
     globalDraftsTable,

@@ -98,6 +98,8 @@ export class StagedChangeExistsError extends ApiError {
  * trash, which only `restore` writes to. `not-trashed`: a restore found it live.
  * `not-scheduled`: a scheduled publish found the row unscheduled or moved.
  * `not-published`: a draft save found the locale no longer published.
+ * `published`: a write to the live row found the locale published since it
+ * read it, so the change belongs in a draft.
  * `draft-changed`: the locale's draft was saved, made or discarded after the
  * write read it.
  */
@@ -106,6 +108,7 @@ export type ConflictReason =
     | 'not-trashed'
     | 'not-scheduled'
     | 'not-published'
+    | 'published'
     | 'draft-changed';
 
 /** How a conflict message words each reason, after the resource's name. */
@@ -114,6 +117,8 @@ const CONFLICT_MESSAGES: Record<ConflictReason, string> = {
     'not-trashed': 'is not in the trash',
     'not-scheduled': 'is not scheduled for the time this publish was due',
     'not-published': 'is no longer published, so it takes no draft',
+    published:
+        'was published after this write read it, so the change belongs in a draft; read it again',
     'draft-changed': 'has a draft that changed after this write read it; read it again',
 };
 

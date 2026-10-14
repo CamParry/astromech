@@ -277,6 +277,108 @@ describe('an update to a published locale', () => {
     });
 });
 
+describe('a write decided on a stale read', () => {
+    /** Runs `meanwhile` after the next entry read, before the write it serves. */
+    function afterNextRead(meanwhile: (id: string) => Promise<unknown>): void {
+        const find = entryRepository.findOne.bind(entryRepository);
+        vi.spyOn(entryRepository, 'findOne').mockImplementationOnce(
+            async (ref, options) => {
+                const read = await find(ref, options);
+                await meanwhile(ref.id);
+                return read;
+            }
+        );
+    }
+
+    it('conflicts when the entry is published after an update read it unpublished', async () => {
+        const page = await api.create({
+            type: 'page',
+            data: { title: 'Live', fields: { body: 'live' } },
+        });
+        afterNextRead((id) => api.publish({ type: 'page', id }));
+
+        const refused = api.update({
+            type: 'page',
+            id: page.id,
+            data: { title: 'Mine' },
+        });
+
+        await expect(refused).rejects.toBeInstanceOf(ResourceConflictError);
+        await expect(refused).rejects.toMatchObject({
+            details: { reason: 'published', id: page.id, locale: 'en' },
+        });
+        expect(await liveRow('page', page.id)).toMatchObject({
+            title: 'Live',
+            status: 'published',
+        });
+        expect(await draftRows()).toEqual([]);
+    });
+
+    it('conflicts when a draft is saved after a status change read the entry unpublished', async () => {
+        const page = await api.create({ type: 'page', data: { title: 'Live' } });
+        afterNextRead(async (id) => {
+            await api.publish({ type: 'page', id });
+            await api.update({ type: 'page', id, data: { title: 'Theirs' } });
+        });
+
+        const refused = api.unpublish({ type: 'page', id: page.id });
+
+        await expect(refused).rejects.toMatchObject({
+            details: { reason: 'draft-changed' },
+        });
+        expect(await liveRow('page', page.id)).toMatchObject({ status: 'published' });
+        expect(await api.get({ type: 'page', id: page.id, draft: true })).toMatchObject({
+            title: 'Theirs',
+        });
+    });
+});
+
+describe('an update that changes nothing', () => {
+    it('saves no draft, and answers the entry as read', async () => {
+        const page = await publishedPage();
+
+        const saved = one(
+            await api.update({
+                type: 'page',
+                id: page.id,
+                data: { title: 'Live', fields: { body: 'live' } },
+            })
+        );
+
+        expect(saved).toMatchObject({
+            title: 'Live',
+            fields: { body: 'live' },
+            hasDraft: false,
+        });
+        expect(await draftRows()).toEqual([]);
+    });
+
+    it('leaves a draft that already holds the patch as it was', async () => {
+        const page = await publishedPage();
+        await api.update({ type: 'page', id: page.id, data: { title: 'Changed' } });
+        const [before] = await draftRows();
+
+        const saved = one(
+            await api.update({ type: 'page', id: page.id, data: { title: 'Changed' } })
+        );
+
+        expect(saved).toMatchObject({ title: 'Changed', hasDraft: true });
+        expect(await draftRows()).toEqual([before]);
+    });
+
+    it('saves a patch back to the live value into the draft', async () => {
+        const page = await publishedPage();
+        await api.update({ type: 'page', id: page.id, data: { title: 'Changed' } });
+
+        await api.update({ type: 'page', id: page.id, data: { title: 'Live' } });
+
+        expect(await api.get({ type: 'page', id: page.id, draft: true })).toMatchObject({
+            title: 'Live',
+            hasDraft: true,
+        });
+    });
+});
+
 describe('an update that is still edited directly', () => {
     it('writes an unpublished entry live', async () => {
         const page = await api.create({ type: 'page', data: { title: 'Live' } });
