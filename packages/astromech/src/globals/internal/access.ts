@@ -24,7 +24,8 @@ export function globalAccess(action: GlobalAction): GlobalRule {
 
 /**
  * `get`'s rule. A `public` global's plain read needs no permission; the `full`
- * and `staged` shapes always need `read`.
+ * and `staged` shapes, and a `draft` read, which is not public, always need
+ * `read`.
  */
 export const globalGetAccess: GlobalRule = (input) => {
     const key = keyOf(input);
@@ -57,6 +58,10 @@ function dataOf(input: unknown): unknown {
 /** True when the call asks for a shape only an authenticated read may have. */
 function wantsPrivateShape(input: unknown): boolean {
     if (typeof input !== 'object' || input === null) return false;
-    const { full, staged } = input as { full?: unknown; staged?: unknown };
-    return full === true || staged === true;
+    const { full, staged, draft } = input as {
+        full?: unknown;
+        staged?: unknown;
+        draft?: unknown;
+    };
+    return full === true || staged === true || draft === true;
 }

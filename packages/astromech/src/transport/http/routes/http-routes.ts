@@ -389,6 +389,7 @@ export const GLOBALS_ROUTE_SPECS = [
         id: 'globals.restoreVersion',
         queryArgs: ['locale'],
     },
+    { verb: 'delete', path: '/:key/draft', id: 'globals.discardDraft' },
     {
         verb: 'post',
         path: '/:key/staged',

@@ -38,6 +38,11 @@ export type GlobalsService = {
         full?: boolean;
         /** Read the staged change rather than the canonical row. Needs `full`. */
         staged?: boolean;
+        /**
+         * Read the locale's draft where it has one, and the live global where
+         * it has none. Needs the global's `read` permission.
+         */
+        draft?: boolean;
     }): Promise<Global | null>;
     /**
      * Write one locale, creating the global's row and that locale's content row
@@ -45,7 +50,9 @@ export type GlobalsService = {
      * array or container value replaces wholesale. A locale other than the
      * default on a non-translatable global is a `ResourceValidationError`; on a
      * translatable one the new locale inherits the shared (`translatable:
-     * false`) fields from the default-locale row.
+     * false`) fields from the default-locale row. On a global with statuses
+     * and no `staging`, a write to a published locale that names no `status`
+     * or `publishedAt` saves the locale's draft, and `publish` makes it live.
      */
     update(params: {
         key: string;
@@ -126,4 +133,10 @@ export type GlobalsService = {
     mergeStaged(params: { key: string; locale?: string }): Promise<Global>;
     /** Discard this locale's staged change (hard delete). */
     deleteStaged(params: { key: string; locale?: string }): Promise<void>;
+
+    /**
+     * Discard this locale's draft, leaving the live global as it is, and answer
+     * the global as it is live. Throws when the locale has no draft.
+     */
+    discardDraft(params: { key: string; locale?: string }): Promise<Global>;
 };

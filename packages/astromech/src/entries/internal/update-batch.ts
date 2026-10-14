@@ -1,6 +1,7 @@
 import type { EntryResource } from '../repository/types';
 import type { ParsedEntryUpdateData } from '../service-types';
 import type { EntryRowWrite } from './prepare-row';
+import type { DraftEdit } from '@/content/drafts';
 import type { ContentRowId } from '@/content/repository/types';
 import type { WriteGuard } from '@/content/write-guard';
 import type { EntryDraftRow } from '@/entries/tables';
@@ -12,7 +13,7 @@ import type {
     ResolvedEntryType,
     User,
 } from '@/types/index';
-import { draftSavedAt, keepsDrafts, writesDraft } from '@/content/drafts';
+import { draftSavedAt, keepsDrafts, planDraftEdit } from '@/content/drafts';
 import { resolveResourceLocale } from '@/content/locale';
 import { patchedFieldNames } from '@/content/prepare-fields';
 import { resolvePublishedAt } from '@/content/published-at';
@@ -31,7 +32,7 @@ import { getEntryOfType } from '../read-entry';
 import { syncEntryRelationships } from '../relationships';
 import { entryDraftRepository, entryRepository } from '../repository/entries-table';
 import { entrySchema, updateEntrySchema } from '../schema';
-import { foldDraft, withDraft } from './drafts';
+import { foldEntryDraft, withEntryDraft } from './drafts';
 import { prepareEntryFields } from './prepare-fields';
 import { prepareEntryRow } from './prepare-row';
 import { assertSlugFree, uniqueSlugIfChanged } from './slug';
@@ -124,7 +125,18 @@ export async function updateEntryBatch(
         );
         plans.push(
             record
-                ? await planEdit({ id, record, data, drafts })
+                ? {
+                      id,
+                      record,
+                      ...(await planDraftEdit({
+                          drafts,
+                          status: record.status,
+                          data,
+                          findDraft: () =>
+                              entryDraftRepository.findOne(id, record.locale),
+                          fold: foldEntryDraft,
+                      })),
+                  }
                 : {
                       kind: 'translate',
                       id,
@@ -186,7 +198,7 @@ export async function updateEntryBatch(
                     data: written,
                     user,
                     staged,
-                    guard,
+                    guard: { ...guard, ...plan.guard },
                 });
             case 'draft':
                 return saveDraft({
@@ -196,7 +208,7 @@ export async function updateEntryBatch(
                     draft: plan.draft,
                     data: written,
                     user,
-                    guard,
+                    guard: { ...guard, ...plan.guard },
                 });
             case 'translate':
                 return writeTranslation({
@@ -240,32 +252,15 @@ export async function updateEntryBatch(
 }
 
 /**
- * What one id in the batch turns out to be: a write to its row, a save of its
- * draft, or a new translation.
+ * What one id in the batch turns out to be: a write to its row or a save of
+ * its draft (`DraftEdit`), or a new translation.
  */
 type UpdatePlan =
-    | {
-          kind: 'update';
+    | ({
           id: string;
+          /** The live row the write, or the draft, belongs to. */
           record: EntryResource;
-          /** The patch, with the draft folded in when there is one. */
-          data: ParsedEntryUpdateData;
-          /**
-           * The locale's draft as read: folded into the write and deleted with
-           * it. Null when the locale has none; undefined when the locale takes
-           * no draft, so none is read.
-           */
-          draft: EntryDraftRow | null | undefined;
-      }
-    | {
-          kind: 'draft';
-          id: string;
-          /** The live row the draft belongs to. */
-          record: EntryResource;
-          data: ParsedEntryUpdateData;
-          /** The draft the save replaces, or null for the first save. */
-          draft: EntryDraftRow | null;
-      }
+      } & DraftEdit<EntryDraftRow, ParsedEntryUpdateData>)
     | {
           kind: 'translate';
           id: string;
@@ -273,34 +268,6 @@ type UpdatePlan =
           sourceContentId: ContentRowId;
           write: EntryRowWrite;
       };
-
-/**
- * The plan for a locale that has a row: its draft when the type keeps drafts
- * and the write changes a published locale's content only, else its row,
- * folding in any draft the row has.
- */
-async function planEdit(params: {
-    id: string;
-    record: EntryResource;
-    data: ParsedEntryUpdateData;
-    /** Whether the type keeps drafts and the write is not a staged one. */
-    drafts: boolean;
-}): Promise<UpdatePlan> {
-    const { id, record, data, drafts } = params;
-    if (!drafts || record.status !== 'published') {
-        return { kind: 'update', id, record, data, draft: undefined };
-    }
-    const draft = await entryDraftRepository.findOne(id, record.locale);
-    if (writesDraft(record.status, data))
-        return { kind: 'draft', id, record, data, draft };
-    return {
-        kind: 'update',
-        id,
-        record,
-        data: draft ? foldDraft(draft, data) : data,
-        draft,
-    };
-}
 
 /**
  * Updates one entry with a parsed patch: saves the state it replaces as a
@@ -317,7 +284,7 @@ async function updateOne(params: {
     user: User | null;
     /** True when the write targets the staged change rather than the canonical. */
     staged: boolean;
-    /** The conditions the snapshot and the write carry, beyond the row. */
+    /** The conditions the snapshot and the write carry beyond the row, the draft's among them. */
     guard: Omit<WriteGuard, 'contentId'>;
 }): Promise<EntryResource> {
     const { config, entryType, currentEntry, draft, data, user, staged } = params;
@@ -326,13 +293,7 @@ async function updateOne(params: {
     const patchedNames = data.fields ? patchedFieldNames(data.fields) : [];
     const ref = { id: currentEntry.id, locale: currentEntry.locale };
     const address = { ...ref, staged };
-    const guard: WriteGuard = {
-        ...params.guard,
-        contentId: currentEntry.contentId,
-        // The draft must be as read, so the fold never publishes or deletes a
-        // draft saved after it.
-        ...(draft === undefined ? {} : { draft: draft?.updatedAt ?? null }),
-    };
+    const guard: WriteGuard = { ...params.guard, contentId: currentEntry.contentId };
 
     // Decided before the slug is uniquified, so the version compares what the caller sent.
     if (
@@ -414,7 +375,9 @@ async function updateOne(params: {
  * it replaces or, for the first save, over the live row. The fields are
  * validated as the live status demands, and the slug is refused when another
  * live entry holds it. Writes no version, re-indexes nothing and propagates no
- * shared field: the live row is unchanged until the draft is published.
+ * shared field: the live row is unchanged until the draft is published. A
+ * patch that changes nothing the merge base holds saves nothing, and answers
+ * the entry as read.
  */
 async function saveDraft(params: {
     config: ResolvedConfig;
@@ -426,7 +389,7 @@ async function saveDraft(params: {
     guard: Omit<WriteGuard, 'contentId'>;
 }): Promise<EntryResource> {
     const { config, entryType, record, draft, data, user } = params;
-    const base = draft ? withDraft(record, draft) : record;
+    const base = draft ? withEntryDraft(record, draft) : record;
 
     const fields = await fieldsToStore({
         config,
@@ -435,15 +398,14 @@ async function saveDraft(params: {
         data,
         user,
     });
+    // A draft holds the versioned columns and the fields, so this compares all it holds.
+    const next = { title: data.title, slug: data.slug, fields };
+    if (!changesVersionedContent('entry', base, next)) return base;
     await assertSlugFree({ type: entryType.id, entry: record, slug: data.slug });
-    // The live row must still be published, and the draft as read: a second
-    // save from the same read conflicts, as `draftSavedAt` always moves the time.
-    const guard: WriteGuard = {
-        ...params.guard,
-        contentId: record.contentId,
-        published: true,
-        draft: draft?.updatedAt ?? null,
-    };
+    // The plan's guard holds the live row published and the draft as read: a
+    // second save from the same read conflicts, as `draftSavedAt` always moves
+    // the time.
+    const guard: WriteGuard = { ...params.guard, contentId: record.contentId };
     const userId = user?.id ?? null;
 
     const saved = await writeGuarded({
@@ -466,7 +428,7 @@ async function saveDraft(params: {
                 { replaces: draft !== null, holds: entryRepository.guardHolds(guard) }
             ),
     });
-    return withDraft(record, saved);
+    return withEntryDraft(record, saved);
 }
 
 /**

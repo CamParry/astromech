@@ -1,7 +1,7 @@
 import type { EntryResource } from '../repository/types';
 import { z } from '@hono/zod-openapi';
+import { discardDraft } from '@/content/drafts';
 import { assertGuardHolds } from '@/content/write-guard';
-import { ResourceNotFoundError } from '@/errors/resource';
 import { defineServiceMethod } from '@/services/define-service-method';
 import { entryAccess } from '../internal/access';
 import { getEntryOfType } from '../read-entry';
@@ -31,16 +31,12 @@ export const discardEntryDraft = defineServiceMethod({
         const { type, id } = params;
 
         const entry = await getEntryOfType(type, id, params.locale);
-        const { locale } = entry;
         assertGuardHolds(
             'entry',
             { canonical: entry },
             { contentId: entry.contentId, trash: 'live' },
-            { id, locale }
+            { id, locale: entry.locale }
         );
-        if (!(await entryDraftRepository.delete(id, locale))) {
-            throw new ResourceNotFoundError('entry', { id, locale, draft: true });
-        }
-        return { ...entry, hasDraft: false };
+        return discardDraft('entry', entryDraftRepository, entry, { id });
     },
 });

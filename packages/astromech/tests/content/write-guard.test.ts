@@ -34,6 +34,12 @@ describe('writeGuarded, when the refusal cannot be explained', () => {
         });
     });
 
+    it('names `published: false` as published', async () => {
+        await expect(
+            refused({ contentId, published: false, draft: null })
+        ).rejects.toMatchObject({ details: { reason: 'published' } });
+    });
+
     it('names `draft` as draft-changed', async () => {
         await expect(refused({ contentId, draft: new Date() })).rejects.toMatchObject({
             details: { reason: 'draft-changed' },

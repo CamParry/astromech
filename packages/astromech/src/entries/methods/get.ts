@@ -8,7 +8,7 @@ import { ValidationError } from '@/errors/validation';
 import { flattenEntryFields } from '@/fields/flatten';
 import { defineServiceMethod } from '@/services/define-service-method';
 import { entryAccess } from '../internal/access';
-import { readDraft } from '../internal/drafts';
+import { readEntryDraft } from '../internal/drafts';
 import { getPreviewEntry } from '../internal/preview';
 import { entryRepository } from '../repository/entries-table';
 import { entryReadKeys, entrySchema } from '../schema';
@@ -51,7 +51,7 @@ export const getEntry = defineServiceMethod({
 
         const live = await entryRepository.findOne({ type, id, locale: params.locale });
         if (!live) return null;
-        const record = draft === true ? await readDraft(live) : live;
+        const record = draft === true ? await readEntryDraft(live) : live;
 
         const entryType = resolveEntryType(config, type);
         const fields = entryType ? flattenEntryFields(entryType.fields) : [];

@@ -8,6 +8,7 @@ import { ResourceValidationError } from '@/errors/resource';
 import { flattenEntryFields } from '@/fields/flatten';
 import { defineServiceMethod } from '@/services/define-service-method';
 import { globalGetAccess } from '../internal/access';
+import { readGlobalDraft } from '../internal/drafts';
 import { globalRepository } from '../repository';
 import { getDeclaredGlobal } from '../resolve-global';
 import { globalSchema, localised } from '../schema';
@@ -15,19 +16,22 @@ import { globalSchema, localised } from '../schema';
 /**
  * Filtered to the caller's visibility shape, and null when that hides it; there
  * is no fallback to another locale. An undeclared key throws. `staged` reads the
- * staged change, and needs `full`.
+ * staged change, and needs `full`. `draft` reads the locale's draft over the
+ * global where it has one, and the live global where it has none; it needs the
+ * global's `read` permission, as `full` does.
  */
 export const getGlobal = defineServiceMethod({
     summary: 'Read one locale of a global. Null when it has never been saved there.',
     input: localised.extend({
         full: z.boolean().optional(),
         staged: z.boolean().optional(),
+        draft: z.boolean().optional(),
     }),
     output: globalSchema.nullable(),
     access: globalGetAccess,
     mutates: false,
     async handler(params, ctx): Promise<GlobalResource | null> {
-        const { key, full, staged } = params;
+        const { key, full, staged, draft } = params;
         const { config } = ctx;
         const global = getDeclaredGlobal(config, key);
         const locale = resolveResourceLocale('global', config, global.id, params.locale);
@@ -41,11 +45,12 @@ export const getGlobal = defineServiceMethod({
                     'never part of the public read.',
             ]);
         }
-        const current =
+        const read =
             staged === true
                 ? await findStaged(key, locale)
                 : await globalRepository.findByKey(key, locale);
-        if (!current) return null;
+        if (!read) return null;
+        const current = draft === true ? await readGlobalDraft(read) : read;
 
         const visible = applyVisibility(
             {

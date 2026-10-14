@@ -50,7 +50,7 @@ error at the mistake rather than at the spread site.
 | `icon`         | a globe | a Lucide icon name for the sidebar.                                         |
 | `fields`       | —       | a flat array, or `{ main, sidebar }`, exactly as on an entry type.          |
 | `translatable` | `false` | one content row per locale, rather than one row.                            |
-| `statuses`     | `true`  | draft / published / scheduled. `false` means every save is live.            |
+| `statuses`     | `true`  | unpublished / published / scheduled. `false` means every save is live.      |
 | `versioning`   | `true`  | snapshot the previous state on every change to the fields.                  |
 | `staging`      | `false` | allow a staged change alongside the live one. Requires `statuses`.          |
 | `public`       | `false` | over HTTP, any signed-in caller may `get` the published content.            |
@@ -198,7 +198,7 @@ Declare `versioning: false` to turn history off for a global.
 
 ## Publishing and scheduling
 
-With `statuses` on (the default), a global is a draft until it is published.
+With `statuses` on (the default), a global is unpublished until it is published.
 
 ```ts
 await app.globals.publish({ key: 'site', locale: 'en' });
@@ -232,8 +232,8 @@ They write no version and leave the fields as they are.
 
 `publishedAt` follows one rule for globals and entries. A date you pass is
 stored as given. Otherwise a global that is already published keeps its date,
-through a re-publish or any save, and one becoming published (from a draft or
-a schedule) is stamped with the current time, so publishing a scheduled global
+through a re-publish or any save, and one becoming published (from unpublished
+or scheduled) is stamped with the current time, so publishing a scheduled global
 puts it live at once.
 Unpublishing clears the date, and scheduling keeps the one it names. A write
 that leaves a global scheduled with no date is refused with a 422 naming
@@ -248,6 +248,55 @@ editor, or by a `global:beforeUpdate` hook) is skipped, and the skip is logged
 at debug level rather than as an error, since the later change wins. A row the job
 cannot publish, such as one whose fields have since become incomplete, is
 logged as an error and stays scheduled, and the next run tries it again.
+
+## Drafts
+
+On a global with statuses, an update to a published locale saves that locale's
+**draft** and leaves the live global as it is. Every later update to the locale
+edits the same draft. The site keeps serving the live content until you publish.
+
+```ts
+await app.globals.update({ key: 'site', data: { fields: { siteName: 'New name' } } });
+
+await app.globals.get({ key: 'site' }); // the live siteName
+await app.globals.get({ key: 'site', draft: true }); // 'New name'
+
+await app.globals.publish({ key: 'site' }); // the draft goes live
+```
+
+- Every global read carries `hasDraft`, which is true when the locale has a
+  draft. `get({ draft: true })` answers the draft's fields over the global, or
+  the live global when there is no draft. Over HTTP it needs the
+  `global:<key>:read` permission, as `full` does, even on a `public` global.
+  Its `updatedAt` and `updatedBy` are the draft's own last save; a draft save
+  does not move the global's.
+- Saving a draft fires no update hook, writes no version, and leaves the
+  relationship index and the other locales alone. The fields are validated as
+  they are for a live update.
+- `publish` copies the draft into the live row, which keeps its id and each
+  item's `_id`, and deletes the draft. It runs as any update does: the update
+  hooks fire once with the final content, a version of the replaced content is
+  saved, and the relationship index is rebuilt.
+- `unpublish`, `schedule` and an update that names `status` or `publishedAt`
+  copy the draft in the same way. Unpublishing a global with a draft keeps the
+  draft's content.
+- `app.globals.discardDraft({ key, locale })` deletes the draft and answers the
+  global as it is live. It needs `global:<key>:update`, and answers 404 when the
+  locale has no draft. Over HTTP it is `DELETE /cms/api/globals/<key>/draft`.
+- Two saves made from the same read conflict: the second answers 409
+  `CONFLICT` with `details.reason` `draft-changed`, and so does a publish when
+  the draft was saved after the publish read it.
+- An update that changes nothing the draft holds (or, before the first save,
+  the live global) saves no draft and answers the global as read.
+- An update that read the locale unpublished or scheduled answers 409
+  `CONFLICT` with `details.reason` `published` when the locale was published
+  meanwhile: read it again, and the update saves a draft. A status change that
+  read the locale unpublished or scheduled answers `draft-changed` when a draft was saved
+  meanwhile.
+
+An unpublished or scheduled locale, and a global without statuses, is edited
+directly. A global that turns `staging` on keeps editing its published locales
+live and has no drafts.
 
 ## Staged changes
 

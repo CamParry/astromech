@@ -184,6 +184,13 @@ await Astromech.entries.publish({ type: 'post', id }); // the draft goes live
 - Two saves made from the same read conflict: the second answers 409
   `CONFLICT` with `details.reason` `draft-changed`, and so does a publish when
   the draft was saved after the publish read it.
+- An update that changes nothing the draft holds (or, before the first save,
+  the live entry) saves no draft and answers the entry as read.
+- An update that read the locale unpublished or scheduled answers 409
+  `CONFLICT` with `details.reason` `published` when the locale was published
+  meanwhile: read it again, and the update saves a draft. A status change that
+  read the locale unpublished or scheduled answers `draft-changed` when a draft was saved
+  meanwhile.
 
 An unpublished or scheduled locale, and a type without statuses, is edited
 directly. A type that turns `staging` on keeps editing published entries live

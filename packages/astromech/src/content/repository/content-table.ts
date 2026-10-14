@@ -25,7 +25,7 @@ import type { GenericDb } from '@/database/repository/create-repository';
 import type { JsonObject } from '@/types/index';
 import type { AliasableExpression, Expression, ExpressionWrapper, SqlBool } from 'kysely';
 import { getDefaultContentLocale } from '@/config/content-locale';
-import { stagedConflict, trashConflict } from '@/content/write-guard';
+import { publishedConflict, stagedConflict, trashConflict } from '@/content/write-guard';
 import { chunks, MAX_BOUND_PARAMETERS } from '@/database/chunks';
 import {
     decodeWith,
@@ -563,8 +563,9 @@ export function createContentRepository<
         if (guard.stagedAbsent === true && hasStagedFor) {
             conditions.push(eb.not(hasStagedChange(eb)));
         }
-        if (guard.published === true) {
-            conditions.push(eb(`${contentKey}.status`, '=', 'published'));
+        if (guard.published !== undefined) {
+            const operator = guard.published ? '=' : '!=';
+            conditions.push(eb(`${contentKey}.status`, operator, 'published'));
         }
         conditions.push(...draftConditions(eb, guard));
         return conditions;
@@ -704,7 +705,7 @@ export function createContentRepository<
             trashConflict(guard, !row['live']) ??
             (row['scheduled'] ? null : 'not-scheduled') ??
             stagedConflict(guard, Boolean(row['hasStaged'])) ??
-            (guard.published === true && !row['published'] ? 'not-published' : null) ??
+            publishedConflict(guard, Boolean(row['published'])) ??
             (row['draftAsRead'] ? null : 'draft-changed')
         );
     }

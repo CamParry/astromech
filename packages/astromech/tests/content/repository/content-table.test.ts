@@ -450,6 +450,22 @@ describe('drafts', () => {
         ).toMatchObject({ fields: { a: 1 } });
     });
 
+    it('holds a guard on `published` only while the row is, or is not, published', async () => {
+        const created = await createSite();
+        const unpublished = { contentId: created.contentId, published: false };
+        const published = { contentId: created.contentId, published: true };
+
+        expect(await repository.explainConflict(unpublished)).toBeNull();
+        expect(await repository.explainConflict(published)).toBe('not-published');
+        await repository.update({ id: created.id }, { status: 'published' });
+
+        expect(
+            await repository.update({ id: created.id }, { fields: {} }, unpublished)
+        ).toBeNull();
+        expect(await repository.explainConflict(unpublished)).toBe('published');
+        expect(await repository.explainConflict(published)).toBeNull();
+    });
+
     it('refuses a guard naming a draft when the shape has no drafts table', async () => {
         const created = await createSite();
 

@@ -33,8 +33,13 @@ export type WriteGuard = {
     scheduledFor?: Date | undefined;
     /** Staging create: the row must have no staged change yet. */
     stagedAbsent?: true | undefined;
-    /** A draft save: the row must still be published, since only then it takes a draft. */
-    published?: true | undefined;
+    /**
+     * Whether the row must be published. True for a draft save, since only a
+     * published locale takes a draft. False for a content write to the live
+     * row of a locale that read unpublished or scheduled, on a type that keeps
+     * drafts: published meanwhile, the change belongs in a draft.
+     */
+    published?: boolean | undefined;
     /**
      * The locale's draft must be as the write read it: null for none, else
      * that draft's `updatedAt`. Set by every write that reads the draft, so two
@@ -150,6 +155,18 @@ export function stagedConflict(
     return guard.stagedAbsent === true && hasStaged ? 'staged-change-exists' : null;
 }
 
+/**
+ * Why the guard's `published` condition refuses a row that is, or is not,
+ * published; null when it holds or the guard sets none.
+ */
+export function publishedConflict(
+    guard: WriteGuard,
+    published: boolean
+): ConflictReason | null {
+    if (guard.published === undefined || guard.published === published) return null;
+    return guard.published ? 'not-published' : 'published';
+}
+
 /** The error a failure answers: 404 for a row gone, else a 409. */
 function refusal(type: ResourceType, address: Address, failure: GuardFailure): ApiError {
     const { id, locale } = address;
@@ -171,6 +188,7 @@ function guardedFailure(guard: WriteGuard): GuardFailure {
     if (guard.trash !== undefined) return TRASH_CONFLICTS[guard.trash];
     if (guard.scheduledFor !== undefined) return 'not-scheduled';
     if (guard.stagedAbsent === true) return 'staged-change-exists';
-    if (guard.published === true) return 'not-published';
+    if (guard.published !== undefined)
+        return guard.published ? 'not-published' : 'published';
     return guard.draft === undefined ? 'gone' : 'draft-changed';
 }

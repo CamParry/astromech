@@ -1,6 +1,7 @@
 import type { GlobalResource } from '../repository';
 import type { ParsedGlobalUpdateData } from '../service-types';
 import type { WriteGuard } from '@/content/write-guard';
+import type { GlobalDraftRow } from '@/globals/tables';
 import type {
     AppContext,
     EntryStatus,
@@ -10,6 +11,7 @@ import type {
 } from '@/types/index';
 import type { MethodContext } from '@/types/methods';
 import { assertCapability } from '@/content/capabilities';
+import { draftSavedAt, keepsDrafts, planDraftEdit } from '@/content/drafts';
 import { resolveResourceLocale } from '@/content/locale';
 import { patchedFieldNames } from '@/content/prepare-fields';
 import { resolvePublishedAt } from '@/content/published-at';
@@ -21,15 +23,22 @@ import { transaction } from '@/database/transaction';
 import { ResourceNotFoundError, ResourceValidationError } from '@/errors/resource';
 import { parseHookOutput, parseOutput } from '@/services/parse-method-output';
 import { syncGlobalRelationships } from '../relationships';
-import { globalRepository } from '../repository';
+import { globalDraftRepository, globalRepository } from '../repository';
 import { getDeclaredGlobal } from '../resolve-global';
 import { globalSchema, updateGlobalSchema } from '../schema';
+import { foldGlobalDraft, withGlobalDraft } from './drafts';
 import { prepareGlobalFields } from './prepare-fields';
 
 /**
  * Writes one locale of one global, firing the global update hooks around it, for
  * `updateGlobal` and the status methods. A locale with no row is created unless
  * `createMissingLocale` is false, and `staged` writes the staged change.
+ *
+ * On a global that keeps drafts (`keepsDrafts`), a content-only write to a
+ * published locale saves the locale's draft instead, with no hooks and no
+ * version. A write naming `status` or `publishedAt` there writes the live row
+ * with the draft folded in under its patch, and deletes the draft: that is how
+ * `publish` publishes a draft, and how `unpublish` keeps its content.
  */
 export async function updateGlobalLocale(
     params: {
@@ -84,6 +93,33 @@ export async function updateGlobalLocale(
         assertGuardHolds('global', { canonical: current }, guard, { id: key, locale });
     }
 
+    // A staged write addresses the staged row; drafts never apply to it.
+    const edit =
+        current === null
+            ? null
+            : await planDraftEdit({
+                  drafts: !staged && keepsDrafts(global.capabilities),
+                  status: current.status,
+                  data: params.data,
+                  findDraft: () => globalDraftRepository.findOne(current.id, locale),
+                  fold: foldGlobalDraft,
+              });
+    // A draft save fires no hook; `*Draft` events are planned
+    // (`roadmap/planned/hooks.md`).
+    if (edit?.kind === 'draft' && current !== null && guard !== null) {
+        return saveDraft({
+            global,
+            key,
+            locale,
+            current,
+            draft: edit.draft,
+            data: edit.data,
+            guard: { ...guard, ...edit.guard },
+            ctx,
+        });
+    }
+    const rowGuard = guard === null ? null : { ...guard, ...edit?.guard };
+
     // Before the fields are prepared, not only before the writes: the hook may
     // replace the patch that is written.
     const context = await ctx.runHook('global:beforeUpdate', {
@@ -93,7 +129,7 @@ export async function updateGlobalLocale(
             current === null
                 ? null
                 : parseOutput(globalSchema, current, 'The global in global:beforeUpdate'),
-        data: params.data,
+        data: edit?.data ?? params.data,
         user,
     });
     // `input` already parsed the caller's `data`, so a failure here is the hook's.
@@ -124,11 +160,11 @@ export async function updateGlobalLocale(
         }
         if (
             current &&
-            guard !== null &&
+            rowGuard !== null &&
             global.capabilities.versioning &&
             changesVersionedContent('global', current, { fields })
         ) {
-            await snapshotVersion('global', globalRepository, guard, user, {
+            await snapshotVersion('global', globalRepository, rowGuard, user, {
                 id: key,
                 locale,
             });
@@ -140,7 +176,7 @@ export async function updateGlobalLocale(
             id,
             locale,
             current,
-            guard,
+            guard: rowGuard,
             fields,
             status: data.status,
             publishedAt: data.publishedAt,
@@ -148,6 +184,11 @@ export async function updateGlobalLocale(
             patchedNames,
         });
         if (fields) await syncGlobalRelationships(config, row.id);
+        // The guard required the draft as read, so this deletes the one folded in.
+        if (edit?.draft) {
+            await globalDraftRepository.delete(row.id, locale);
+            return { ...row, hasDraft: false };
+        }
         return row;
     });
 
@@ -160,6 +201,54 @@ export async function updateGlobalLocale(
     });
 
     return updated;
+}
+
+/**
+ * Saves a published locale's draft with a parsed patch, merged over the draft
+ * it replaces or, for the first save, over the live row. The fields are
+ * validated as the live status demands. Writes no version, re-indexes nothing
+ * and propagates no shared field: the live row is unchanged until the draft is
+ * published. `guard` holds the live row published and the draft as read. A
+ * patch that changes nothing the merge base holds saves nothing, and answers
+ * the global as read.
+ */
+async function saveDraft(params: {
+    global: ResolvedGlobal;
+    key: string;
+    locale: string;
+    current: GlobalResource;
+    draft: GlobalDraftRow | null;
+    data: ParsedGlobalUpdateData;
+    guard: WriteGuard;
+    ctx: AppContext;
+}): Promise<GlobalResource> {
+    const { global, key, locale, current, draft, data, guard, ctx } = params;
+    const base = draft ? withGlobalDraft(current, draft) : current;
+    const { id } = current;
+
+    const fields = await fieldsToStore({ global, id, locale, current: base, data, ctx });
+    if (!changesVersionedContent('global', base, { fields })) return base;
+    const userId = ctx.user?.id ?? null;
+
+    const saved = await writeGuarded({
+        type: 'global',
+        address: { id: key, locale },
+        guard,
+        repository: globalRepository,
+        write: () =>
+            globalDraftRepository.save(
+                {
+                    globalId: id,
+                    locale,
+                    fields: fields ?? base.fields,
+                    createdBy: userId,
+                    updatedBy: userId,
+                    updatedAt: draftSavedAt(draft?.updatedAt),
+                },
+                { replaces: draft !== null, holds: globalRepository.guardHolds(guard) }
+            ),
+    });
+    return withGlobalDraft(current, saved);
 }
 
 /**

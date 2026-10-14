@@ -147,10 +147,16 @@ describe('the emitted document', () => {
     });
 
     it('documents a read’s query string from the method’s input', () => {
-        // `full` and `staged` are the two shapes the global read accepts.
+        // `full` and `staged` are the two shapes the global read accepts, and
+        // `draft` reads the locale's draft.
         const doc = document();
         const get = doc.paths['/globals/{key}']?.['get'];
-        expect(queryParameters(get).sort()).toEqual(['full', 'locale', 'staged']);
+        expect(queryParameters(get).sort()).toEqual([
+            'draft',
+            'full',
+            'locale',
+            'staged',
+        ]);
         // The write takes both on the URL and the `data` key alone as its body.
         const write = doc.paths['/globals/{key}']?.['put'];
         expect(queryParameters(write).sort()).toEqual(['locale', 'staged']);

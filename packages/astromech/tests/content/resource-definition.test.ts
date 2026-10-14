@@ -89,6 +89,7 @@ const ROWS: Record<ResourceType, Row> = {
             publish: 'statuses',
             unpublish: 'statuses',
             schedule: 'statuses',
+            discardDraft: 'statuses',
             versions: 'versioning',
             getVersion: 'versioning',
             restoreVersion: 'versioning',
