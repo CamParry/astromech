@@ -93,27 +93,32 @@ this is the editorial model; `roadmap/planned/autosave.md` and
 
 One agent and one landing per step. Staging keeps working until step 7.
 
-- [x]   1. The drafts tables, their repositories and one content-column
-       definition per resource.
-- [ ]   2. Entries: an update to a published locale writes its draft;
-       `get({ draft: true })` and `hasDraft`; publish, `discardDraft` and
-       unpublish as decided; slug and `unique` checks on save and publish;
-       hooks on publish.
-- [ ]   3. Globals: the same, through the shared code in `content/`.
-- [ ]   4. Relationships index live content only; "used by" and delete warnings
-       read drafts too; shared fields propagate to the other locales' live
-       rows and drafts on publish.
-- [ ]   5. Schedules (`roadmap/planned/schedules.md`).
-- [ ]   6. The admin: no staged routes; "Published · Changed" in the badge and
-       the list; Publish changes and Discard changes; preview shows the draft.
-- [ ]   7. Remove the staging API: methods, routes, the capability and config
-       option, the `staged` parameters and errors, the preview's `staged`
-       option (tokens need no capability).
-- [ ]   8. Drop the staging schema: delete staged rows (no sites exist), drop
-       `stagedFor`, `sourceStaged` and their indexes, and every `stagedFor`
-       filter. The Cloudflare baseline by hand.
-- [ ]   9. `*Draft` events (`roadmap/planned/hooks.md`), `TERMINOLOGY.md` (Draft
-       replaces Staged change), `ARCHITECTURE.md` and `apps/docs`.
+- [x] Step 1: The drafts tables, their repositories and one content-column
+      definition per resource.
+- [x] Step 2: Entries: an update to a published locale writes its draft;
+      `get({ draft: true })` and `hasDraft`; publish, `discardDraft` and
+      unpublish as decided; slug and `unique` checks on save and publish;
+      hooks on publish.
+- [ ] Step 3: Globals: the same, through the shared code in `content/`.
+      Also: the live-row guard checks the status as read, so an update that
+      read an unpublished locale cannot write live after a concurrent
+      publish; an update that changes nothing saves no draft.
+- [ ] Step 4: Relationships index live content only; "used by" and delete warnings
+      read drafts too; shared fields propagate to the other locales' live
+      rows and drafts on publish.
+- [ ] Step 5: Schedules (`roadmap/planned/schedules.md`).
+- [ ] Step 6: The admin: no staged routes; "Published · Changed" in the badge and
+      the list; Publish changes and Discard changes; preview shows the draft.
+- [ ] Step 7: Remove the staging API: methods, routes, the capability and config
+      option, the `staged` parameters and errors, the preview's `staged`
+      option (tokens need no capability).
+- [ ] Step 8: Drop the staging schema: delete staged rows (no sites exist), drop
+      `stagedFor`, `sourceStaged` and their indexes, and every `stagedFor`
+      filter. The Cloudflare baseline by hand.
+- [ ] Step 9: `entries.duplicate` copies the draft when asked for one
+      (today it copies live content); `TERMINOLOGY.md`'s "Validation mode"
+      line, whose "draft" means an unpublished entry. `*Draft` events (`roadmap/planned/hooks.md`), `TERMINOLOGY.md` (Draft
+      replaces Staged change), `ARCHITECTURE.md` and `apps/docs`.
 
 **Planned work that assumes staging and must follow this file:**
 `roadmap/planned/hooks.md` (staged events), `roadmap/completed/write-race-and-data-loss-defects.md`
