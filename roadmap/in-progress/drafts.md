@@ -78,22 +78,42 @@ this is the editorial model; `roadmap/planned/autosave.md` and
   draft, and a user's email, role and password must apply at once. The drafts
   table works for any resource, so either can add them later.
 
+## Decided (2026-10-14)
+
+- **`publish` publishes the draft:** on a published locale with a draft it
+  copies the draft in, as Strapi 5's `documents.publish()` and Sanity's
+  publish action do. **`discardDraft`** deletes it (Strapi 5's name).
+- **`get({ draft: true })`** reads the draft over the live content when there
+  is one (Payload's `draft: true`); every read carries **`hasDraft`**.
+- **Scheduling a draft** is built in this sequence, with
+  `roadmap/planned/schedules.md` (whose schedule records already publish a
+  draft at their time), not as a column on the drafts table.
+
 ## The work
 
-- [ ] The drafts tables and the shared content-column definition, with
-      `pnpm run db:generate` and the Cloudflare baseline hand-applied; drop
-      `stagedFor` and its indexes; migrate existing staged rows into drafts.
-- [ ] Update writes to a published locale into its draft; publish, discard and
-      unpublish as decided; remove the staging methods, routes and capability.
-- [ ] Relationships: index live content only; "used by" and delete warnings
-      read drafts too.
-- [ ] Slug and `unique` checks for drafts; hooks on publish; `*Draft` events.
-- [ ] Shared fields propagate to the other locales' live rows and drafts on
-      publish.
-- [ ] The admin: no staged routes; "Published · Changed" in the badge and the
-      list; Publish changes and Discard changes; preview shows the draft.
-- [ ] `TERMINOLOGY.md` (Draft replaces Staged change), `ARCHITECTURE.md` and
-      `apps/docs` once it lands.
+One agent and one landing per step. Staging keeps working until step 7.
+
+- [x]   1. The drafts tables, their repositories and one content-column
+       definition per resource.
+- [ ]   2. Entries: an update to a published locale writes its draft;
+       `get({ draft: true })` and `hasDraft`; publish, `discardDraft` and
+       unpublish as decided; slug and `unique` checks on save and publish;
+       hooks on publish.
+- [ ]   3. Globals: the same, through the shared code in `content/`.
+- [ ]   4. Relationships index live content only; "used by" and delete warnings
+       read drafts too; shared fields propagate to the other locales' live
+       rows and drafts on publish.
+- [ ]   5. Schedules (`roadmap/planned/schedules.md`).
+- [ ]   6. The admin: no staged routes; "Published · Changed" in the badge and
+       the list; Publish changes and Discard changes; preview shows the draft.
+- [ ]   7. Remove the staging API: methods, routes, the capability and config
+       option, the `staged` parameters and errors, the preview's `staged`
+       option (tokens need no capability).
+- [ ]   8. Drop the staging schema: delete staged rows (no sites exist), drop
+       `stagedFor`, `sourceStaged` and their indexes, and every `stagedFor`
+       filter. The Cloudflare baseline by hand.
+- [ ]   9. `*Draft` events (`roadmap/planned/hooks.md`), `TERMINOLOGY.md` (Draft
+       replaces Staged change), `ARCHITECTURE.md` and `apps/docs`.
 
 **Planned work that assumes staging and must follow this file:**
 `roadmap/planned/hooks.md` (staged events), `roadmap/completed/write-race-and-data-loss-defects.md`

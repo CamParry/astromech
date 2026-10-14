@@ -57,7 +57,7 @@ Paths are under `packages/astromech/src/` unless they name a package.
 
 Groups 1 to 4 change no behaviour.
 
-- [ ] **Docs and dead code.** Make `apps/docs/content/globals.md` say what a
+- [x] **Docs and dead code.** Make `apps/docs/content/globals.md` say what a
       public global's read does; list all four catalogue sources in
       `apps/docs/cli.md`; correct the private-media error in
       `config/validate/media-access.ts` and `apps/docs/configuration/storage.md`;
@@ -67,7 +67,7 @@ Groups 1 to 4 change no behaviour.
       and `defineAbsolutePermissions`; add Role, Access and Action to
       `TERMINOLOGY.md` and rewrite Permission and Policy; record "capability",
       "guard" and "policy" in [reserved words](../../decisions/reserved-words.md).
-- [ ] **One home and one type.** `utilities/permission-match.ts`,
+- [x] **One home and one type.** `utilities/permission-match.ts`,
       `permissions/define.ts` and the `Permission` type into
       `permissions/permission.ts`; one `AccessRule` in `permissions/access.ts`;
       delete core `can()` in `permissions/roles.ts`, and have
