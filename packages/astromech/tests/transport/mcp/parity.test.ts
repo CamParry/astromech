@@ -234,6 +234,7 @@ describe('manifest ↔ MCP tool coverage', () => {
                 'createStaged',
                 'delete',
                 'deleteStaged',
+                'discardDraft',
                 'duplicate',
                 'emptyTrash',
                 'get',

@@ -120,6 +120,11 @@ export const entrySchema = z
         status: statusSchema,
         /** True when this read is the staged change rather than the canonical row. */
         staged: z.boolean(),
+        /**
+         * True when this locale is published and has changes saved but not yet
+         * published: a draft. `get({ draft: true })` reads them.
+         */
+        hasDraft: z.boolean(),
         ...publishedAtKey,
         deletedAt: withFallback(z.date().nullable(), null),
         ...auditKeys,

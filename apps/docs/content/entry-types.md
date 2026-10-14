@@ -145,6 +145,50 @@ publish or schedule it in the same call, name `status` (and `publishedAt`) in
 unless `overrides` names a `status`. A write that leaves an entry scheduled with
 no date is refused with a 422 naming `publishedAt`.
 
+## Drafts
+
+On a type with statuses, an update to a published locale saves that locale's
+**draft** and leaves the live entry as it is. Every later update to the locale
+edits the same draft. The site keeps serving the live content until you publish.
+
+```ts
+await Astromech.entries.update({ type: 'post', id, data: { title: 'New title' } });
+
+await Astromech.entries.get({ type: 'post', id }); // the live title
+await Astromech.entries.get({ type: 'post', id, draft: true }); // 'New title'
+
+await Astromech.entries.publish({ type: 'post', id }); // the draft goes live
+```
+
+- Every entry read carries `hasDraft`, which is true when the locale has a
+  draft. `get({ draft: true })` answers the draft's content over the entry, or
+  the live entry when there is no draft. It needs the `entry:read:full`
+  permission, as `full` does. Its `updatedAt` and `updatedBy` are the draft's
+  own last save; a draft save does not move the entry's.
+- Saving a draft fires no update hook, writes no version, and leaves the
+  relationship index and the other locales alone. The fields are validated as
+  they are for a live update. A slug that another live entry holds in the
+  locale is refused with a 422 naming `slug`, rather than renamed.
+- `publish` copies the draft into the live row, which keeps its id and each
+  item's `_id`, and deletes the draft. It runs as any update does: the update
+  hooks fire once with the final content, a version of the replaced content is
+  saved, and the relationship index is rebuilt. The slug is checked again, so
+  a slug another entry took meanwhile refuses the publish.
+- `unpublish`, `schedule` and an update that names `status` or `publishedAt`
+  copy the draft in the same way. Unpublishing an entry with a draft keeps the
+  draft's content.
+- `Astromech.entries.discardDraft({ type, id, locale })` deletes the draft and
+  answers the entry as it is live. It needs the type's `update` permission, and
+  answers 404 when the locale has no draft. Over HTTP it is
+  `DELETE /entries/:type/:id/draft`.
+- Two saves made from the same read conflict: the second answers 409
+  `CONFLICT` with `details.reason` `draft-changed`, and so does a publish when
+  the draft was saved after the publish read it.
+
+An unpublished or scheduled locale, and a type without statuses, is edited
+directly. A type that turns `staging` on keeps editing published entries live
+and has no drafts.
+
 ## Trash and restore
 
 `Astromech.entries.trash()` moves an entry to the trash with every locale, and
@@ -155,7 +199,8 @@ a new locale, a new staged change, a staged merge, a version restore or a
 preview token answers 409 `CONFLICT` with `details.reason` `trashed` and the
 entry's `details.id`, including when the entry is trashed while the write runs.
 Restoring sets every locale `unpublished`, through the same update path as any
-status change, so the update hooks fire. A locale whose
+status change, so the update hooks fire. A trashed entry keeps its drafts, and
+restoring copies each draft into its unpublished locale. A locale whose
 slug another entry took meanwhile gets the next free one (`same-2`). An entry
 that another call restores while the restore runs is left as that call left it.
 The admin's restore message says the entry is unpublished and names any new

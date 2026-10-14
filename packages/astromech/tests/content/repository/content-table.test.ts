@@ -6,23 +6,32 @@
  * machinery with entries' own columns bolted on.
  */
 
-import type { ContentRowId, Resource } from '@/content/repository/types';
+import type { ContentRowId, ContentRowState, Resource } from '@/content/repository/types';
 import type { Db } from '@/database/types';
 import type { GlobalContentRow, GlobalTableRow } from '@/globals/tables';
 import type { JsonObject } from '@/types/index';
 import { createTestDb, createTestUser, setupTestConfig } from '@tests/harness';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { createContentRepository } from '@/content/repository/content-table';
-import { globalContentTable, globalsTable, globalVersionsTable } from '@/database/tables';
+import { createDraftsRepository } from '@/content/repository/drafts';
+import {
+    globalContentTable,
+    globalDraftsTable,
+    globalsTable,
+    globalVersionsTable,
+} from '@/database/tables';
+import { AstromechError } from '@/errors/astromech-error';
 
-type TestResource = Resource & { key: string };
+type TestResource = Resource & { key: string; hasDraft: boolean };
 
 function decode(
     resourceRow: GlobalTableRow,
     contentRow: GlobalContentRow,
-    locales: string[]
+    locales: string[],
+    { hasDraft }: ContentRowState
 ): TestResource {
     return {
+        hasDraft,
         id: contentRow.globalId,
         contentId: contentRow.id as ContentRowId,
         key: resourceRow.key,
@@ -41,7 +50,8 @@ function decode(
     };
 }
 
-function createRepository() {
+/** The repository over the globals shape; `drafts` names its drafts table too. */
+function createRepository(options: { drafts?: boolean } = {}) {
     return createContentRepository(
         {
             type: 'global',
@@ -49,6 +59,7 @@ function createRepository() {
             contentTable: globalContentTable,
             versionsTable: globalVersionsTable,
             resourceIdColumn: 'globalId',
+            ...(options.drafts === true && { draftsTable: globalDraftsTable }),
         },
         { decode }
     );
@@ -393,5 +404,61 @@ describe('versions', () => {
         await repository.delete(site.id);
         expect(await db.selectFrom('globalVersions').selectAll().execute()).toEqual([]);
         expect(await db.selectFrom('globalContent').selectAll().execute()).toEqual([]);
+    });
+});
+
+describe('drafts', () => {
+    const drafts = createDraftsRepository(globalDraftsTable, 'globalId');
+
+    it('reports no draft on any read when the shape names no drafts table', async () => {
+        const created = await createSite();
+        await drafts.save({ globalId: created.id, locale: 'en', fields: {} });
+
+        expect((await repository.findOne({ id: created.id }))?.hasDraft).toBe(false);
+    });
+
+    it("reports whether each read's locale has a draft", async () => {
+        const withDrafts = createRepository({ drafts: true });
+        const created = await withDrafts.create({ key: 'site' }, { fields: {} });
+        await withDrafts.update({ id: created.id, locale: 'de' }, { fields: {} });
+        await drafts.save({ globalId: created.id, locale: 'de', fields: {} });
+
+        expect((await withDrafts.findOne({ id: created.id }))?.hasDraft).toBe(false);
+        expect(
+            (await withDrafts.findOne({ id: created.id, locale: 'de' }))?.hasDraft
+        ).toBe(true);
+    });
+
+    it('holds a guard naming the draft only while the draft is as read', async () => {
+        const withDrafts = createRepository({ drafts: true });
+        const created = await withDrafts.create({ key: 'site' }, { fields: {} });
+        const noDraft = { contentId: created.contentId, draft: null };
+        const saved = await drafts.save({
+            globalId: created.id,
+            locale: 'en',
+            fields: {},
+        });
+
+        expect(
+            await withDrafts.update({ id: created.id }, { fields: {} }, noDraft)
+        ).toBeNull();
+        expect(await withDrafts.explainConflict(noDraft)).toBe('draft-changed');
+        const asSaved = { contentId: created.contentId, draft: saved.updatedAt };
+        expect(await withDrafts.explainConflict(asSaved)).toBeNull();
+        expect(
+            await withDrafts.update({ id: created.id }, { fields: { a: 1 } }, asSaved)
+        ).toMatchObject({ fields: { a: 1 } });
+    });
+
+    it('refuses a guard naming a draft when the shape has no drafts table', async () => {
+        const created = await createSite();
+
+        await expect(
+            repository.update(
+                { id: created.id },
+                { fields: {} },
+                { contentId: created.contentId, draft: null }
+            )
+        ).rejects.toBeInstanceOf(AstromechError);
     });
 });

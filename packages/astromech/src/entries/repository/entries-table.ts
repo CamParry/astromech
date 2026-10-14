@@ -11,7 +11,11 @@ import type {
     ListParams,
     PreviewTokenRecord,
 } from './types';
-import type { ContentRowId, JoinedWhere } from '@/content/repository/types';
+import type {
+    ContentRowId,
+    ContentRowState,
+    JoinedWhere,
+} from '@/content/repository/types';
 import type { WriteGuard } from '@/content/write-guard';
 import type { Where } from '@/database/repository/where';
 import type { EntryContentRow, EntryTableRow } from '@/entries/tables';
@@ -236,7 +240,8 @@ function referencesExists(eb: JoinedEb, filter: ReferencesFilter): Expression<Sq
 function toEntryResource(
     resourceRow: EntryTableRow,
     contentRow: EntryContentRow,
-    locales: string[]
+    locales: string[],
+    { hasDraft }: ContentRowState
 ): EntryResource {
     return {
         id: contentRow.entryId,
@@ -245,6 +250,7 @@ function toEntryResource(
         locale: contentRow.locale,
         locales,
         staged: contentRow.stagedFor !== null,
+        hasDraft,
         title: contentRow.title,
         slug: contentRow.slug,
         fields: (contentRow.fields ?? {}) as JsonObject,
@@ -274,6 +280,7 @@ function createEntryRepository() {
             contentTable: entryContentTable,
             versionsTable: entryVersionsTable,
             resourceIdColumn: 'entryId',
+            draftsTable: entryDraftsTable,
             // Copied onto `entry_content` because the slug-unique and list
             // indexes cannot reach across the join.
             inheritedColumns: {
@@ -561,6 +568,7 @@ function createEntryRepository() {
         create,
         update,
         explainConflict: content.explainConflict,
+        guardHolds: content.guardHolds,
         delete: del,
         trash,
         versions: content.versions,
@@ -579,9 +587,8 @@ function createEntryRepository() {
 export const entryRepository = createEntryRepository();
 
 /**
- * @internal The entry drafts repository: the shared drafts group over
- * `entry_drafts`. Only its tests call it until updates write drafts
- * (`roadmap/in-progress/drafts.md`).
+ * The entry drafts repository: the shared drafts group over `entry_drafts`,
+ * which an update of a published locale writes (`internal/update-batch.ts`).
  */
 export const entryDraftRepository = createDraftsRepository(entryDraftsTable, 'entryId');
 

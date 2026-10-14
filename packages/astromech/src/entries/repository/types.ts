@@ -24,6 +24,11 @@ export type EntryResource = Resource & {
     status: EntryStatus;
     publishedAt: Date | null;
     deletedAt: Date | null;
+    /**
+     * True when this locale has a draft. A read of the draft itself
+     * (`get({ draft: true })`) reports its content and its own `updatedAt`.
+     */
+    hasDraft: boolean;
 };
 
 /**

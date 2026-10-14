@@ -3,6 +3,7 @@ import type { ParsedEntryUpdateData } from '../service-types';
 import type { EntryRowWrite } from './prepare-row';
 import type { ContentRowId } from '@/content/repository/types';
 import type { WriteGuard } from '@/content/write-guard';
+import type { EntryDraftRow } from '@/entries/tables';
 import type {
     AppContext,
     EntryStatus,
@@ -11,6 +12,7 @@ import type {
     ResolvedEntryType,
     User,
 } from '@/types/index';
+import { draftSavedAt, keepsDrafts, writesDraft } from '@/content/drafts';
 import { resolveResourceLocale } from '@/content/locale';
 import { patchedFieldNames } from '@/content/prepare-fields';
 import { resolvePublishedAt } from '@/content/published-at';
@@ -27,17 +29,24 @@ import { assertWritableFields } from '../capabilities';
 import { UnknownEntryTypeError } from '../errors';
 import { getEntryOfType } from '../read-entry';
 import { syncEntryRelationships } from '../relationships';
-import { entryRepository } from '../repository/entries-table';
+import { entryDraftRepository, entryRepository } from '../repository/entries-table';
 import { entrySchema, updateEntrySchema } from '../schema';
+import { foldDraft, withDraft } from './drafts';
 import { prepareEntryFields } from './prepare-fields';
 import { prepareEntryRow } from './prepare-row';
-import { uniqueSlugIfChanged } from './slug';
+import { assertSlugFree, uniqueSlugIfChanged } from './slug';
 import { writeBatch } from './write-batch';
 
 /**
  * Writes one locale of each entry in a batch, atomically, firing the write hooks,
  * for `update`, the status methods and `restore`. A locale with no row is created
  * unless `createMissingLocale` is false; `staged` writes the staged change.
+ *
+ * On a type that keeps drafts (`keepsDrafts`), a content-only write to a
+ * published locale saves the locale's draft instead, with no hooks and no
+ * version. A write naming `status` or `publishedAt` there writes the live row
+ * with the draft folded in under its patch, and deletes the draft: that is how
+ * `publish` publishes a draft, and how `unpublish` keeps its content.
  */
 export async function updateEntryBatch(
     params: {
@@ -89,6 +98,8 @@ export async function updateEntryBatch(
         });
     }
     const locale = resolveResourceLocale('entry', config, entryType.id, params.locale);
+    // A staged write addresses the staged row; drafts never apply to it.
+    const drafts = !staged && keepsDrafts(entryType.capabilities);
 
     // An id with no row in `locale` is a new translation, prepared here so its
     // before hook sees the row it writes, as `create`'s does.
@@ -113,7 +124,7 @@ export async function updateEntryBatch(
         );
         plans.push(
             record
-                ? { kind: 'update', id, record }
+                ? await planEdit({ id, record, data, drafts })
                 : {
                       kind: 'translate',
                       id,
@@ -132,6 +143,8 @@ export async function updateEntryBatch(
 
     // An update's fields are prepared after its hook, in `updateOne`: the hook
     // may change `data` in place, so it is parsed again as the hooks leave it.
+    // A draft save fires no hook; `*Draft` events are planned
+    // (`roadmap/planned/hooks.md`).
     for (const plan of plans) {
         if (plan.kind === 'update') {
             await ctx.runHook('entry:beforeUpdate', {
@@ -141,10 +154,10 @@ export async function updateEntryBatch(
                     plan.record,
                     'The entry in entry:beforeUpdate'
                 ),
-                data,
+                data: plan.data,
                 user,
             });
-        } else {
+        } else if (plan.kind === 'translate') {
             await ctx.runHook('entry:beforeCreate', {
                 type: entryType.id,
                 data: plan.write,
@@ -152,29 +165,51 @@ export async function updateEntryBatch(
             });
         }
     }
-    const written = parseHookOutput(schema, data, 'entry:beforeUpdate');
+    const steps = plans.map((plan) => ({
+        id: plan.id,
+        plan,
+        data:
+            plan.kind === 'translate'
+                ? data
+                : parseHookOutput(schema, plan.data, 'entry:beforeUpdate'),
+    }));
 
-    const results = await writeBatch(plans, (plan) =>
-        plan.kind === 'update'
-            ? updateOne({
-                  config,
-                  entryType,
-                  currentEntry: plan.record,
-                  data: written,
-                  user,
-                  staged,
-                  guard: { trash, scheduledFor },
-              })
-            : writeTranslation({
-                  config,
-                  id: plan.id,
-                  locale,
-                  write: plan.write,
-                  guard: { contentId: plan.sourceContentId, trash },
-              })
-    );
+    const guard = { trash, scheduledFor };
+    const results = await writeBatch(steps, ({ plan, data: written }) => {
+        switch (plan.kind) {
+            case 'update':
+                return updateOne({
+                    config,
+                    entryType,
+                    currentEntry: plan.record,
+                    draft: plan.draft,
+                    data: written,
+                    user,
+                    staged,
+                    guard,
+                });
+            case 'draft':
+                return saveDraft({
+                    config,
+                    entryType,
+                    record: plan.record,
+                    draft: plan.draft,
+                    data: written,
+                    user,
+                    guard,
+                });
+            case 'translate':
+                return writeTranslation({
+                    config,
+                    id: plan.id,
+                    locale,
+                    write: plan.write,
+                    guard: { contentId: plan.sourceContentId, trash },
+                });
+        }
+    });
 
-    for (const [index, plan] of plans.entries()) {
+    for (const [index, { plan, data: written }] of steps.entries()) {
         // A throw here propagates; the write above stays (`decisions/hook-throws-propagate.md`).
         if (plan.kind === 'update') {
             await ctx.runHook('entry:afterUpdate', {
@@ -187,7 +222,7 @@ export async function updateEntryBatch(
                 data: written,
                 user,
             });
-        } else {
+        } else if (plan.kind === 'translate') {
             await ctx.runHook('entry:afterCreate', {
                 type: entryType.id,
                 data: plan.write,
@@ -204,9 +239,33 @@ export async function updateEntryBatch(
     return results;
 }
 
-/** What one id in the batch turns out to be: an edit, or a new translation. */
+/**
+ * What one id in the batch turns out to be: a write to its row, a save of its
+ * draft, or a new translation.
+ */
 type UpdatePlan =
-    | { kind: 'update'; id: string; record: EntryResource }
+    | {
+          kind: 'update';
+          id: string;
+          record: EntryResource;
+          /** The patch, with the draft folded in when there is one. */
+          data: ParsedEntryUpdateData;
+          /**
+           * The locale's draft as read: folded into the write and deleted with
+           * it. Null when the locale has none; undefined when the locale takes
+           * no draft, so none is read.
+           */
+          draft: EntryDraftRow | null | undefined;
+      }
+    | {
+          kind: 'draft';
+          id: string;
+          /** The live row the draft belongs to. */
+          record: EntryResource;
+          data: ParsedEntryUpdateData;
+          /** The draft the save replaces, or null for the first save. */
+          draft: EntryDraftRow | null;
+      }
     | {
           kind: 'translate';
           id: string;
@@ -216,13 +275,44 @@ type UpdatePlan =
       };
 
 /**
+ * The plan for a locale that has a row: its draft when the type keeps drafts
+ * and the write changes a published locale's content only, else its row,
+ * folding in any draft the row has.
+ */
+async function planEdit(params: {
+    id: string;
+    record: EntryResource;
+    data: ParsedEntryUpdateData;
+    /** Whether the type keeps drafts and the write is not a staged one. */
+    drafts: boolean;
+}): Promise<UpdatePlan> {
+    const { id, record, data, drafts } = params;
+    if (!drafts || record.status !== 'published') {
+        return { kind: 'update', id, record, data, draft: undefined };
+    }
+    const draft = await entryDraftRepository.findOne(id, record.locale);
+    if (writesDraft(record.status, data))
+        return { kind: 'draft', id, record, data, draft };
+    return {
+        kind: 'update',
+        id,
+        record,
+        data: draft ? foldDraft(draft, data) : data,
+        draft,
+    };
+}
+
+/**
  * Updates one entry with a parsed patch: saves the state it replaces as a
  * version, writes the row, then re-indexes it and propagates shared fields.
+ * A draft folded into the patch is deleted in the same transaction.
  */
 async function updateOne(params: {
     config: ResolvedConfig;
     entryType: ResolvedEntryType;
     currentEntry: EntryResource;
+    /** The locale's draft as read, or null for none; undefined when it takes none. */
+    draft: EntryDraftRow | null | undefined;
     data: ParsedEntryUpdateData;
     user: User | null;
     /** True when the write targets the staged change rather than the canonical. */
@@ -230,13 +320,19 @@ async function updateOne(params: {
     /** The conditions the snapshot and the write carry, beyond the row. */
     guard: Omit<WriteGuard, 'contentId'>;
 }): Promise<EntryResource> {
-    const { config, entryType, currentEntry, data, user, staged } = params;
+    const { config, entryType, currentEntry, draft, data, user, staged } = params;
 
     const fields = await fieldsToStore({ config, entryType, currentEntry, data, user });
     const patchedNames = data.fields ? patchedFieldNames(data.fields) : [];
     const ref = { id: currentEntry.id, locale: currentEntry.locale };
     const address = { ...ref, staged };
-    const guard = { ...params.guard, contentId: currentEntry.contentId };
+    const guard: WriteGuard = {
+        ...params.guard,
+        contentId: currentEntry.contentId,
+        // The draft must be as read, so the fold never publishes or deletes a
+        // draft saved after it.
+        ...(draft === undefined ? {} : { draft: draft?.updatedAt ?? null }),
+    };
 
     // Decided before the slug is uniquified, so the version compares what the caller sent.
     if (
@@ -256,11 +352,14 @@ async function updateOne(params: {
         current: currentEntry,
         now: new Date(),
     });
-    const slug = await uniqueSlugIfChanged({
-        type: entryType.id,
-        entry: currentEntry,
-        slug: data.slug,
-    });
+    const slugChange = { type: entryType.id, entry: currentEntry, slug: data.slug };
+    // A draft that goes live keeps the slug its editor chose, or is refused.
+    const publishesDraft =
+        draft !== null &&
+        draft !== undefined &&
+        (data.status ?? currentEntry.status) === 'published';
+    if (publishesDraft) await assertSlugFree(slugChange);
+    const slug = publishesDraft ? data.slug : await uniqueSlugIfChanged(slugChange);
     const write = {
         title: data.title,
         slug,
@@ -302,8 +401,72 @@ async function updateOne(params: {
         // other locales' rows must hold the shared fields first.
         await syncEntryRelationships(config, entry);
     }
+    if (draft) {
+        await entryDraftRepository.delete(ref.id, ref.locale);
+        return { ...entry, hasDraft: false };
+    }
 
     return entry;
+}
+
+/**
+ * Saves a published locale's draft with a parsed patch, merged over the draft
+ * it replaces or, for the first save, over the live row. The fields are
+ * validated as the live status demands, and the slug is refused when another
+ * live entry holds it. Writes no version, re-indexes nothing and propagates no
+ * shared field: the live row is unchanged until the draft is published.
+ */
+async function saveDraft(params: {
+    config: ResolvedConfig;
+    entryType: ResolvedEntryType;
+    record: EntryResource;
+    draft: EntryDraftRow | null;
+    data: ParsedEntryUpdateData;
+    user: User | null;
+    guard: Omit<WriteGuard, 'contentId'>;
+}): Promise<EntryResource> {
+    const { config, entryType, record, draft, data, user } = params;
+    const base = draft ? withDraft(record, draft) : record;
+
+    const fields = await fieldsToStore({
+        config,
+        entryType,
+        currentEntry: base,
+        data,
+        user,
+    });
+    await assertSlugFree({ type: entryType.id, entry: record, slug: data.slug });
+    // The live row must still be published, and the draft as read: a second
+    // save from the same read conflicts, as `draftSavedAt` always moves the time.
+    const guard: WriteGuard = {
+        ...params.guard,
+        contentId: record.contentId,
+        published: true,
+        draft: draft?.updatedAt ?? null,
+    };
+    const userId = user?.id ?? null;
+
+    const saved = await writeGuarded({
+        type: 'entry',
+        address: { id: record.id, locale: record.locale },
+        guard,
+        repository: entryRepository,
+        write: () =>
+            entryDraftRepository.save(
+                {
+                    entryId: record.id,
+                    locale: record.locale,
+                    title: data.title ?? base.title,
+                    slug: data.slug ?? base.slug,
+                    fields: fields ?? base.fields,
+                    createdBy: userId,
+                    updatedBy: userId,
+                    updatedAt: draftSavedAt(draft?.updatedAt),
+                },
+                { replaces: draft !== null, holds: entryRepository.guardHolds(guard) }
+            ),
+    });
+    return withDraft(record, saved);
 }
 
 /**

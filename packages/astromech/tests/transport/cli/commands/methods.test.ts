@@ -85,7 +85,7 @@ describe('methods', () => {
             'entries.recipe.get  (permission: entry:recipe:read)',
             'entries.recipe.query  (permission: entry:recipe:read)',
             'entries.recipe.usedBy  (permission: entry:recipe:read)',
-            '\n10 excluded by surface policy: 10 read-only surface: method mutates state',
+            '\n11 excluded by surface policy: 11 read-only surface: method mutates state',
         ]);
     });
 

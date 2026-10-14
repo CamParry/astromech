@@ -423,7 +423,9 @@ describe('versioning (on)', () => {
             data: { title: 'Orig', slug: 'orig', fields: { body: 'orig' } },
         });
         await api.publish({ type: 'post', id: e.id });
+        // The edit is a draft; publishing it replaces the row, which is versioned.
         await api.update({ type: 'post', id: e.id, data: { title: 'Changed' } });
+        await api.publish({ type: 'post', id: e.id });
 
         const [stored] = await getDb().selectFrom('entryVersions').selectAll().execute();
         expect(stored).toMatchObject({

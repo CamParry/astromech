@@ -22,6 +22,7 @@ function publishedEntry(fields: JsonObject): Entry {
         locale: 'en',
         locales: ['en'],
         staged: false,
+        hasDraft: false,
         slug: 'post',
         title: 'Post',
         fields,
