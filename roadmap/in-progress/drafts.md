@@ -105,7 +105,20 @@ One agent and one landing per step. Staging keeps working until step 7.
       publish; an update that changes nothing saves no draft.
 - [ ] Step 4: Relationships index live content only; "used by" and delete warnings
       read drafts too; shared fields propagate to the other locales' live
-      rows and drafts on publish.
+      rows and drafts on publish. Research (2026-10-14):
+    - Every delete-time read goes through `listUsage`
+      (`packages/astromech/src/content/usage.ts`): the entry delete modal, the
+      media usage panel and the media replace count. No delete is refused on
+      the server. A draft scan joins `entries` and `globals` for the subtype,
+      since a draft row has no type or key.
+    - Shared fields are not limited to the default locale: a write to any
+      locale propagates them (`propagateFields` in
+      `content/repository/content-table.ts`), to live rows only. A draft
+      can change one, and its publish then spreads every shared value it
+      holds, so a stale draft puts an old value back. Propagating into
+      drafts inside `propagateFields` also covers a live write beside
+      another locale's draft; decide whether that write moves the draft's
+      `updatedAt`, so a concurrent save of it conflicts.
 - [ ] Step 5: Schedules (`roadmap/planned/schedules.md`).
 - [ ] Step 6: The admin: no staged routes; "Published · Changed" in the badge and
       the list; Publish changes and Discard changes; preview shows the draft.
