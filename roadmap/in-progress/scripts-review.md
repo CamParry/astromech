@@ -4,8 +4,8 @@ milestone: 1.0
 
 # Scripts review
 
-`scripts/` held about 6,800 lines in 22 files, plus four under
-`packages/astromech/scripts/`, each written its own way: 2 parsed arguments
+`scripts/` held about 6,800 lines in 22 files, plus four in core's
+`scripts` folder, each written its own way: 2 parsed arguments
 with `node:util` `parseArgs` and 9 read `process.argv` by hand; some shared
 `check-helpers.mjs` and some didn't; one had tests.
 
@@ -30,7 +30,7 @@ with `node:util` `parseArgs` and 9 read `process.argv` by hand; some shared
   pass, 1 fail, 2 usage, set through `process.exitCode`.
 - **publint joins `check:install`** now; `@arethetypeswrong/cli` waits for the
   pre-launch audit.
-- **`packages/astromech/scripts/seed.ts` and `db:seed` go**: `db:seed:demo`
+- **Core's `seed.ts` and `db:seed` go**: `db:seed:demo`
   is the seed CI and new worktrees use.
 
 ## The work

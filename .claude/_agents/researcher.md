@@ -11,7 +11,7 @@ When researching:
 
 - Search the codebase thoroughly before looking externally
 - For a choice the project already made, read the `DECISIONS.md` index, open only the decision file whose title matches, and cite it by its path
-- To see how another CMS or library does something (Payload, Strapi, Directus, Craft, WordPress, Astro, Hono, Drizzle and the others in `scripts/prior-art.mjs`), run `pnpm run prior-art <name>`, which clones or updates a shallow checkout and prints its path, then search that checkout with `grep -rn` or `rg`. Don't fetch source files from the web one at a time.
+- To see how another CMS or library does something (Payload, Strapi, Directus, Craft, WordPress, Astro, Hono, Drizzle and the others in `scripts/prior-art.ts`), run `pnpm run prior-art <name>`, which clones or updates a shallow checkout and prints its path, then search that checkout with `grep -rn` or `rg`. Don't fetch source files from the web one at a time.
 - Fetch from the web for documentation (libraries, APIs, Cloudflare docs) and for anything the checkouts don't hold
 - Summarize findings concisely with relevant file paths and line numbers
 - Note any conflicts between what the code does and what documentation says

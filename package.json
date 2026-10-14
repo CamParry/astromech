@@ -13,14 +13,13 @@
         "verify:status": "node scripts/verify.ts --status",
         "build": "node scripts/turbo.ts --lock build",
         "build:js": "node scripts/turbo.ts --lock --no-dts build",
-        "routes:generate": "pnpm -F @astromech/admin routes:generate",
         "typecheck": "node scripts/turbo.ts --filter='!./apps/*' typecheck && pnpm run typecheck:apps",
-        "typecheck:apps": "node scripts/turbo.ts --lock --filter='astromech-demo^...' --filter='astromech-demo-cloudflare^...' build //#routes:generate && pnpm -F astromech-demo typecheck && pnpm -F astromech-demo-cloudflare typecheck",
+        "typecheck:apps": "node scripts/turbo.ts --lock --filter='astromech-demo^...' --filter='astromech-demo-cloudflare^...' build @astromech/admin#routes:generate && pnpm -F astromech-demo typecheck && pnpm -F astromech-demo-cloudflare typecheck",
         "lint": "node scripts/turbo.ts lint",
         "check:config": "pnpm -F astromech-demo check:config && pnpm -F astromech-demo-cloudflare check:config",
-        "check:node-imports": "pnpm -F astromech check:node-imports",
-        "check:exports": "pnpm -F astromech check:exports",
-        "check:docs": "node scripts/check-docs-links.mjs && node scripts/roadmap-index.mjs --check && node scripts/decisions-index.mjs --check",
+        "check:node-imports": "node scripts/check-node-imports.ts",
+        "check:exports": "node scripts/check-exports-parity.ts",
+        "check:docs": "node scripts/check-docs-links.ts && node scripts/docs-index.ts --check",
         "check:unused": "knip && knip --production --include files,exports,types,nsExports,nsTypes,enumMembers",
         "check:boot": "node scripts/turbo.ts --lock astromech-demo#check:boot",
         "check:boot:cloudflare": "node scripts/turbo.ts --lock astromech-demo-cloudflare#check:boot:cloudflare",
@@ -28,19 +27,17 @@
         "check:install": "node scripts/turbo.ts --lock @astromech/scripts#check:install",
         "check:install:pnpm": "node scripts/turbo.ts --lock @astromech/scripts#check:install:pnpm",
         "check:hooks": "node --test \".claude/hooks/*.test.mjs\"",
-        "report:drift": "node scripts/report-drift.mjs",
+        "report:drift": "node scripts/report-drift.ts",
         "land": "node scripts/land.ts",
-        "prior-art": "node scripts/prior-art.mjs",
-        "roadmap": "node scripts/roadmap-index.mjs",
-        "decisions": "node scripts/decisions-index.mjs",
+        "prior-art": "node scripts/prior-art.ts",
+        "roadmap": "node scripts/docs-index.ts roadmap",
+        "decisions": "node scripts/docs-index.ts decisions",
         "format": "prettier --write .",
         "format:check": "prettier --check .",
         "lint:css": "pnpm -F @astromech/admin lint:css",
-        "test": "pnpm -F astromech test",
         "test:run": "node scripts/turbo.ts --lock test:coverage",
         "db:generate": "pnpm -F astromech-demo db:generate",
         "db:init": "pnpm -F astromech-demo db:init",
-        "db:seed": "pnpm -F astromech db:seed",
         "db:seed:demo": "tsx apps/demo/seed.ts",
         "changeset": "changeset",
         "version": "changeset version",
@@ -56,7 +53,6 @@
         "eslint": "^10.1.0",
         "eslint-config-turbo": "2.11.7",
         "husky": "^9.1.7",
-        "jscpd": "^5.3.1",
         "knip": "5.88.1",
         "lint-staged": "^16.4.0",
         "playwright": "^1.62.1",
@@ -78,11 +74,15 @@
             "stylelint --fix",
             "prettier --write"
         ],
-        "*.{json,jsonc,md,astro,yml,yaml,js,cjs,mjs}": [
+        "*.{json,jsonc,astro,yml,yaml,js,cjs,mjs}": [
             "prettier --write"
         ],
-        ".claude/hooks/**": "sh -c 'pnpm run check:hooks'",
-        "scripts/**": "sh -c 'pnpm -F @astromech/scripts test'"
+        "*.md": [
+            "prettier --write",
+            "sh -c 'for f; do case \"$f\" in */roadmap/*|*/decisions/*) node scripts/docs-index.ts && exec git add roadmap/README.md DECISIONS.md;; esac; done' --"
+        ],
+        ".claude/hooks/**": "sh -c 'node --test \".claude/hooks/*.test.mjs\"'",
+        "scripts/**": "sh -c 'cd scripts && node --test'"
     },
     "engines": {
         "node": ">=22.18.0"

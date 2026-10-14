@@ -38,7 +38,7 @@ function listPackages(root: string): WorkspacePackage[] {
     const listed = JSON.parse(
         capture('pnpm', ['ls', '-r', '--json', '--depth', '-1'], {
             cwd: root,
-            stdio: ['ignore', 'pipe', 'pipe'],
+            stderr: 'pipe',
         })
     ) as { name: string; path: string }[];
     return listed

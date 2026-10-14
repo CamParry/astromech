@@ -33,7 +33,7 @@ Two consequences worth stating because they get missed:
 
 ## Decisions
 
-Each decision is its own file, `decisions/<slug>.md`, where the slug is the claim in a few words. `DECISIONS.md` is an index of them grouped by area, which `pnpm run decisions` writes (`scripts/decisions-index.mjs`); `check:docs` fails when it is stale, so never edit the index by hand.
+Each decision is its own file, `decisions/<slug>.md`, where the slug is the claim in a few words. `DECISIONS.md` is an index of them grouped by area, which `pnpm run decisions` and the pre-commit hook write (`scripts/docs-index.ts`); `check:docs` fails when it is stale, so never edit the index by hand.
 
 A decision file holds, in this order:
 
@@ -59,7 +59,7 @@ Nothing in a decision is binding. It is evidence, so a settled question is not r
 
 One file per feature. **Status is the directory** (`proposed/` → `planned/` → `in-progress/` → `completed/`; `proposed/` needs planning, `planned/` is ready to build) and never a field, a heading, or an emoji inside the file. Change status with `git mv`.
 
-**The milestone is a field.** Every file outside `completed/` starts with frontmatter holding `milestone: 1.0` or `milestone: later`; changing scope edits that line and moves nothing. After adding, moving or retagging a file, run `pnpm run roadmap` to rewrite the progress index in `roadmap/README.md`. `check:docs` fails when a live file has no milestone or the index is stale.
+**The milestone is a field.** Every file outside `completed/` starts with frontmatter holding `milestone: 1.0` or `milestone: later`; changing scope edits that line and moves nothing. After adding, moving or retagging a file, run `pnpm run roadmap` to rewrite the progress index in `roadmap/README.md` (the pre-commit hook rewrites it too). `check:docs` fails when a live file has no milestone or the index is stale.
 
 `backlog.md` holds unscheduled work that belongs to no single feature: one line each, with a link if there is detail. It is not a bug tracker and not an essay. A known defect in shipped code belongs in the roadmap file for the feature it breaks, where the person picking that feature back up will see it.
 

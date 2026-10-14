@@ -1,9 +1,12 @@
-npx lint-staged
+pnpm exec lint-staged
 
 # Two whole-repo checks that cost well under a second each, so the hook runs
-# them on every commit rather than wiring them to lint-staged file globs.
-# `check:exports` asserts the exports and publishConfig.exports maps still name
-# the same subpaths; `check:docs` resolves every repo-relative link and
-# backticked path in markdown. Both are otherwise only run in the full gate.
-pnpm run check:exports
-pnpm run check:docs
+# them on every commit rather than wiring them to lint-staged file globs, with
+# `node` rather than a `pnpm run` start each. They are `check:exports`, which
+# asserts the exports and publishConfig.exports maps still name the same
+# subpaths, and `check:docs`, which resolves every repo-relative link and
+# backticked path in markdown and checks the two generated indexes. The gate
+# runs both too.
+node scripts/check-exports-parity.ts
+node scripts/check-docs-links.ts
+node scripts/docs-index.ts --check

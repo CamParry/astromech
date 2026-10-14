@@ -75,6 +75,7 @@ import { execFileSync } from 'node:child_process';
 import { readFileSync, realpathSync } from 'node:fs';
 import { homedir } from 'node:os';
 import { basename, dirname, isAbsolute, join, resolve, sep } from 'node:path';
+import { fileURLToPath } from 'node:url';
 
 // Commands that mention none of these words cannot match a rule, so they skip the parse.
 const TRIGGER = /git|pkill|killall|\bwt\b|no-gate-check/;
@@ -86,28 +87,34 @@ const SHELL_TRIGGER = /\b(?:ba|z|da)?sh\b/;
 // Likewise a command with a glob character, for the rule on unquoted globs in option values.
 const GLOB_TRIGGER = /[*?[]/;
 
-function main() {
-    const input = readInput();
+/**
+ * The hook's decision on its input, the JSON Claude Code passes on stdin: `{ decision, reason }`
+ * with `decision` `'deny'` or `'ask'`, or `undefined` when it stays silent. `env` supplies
+ * `CLAUDE_PROJECT_DIR` and `CLAUDE_CODE_TMPDIR`; the git commands it runs get this process's.
+ */
+export function decide(input, env = process.env) {
     const command = input?.tool_input?.command;
-    if (typeof command !== 'string') return;
+    if (typeof command !== 'string') return undefined;
     const guarded = TRIGGER.test(command);
-    if (!guarded && !SHELL_TRIGGER.test(command) && !GLOB_TRIGGER.test(command)) return;
+    if (!guarded && !SHELL_TRIGGER.test(command) && !GLOB_TRIGGER.test(command)) {
+        return undefined;
+    }
 
     let findings;
     try {
         findings = [];
         collectFindings(parseScript(command), input.cwd ?? process.cwd(), findings);
     } catch (error) {
-        if (!guarded) return;
+        if (!guarded) return undefined;
         const detail = error instanceof ParseError ? error.message : String(error);
-        respond('ask', [
-            `The Bash hook could not parse this command (${detail}), so it asks before running it.`,
-        ]);
-        return;
+        return {
+            decision: 'ask',
+            reason: `The Bash hook could not parse this command (${detail}), so it asks before running it.`,
+        };
     }
 
-    const worktrees = lazy(() => findWorktreesDirectory(input));
-    const claudeRoot = lazy(findClaudeTemporaryRoot);
+    const worktrees = lazy(() => findWorktreesDirectory(input, env));
+    const claudeRoot = lazy(() => findClaudeTemporaryRoot(env));
     const inScratchpad = (path) => isInScratchpad(path, claudeRoot());
     const denials = [];
     const questions = [];
@@ -116,8 +123,14 @@ function main() {
         if (verdict?.decision === 'deny') denials.push(verdict.reason);
         if (verdict?.decision === 'ask') questions.push(verdict.reason);
     }
-    if (denials.length > 0) respond('deny', denials);
-    else if (questions.length > 0) respond('ask', questions);
+    if (denials.length > 0) return { decision: 'deny', reason: joinReasons(denials) };
+    if (questions.length > 0) return { decision: 'ask', reason: joinReasons(questions) };
+    return undefined;
+}
+
+/** The distinct reasons, in order, as one line. */
+function joinReasons(reasons) {
+    return [...new Set(reasons)].join(' ');
 }
 
 /** Reads the hook input from stdin, or `null` when there is none. */
@@ -131,13 +144,12 @@ function readInput() {
     }
 }
 
-function respond(decision, reasons) {
-    const permissionDecisionReason = [...new Set(reasons)].join(' ');
+function respond({ decision, reason }) {
     const output = {
         hookSpecificOutput: {
             hookEventName: 'PreToolUse',
             permissionDecision: decision,
-            permissionDecisionReason,
+            permissionDecisionReason: reason,
         },
     };
     process.stdout.write(`${JSON.stringify(output)}\n`);
@@ -240,8 +252,8 @@ function unmergedBranches({ names, remote, directory }) {
  * The sibling `<main checkout>-worktrees` directory, found from the project directory's common
  * git directory, so it holds whether the session started in the main checkout or a worktree.
  */
-function findWorktreesDirectory(input) {
-    const projectDirectory = process.env.CLAUDE_PROJECT_DIR ?? input.cwd ?? process.cwd();
+function findWorktreesDirectory(input, env) {
+    const projectDirectory = env.CLAUDE_PROJECT_DIR ?? input.cwd ?? process.cwd();
     try {
         const commonDirectory = execFileSync(
             'git',
@@ -265,9 +277,9 @@ function findWorktreesDirectory(input) {
  * Claude Code's per-user temporary directory, `<tmp>/claude-<uid>`, as a real path; `null` where
  * there is no uid (Windows).
  */
-function findClaudeTemporaryRoot() {
+function findClaudeTemporaryRoot(env) {
     if (typeof process.getuid !== 'function') return null;
-    const base = process.env.CLAUDE_CODE_TMPDIR || '/tmp';
+    const base = env.CLAUDE_CODE_TMPDIR || '/tmp';
     return canonical(join(base, `claude-${process.getuid()}`));
 }
 
@@ -1552,4 +1564,12 @@ class Parser {
     }
 }
 
-main();
+// Run as a hook, it reads the input and prints the decision. Imported, as by its tests, it only
+// exports `decide`. Last, so every class and constant above is initialised.
+if (
+    process.argv[1] !== undefined &&
+    realpathSync(process.argv[1]) === fileURLToPath(import.meta.url)
+) {
+    const verdict = decide(readInput());
+    if (verdict !== undefined) respond(verdict);
+}

@@ -19,8 +19,8 @@ stale. To add a feature, create a file in the right directory. To change status,
 The milestone is a field: every file outside `completed/` starts with
 frontmatter holding `milestone: 1.0` or `milestone: later`. Changing a feature's
 scope edits that line and moves nothing. After adding, moving or retagging a
-file, run `pnpm run roadmap` to rewrite the progress index below; `check:docs`
-fails when the index is stale.
+file, run `pnpm run roadmap` to rewrite the progress index below. The
+pre-commit hook rewrites it too, and `check:docs` fails when it is stale.
 
 `check:docs` catches a **markdown link** to the old path from anywhere. It does
 not catch a **backticked path**, because those go unchecked in `specs/`,

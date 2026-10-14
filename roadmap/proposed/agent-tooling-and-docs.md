@@ -39,9 +39,10 @@ this file to `planned/`.
       the matching memory notes.
 - [ ] **Cite decisions by title, and check the citation.** 22 code comments
       cite a bare `(DECISIONS.md)`, e.g. `entries/internal/update-batch.ts:149`.
-      Cite the entry's title, and have `scripts/check-docs-links.mjs` confirm
-      it matches a bold lead. Fix the stale `why` at
-      `scripts/report-drift.mjs:66`.
+      Cite the entry's title, and have `scripts/check-docs-links.ts` confirm
+      it matches a bold lead. Fix the stale `why` of the
+      "Repository built outside a repository file" pattern in
+      `scripts/report-drift.ts`.
 - [ ] **Tighten `TERMINOLOGY.md`.** Give the seven bare rejections a reason
       (Entry, Global, Repository, Resource, Resource type, Driver, Admin
       resource). Add the missing two-way guards: Confirmation and Approval,

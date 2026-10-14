@@ -21,7 +21,7 @@
             ]
         },
         "typecheck": {
-            "dependsOn": ["//#routes:generate"],
+            "dependsOn": ["@astromech/admin#routes:generate"],
             "inputs": [
                 "$TURBO_DEFAULT$",
                 "!**/*.md",
@@ -33,7 +33,7 @@
             ]
         },
         "lint": {
-            "dependsOn": ["//#routes:generate"],
+            "dependsOn": ["@astromech/admin#routes:generate"],
             "inputs": [
                 "$TURBO_DEFAULT$",
                 "!**/*.md",
