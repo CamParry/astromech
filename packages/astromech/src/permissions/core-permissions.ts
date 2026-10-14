@@ -3,15 +3,14 @@
  * changes the shape of a read rather than gating a call.
  */
 
-import type { Permission } from '@/types/domain';
-import { defineAbsolutePermissions } from '@/permissions/define';
+import type { Permission, PermissionDeclarations } from '@/permissions/permission';
 
 /**
  * Every permission core itself enforces — the core half of the permission
- * catalogue, declared through {@link defineAbsolutePermissions} since these
- * keys are already full strings (core is the root namespace).
+ * catalogue. Its keys are already full strings (core is the root namespace),
+ * so nothing namespaces them as `definePermissions` keys are.
  */
-export const CORE_PERMISSIONS = defineAbsolutePermissions({
+export const CORE_PERMISSIONS = {
     'admin:access': {
         label: 'Access the admin',
         description: 'Sign in to the admin UI. Every admin page requires it.',
@@ -43,7 +42,7 @@ export const CORE_PERMISSIONS = defineAbsolutePermissions({
         description:
             'Read the admin/editor shape of any entry — drafts and unpublished fields included — rather than the public shape.',
     },
-});
+} satisfies PermissionDeclarations;
 
 /** Core permission keys, literal-typed. */
 export type CorePermissionKey = keyof typeof CORE_PERMISSIONS;

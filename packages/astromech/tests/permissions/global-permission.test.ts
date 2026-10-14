@@ -6,7 +6,7 @@ import {
     pluginGlobalPermission,
     rootGlobalPermission,
 } from '@/permissions/global-permission';
-import { hasPermission } from '@/utilities/permission-match';
+import { hasPermission } from '@/permissions/permission';
 
 const ACTIONS: GlobalAction[] = ['read', 'update', 'publish'];
 

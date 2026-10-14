@@ -5,7 +5,7 @@
  */
 
 import { describe, expect, it } from 'vitest';
-import { hasPermission, matchesPermission } from '@/utilities/permission-match';
+import { hasPermission, matchesPermission } from '@/permissions/permission';
 
 describe('matchesPermission', () => {
     it.each([

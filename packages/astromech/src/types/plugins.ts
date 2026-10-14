@@ -14,7 +14,6 @@ import type {
     GlobalConfig,
     ResolvedConfig,
 } from './config';
-import type { Permission } from './domain';
 import type { FieldType, Label } from './fields';
 import type { PluginHooks } from './hooks';
 import type { ServiceMethod, ToolDefinition } from './methods';
@@ -22,7 +21,8 @@ import type { Table } from '@/database/define-table';
 import type { DbDump } from '@/database/driver';
 import type { TypedEntriesService } from '@/entries/typed-entries';
 import type { TypedGlobalsService } from '@/globals/typed-globals';
-import type { PermissionDeclarations } from '@/permissions/define';
+import type { AccessRule } from '@/permissions/access';
+import type { Permission, PermissionDeclarations } from '@/permissions/permission';
 import type { AdminResource } from '@/plugins/admin-resource';
 import type { StorageObject, StoragePutOptions } from '@/storage/driver';
 import type { z } from '@hono/zod-openapi';
@@ -156,12 +156,6 @@ export type PluginContext = Omit<AppContext, 'config' | 'entries' | 'globals'> &
 };
 
 /**
- * Access policy for a plugin service method or raw route. There is no
- * default — omitting `access` is a build error (the field is required).
- */
-export type PluginAccess = 'public' | 'authenticated' | { permission: string };
-
-/**
  * Collection element for a plugin's service record: variance-safe over any
  * concrete method. `Input` is contravariant in `handler` (hence `never`) but
  * covariant in `input`, so the schema position is widened separately — a single
@@ -222,7 +216,8 @@ export type PluginRawRoute = {
     method?: 'GET' | 'POST' | 'PUT' | 'DELETE' | 'PATCH';
     /** Path relative to `${basePath}/api/plugins/{name}`, e.g. `/upload`. */
     path: string;
-    access: PluginAccess;
+    /** Required: there is no default. A raw route has no input to resolve against. */
+    access: AccessRule<undefined>;
     /** `params` holds the values of the path's `:name` segments, decoded. */
     handler: (
         request: Request,

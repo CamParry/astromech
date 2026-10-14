@@ -2,8 +2,8 @@
  * `routes/plugins.ts` — the RPC catch-all and the raw-route escape hatch.
  *
  * Both are bespoke by construction: the method id is two path params resolved
- * at request time, and access is `PluginAccess` rather than a method contract's
- * permission. These pin the three access branches, the two 404s, and the fact
+ * at request time, and a raw route's `access` belongs to the route rather than
+ * to a method contract. These pin the three access branches, the two 404s, and the fact
  * that RPC returns the handler's result with no envelope around it.
  *
  * `createPluginsRouter` reads the registered raw routes when it is called, so

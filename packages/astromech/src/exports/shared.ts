@@ -24,7 +24,7 @@ export { globalPermission } from '@/permissions/global-permission';
 export { formatAiContextMessage } from '@/ai/context-message';
 export { deepEqual } from '@/utilities/deep-equal';
 export { defaultContentLocale, resolveContentLocale } from '@/utilities/locale';
-export { hasPermission } from '@/utilities/permission-match';
+export { hasPermission } from '@/permissions/permission';
 export { MEDIA_MIME_TYPE_FILTERS, MEDIA_SORT_FIELDS } from '@/types/query';
 export { ENTRY_STATUSES, isEntryStatus } from '@/types/domain';
 export { renderCaptcha } from '@/security/captcha/client';

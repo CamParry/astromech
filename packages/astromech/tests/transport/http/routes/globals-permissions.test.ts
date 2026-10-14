@@ -2,9 +2,9 @@
  * The grant each globals route demands, derived from the key it addresses.
  *
  * Two properties: a `global:<key>:<action>` grant reaches exactly its own
- * global and no plugin's, and the ONE unauthenticated shape — a `public`
- * global's plain read — needs no grant at all while `full` and `staged` always
- * do.
+ * global and no plugin's, and the one read that needs no grant (a `public`
+ * global's plain read, by a signed-in caller) stays that way while `full` and
+ * `staged` always need one.
  */
 
 import { adminRole, roleWith } from '@tests/fixtures';

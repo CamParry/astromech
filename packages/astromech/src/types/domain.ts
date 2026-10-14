@@ -14,6 +14,7 @@ import type {
     mediaVersionSchema,
 } from '@/media/schema';
 import type { notificationSchema } from '@/notifications/schema';
+import type { Permission } from '@/permissions/permission';
 import type { allowedAddressSchema, blockedAddressSchema } from '@/security/schema';
 import type { userSchema, userVersionSchema } from '@/users/schema';
 import type { z } from 'zod';
@@ -91,34 +92,6 @@ export type MediaMetadata = z.output<typeof mediaMetadataSchema>;
 
 /** An uploaded file: an image, video, document or other stored asset. */
 export type Media = z.output<typeof mediaSchema>;
-
-/**
- * Permission strings follow `resource[:identifier]:action` — action always last.
- * Segment wildcards: `*` matches one segment; trailing `*` matches all remaining segments.
- *
- * Examples: `entry:posts:read`, `entry:*:read`, `entry:*`, `plugin:my-plugin:*`
- */
-export type Permission =
-    | 'entry:*'
-    | `entry:${string}:create`
-    | `entry:${string}:read`
-    | `entry:${string}:update`
-    | `entry:${string}:delete`
-    | `entry:${string}:publish`
-    | `entry:${string}:*`
-    | 'media:read'
-    | 'media:upload'
-    | 'media:update'
-    | 'media:delete'
-    | 'users:read'
-    | 'users:create'
-    | 'users:update'
-    | 'users:delete'
-    | 'security:manage'
-    | 'admin:access'
-    | `plugin:${string}`
-    | '*'
-    | (string & {});
 
 export type Role = {
     slug: string;

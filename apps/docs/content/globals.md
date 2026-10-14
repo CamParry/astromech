@@ -53,7 +53,7 @@ error at the mistake rather than at the spread site.
 | `statuses`     | `true`  | draft / published / scheduled. `false` means every save is live.            |
 | `versioning`   | `true`  | snapshot the previous state on every change to the fields.                  |
 | `staging`      | `false` | allow a staged change alongside the live one. Requires `statuses`.          |
-| `public`       | `false` | an unauthenticated `get` returns the published content.                     |
+| `public`       | `false` | over HTTP, any signed-in caller may `get` the published content.            |
 | `nav`          | `true`  | show the global in the admin sidebar.                                       |
 | `validate`     | —       | a whole-resource validator, as on an entry type.                            |
 
@@ -81,10 +81,15 @@ Omit `locale` and you get the default content locale. `get` never falls back to
 another locale: a translatable global with no row for the locale you asked for
 is `null`.
 
-An Astro page renders with no signed-in user, so the read is unauthenticated.
-That succeeds only for a global declared `public: true`, and it returns the
-**published** content with any role-restricted fields removed. A global that is
-not public needs the read permission.
+`app.globals.get` is trusted server code: it checks no permission, so it reads
+any global, `public` or not. Without `full: true` it returns the **published**
+content with any role-restricted fields removed.
+
+`public: true` matters only over HTTP. There, a signed-in caller may read a
+public global's published content without the `global:<key>:read` permission,
+and a global that is not public needs it. The HTTP API still needs a session for
+this read, so an anonymous visitor cannot read a public global over HTTP. A
+`full` or `staged` read always needs the read permission.
 
 Pass `full: true` from trusted server code to get the stored content whatever
 its status, including role-restricted fields:

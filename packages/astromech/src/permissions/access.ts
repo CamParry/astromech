@@ -1,11 +1,26 @@
 /**
- * `resolveAccess` — what a method's declared `access` means for one call. The
- * one place the five forms are read, so the permission guard, the scoped
- * handles, the manifest and the plugin RPC route cannot each hold a copy.
+ * `AccessRule`, the rule a service method or a plugin's raw route declares for
+ * its callers, and `resolveAccess`, what that rule means for one call. The one
+ * place the five forms are read, so `permissionsFor`, the scoped handles, the
+ * manifest and the plugin routes cannot each hold a copy.
  */
 
-import type { Permission, ServiceMethodAccess } from '@/types/index';
+import type { Permission } from '@/permissions/permission';
 import { resolvePluginPermission } from '@/plugins/runtime/plugin-identity';
+
+/**
+ * What a method demands of its caller. `'authenticated'` holds when the caller
+ * has a role, `Permission` is the bare core form, `{ permission }` is the plugin
+ * form resolved under the plugin's namespace, and the function form answers per
+ * input: `null` for none, or a list the caller must hold every one of. A raw
+ * route has no input, so its function form is called with `undefined`.
+ */
+export type AccessRule<Input = unknown> =
+    | 'public'
+    | 'authenticated'
+    | Permission
+    | { permission: string }
+    | ((input: Input) => Permission | readonly Permission[] | null);
 
 /** What `access` demands of this one call: every one of `permissions`, when it names any. */
 export type ResolvedAccess =
@@ -17,10 +32,10 @@ export type ResolvedAccess =
  * Resolve `access` against `input`. `namespace` is the plugin's permission
  * namespace, which only the object form needs — a core catalogue never uses
  * that form, so resolving one without a namespace throws. The parameter is
- * `ServiceMethodAccess<never>`, the form every `ServiceMethodAccess` widens to.
+ * `AccessRule<never>`, the form every `AccessRule` widens to.
  */
 export function resolveAccess(
-    access: ServiceMethodAccess<never>,
+    access: AccessRule<never>,
     input: unknown,
     namespace?: string
 ): ResolvedAccess {

@@ -1,6 +1,6 @@
 /**
  * Client-side permission hook. Uses the same segment-wise matcher as the
- * server (src/utilities/permission-match.ts).
+ * server (`packages/astromech/src/permissions/permission.ts`).
  */
 
 import { hasPermission } from 'astromech/shared';
@@ -24,7 +24,5 @@ export function usePermissions() {
         canUpdateUsers: () => hasPermission(permissions, 'users:update'),
         canDeleteUsers: () => hasPermission(permissions, 'users:delete'),
         canManageSecurity: () => hasPermission(permissions, 'security:manage'),
-        hasAdminAccess: () => hasPermission(permissions, 'admin:access'),
-        isAdmin: () => permissions.includes('*'),
     };
 }

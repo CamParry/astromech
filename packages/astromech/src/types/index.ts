@@ -1,9 +1,11 @@
 /**
  * The public list of Astromech types. Most are declared in this directory; each
- * driver contract, each service contract, the typed entry and global facades
- * and the admin resource contract are declared in the module that owns them
- * and listed here so the public API names them.
+ * driver contract, each service contract, the typed entry and global facades,
+ * the admin resource contract and the permission types are declared in the
+ * module that owns them and listed here so the public API names them.
  */
+export type { AccessRule } from '@/permissions/access';
+export type { Permission } from '@/permissions/permission';
 export * from './domain';
 export * from './fields';
 export * from './config';

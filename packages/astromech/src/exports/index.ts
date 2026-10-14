@@ -19,8 +19,11 @@ export type { Astromech, ScheduledOptions } from '@/astromech';
 export { getModel, hasModel } from '@/ai/models';
 export { permissionsForBuiltInRole, BUILT_IN_ROLES } from '@/permissions/roles';
 export type { BuiltInRoleSlug } from '@/permissions/roles';
-export { definePermissions } from '@/permissions/define';
-export type { PermissionDeclaration, PermissionDeclarations } from '@/permissions/define';
+export { definePermissions } from '@/permissions/permission';
+export type {
+    PermissionDeclaration,
+    PermissionDeclarations,
+} from '@/permissions/permission';
 /**
  * Entry permissions are derived, never declared — a site grants a plugin's
  * entry types with these rather than reading a list off the plugin.

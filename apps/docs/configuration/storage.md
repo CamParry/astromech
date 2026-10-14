@@ -191,19 +191,22 @@ API and streamed to the driver. The capability is there for your own code.
 ## `private` + Cloudflare Images is rejected
 
 `media.access: 'private'` and the `cloudflare-images` image driver cannot
-coexist, and the combination throws at config resolution rather than failing in
-production:
+coexist, and the combination throws at config resolution:
 
 ```
-[Astromech] `media.access: 'private'` cannot be combined with the
+AstromechError: `media.access: 'private'` cannot be combined with the
 `cloudflare-images` image driver: it transforms by URL, so Cloudflare's network
-must be able to fetch your media route, which a private route refuses. Either
-set `media.access: 'public'`, or use a different image driver (e.g. `sharp()`).
+fetches each original from your media route with no session. `private` keeps
+originals behind that route so access can be checked there, and this driver
+needs them fetchable by anyone with the URL. Either set `media.access: 'public'`,
+or use a different image driver (e.g. `sharp()`).
 ```
 
 That driver hands your own media-route URL to Cloudflare's network and lets
-Cloudflare fetch the origin. A private route is exactly what refuses that
-request, so every optimised image would fail at the edge.
+Cloudflare fetch the origin without a session. The media route does not check
+permissions today (see [media access modes](#media-access-modes)), so the fetch
+would succeed, but only because the originals stay open to anyone with the URL,
+which is what `private` exists to rule out.
 
 `sharp()` needs the `sharp` package installed alongside `astromech`; it is an
 optional peer dependency that only that driver loads.

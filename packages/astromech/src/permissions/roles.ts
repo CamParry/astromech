@@ -1,20 +1,20 @@
 /**
- * Roles — the built-in set, the merge with the config's own, and the check of
- * a role against a permission.
+ * Roles — the built-in set, the merge with the config's own, and the lookup of
+ * one by slug. A role is checked against a permission with `permissionsFor`.
  *
  * Roles are code-defined (`AstromechConfig.roles` plus the built-in defaults).
  * The local transport bypasses permission checks by design — only the HTTP API
  * enforces them.
  */
 
+import type { Permission } from '@/permissions/permission';
 import type { AstromechConfig, ResolvedConfig } from '@/types/config';
-import type { Permission, Role } from '@/types/domain';
+import type { Role } from '@/types/domain';
 import { z } from '@hono/zod-openapi';
 import { getConfig } from '@/config/registry';
 import { PROTOTYPE_KEY } from '@/entries/entry-types';
 import { ValidationError } from '@/errors/validation';
 import { corePermissions } from '@/permissions/core-permissions';
-import { hasPermission } from '@/utilities/permission-match';
 
 type ConfigWithRoles = Pick<AstromechConfig, 'roles'> | Pick<ResolvedConfig, 'roles'>;
 
@@ -138,9 +138,4 @@ function unknownRoleMessage(
 ): string {
     const configured = Object.keys(config.resolvedRoles).join(', ');
     return `Unknown role "${slug}". Configured roles: ${configured}`;
-}
-
-/** Convenience wrapper: check whether a role grants a permission. */
-export function can(role: Role, permission: Permission): boolean {
-    return hasPermission(role.permissions, permission);
 }
