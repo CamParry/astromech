@@ -99,7 +99,8 @@ A **driver** is a plain object the site config names and core calls through a fi
 
 ### Resources
 
-- Entries, globals, media items and users each have a resource row (shared across locales), a content row per locale (with `fields` as JSON) and a versions table.
+- Entries, globals, media items and users each have a resource row (shared across locales), a content row per locale (with `fields` as JSON) and a versions table. Entries and globals also have a drafts table (`entry_drafts`, `global_drafts`), one row per resource and locale. Each resource defines its content columns once in its `tables.ts`, and the content, versions and drafts tables share them.
+- `content/repository/drafts.ts` reads and writes both drafts tables.
 - `content/repository/versions.ts` writes all four versions tables; `content/versions.ts` lists, reads and restores. A version is addressed by resource, locale and number.
 - `RESOURCE_CONFIG` (`content/resources.ts`) describes each resource to the shared helpers. Outside `content/`, code names the resource (`'user'`) instead (lint).
 - **Entries** (`entries/tables.ts`) hold every entry type, the site's and each plugin's.

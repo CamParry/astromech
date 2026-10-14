@@ -4,8 +4,16 @@
  * row per locale of what the site's own fields say, and `user_versions` snapshots one.
  */
 
-import type { TableInsert, TableSelect } from '@/database/define-table';
+import type { ColFactory, TableInsert, TableSelect } from '@/database/define-table';
 import { defineTable } from '@/database/define-table';
+
+/**
+ * What the site's own fields say in one locale of a user: the columns the
+ * content and versions rows both carry.
+ */
+function userContentColumns(col: ColFactory) {
+    return { fields: col.json() };
+}
 
 export const usersTable = defineTable('users', ({ col }) => ({
     id: col.id({ format: 'uuid' }),
@@ -30,7 +38,7 @@ export const userContentTable = defineTable(
             onDelete: 'cascade',
         }),
         locale: col.text({ notNull: true }),
-        fields: col.json(),
+        ...userContentColumns(col),
         createdAt: col.timestamp({ notNull: true, defaultNow: true }),
         updatedAt: col.timestamp({ notNull: true, defaultNow: true, onUpdate: true }),
         createdBy: col.reference('users', { onDelete: 'set null' }),
@@ -53,7 +61,7 @@ export const userVersionsTable = defineTable(
             onDelete: 'cascade',
         }),
         version: col.integer({ notNull: true }),
-        fields: col.json(),
+        ...userContentColumns(col),
         createdAt: col.timestamp({ notNull: true, defaultNow: true }),
         createdBy: col.reference('users', { onDelete: 'set null' }),
     }),

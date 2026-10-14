@@ -6,9 +6,22 @@
  * publishing or staging: a file carries no publish state of its own.
  */
 
-import type { TableInsert, TableSelect } from '@/database/define-table';
+import type { ColFactory, TableInsert, TableSelect } from '@/database/define-table';
 import type { MediaMetadata } from '@/types/index';
 import { defineTable } from '@/database/define-table';
+
+/**
+ * What editors author in one locale of a media item: the columns the content
+ * and versions rows both carry.
+ */
+function mediaContentColumns(col: ColFactory) {
+    return {
+        title: col.text(),
+        alt: col.text(),
+        caption: col.text(),
+        fields: col.json(),
+    };
+}
 
 export const mediaTable = defineTable(
     'media',
@@ -40,10 +53,7 @@ export const mediaContentTable = defineTable(
             onDelete: 'cascade',
         }),
         locale: col.text({ notNull: true }),
-        title: col.text(),
-        alt: col.text(),
-        caption: col.text(),
-        fields: col.json(),
+        ...mediaContentColumns(col),
         createdAt: col.timestamp({ notNull: true, defaultNow: true }),
         updatedAt: col.timestamp({ notNull: true, defaultNow: true, onUpdate: true }),
         createdBy: col.reference('users', { onDelete: 'set null' }),
@@ -66,10 +76,7 @@ export const mediaVersionsTable = defineTable(
             onDelete: 'cascade',
         }),
         version: col.integer({ notNull: true }),
-        title: col.text(),
-        alt: col.text(),
-        caption: col.text(),
-        fields: col.json(),
+        ...mediaContentColumns(col),
         createdAt: col.timestamp({ notNull: true, defaultNow: true }),
         createdBy: col.reference('users', { onDelete: 'set null' }),
     }),

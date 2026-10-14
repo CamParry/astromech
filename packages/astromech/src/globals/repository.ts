@@ -10,10 +10,16 @@ import type { EntryStatus, JsonObject } from '@/types/index';
 import type { NotNull } from 'kysely';
 import { getDefaultContentLocale } from '@/config/content-locale';
 import { createContentRepository, lastUpdate } from '@/content/repository/content-table';
+import { createDraftsRepository } from '@/content/repository/drafts';
 import { kyselyTableKey } from '@/database/codec';
 import { getDb } from '@/database/registry';
 import { createRepository } from '@/database/repository/create-repository';
-import { globalContentTable, globalsTable, globalVersionsTable } from '@/database/tables';
+import {
+    globalContentTable,
+    globalDraftsTable,
+    globalsTable,
+    globalVersionsTable,
+} from '@/database/tables';
 import { compareTimestamps } from '@/database/timestamps';
 
 /** One locale of one global, as the globals service reads it. */
@@ -141,3 +147,13 @@ function createGlobalRepository() {
 
 /** The globals repository. Stateless: every handle and the default locale resolve per call. */
 export const globalRepository = createGlobalRepository();
+
+/**
+ * @internal The global drafts repository: the shared drafts group over
+ * `global_drafts`. Only its tests call it until updates write drafts
+ * (`roadmap/in-progress/drafts.md`).
+ */
+export const globalDraftRepository = createDraftsRepository(
+    globalDraftsTable,
+    'globalId'
+);

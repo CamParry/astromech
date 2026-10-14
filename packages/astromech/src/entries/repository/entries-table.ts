@@ -21,13 +21,19 @@ import { sql } from 'kysely';
 import { getDefaultContentLocale } from '@/config/content-locale';
 import { buildOrderBy } from '@/content/list';
 import { createContentRepository, lastUpdate } from '@/content/repository/content-table';
+import { createDraftsRepository } from '@/content/repository/drafts';
 import { relationshipRepository } from '@/content/repository/relationships';
 import { sortableColumns } from '@/content/resources';
 import { encodePatchWith } from '@/database/codec';
 import { getDb } from '@/database/registry';
 import { createRepository } from '@/database/repository/create-repository';
 import { compileWhere } from '@/database/repository/where';
-import { entriesTable, entryContentTable, entryVersionsTable } from '@/database/tables';
+import {
+    entriesTable,
+    entryContentTable,
+    entryDraftsTable,
+    entryVersionsTable,
+} from '@/database/tables';
 import { compareTimestamps } from '@/database/timestamps';
 import { transaction } from '@/database/transaction';
 import { ResourceNotFoundError } from '@/errors/resource';
@@ -571,6 +577,13 @@ function createEntryRepository() {
 
 /** The one entry repository every entry type reads and writes through. */
 export const entryRepository = createEntryRepository();
+
+/**
+ * @internal The entry drafts repository: the shared drafts group over
+ * `entry_drafts`. Only its tests call it until updates write drafts
+ * (`roadmap/in-progress/drafts.md`).
+ */
+export const entryDraftRepository = createDraftsRepository(entryDraftsTable, 'entryId');
 
 /** The resource when it is of the addressed type, else null. */
 function ofType<R extends { type?: string }>(resource: R | null, type: string): R | null {
