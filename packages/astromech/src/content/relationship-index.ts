@@ -34,7 +34,7 @@ export type DriftReport = {
     missing: RelationshipRow[];
     /** Stored but held by no field data. */
     unexpected: RelationshipRow[];
-    /** Same key, different `sourceType` / `schemaPath` / `sourceStaged`. */
+    /** Same key, different `sourceSubtype` / `schemaPath` / `sourceStaged`. */
     mismatched: { stored: RelationshipRow; computed: RelationshipRow }[];
 };
 
@@ -56,17 +56,17 @@ export async function rebuildRelationshipIndex(
     // Read AFTER the replaces: what is left over then belongs to sources that no
     // longer exist, which no `replaceForSource` would ever reach.
     const stored = await relationshipRepository.findMany(storedScope(opts));
-    const live = new Set(sources.map(({ source }) => sourceKey(source.id, source.kind)));
-    const orphanSources = new Map<string, { id: string; kind: ResourceType }>();
+    const live = new Set(sources.map(({ source }) => sourceKey(source.id, source.type)));
+    const orphanSources = new Map<string, { id: string; type: ResourceType }>();
     let orphanRowsRemoved = 0;
     for (const row of stored) {
-        const key = sourceKey(row.sourceId, row.sourceKind);
+        const key = sourceKey(row.sourceId, row.sourceType);
         if (live.has(key)) continue;
         orphanRowsRemoved += 1;
-        orphanSources.set(key, { id: row.sourceId, kind: row.sourceKind });
+        orphanSources.set(key, { id: row.sourceId, type: row.sourceType });
     }
-    for (const { id, kind } of orphanSources.values()) {
-        await relationshipRepository.deleteBySource(id, kind);
+    for (const { id, type } of orphanSources.values()) {
+        await relationshipRepository.deleteBySource(id, type);
     }
 
     return { sourcesScanned: sources.length, rowsWritten, orphanRowsRemoved };
@@ -96,7 +96,7 @@ export async function checkRelationshipIndex(
         if (!found) {
             missing.push(row);
         } else if (
-            found.sourceType !== row.sourceType ||
+            found.sourceSubtype !== row.sourceSubtype ||
             found.schemaPath !== row.schemaPath ||
             found.sourceStaged !== row.sourceStaged
         ) {
@@ -124,7 +124,7 @@ async function collectSources(
     opts?: RelationshipIndexScope
 ): Promise<RelationshipIndexSource[]> {
     if (opts?.type !== undefined) {
-        return allEntryRelationships(config, { type: opts.type });
+        return allEntryRelationships(config, { subtype: opts.type });
     }
     return [
         ...(await allEntryRelationships(config)),
@@ -146,15 +146,15 @@ function storedScope(opts?: RelationshipIndexScope): { entryType?: string } {
 function rowKey(row: RelationshipRow): string {
     return [
         row.sourceId,
-        row.sourceKind,
+        row.sourceType,
         row.locale,
         row.instancePath,
         row.targetId,
-        row.targetKind,
+        row.targetType,
     ].join('\u0000');
 }
 
-/** The (id, kind) half of the key — what `deleteBySource` addresses. */
-function sourceKey(id: string, kind: ResourceType): string {
-    return `${id}\u0000${kind}`;
+/** The (id, type) half of the key — what `deleteBySource` addresses. */
+function sourceKey(id: string, type: ResourceType): string {
+    return `${id}\u0000${type}`;
 }

@@ -1,6 +1,6 @@
 /**
  * The not-found, validation and conflict errors every resource throws: one class
- * each, carrying which kind of resource the call addressed, so a transport maps
+ * each, carrying which type of resource the call addressed, so a transport maps
  * them without knowing entries, globals, media or users exist.
  */
 
@@ -9,7 +9,7 @@ import type { FieldErrors } from '@/types/fields';
 import { ApiError } from '@/errors/api-error';
 import { ValidationError } from '@/errors/validation';
 
-/** How a message names each kind. */
+/** How a message names each type. */
 const LABELS: Record<ResourceType, string> = {
     entry: 'Entry',
     global: 'Global',
@@ -24,13 +24,13 @@ const LABELS: Record<ResourceType, string> = {
  * locale does not have. A `get` answers null rather than throwing.
  */
 export class ResourceNotFoundError extends ApiError {
-    public readonly kind: ResourceType;
+    public readonly type: ResourceType;
     /** The resource id, or a global's key. */
     public readonly id: string;
     public readonly locale: string | undefined;
 
     constructor(
-        kind: ResourceType,
+        type: ResourceType,
         args: {
             id: string;
             locale?: string | undefined;
@@ -38,12 +38,12 @@ export class ResourceNotFoundError extends ApiError {
             version?: number;
         }
     ) {
-        super(notFoundMessage(`${LABELS[kind]} '${args.id}'`, args), {
+        super(notFoundMessage(`${LABELS[type]} '${args.id}'`, args), {
             status: 404,
             code: 'NOT_FOUND',
         });
         this.name = 'ResourceNotFoundError';
-        this.kind = kind;
+        this.type = type;
         this.id = args.id;
         this.locale = args.locale;
     }
@@ -68,14 +68,14 @@ export class ResourceValidationError extends ValidationError {
  * needs no second id to open it.
  */
 export class StagedChangeExistsError extends ApiError {
-    public readonly kind: ResourceType;
+    public readonly type: ResourceType;
     /** The resource id, or a global's key. */
     public readonly id: string;
     public readonly locale: string;
 
-    constructor(kind: ResourceType, args: { id: string; locale: string }) {
+    constructor(type: ResourceType, args: { id: string; locale: string }) {
         super(
-            `${LABELS[kind]} '${args.id}' already has a staged change for locale ` +
+            `${LABELS[type]} '${args.id}' already has a staged change for locale ` +
                 `'${args.locale}'`,
             {
                 status: 409,
@@ -84,7 +84,7 @@ export class StagedChangeExistsError extends ApiError {
             }
         );
         this.name = 'StagedChangeExistsError';
-        this.kind = kind;
+        this.type = type;
         this.id = args.id;
         this.locale = args.locale;
     }
@@ -111,17 +111,17 @@ const CONFLICT_MESSAGES: Record<ConflictReason, string> = {
  * and the row (`id`, `locale`), so a multi-id call says which id it refused.
  */
 export class ResourceConflictError extends ApiError {
-    public readonly kind: ResourceType;
+    public readonly type: ResourceType;
     /** The resource id, or a global's key. */
     public readonly id: string;
     public readonly locale: string | undefined;
     public readonly reason: ConflictReason;
 
     constructor(
-        kind: ResourceType,
+        type: ResourceType,
         args: { id: string; locale?: string | undefined; reason: ConflictReason }
     ) {
-        super(`${LABELS[kind]} '${args.id}' ${CONFLICT_MESSAGES[args.reason]}`, {
+        super(`${LABELS[type]} '${args.id}' ${CONFLICT_MESSAGES[args.reason]}`, {
             status: 409,
             code: 'CONFLICT',
             details: {
@@ -131,7 +131,7 @@ export class ResourceConflictError extends ApiError {
             },
         });
         this.name = 'ResourceConflictError';
-        this.kind = kind;
+        this.type = type;
         this.id = args.id;
         this.locale = args.locale;
         this.reason = args.reason;

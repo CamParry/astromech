@@ -41,7 +41,7 @@ function slugContext(value: unknown): FieldValidationContext {
         path: [{ kind: 'field', name: 'slug' }],
         operation: 'create',
         validation: 'complete',
-        resource: { kind: 'entry', record: null },
+        resource: { type: 'entry', record: null },
         user: null,
     };
 }

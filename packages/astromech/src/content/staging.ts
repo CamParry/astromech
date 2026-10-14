@@ -12,12 +12,12 @@ import { ResourceNotFoundError } from '@/errors/resource';
  */
 export async function requireStagedChange<R>(
     staging: { findOne(ref: { id: string; locale: string }): Promise<R | null> },
-    kind: 'entry' | 'global',
+    type: 'entry' | 'global',
     address: { rowId: string; id: string; locale: string }
 ): Promise<R> {
     const staged = await staging.findOne({ id: address.rowId, locale: address.locale });
     if (!staged) {
-        throw new ResourceNotFoundError(kind, {
+        throw new ResourceNotFoundError(type, {
             id: address.id,
             locale: address.locale,
             staged: true,

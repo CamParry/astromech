@@ -271,7 +271,7 @@ async function updateOne(params: {
     };
 
     const entry = await writeGuarded({
-        kind: 'entry',
+        type: 'entry',
         address,
         guard,
         repository: entryRepository,
@@ -392,7 +392,7 @@ async function writeTranslation(params: {
 }): Promise<EntryResource> {
     const { config, id, locale, write, guard } = params;
     const entry = await writeGuarded({
-        kind: 'entry',
+        type: 'entry',
         address: { id, locale },
         guard,
         repository: entryRepository,

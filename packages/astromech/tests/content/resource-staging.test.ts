@@ -194,8 +194,8 @@ beforeEach(async () => {
     });
 });
 
-describe.each(STAGED_RESOURCES)('%s', (kind) => {
-    const adapter = ADAPTERS[kind];
+describe.each(STAGED_RESOURCES)('%s', (type) => {
+    const adapter = ADAPTERS[type];
 
     describe('createStaged', () => {
         it('makes one staged change when another create lands after its check', async () => {

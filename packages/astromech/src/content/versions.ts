@@ -56,7 +56,7 @@ export async function readVersion<S extends object>(params: {
 }): Promise<VersionMetadata & { snapshot: S }> {
     const { resource, record } = params;
     const row = await findVersion(params.versions, record, params.version, {
-        kind: resource,
+        type: resource,
         id: params.address.id,
     });
     const snapshot = {
@@ -89,7 +89,7 @@ export async function snapshotVersion(
     address: { id: string; locale: string }
 ): Promise<void> {
     await writeGuarded({
-        kind: resource,
+        type: resource,
         address,
         guard,
         repository,
@@ -138,7 +138,7 @@ export async function restoreVersion<R, V extends StoredVersion>(params: {
 }): Promise<R> {
     const { resource, repository, current, guard } = params;
     const version = await findVersion(repository.versions, current, params.version, {
-        kind: resource,
+        type: resource,
         id: params.address.id,
     });
     const fields = (version.fields as JsonObject | null) ?? current.fields;
@@ -147,7 +147,7 @@ export async function restoreVersion<R, V extends StoredVersion>(params: {
     return transaction(async () => {
         await snapshotVersion(resource, repository, guard, params.user, address);
         return writeGuarded({
-            kind: resource,
+            type: resource,
             address,
             guard,
             repository,
@@ -161,11 +161,11 @@ async function findVersion<V>(
     versions: ContentVersions<V>,
     record: AddressedRecord,
     version: number,
-    error: { kind: ResourceType; id: string }
+    error: { type: ResourceType; id: string }
 ): Promise<V> {
     const row = await versions.findOne(record.contentId, version);
     if (row === null) {
-        throw new ResourceNotFoundError(error.kind, {
+        throw new ResourceNotFoundError(error.type, {
             id: error.id,
             locale: record.locale,
             version,

@@ -4,7 +4,7 @@
  * Run it only on parsed data: `children()` mints ids on raw input.
  */
 
-import type { TargetKind } from '@/types/domain';
+import type { TargetType } from '@/types/domain';
 import type { DataField, Field, FieldPathSegment } from '@/types/fields';
 import { formatInstancePath, formatSchemaPath } from '@/fields/field-path';
 import { getFieldType } from '@/fields/field-type-registry';
@@ -18,7 +18,7 @@ export type FieldReference = {
     /** `sections[a1].gallery` — for deep-linking; never pattern-matched. */
     instancePath: string;
     targetId: string;
-    targetKind: TargetKind;
+    targetType: TargetType;
 };
 
 /**
@@ -26,7 +26,7 @@ export type FieldReference = {
  * field writes a relationship row like any other, as does a `relationship`
  * whose `target` is `media`.
  */
-function targetKindOf(field: DataField): TargetKind {
+function targetTypeOf(field: DataField): TargetType {
     if (field.type === 'media' || field.target === 'media') return 'media';
     return field.target === 'users' ? 'user' : 'entry';
 }
@@ -52,11 +52,11 @@ function walk(
         const value = values[field.name];
 
         if (fieldType?.isRelation === true) {
-            const targetKind = targetKindOf(field);
+            const targetType = targetTypeOf(field);
             const schemaPath = formatSchemaPath(segments);
             const instancePath = formatInstancePath(segments);
             for (const targetId of targetIdsOf(value)) {
-                out.push({ schemaPath, instancePath, targetId, targetKind });
+                out.push({ schemaPath, instancePath, targetId, targetType });
             }
             continue;
         }
@@ -94,7 +94,7 @@ export function findReferences(
 
     const seen = new Set<string>();
     return collected.filter((reference) => {
-        const key = `${reference.instancePath}\u0000${reference.targetId}\u0000${reference.targetKind}`;
+        const key = `${reference.instancePath}\u0000${reference.targetId}\u0000${reference.targetType}`;
         if (seen.has(key)) return false;
         seen.add(key);
         return true;
@@ -104,7 +104,7 @@ export function findReferences(
 /** A relationship field as DECLARED: where it sits and what it points at. */
 export type RelationshipDeclaration = {
     schemaPath: string;
-    targetKind: TargetKind;
+    targetType: TargetType;
     /** The declared `target`, when the field names one. */
     target: string | undefined;
 };
@@ -137,7 +137,7 @@ export function collectRelationshipDeclarations(
         if (getFieldType(field.type)?.isRelation !== true) return;
         collected.push({
             schemaPath,
-            targetKind: targetKindOf(field),
+            targetType: targetTypeOf(field),
             target: field.target,
         });
         return false;

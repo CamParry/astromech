@@ -206,7 +206,7 @@ fields.text('sku', {
 The context carries `value`, `values` (the field's siblings, for cross-field
 rules), `field`, `path`, `operation` (`'create'` or `'update'`), `validation`
 (`'partial'` on a draft save, `'complete'` otherwise, so a rule can relax itself
-on a draft), `resource` (the kind being written and the record as it stands),
+on a draft), `resource` (the type being written and the record as it stands),
 `user`, and `entryTypes` when the caller can read entries.
 
 `values` is scoped to the field's own container, not the whole record — a rule

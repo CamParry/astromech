@@ -22,6 +22,6 @@ export const listEntryUsage = defineServiceMethod({
 
         await getEntryResource(type, id);
 
-        return listUsage(config, { id, kind: 'entry' });
+        return listUsage(config, { id, type: 'entry' });
     },
 });

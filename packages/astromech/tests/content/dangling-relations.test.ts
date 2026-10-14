@@ -26,7 +26,7 @@ const api = currentServices.entries;
 const usersService = currentServices.users;
 
 /**
- * One relation per target kind (media twice, by field type and by `target`),
+ * One relation per target type (media twice, by field type and by `target`),
  * plus one nested inside a repeater.
  */
 const docFields: Field[] = [
@@ -273,13 +273,13 @@ describe('pruneDanglingRelations (directly)', () => {
         expect(result.values).toEqual({ author: null, related: [alive.id] });
     });
 
-    it('asks which ids exist once per target kind', async () => {
+    it('asks which ids exist once per target type', async () => {
         const { findIds } = resourceExistenceRepository;
         const asked: [string, string[]][] = [];
         vi.spyOn(resourceExistenceRepository, 'findIds').mockImplementation(
-            (kind, ids) => {
-                asked.push([kind, ids]);
-                return findIds(kind, ids);
+            (type, ids) => {
+                asked.push([type, ids]);
+                return findIds(type, ids);
             }
         );
         await pruneDanglingRelations(config, docFields, {

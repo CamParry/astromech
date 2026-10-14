@@ -66,7 +66,7 @@ type Address = { id: string; locale: string; staged?: boolean };
  * write refused here fires no hook. Throws `ResourceConflictError`.
  */
 export function assertGuardHolds(
-    kind: ResourceType,
+    type: ResourceType,
     loaded: { canonical: GuardedRecord; staged?: GuardedRecord | null | undefined },
     guard: WriteGuard,
     address: Address
@@ -77,7 +77,7 @@ export function assertGuardHolds(
         trashConflict(guard, trashed) ??
         scheduleConflict(guard, canonical) ??
         stagedConflict(guard, (loaded.staged ?? null) !== null);
-    if (failure !== null) throw refusal(kind, address, failure);
+    if (failure !== null) throw refusal(type, address, failure);
 }
 
 /**
@@ -85,13 +85,13 @@ export function assertGuardHolds(
  * Then asks the repository why, and throws the 409, or the 404 for a row gone.
  */
 export async function writeGuarded<R>(params: {
-    kind: ResourceType;
+    type: ResourceType;
     address: Address;
     guard: WriteGuard;
     repository: GuardedRepository;
     write: () => Promise<R | null>;
 }): Promise<R> {
-    const { kind, address, guard, repository } = params;
+    const { type, address, guard, repository } = params;
 
     const written = await params.write();
     if (written !== null) return written;
@@ -99,7 +99,7 @@ export async function writeGuarded<R>(params: {
     const explained = await repository.explainConflict(guard);
     // A condition that holds again by the time it is read still refused the
     // write, so the error names the condition the guard sets.
-    throw refusal(kind, address, explained ?? guardedFailure(guard));
+    throw refusal(type, address, explained ?? guardedFailure(guard));
 }
 
 /**
@@ -142,13 +142,13 @@ export function stagedConflict(
 }
 
 /** The error a failure answers: 404 for a row gone, else a 409. */
-function refusal(kind: ResourceType, address: Address, failure: GuardFailure): ApiError {
+function refusal(type: ResourceType, address: Address, failure: GuardFailure): ApiError {
     const { id, locale } = address;
-    if (failure === 'gone') return new ResourceNotFoundError(kind, address);
+    if (failure === 'gone') return new ResourceNotFoundError(type, address);
     if (failure === 'staged-change-exists') {
-        return new StagedChangeExistsError(kind, { id, locale });
+        return new StagedChangeExistsError(type, { id, locale });
     }
-    return new ResourceConflictError(kind, { id, locale, reason: failure });
+    return new ResourceConflictError(type, { id, locale, reason: failure });
 }
 
 /** What each `trash` condition answers when it fails. */

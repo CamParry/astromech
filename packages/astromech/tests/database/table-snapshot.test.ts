@@ -102,11 +102,11 @@ const edge = defineTable(
     'edge',
     ({ col }) => ({
         sourceId: col.text({ notNull: true }),
-        targetKind: col.enum(['entry', 'user', 'media'], { notNull: true }),
+        targetType: col.enum(['entry', 'user', 'media'], { notNull: true }),
         label: col.text(),
     }),
     {
-        primaryKey: ['sourceId', 'targetKind'],
+        primaryKey: ['sourceId', 'targetType'],
         indexes: ({ index }) => [index('idx_edge_label', ['label'])],
     }
 );
@@ -197,7 +197,7 @@ describe('toSnapshotTable', () => {
 
     it('snake_cases a composite primary key and keeps the options-form indexes', () => {
         const snap = toSnapshotTable(edge, 'sqlite');
-        expect(snap.primaryKey).toEqual(['source_id', 'target_kind']);
+        expect(snap.primaryKey).toEqual(['source_id', 'target_type']);
         expect(snap.indexes).toEqual([
             { name: 'idx_edge_label', columns: ['label'], unique: false },
         ]);
@@ -255,10 +255,10 @@ describe('createSnapshot', () => {
 
     it('carries enum values on enum columns', () => {
         const snapshot = createSnapshot([relationshipsTable], { dialect: 'sqlite' });
-        const sourceKind = snapshot.tables.relationships?.columns.find(
-            (c) => c.key === 'sourceKind'
+        const sourceType = snapshot.tables.relationships?.columns.find(
+            (c) => c.key === 'sourceType'
         );
-        expect(sourceKind?.enumValues).toEqual(['entry', 'global', 'user', 'media']);
+        expect(sourceType?.enumValues).toEqual(['entry', 'global', 'user', 'media']);
     });
 
     it('excludes app-side-only facts (appDefault, onUpdate, serialize, parse) from columns', () => {

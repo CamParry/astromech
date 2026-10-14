@@ -49,9 +49,9 @@ function reportFindings(report: ValidationReport): void {
 /** One finding on one line: which row, which field, what it says. */
 function describe(finding: ValidationFinding): string {
     const subject =
-        finding.type !== null
-            ? `${finding.kind} ${finding.type}/${finding.id}`
-            : `${finding.kind} ${finding.id}`;
+        finding.subtype !== null
+            ? `${finding.type} ${finding.subtype}/${finding.id}`
+            : `${finding.type} ${finding.id}`;
     const where = [finding.locale, finding.staged ? 'staged' : null].filter(
         (part) => part !== null
     );

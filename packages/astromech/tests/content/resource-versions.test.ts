@@ -274,8 +274,8 @@ beforeEach(async () => {
     });
 });
 
-describe.each(RESOURCE_TYPES)('%s', (kind) => {
-    const adapter = ADAPTERS[kind];
+describe.each(RESOURCE_TYPES)('%s', (type) => {
+    const adapter = ADAPTERS[type];
 
     describe('versions', () => {
         it('snapshots the pre-update state when its content changes', async () => {
@@ -380,7 +380,7 @@ describe.each(RESOURCE_TYPES)('%s', (kind) => {
 
         // A declared global exists before anything saves a locale of it, as `get`
         // answers null for one. An entry, user or media item with no row does not.
-        if (kind === 'global') {
+        if (type === 'global') {
             it('answers an empty list for a locale with no content row', async () => {
                 const id = await adapter.create('one');
 
@@ -478,11 +478,11 @@ describe.each(RESOURCE_TYPES)('%s', (kind) => {
 
 // Media is left out: its adapter creates through the repository, which writes
 // no version whatever the service does. Its own create path is `upload`, below.
-describe.each(RESOURCE_TYPES.filter((kind) => kind !== 'media'))('%s', (kind) => {
+describe.each(RESOURCE_TYPES.filter((type) => type !== 'media'))('%s', (type) => {
     it('writes no version when it is created, which replaces nothing', async () => {
-        const id = await ADAPTERS[kind].create('one');
+        const id = await ADAPTERS[type].create('one');
 
-        expect(await ADAPTERS[kind].versions(id)).toEqual([]);
+        expect(await ADAPTERS[type].versions(id)).toEqual([]);
     });
 });
 

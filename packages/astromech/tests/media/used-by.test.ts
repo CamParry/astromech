@@ -17,7 +17,7 @@ const usersService = currentServices.users;
 /**
  * `article` holds a media field flat and another inside a repeater, plus a
  * relationship targeting media; users hold a media field too, so a
- * `sourceType: null` source is reachable.
+ * `sourceSubtype: null` source is reachable.
  */
 function makeUsageConfig(): AstromechConfig {
     const base = makeTestConfig();
@@ -82,8 +82,8 @@ describe('mediaService.usedBy', () => {
         expect(await mediaService.usedBy({ id: mediaId })).toEqual([
             {
                 sourceId: article.id,
-                sourceKind: 'entry',
-                sourceType: 'article',
+                sourceType: 'entry',
+                sourceSubtype: 'article',
                 sourceTitle: 'Article',
                 schemaPath: 'cover',
                 instancePath: 'cover',
@@ -163,7 +163,7 @@ describe('mediaService.usedBy', () => {
         expect(usage[0]?.sourceStaged).toBe(true);
     });
 
-    it('returns a user source with a null sourceType', async () => {
+    it('returns a user source with a null sourceSubtype', async () => {
         const mediaId = await createMedia();
         const user = await usersService.create({
             data: {
@@ -176,8 +176,8 @@ describe('mediaService.usedBy', () => {
         expect(await mediaService.usedBy({ id: mediaId })).toEqual([
             {
                 sourceId: user.id,
-                sourceKind: 'user',
-                sourceType: null,
+                sourceType: 'user',
+                sourceSubtype: null,
                 sourceTitle: 'Avatar Owner',
                 schemaPath: 'avatar',
                 instancePath: 'avatar',
@@ -187,8 +187,8 @@ describe('mediaService.usedBy', () => {
         ]);
     });
 
-    // Titles for user and media sources load in one read per kind, not one per
-    // source, so several of each must still come back named and in order.
+    // Titles for user and media sources load in one read per source type, not one
+    // per source, so several of each must still come back named and in order.
     it('names several user and media sources, and leaves a missing one untitled', async () => {
         const mediaId = await createMedia('target.png');
         const users = await Promise.all(
@@ -211,14 +211,14 @@ describe('mediaService.usedBy', () => {
         ];
         for (const sourceId of mediaSources) {
             await relationshipRepository.replaceForSource(
-                { id: sourceId, kind: 'media' },
+                { id: sourceId, type: 'media' },
                 [
                     {
                         locale: 'en',
                         schemaPath: 'credit',
                         instancePath: 'credit',
                         targetId: mediaId,
-                        targetKind: 'media',
+                        targetType: 'media',
                     },
                 ]
             );
@@ -231,7 +231,7 @@ describe('mediaService.usedBy', () => {
         expect(usage).toHaveLength(6);
         expect(users.map((user) => titleOf(user.id))).toEqual(['Ada', 'Grace', 'Linus']);
         expect(mediaSources.map(titleOf)).toEqual(['first.png', 'second.png', '']);
-        expect(usage.map((row) => row.sourceKind)).toEqual([
+        expect(usage.map((row) => row.sourceType)).toEqual([
             'media',
             'media',
             'media',

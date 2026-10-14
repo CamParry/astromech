@@ -253,9 +253,9 @@ describe('GET /entries/:type/:id/used-by', () => {
         expect(body.data).toHaveLength(1);
         expect(body.data[0]).toEqual({
             sourceId: source.id,
-            sourceKind: 'entry',
+            sourceType: 'entry',
             sourceTitle: 'Source',
-            sourceType: 'post',
+            sourceSubtype: 'post',
             schemaPath: 'related',
             instancePath: 'related',
             locales: ['en'],

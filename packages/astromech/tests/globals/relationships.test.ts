@@ -67,7 +67,7 @@ describe('global relationships', () => {
 
         const rows = await relationshipRepository.findBySource(saved.id, 'global');
         expect(
-            rows.map((row) => [row.sourceType, row.schemaPath, row.targetId]).sort()
+            rows.map((row) => [row.sourceSubtype, row.schemaPath, row.targetId]).sort()
         ).toEqual([
             ['site', 'home', postId],
             ['site', 'logo', mediaId],
@@ -82,7 +82,7 @@ describe('global relationships', () => {
 
         const usage = await mediaService.usedBy({ id: mediaId });
         expect(
-            usage.map((row) => [row.sourceKind, row.sourceId, row.sourceType])
+            usage.map((row) => [row.sourceType, row.sourceId, row.sourceSubtype])
         ).toEqual([['global', saved.id, 'site']]);
     });
 
@@ -122,7 +122,7 @@ describe('global relationships', () => {
         expect(saved.fields).toEqual({ logo: mediaId, home: null });
     });
 
-    // The key shares `sourceType` with entry types, so an entry-type-scoped
+    // The key shares `sourceSubtype` with entry types, so an entry-type-scoped
     // rebuild must not read a global's rows as its own orphans.
     it('stays out of an entry-type-scoped read of the index', async () => {
         await globalsService.update({ key: 'site', data: { fields: { logo: mediaId } } });

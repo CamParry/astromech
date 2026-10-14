@@ -229,7 +229,7 @@ async function indexRelationships(): Promise<void> {
     const rows = seededEntries.flatMap((entry) =>
         findReferences(entryFields(entry.type), entry.fields)
             .filter((reference) => {
-                const key = `${entry.id}|${entry.locale}|${reference.instancePath}|${reference.targetId}|${reference.targetKind}`;
+                const key = `${entry.id}|${entry.locale}|${reference.instancePath}|${reference.targetId}|${reference.targetType}`;
                 if (seen.has(key)) return false;
                 seen.add(key);
                 return true;
@@ -237,13 +237,13 @@ async function indexRelationships(): Promise<void> {
             .map((reference) =>
                 schema.encodeWith(schema.relationshipsTable, {
                     sourceId: entry.id,
-                    sourceKind: 'entry' as const,
-                    sourceType: entry.type,
+                    sourceType: 'entry' as const,
+                    sourceSubtype: entry.type,
                     locale: entry.locale,
                     schemaPath: reference.schemaPath,
                     instancePath: reference.instancePath,
                     targetId: reference.targetId,
-                    targetKind: reference.targetKind,
+                    targetType: reference.targetType,
                     sourceStaged: false,
                 })
             )

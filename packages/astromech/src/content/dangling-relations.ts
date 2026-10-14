@@ -5,11 +5,11 @@
  */
 
 import type { RelationshipDeclaration } from '@/fields/references';
-import type { TargetKind } from '@/types/domain';
+import type { TargetType } from '@/types/domain';
 import type { Field } from '@/types/fields';
 import type { JsonObject, ResolvedConfig } from '@/types/index';
 import { resourceExistenceRepository } from '@/content/repository/resource-existence';
-import { TARGET_KINDS } from '@/content/resource-types';
+import { TARGET_TYPES } from '@/content/resource-types';
 import { resolveEntryType } from '@/entries/entry-types';
 import { parseInstancePath } from '@/fields/field-path';
 import { collectRelationshipDeclarations, findReferences } from '@/fields/references';
@@ -35,22 +35,22 @@ export async function pruneDanglingRelations(
     );
     if (candidates.length === 0) return { values, dropped: 0 };
 
-    const aliveByKind = new Map<TargetKind, Set<string>>();
-    for (const kind of TARGET_KINDS) {
-        const ofKind = candidates.filter((reference) => reference.targetKind === kind);
-        if (ofKind.length === 0) continue;
-        aliveByKind.set(
-            kind,
+    const aliveByType = new Map<TargetType, Set<string>>();
+    for (const type of TARGET_TYPES) {
+        const ofType = candidates.filter((reference) => reference.targetType === type);
+        if (ofType.length === 0) continue;
+        aliveByType.set(
+            type,
             await resourceExistenceRepository.findIds(
-                kind,
-                ofKind.map((reference) => reference.targetId)
+                type,
+                ofType.map((reference) => reference.targetId)
             )
         );
     }
 
     const dead = candidates.filter(
         (reference) =>
-            aliveByKind.get(reference.targetKind)?.has(reference.targetId) !== true
+            aliveByType.get(reference.targetType)?.has(reference.targetId) !== true
     );
     if (dead.length === 0) return { values, dropped: 0 };
 
@@ -88,7 +88,7 @@ function isPrunable(
     config: ResolvedConfig,
     declaration: RelationshipDeclaration
 ): boolean {
-    if (declaration.targetKind !== 'entry') return true;
+    if (declaration.targetType !== 'entry') return true;
     const target = declaration.target;
     if (target === undefined || target === '') return false;
     return resolveEntryType(config, target) !== undefined;

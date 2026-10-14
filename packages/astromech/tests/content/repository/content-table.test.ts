@@ -44,7 +44,7 @@ function decode(
 function createRepository() {
     return createContentRepository(
         {
-            kind: 'global',
+            type: 'global',
             table: globalsTable,
             contentTable: globalContentTable,
             versionsTable: globalVersionsTable,

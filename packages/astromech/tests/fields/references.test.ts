@@ -18,7 +18,7 @@ describe('findReferences — top-level fields', () => {
                 schemaPath: 'author',
                 instancePath: 'author',
                 targetId: 'p1',
-                targetKind: 'entry',
+                targetType: 'entry',
             },
         ]);
     });
@@ -31,19 +31,19 @@ describe('findReferences — top-level fields', () => {
                 schemaPath: 'hero',
                 instancePath: 'hero',
                 targetId: 'm1',
-                targetKind: 'media',
+                targetType: 'media',
             },
         ]);
     });
 
-    it("maps target: 'users' to the user kind", () => {
+    it("maps target: 'users' to the user type", () => {
         const defs: Field[] = [{ name: 'owner', type: 'relationship', target: 'users' }];
-        expect(findReferences(defs, { owner: 'u1' })[0]?.targetKind).toBe('user');
+        expect(findReferences(defs, { owner: 'u1' })[0]?.targetType).toBe('user');
     });
 
-    it("maps target: 'media' to the media kind", () => {
+    it("maps target: 'media' to the media type", () => {
         const defs: Field[] = [{ name: 'photo', type: 'relationship', target: 'media' }];
-        expect(findReferences(defs, { photo: 'm1' })[0]?.targetKind).toBe('media');
+        expect(findReferences(defs, { photo: 'm1' })[0]?.targetType).toBe('media');
     });
 
     it('yields one reference per id in a multi-relation', () => {
@@ -102,7 +102,7 @@ describe('findReferences — nested containers', () => {
                 schemaPath: 'seo.image',
                 instancePath: 'seo.image',
                 targetId: 'm1',
-                targetKind: 'media',
+                targetType: 'media',
             },
         ]);
     });
@@ -126,13 +126,13 @@ describe('findReferences — nested containers', () => {
                 schemaPath: 'items[].author',
                 instancePath: 'items[a1].author',
                 targetId: 'p1',
-                targetKind: 'entry',
+                targetType: 'entry',
             },
             {
                 schemaPath: 'items[].author',
                 instancePath: 'items[b2].author',
                 targetId: 'p2',
-                targetKind: 'entry',
+                targetType: 'entry',
             },
         ]);
     });
@@ -162,7 +162,7 @@ describe('findReferences — nested containers', () => {
                 schemaPath: 'sections[].meta.author',
                 instancePath: 'sections[a1].meta.author',
                 targetId: 'p1',
-                targetKind: 'entry',
+                targetType: 'entry',
             },
         ]);
     });
@@ -193,13 +193,13 @@ describe('findReferences — nested containers', () => {
                 schemaPath: 'nav[].page',
                 instancePath: 'nav[n1].page',
                 targetId: 'pg1',
-                targetKind: 'entry',
+                targetType: 'entry',
             },
             {
                 schemaPath: 'nav[].page',
                 instancePath: 'nav[n2].page',
                 targetId: 'pg2',
-                targetKind: 'entry',
+                targetType: 'entry',
             },
         ]);
     });

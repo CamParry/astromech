@@ -19,9 +19,9 @@ import { defaultContentLocale } from '@/utilities/locale';
 export type ValidationScope = { type?: string };
 
 export type ValidationFinding = {
-    kind: ResourceType;
+    type: ResourceType;
     /** Entry type; null for media, users and globals. */
-    type: string | null;
+    subtype: string | null;
     id: string;
     locale: string | null;
     /** Whether the row is a staged change rather than the live row. */
@@ -41,7 +41,7 @@ type ContentFieldsRow = { id: string; fields: JsonObject };
 
 /** One stored row to check, with what its write path's parse context needs. */
 type StoredRow = {
-    kind: ResourceType;
+    type: ResourceType;
     /** The entry type or global key; users and media have none. */
     target: string | undefined;
     id: string;
@@ -99,7 +99,7 @@ async function checkEntries(
         const entry = live.get(row.entryId);
         if (entry === undefined) continue;
         await checkRow(ctx, report, {
-            kind: 'entry',
+            type: 'entry',
             target: entry.type,
             id: entry.id,
             locale: row.locale,
@@ -119,16 +119,16 @@ async function checkEntries(
 async function checkContentRows(
     ctx: AppContext,
     report: ValidationReport,
-    kind: 'media' | 'user'
+    type: 'media' | 'user'
 ): Promise<void> {
     const listContent = (locale: string): Promise<readonly ContentFieldsRow[]> =>
-        kind === 'media'
+        type === 'media'
             ? mediaRepository.findByLocale(locale)
             : userRepository.findByLocale(locale);
-    for (const locale of locales(ctx, isTranslatable(kind, ctx.config))) {
+    for (const locale of locales(ctx, isTranslatable(type, ctx.config))) {
         for (const row of await listContent(locale)) {
             await checkRow(ctx, report, {
-                kind,
+                type,
                 target: undefined,
                 id: row.id,
                 locale,
@@ -154,7 +154,7 @@ async function checkGlobals(ctx: AppContext, report: ValidationReport): Promise<
                 const row = await ctx.globals.get({ key, locale, full: true, staged });
                 if (row === null) continue;
                 await checkRow(ctx, report, {
-                    kind: 'global',
+                    type: 'global',
                     target: key,
                     id: key,
                     locale,
@@ -175,15 +175,15 @@ async function checkRow(
     row: StoredRow
 ): Promise<void> {
     // A row whose entry type the config no longer declares has no rules to fail.
-    if (row.kind === 'entry' && !resolveEntryType(ctx.config, row.target ?? '')) return;
+    if (row.type === 'entry' && !resolveEntryType(ctx.config, row.target ?? '')) return;
 
     report.rowsChecked += 1;
     const processed = await safeParseFields(
         row.fields,
-        definitionsOf({ resource: row.kind, config: ctx.config, target: row.target }),
+        definitionsOf({ resource: row.type, config: ctx.config, target: row.target }),
         {
             ...fieldParseContext({
-                resource: row.kind,
+                resource: row.type,
                 config: ctx.config,
                 target: row.target,
                 operation: 'update',
@@ -197,8 +197,8 @@ async function checkRow(
     );
 
     const subject = {
-        kind: row.kind,
-        type: row.kind === 'entry' ? (row.target ?? null) : null,
+        type: row.type,
+        subtype: row.type === 'entry' ? (row.target ?? null) : null,
         id: row.id,
         locale: row.locale,
         staged: row.staged,

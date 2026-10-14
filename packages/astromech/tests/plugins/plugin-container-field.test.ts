@@ -89,7 +89,7 @@ function configWithCards(): AstromechConfig {
 
 const parseContext = {
     operation: 'create' as const,
-    resource: { kind: 'entry' as const, record: {} },
+    resource: { type: 'entry' as const, record: {} },
     user: null,
 };
 
@@ -148,7 +148,7 @@ describe('a plugin container field type', () => {
                 schemaPath: 'cards[].link',
                 instancePath: 'cards[c1].link',
                 targetId: 'p1',
-                targetKind: 'entry',
+                targetType: 'entry',
             },
         ]);
     });

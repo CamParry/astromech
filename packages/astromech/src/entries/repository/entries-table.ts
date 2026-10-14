@@ -206,9 +206,9 @@ function publiclyVisibleWhere(
  * change must not change what the live content is filtered on.
  *
  * `relationships.sourceId` is an entry id, so this correlates on `entries.id`.
- * No `targetKind` condition — a target id is a ULID unique across resources,
- * and constraining it would force the caller to say which kind they meant.
- * `schemaPath`/`targetId` are plain TEXT and `sourceKind` is an enum the table
+ * No `targetType` condition — a target id is a ULID unique across resources,
+ * and constraining it would force the caller to say which type they meant.
+ * `schemaPath`/`targetId` are plain TEXT and `sourceType` is an enum the table
  * passes through, so all three bind as-is with no `encodeWith`; `sourceStaged`
  * is a boolean column, stored as 0 or 1, so it binds the stored 0.
  */
@@ -218,7 +218,7 @@ function referencesExists(eb: JoinedEb, filter: ReferencesFilter): Expression<Sq
             .selectFrom('relationships')
             .select('relationships.sourceId')
             .whereRef('relationships.sourceId', '=', 'entries.id')
-            .where('relationships.sourceKind', '=', 'entry')
+            .where('relationships.sourceType', '=', 'entry')
             .whereRef('relationships.locale', '=', 'entryContent.locale')
             .where('relationships.schemaPath', '=', filter.path)
             .where('relationships.targetId', '=', filter.id)
@@ -263,7 +263,7 @@ function createEntryRepository() {
 
     const content = createContentRepository(
         {
-            kind: 'entry',
+            type: 'entry',
             table: entriesTable,
             contentTable: entryContentTable,
             versionsTable: entryVersionsTable,

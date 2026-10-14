@@ -37,7 +37,7 @@ export const createStagedGlobal = defineServiceMethod({
 
         return transaction(async () => {
             const created = await writeGuarded({
-                kind: 'global',
+                type: 'global',
                 address: { id: key, locale },
                 guard,
                 repository: globalRepository,

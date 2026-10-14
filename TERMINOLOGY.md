@@ -115,8 +115,11 @@ fields. In code, `UserResource` and its siblings are the resource row joined wit
 one locale's content row, plus the locales that have one; the public type keeps
 the plain name (`User`).
 
-**Resource type.** Which of the four a resource is. Each has one resource config
-that the shared content helpers read.
+**Resource type.** Which of the four a resource is (`'entry'`, `'global'`,
+`'user'` or `'media'`). Each has one resource config that the shared content
+helpers read. Code that holds one names it `type`. An entry's type or a
+global's key, named beside it, is its **subtype** (`sourceSubtype` in the
+relationships index); users and media have none.
 
 **Schema.** Request validation or a whole-shape aggregate, never table
 declarations. A method's output schema is the public shape it returns.

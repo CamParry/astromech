@@ -1,7 +1,7 @@
 /**
  * Relationship indexing (entries policy): the entries tables bound to the shared
  * content policy in `content/relationships.ts`, which holds the rule. An entry's
- * type is the index's `sourceType`, and the schema its references are read from.
+ * type is the index's `sourceSubtype`, and the schema its references are read from.
  */
 
 import type { ResolvedConfig } from '@/types/index';
@@ -12,8 +12,8 @@ import { entryRepository } from './repository/entries-table';
 const relationships = createContentRelationships({
     repository: entryRepository,
     resourceIdColumn: 'entryId',
-    kind: 'entry',
-    sourceType: (resourceRow) => String(resourceRow['type']),
+    type: 'entry',
+    sourceSubtype: (resourceRow) => String(resourceRow['type']),
 });
 
 /**

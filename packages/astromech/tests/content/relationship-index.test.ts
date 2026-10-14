@@ -29,7 +29,7 @@ const usersService = currentServices.users;
 /**
  * `article` holds a relation flat and two more inside a repeater (one of them a
  * multi media relation), and is translatable; users and media hold relations
- * too, so all three source kinds are reachable.
+ * too, so all three source types are reachable.
  */
 function makeIndexConfig(): AstromechConfig {
     const base = makeTestConfig();
@@ -103,7 +103,7 @@ async function createMedia(filename = 'a.png'): Promise<string> {
 }
 
 /**
- * One of every source kind, written through the service write paths: an entry
+ * One of every source type, written through the service write paths: an entry
  * with a flat relation plus a nested multi-relation and a nested media
  * relation, a user, and a media record.
  */
@@ -169,16 +169,16 @@ describe('checkRelationshipIndex', () => {
         const report = await checkRelationshipIndex(getConfig());
 
         expect(driftCount(report)).toBe(0);
-        // Guard against a vacuous pass: every source kind must actually have
+        // Guard against a vacuous pass: every source type must actually have
         // contributed rows for the parity to mean anything.
         const rows = await storedRows();
         expect(
-            [...new Set(rows.map((row) => row.sourceType ?? row.sourceKind))].sort()
+            [...new Set(rows.map((row) => row.sourceSubtype ?? row.sourceType))].sort()
         ).toEqual(['article', 'media', 'user']);
         expect(
             rows.filter((row) => row.schemaPath === 'sections[].related')
         ).toHaveLength(3);
-        expect(rows.filter((row) => row.targetKind === 'media')).toHaveLength(2);
+        expect(rows.filter((row) => row.targetType === 'media')).toHaveLength(2);
     });
 
     // A staged row shares its entry's id, so both content rows are one source
@@ -311,13 +311,13 @@ describe('rebuildRelationshipIndex', () => {
         const { article } = await seedContent();
         await createRepository(relationshipsTable).create({
             sourceId: article,
-            sourceKind: 'entry',
-            sourceType: 'article',
+            sourceType: 'entry',
+            sourceSubtype: 'article',
             locale: 'en',
             schemaPath: 'author',
             instancePath: 'author',
             targetId: 'ghost',
-            targetKind: 'entry',
+            targetType: 'entry',
             sourceStaged: false,
         });
 
@@ -355,13 +355,13 @@ describe('rebuildRelationshipIndex', () => {
         await seedContent();
         await createRepository(relationshipsTable).create({
             sourceId: 'purged-entry',
-            sourceKind: 'entry',
-            sourceType: 'article',
+            sourceType: 'entry',
+            sourceSubtype: 'article',
             locale: 'en',
             schemaPath: 'author',
             instancePath: 'author',
             targetId: 'anything',
-            targetKind: 'entry',
+            targetType: 'entry',
             sourceStaged: false,
         });
 
@@ -400,24 +400,24 @@ describe('rebuildRelationshipIndex(getConfig(), { type })', () => {
         });
         await repository.create({
             sourceId: post,
-            sourceKind: 'entry',
-            sourceType: 'post',
+            sourceType: 'entry',
+            sourceSubtype: 'post',
             locale: 'en',
             schemaPath: 'related',
             instancePath: 'related',
             targetId: 'ghost',
-            targetKind: 'entry',
+            targetType: 'entry',
             sourceStaged: false,
         });
         await repository.create({
             sourceId: media,
-            sourceKind: 'media',
-            sourceType: null,
+            sourceType: 'media',
+            sourceSubtype: null,
             locale: 'en',
             schemaPath: 'credit',
             instancePath: 'credit',
             targetId: 'ghost',
-            targetKind: 'entry',
+            targetType: 'entry',
             sourceStaged: false,
         });
 
@@ -491,13 +491,13 @@ describe('the index across locales', () => {
         const { article, english } = await seedTranslated();
         await createRepository(relationshipsTable).create({
             sourceId: article,
-            sourceKind: 'entry',
-            sourceType: 'article',
+            sourceType: 'entry',
+            sourceSubtype: 'article',
             locale: 'de',
             schemaPath: 'author',
             instancePath: 'author',
             targetId: english,
-            targetKind: 'entry',
+            targetType: 'entry',
             sourceStaged: false,
         });
 

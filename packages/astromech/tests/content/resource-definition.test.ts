@@ -167,8 +167,8 @@ beforeEach(async () => {
     });
 });
 
-describe.each(RESOURCE_TYPES)('%s', (kind) => {
-    const row = ROWS[kind];
+describe.each(RESOURCE_TYPES)('%s', (type) => {
+    const row = ROWS[type];
 
     describe('the catalogue', () => {
         it('holds exactly the service’s methods, each stamped with its id', () => {

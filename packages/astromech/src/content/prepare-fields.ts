@@ -150,7 +150,7 @@ export function fieldParseContext(
             hasStatuses: resourceConfig.hasStatuses(config, target),
         }),
         resource: {
-            kind: resource,
+            type: resource,
             record: write.operation === 'update' ? write.existing : null,
         },
         user: write.user,

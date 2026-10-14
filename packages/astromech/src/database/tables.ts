@@ -9,7 +9,7 @@ import {
     sessionsTable,
     verificationsTable,
 } from '@/auth/tables';
-import { RESOURCE_TYPES, TARGET_KINDS } from '@/content/resource-types';
+import { RESOURCE_TYPES, TARGET_TYPES } from '@/content/resource-types';
 import { defineTable } from '@/database/define-table';
 import { entriesTable, entryContentTable, entryVersionsTable } from '@/entries/tables';
 import { globalContentTable, globalsTable, globalVersionsTable } from '@/globals/tables';
@@ -112,12 +112,12 @@ export const relationshipsTable = defineTable(
     'relationships',
     ({ col }) => ({
         sourceId: col.text({ notNull: true }),
-        sourceKind: col.enum(RESOURCE_TYPES, { notNull: true }),
+        sourceType: col.enum(RESOURCE_TYPES, { notNull: true }),
         /**
          * The entry type ('post', 'ns/type') or the global's key; null for user
          * and media sources.
          */
-        sourceType: col.text(),
+        sourceSubtype: col.text(),
         /**
          * The locale of the content row holding the reference. Never null: every
          * content row has a locale, a shared field included, and a resource
@@ -129,7 +129,7 @@ export const relationshipsTable = defineTable(
         /** `sections[a1].gallery` — for deep-linking; never pattern-matched. */
         instancePath: col.text({ notNull: true }),
         targetId: col.text({ notNull: true }),
-        targetKind: col.enum(TARGET_KINDS, { notNull: true }),
+        targetType: col.enum(TARGET_TYPES, { notNull: true }),
         /**
          * True when only the locale's staged row holds the reference, not its
          * canonical row. Derived from the content row's `stagedFor`, so reverse
@@ -141,15 +141,15 @@ export const relationshipsTable = defineTable(
     {
         primaryKey: [
             'sourceId',
-            'sourceKind',
+            'sourceType',
             'locale',
             'instancePath',
             'targetId',
-            'targetKind',
+            'targetType',
         ],
         indexes: ({ index }) => [
-            index('idx_rel_target', ['targetId', 'targetKind']),
-            index('idx_rel_filter', ['sourceType', 'schemaPath', 'targetId']),
+            index('idx_rel_target', ['targetId', 'targetType']),
+            index('idx_rel_filter', ['sourceSubtype', 'schemaPath', 'targetId']),
         ],
     }
 );

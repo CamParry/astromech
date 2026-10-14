@@ -93,7 +93,7 @@ function createUserRepository() {
     const accounts = createRepository(accountsTable);
     const content = createContentRepository(
         {
-            kind: 'user',
+            type: 'user',
             table: usersTable,
             contentTable: userContentTable,
             versionsTable: userVersionsTable,

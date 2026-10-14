@@ -115,8 +115,8 @@ beforeEach(async () => {
     setupFields(FIELDS);
 });
 
-describe.each(RESOURCE_TYPES)('%s', (kind) => {
-    const adapter = ADAPTERS[kind];
+describe.each(RESOURCE_TYPES)('%s', (type) => {
+    const adapter = ADAPTERS[type];
 
     describe('a required field', () => {
         it('is refused when absent', async () => {
@@ -202,12 +202,12 @@ describe.each(RESOURCE_TYPES)('%s', (kind) => {
 });
 
 /** Every resource with a write that names no `fields` key. */
-const WITHOUT_FIELDS = RESOURCE_TYPES.flatMap((kind) => {
-    const updateWithoutFields = ADAPTERS[kind].updateWithoutFields;
-    return updateWithoutFields ? [{ kind, ...updateWithoutFields }] : [];
+const WITHOUT_FIELDS = RESOURCE_TYPES.flatMap((type) => {
+    const updateWithoutFields = ADAPTERS[type].updateWithoutFields;
+    return updateWithoutFields ? [{ type, ...updateWithoutFields }] : [];
 });
 
-describe.each(WITHOUT_FIELDS)('$kind', ({ kind, write, sets }) => {
+describe.each(WITHOUT_FIELDS)('$type', ({ type, write, sets }) => {
     it('writes a column outside its fields without running field validation', async () => {
         // Stores fields that now fail validation: saved while `headline` was
         // optional, then made required, so a write that validated would refuse.
@@ -216,7 +216,7 @@ describe.each(WITHOUT_FIELDS)('$kind', ({ kind, write, sets }) => {
                 field.name === 'headline' ? { ...field, required: false } : field
             )
         );
-        const saved = await ADAPTERS[kind].save({});
+        const saved = await ADAPTERS[type].save({});
         setupFields(FIELDS);
 
         const updated = await write(saved.id);

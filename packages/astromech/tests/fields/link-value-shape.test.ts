@@ -17,7 +17,7 @@ function ctx(value: unknown): FieldValidationContext {
         path: [{ kind: 'field', name: 'cta' }],
         operation: 'create',
         validation: 'complete',
-        resource: { kind: 'entry', record: null },
+        resource: { type: 'entry', record: null },
         user: null,
     };
 }

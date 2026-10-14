@@ -6,7 +6,7 @@
  */
 
 import type { RelationshipRow } from '@/database/tables';
-import type { ResolvedConfig, TargetKind, Usage } from '@/types/index';
+import type { ResolvedConfig, TargetType, Usage } from '@/types/index';
 import { relationshipRepository } from '@/content/repository/relationships';
 import { getEntryResource } from '@/entries/read-entry';
 import { resolveGlobal } from '@/globals/resolve-global';
@@ -21,9 +21,9 @@ import { userRepository } from '@/users/repository';
  */
 export async function listUsage(
     config: ResolvedConfig,
-    target: { id: string; kind: TargetKind }
+    target: { id: string; type: TargetType }
 ): Promise<Usage[]> {
-    const rows = await relationshipRepository.findByTarget(target.id, target.kind, {
+    const rows = await relationshipRepository.findByTarget(target.id, target.type, {
         includeStaged: true,
     });
     const titles = await loadSourceTitles(config, rows);
@@ -35,8 +35,8 @@ export async function listUsage(
         if (held === undefined) {
             byReference.set(key, {
                 sourceId: row.sourceId,
-                sourceKind: row.sourceKind,
                 sourceType: row.sourceType,
+                sourceSubtype: row.sourceSubtype,
                 sourceTitle: titles.get(sourceKey(row)) ?? '',
                 schemaPath: row.schemaPath,
                 instancePath: row.instancePath,
@@ -56,7 +56,7 @@ export async function listUsage(
 }
 
 /**
- * Display name per source, keyed by kind and id. An entry loads through its own
+ * Display name per source, keyed by type and id. An entry loads through its own
  * type's repository, in the locale it displays under; a global is named by its
  * label; users and media are read in batches. A source that fails to load keeps
  * an empty title rather than dropping out, since its reference still counts.
@@ -71,40 +71,40 @@ async function loadSourceTitles(
     const userIds = new Set<string>();
     const mediaIds = new Set<string>();
     for (const row of rows) {
-        if (row.sourceKind === 'entry' && row.sourceType !== null) {
-            const ids = entryIdsByType.get(row.sourceType) ?? new Set<string>();
+        if (row.sourceType === 'entry' && row.sourceSubtype !== null) {
+            const ids = entryIdsByType.get(row.sourceSubtype) ?? new Set<string>();
             ids.add(row.sourceId);
-            entryIdsByType.set(row.sourceType, ids);
-        } else if (row.sourceKind === 'global' && row.sourceType !== null) {
-            const label = resolveGlobal(config, row.sourceType)?.label;
+            entryIdsByType.set(row.sourceSubtype, ids);
+        } else if (row.sourceType === 'global' && row.sourceSubtype !== null) {
+            const label = resolveGlobal(config, row.sourceSubtype)?.label;
             titles.set(
                 sourceKey(row),
-                typeof label === 'string' ? label : row.sourceType
+                typeof label === 'string' ? label : row.sourceSubtype
             );
-        } else if (row.sourceKind === 'user') {
+        } else if (row.sourceType === 'user') {
             userIds.add(row.sourceId);
-        } else if (row.sourceKind === 'media') {
+        } else if (row.sourceType === 'media') {
             mediaIds.add(row.sourceId);
         }
     }
 
     for (const [type, ids] of entryIdsByType) {
         for (const [id, title] of await entryTitles(type, ids)) {
-            titles.set(sourceKey({ sourceKind: 'entry', sourceId: id }), title);
+            titles.set(sourceKey({ sourceType: 'entry', sourceId: id }), title);
         }
     }
 
     // A name or an email is all a title needs, so the `users` row is enough.
     for (const user of await userRepository.findUserRows(userIds)) {
         titles.set(
-            sourceKey({ sourceKind: 'user', sourceId: user.id }),
+            sourceKey({ sourceType: 'user', sourceId: user.id }),
             user.name || user.email
         );
     }
 
     // The filename lives on the file row, so the content join is not needed.
     for (const item of await mediaRepository.findFiles(mediaIds)) {
-        titles.set(sourceKey({ sourceKind: 'media', sourceId: item.id }), item.filename);
+        titles.set(sourceKey({ sourceType: 'media', sourceId: item.id }), item.filename);
     }
 
     return titles;
@@ -135,16 +135,16 @@ async function entryTitles(
     return titles;
 }
 
-/** Kind and id, NUL-joined so no id can spell another kind's key. */
-function sourceKey(row: { sourceKind: string; sourceId: string }): string {
-    return `${row.sourceKind}\0${row.sourceId}`;
+/** Type and id, NUL-joined so no id can spell another type's key. */
+function sourceKey(row: { sourceType: string; sourceId: string }): string {
+    return `${row.sourceType}\0${row.sourceId}`;
 }
 
 /** A stable order: the index itself has none, so reads would reshuffle. */
 function compareUsage(a: Usage, b: Usage): number {
     return (
-        a.sourceKind.localeCompare(b.sourceKind) ||
-        (a.sourceType ?? '').localeCompare(b.sourceType ?? '') ||
+        a.sourceType.localeCompare(b.sourceType) ||
+        (a.sourceSubtype ?? '').localeCompare(b.sourceSubtype ?? '') ||
         a.sourceId.localeCompare(b.sourceId) ||
         a.schemaPath.localeCompare(b.schemaPath) ||
         a.instancePath.localeCompare(b.instancePath)

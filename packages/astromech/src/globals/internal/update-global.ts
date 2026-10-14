@@ -108,7 +108,7 @@ export async function updateGlobalLocale(
             // No version and no propagation: both belong to the canonical row,
             // which the merge writes.
             const stagedRow = await writeGuarded({
-                kind: 'global',
+                type: 'global',
                 address: { id: key, locale, staged },
                 guard,
                 repository: globalRepository,
@@ -276,7 +276,7 @@ async function writeRow(params: {
             : guard === null
               ? await globalRepository.update({ id, locale }, write)
               : await writeGuarded({
-                    kind: 'global',
+                    type: 'global',
                     address: { id: params.key, locale },
                     guard,
                     repository: globalRepository,

@@ -1,7 +1,7 @@
 /**
  * Relationship indexing (globals policy): the globals tables bound to the shared
  * content policy in `content/relationships.ts`, which holds the rule. A global's
- * key is the index's `sourceType`, so a reverse lookup can name it.
+ * key is the index's `sourceSubtype`, so a reverse lookup can name it.
  */
 
 import { createContentRelationships } from '@/content/relationships';
@@ -10,8 +10,8 @@ import { globalRepository } from '@/globals/repository';
 const relationships = createContentRelationships({
     repository: globalRepository,
     resourceIdColumn: 'globalId',
-    kind: 'global',
-    sourceType: (resourceRow) => String(resourceRow['key']),
+    type: 'global',
+    sourceSubtype: (resourceRow) => String(resourceRow['key']),
 });
 
 /**

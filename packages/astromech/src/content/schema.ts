@@ -108,12 +108,12 @@ export const usageSchema = z
         /** Display name of the source; empty when it could not be loaded. */
         sourceTitle: z.string(),
         /** What holds the reference. */
-        sourceKind: z.enum(RESOURCE_TYPES),
+        sourceType: z.enum(RESOURCE_TYPES),
         /**
          * An entry source's type (qualified for a plugin type) or a global source's
          * key. Null for user and media sources.
          */
-        sourceType: withFallback(z.string().nullable(), null),
+        sourceSubtype: withFallback(z.string().nullable(), null),
         /** Schema path of the field holding the reference (`sections[].gallery`). */
         schemaPath: z.string(),
         /** Instance path, which deep-links to the exact item. Never pattern-matched. */

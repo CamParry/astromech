@@ -13,9 +13,9 @@ import { safeParseFields } from 'astromech/shared';
  */
 export async function requiresFieldValues(
     definitions: Field[],
-    kind: 'user' | 'media'
+    type: 'user' | 'media'
 ): Promise<boolean> {
-    const errors = await requiredFieldErrors(definitions, kind);
+    const errors = await requiredFieldErrors(definitions, type);
     return Object.keys(errors).length > 0;
 }
 
@@ -25,12 +25,12 @@ export async function requiresFieldValues(
  */
 export async function requiredFieldErrors(
     definitions: Field[],
-    kind: 'user' | 'media'
+    type: 'user' | 'media'
 ): Promise<FieldErrors> {
     const { errors } = await safeParseFields({}, definitions, {
         operation: 'create',
         validation: 'complete',
-        resource: { kind, record: null },
+        resource: { type, record: null },
         user: null,
     });
     return errors;

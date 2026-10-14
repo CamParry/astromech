@@ -189,7 +189,7 @@ async function parseRedirect(
     );
     const values = await parseFields(data, definitions, {
         operation: existing === null ? 'create' : 'update',
-        resource: { kind: 'plugin', record: existing },
+        resource: { type: 'plugin', record: existing },
         user: ctx.user,
     });
     return {

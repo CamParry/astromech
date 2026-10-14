@@ -25,7 +25,7 @@ import { userSchema } from '@/users/schema';
  * global's key where a call has one; users and media ignore it.
  */
 export type ResourceConfig = {
-    kind: ResourceType;
+    type: ResourceType;
     /** How a message names the target: `Entry type 'post'`, `Media`. */
     name(target?: string): string;
     /** The target's field tree, layout fields included; empty when nothing declares it. */
@@ -46,10 +46,10 @@ export type ResourceConfig = {
 
 /** Every resource type's config, keyed by type, so a missing resource is a type error. */
 export const RESOURCE_CONFIG: {
-    readonly [K in ResourceType]: ResourceConfig & { kind: K };
+    readonly [K in ResourceType]: ResourceConfig & { type: K };
 } = {
     entry: {
-        kind: 'entry',
+        type: 'entry',
         name: (type) => `Entry type '${type ?? ''}'`,
         fields: (config, type) => {
             const entryType = resolveEntryType(config, type ?? '');
@@ -69,7 +69,7 @@ export const RESOURCE_CONFIG: {
         outputSchema: entrySchema,
     },
     global: {
-        kind: 'global',
+        type: 'global',
         name: (key) => `Global '${key ?? ''}'`,
         fields: (config, key) => {
             const global = resolveGlobal(config, key ?? '');
@@ -85,7 +85,7 @@ export const RESOURCE_CONFIG: {
         outputSchema: globalSchema,
     },
     user: {
-        kind: 'user',
+        type: 'user',
         name: () => 'User content',
         fields: (config) => config.users.fields,
         translatable: (config) => config.users.translatable,
@@ -96,7 +96,7 @@ export const RESOURCE_CONFIG: {
         outputSchema: userSchema,
     },
     media: {
-        kind: 'media',
+        type: 'media',
         name: () => 'Media',
         fields: (config) => config.media.fields ?? [],
         translatable: (config) => config.media.translatable,

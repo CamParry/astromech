@@ -58,8 +58,8 @@ let usage: Usage[] = [];
 const USAGE = [
     {
         sourceId: 'u1',
-        sourceKind: 'user',
-        sourceType: null,
+        sourceType: 'user',
+        sourceSubtype: null,
         sourceTitle: 'Ada',
         schemaPath: 'avatar',
         instancePath: 'avatar',
@@ -68,8 +68,8 @@ const USAGE = [
     },
     {
         sourceId: 'u2',
-        sourceKind: 'user',
-        sourceType: null,
+        sourceType: 'user',
+        sourceSubtype: null,
         sourceTitle: 'Grace',
         schemaPath: 'avatar',
         instancePath: 'avatar',

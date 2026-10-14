@@ -1,6 +1,6 @@
 /**
  * "Used by" panel — the entries, globals, users and media items that reference
- * one media item, grouped by source kind and entry type. `media.usedBy` resolves
+ * one media item, grouped by source type and entry type. `media.usedBy` resolves
  * display titles server-side, so this component only groups and links.
  */
 
@@ -17,11 +17,11 @@ export type MediaUsagePanelProps = {
     mediaId: string;
 };
 
-/** One heading's worth of rows: all the references from one kind (and entry type). */
+/** One heading's worth of rows: all the references from one source type (and entry type). */
 type UsageGroup = {
     key: string;
-    sourceKind: Usage['sourceKind'];
-    sourceType: string | null;
+    sourceType: Usage['sourceType'];
+    sourceSubtype: string | null;
     rows: Usage[];
 };
 
@@ -58,7 +58,7 @@ export function MediaUsagePanel({
                         {group.rows.map((row) => (
                             <li
                                 className="am-media-usage-item"
-                                key={`${row.sourceKind}-${row.sourceId}-${row.instancePath}`}
+                                key={`${row.sourceType}-${row.sourceId}-${row.instancePath}`}
                             >
                                 <span className="am-media-usage-source">
                                     <SourceName group={group} row={row} />
@@ -91,11 +91,11 @@ function SourceName({
     // A source that would not load has no title, so its id is all there is.
     const label = row.sourceTitle === '' ? row.sourceId : row.sourceTitle;
 
-    if (group.sourceKind !== 'entry' || group.sourceType === null) {
+    if (group.sourceType !== 'entry' || group.sourceSubtype === null) {
         return <span className="am-text-mono">{label}</span>;
     }
     return (
-        <Link className="am-link" to={entryAdminPath(group.sourceType, row.sourceId)}>
+        <Link className="am-link" to={entryAdminPath(group.sourceSubtype, row.sourceId)}>
             {label}
         </Link>
     );
@@ -105,11 +105,11 @@ function SourceName({
 function groupUsage(rows: Usage[]): UsageGroup[] {
     const groups = new Map<string, UsageGroup>();
     for (const row of rows) {
-        const key = `${row.sourceKind} ${row.sourceType ?? ''}`;
+        const key = `${row.sourceType} ${row.sourceSubtype ?? ''}`;
         const group = groups.get(key) ?? {
             key,
-            sourceKind: row.sourceKind,
             sourceType: row.sourceType,
+            sourceSubtype: row.sourceSubtype,
             rows: [],
         };
         group.rows.push(row);
@@ -118,13 +118,13 @@ function groupUsage(rows: Usage[]): UsageGroup[] {
     return Array.from(groups.values());
 }
 
-/** Entry groups use the type's plural label; the other kinds are translated. */
+/** Entry groups use the type's plural label; the other source types are translated. */
 function groupLabel(group: UsageGroup, translate: (key: string) => string): string {
-    if (group.sourceKind === 'global') return translate('media.usedBySourceGlobals');
-    if (group.sourceKind === 'user') return translate('media.usedBySourceUsers');
-    if (group.sourceKind === 'media') return translate('media.usedBySourceMedia');
-    if (group.sourceType === null) return translate('media.usedBySourceEntries');
-    return entryTypeLabel(group.sourceType) ?? group.sourceType;
+    if (group.sourceType === 'global') return translate('media.usedBySourceGlobals');
+    if (group.sourceType === 'user') return translate('media.usedBySourceUsers');
+    if (group.sourceType === 'media') return translate('media.usedBySourceMedia');
+    if (group.sourceSubtype === null) return translate('media.usedBySourceEntries');
+    return entryTypeLabel(group.sourceSubtype) ?? group.sourceSubtype;
 }
 
 /** The admin's plural label for a root or plugin entry type, or null if unknown. */
