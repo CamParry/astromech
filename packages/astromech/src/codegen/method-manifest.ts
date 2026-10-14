@@ -8,8 +8,8 @@ import type {
     CoreManifestMethod,
     EntriesManifestMethod,
     JsonSchemaObject,
-    ManifestAccess,
     ManifestMethod,
+    ManifestMethodAccess,
     MethodManifest,
     PluginDefinition,
     PluginManifestMethod,
@@ -22,10 +22,8 @@ import { availableEntryMethods } from '@/entries/catalogue';
 import { globalsDefinition } from '@/globals/service';
 import { mediaDefinition } from '@/media/service';
 import { notificationsDefinition } from '@/notifications/service';
-import {
-    resolvePluginIdentity,
-    resolvePluginPermission,
-} from '@/plugins/runtime/plugin-identity';
+import { resolveAccess } from '@/permissions/access';
+import { resolvePluginIdentity } from '@/plugins/runtime/plugin-identity';
 import { securityDefinition } from '@/security/service';
 import { toJsonSchema } from '@/services/json-schema';
 import { usersDefinition } from '@/users/service';
@@ -54,14 +52,26 @@ function toJSONSchema(
 }
 
 /**
- * A contract's statically-serialisable permission. Function-form permissions
- * resolve from the call input, so they cannot go in the manifest as a string —
- * `permissionDynamic` flags them instead.
+ * What `access` demands, as the manifest records it. `call` is the input that
+ * fixes the method's target, when its id fixes one (an entry method's type): a
+ * function form is resolved against it. With no call, a function form's
+ * permission depends on an input the manifest does not have, so it is dynamic.
+ * `namespace` resolves a plugin's `{ permission }` form.
  */
-function staticPermission(contract: ServiceMethodContract): string | null {
-    const { access } = contract;
-    if (typeof access !== 'string') return null;
-    return access === 'public' || access === 'authenticated' ? null : access;
+function describeAccess(
+    access: AccessRule<never>,
+    call: { input: unknown } | null,
+    namespace?: string
+): ManifestMethodAccess {
+    if (typeof access === 'function' && call === null) {
+        return { access: 'permission', permissions: [], dynamic: true };
+    }
+    const resolved = resolveAccess(access, call?.input, namespace);
+    return {
+        access: resolved.kind,
+        permissions: resolved.kind === 'permission' ? [...resolved.permissions] : [],
+        dynamic: false,
+    };
 }
 
 function buildCoreMethods(): CoreManifestMethod[] {
@@ -88,16 +98,13 @@ function buildCoreMethods(): CoreManifestMethod[] {
                 source: 'core',
                 module,
                 method: key,
-                permission: staticPermission(contract),
+                // A core module's method names no target in its id, so a
+                // function form (every `globals` method's) is dynamic.
+                ...describeAccess(contract.access, null),
                 mutates: contract.mutates,
                 destructive: contract.destructive ?? false,
                 idempotent: contract.idempotent ?? false,
             };
-
-            // Flag function-form permissions — they cannot be statically serialised.
-            if (typeof contract.access === 'function') {
-                method.permissionDynamic = true;
-            }
 
             method.input = toJSONSchema(contract.input, 'input');
             if (contract.output) {
@@ -149,7 +156,8 @@ function projectEntryMethod(
         source: 'entries',
         method: name,
         typeId: entryType.id,
-        permission: staticPermission(contract),
+        // The id fixes the type, so the rule resolves for a call naming it.
+        ...describeAccess(contract.access, { input: { type: entryType.id } }),
         mutates: contract.mutates,
         destructive: contract.destructive ?? false,
         idempotent: contract.idempotent ?? false,
@@ -162,12 +170,6 @@ function projectEntryMethod(
         method.output = toJSONSchema(contract.output, 'output');
     }
     return method;
-}
-
-function normaliseAccess(access: AccessRule<never>): ManifestAccess {
-    if (access === 'public') return 'public';
-    if (access === 'authenticated') return 'authenticated';
-    return 'permission';
 }
 
 function buildPluginServiceMethods(plugins: PluginDefinition[]): PluginManifestMethod[] {
@@ -187,16 +189,14 @@ function buildPluginServiceMethods(plugins: PluginDefinition[]): PluginManifestM
                 plugin: identity.namespace,
                 serviceKey: identity.serviceKey,
                 method: key,
-                access: normaliseAccess(serviceMethod.access),
-                // Mirror the route's enforcement: bare keys are plugin-scoped
-                // (`read` → `plugin:<ns>:read`); keys with a `:` pass through.
-                permission:
-                    typeof serviceMethod.access === 'object'
-                        ? resolvePluginPermission(
-                              identity.permissionNamespace,
-                              serviceMethod.access.permission
-                          )
-                        : null,
+                // Resolved as the scoped handle resolves it: a bare key is
+                // plugin-scoped (`read` to `plugin:<ns>:read`), a key with a `:`
+                // passes through.
+                ...describeAccess(
+                    serviceMethod.access,
+                    null,
+                    identity.permissionNamespace
+                ),
                 mutates: serviceMethod.mutates,
                 destructive: serviceMethod.destructive ?? false,
                 idempotent: serviceMethod.idempotent ?? false,
@@ -234,7 +234,7 @@ export function generateMethodManifest(
     // list renders at prompt position 0, so a reorder would bust the prompt cache.
     methods.sort((a, b) => (a.id < b.id ? -1 : a.id > b.id ? 1 : 0));
 
-    return { version: 3, methods };
+    return { version: 4, methods };
 }
 
 /**

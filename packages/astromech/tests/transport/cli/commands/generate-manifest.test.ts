@@ -56,7 +56,7 @@ describe('generate:manifest', () => {
         );
         expect(recipeCreate).toMatchObject({
             mutates: true,
-            permission: 'entry:recipe:create',
+            permissions: ['entry:recipe:create'],
         });
         expect(manifest.methods.some((m) => m.id === 'users.create')).toBe(true);
         expect(manifest.methods.some((m) => m.id.startsWith('entries.post.'))).toBe(

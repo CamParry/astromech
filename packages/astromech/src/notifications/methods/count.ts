@@ -8,7 +8,7 @@ export const countNotifications = defineServiceMethod({
     summary: 'Count your own undismissed notifications.',
     input: z.strictObject({}),
     output: z.number(),
-    access: 'public',
+    access: 'authenticated',
     sessionScoped: true,
     mutates: false,
     async handler(_params, ctx): Promise<number> {

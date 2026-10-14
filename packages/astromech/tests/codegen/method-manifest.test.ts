@@ -1,8 +1,9 @@
 /**
  * The method manifest generated from one config: a versioned, an unversioned
- * and a staging entry type, plus a plugin with an entry type and three service
- * methods. What each method declares is one row of the table; the rules every
- * method of a kind keeps are checked over the whole manifest.
+ * and a staging entry type, plus a plugin with an entry type and a service
+ * method for each access form. What each method declares is one row of the
+ * table; the rules every method of a kind keeps are checked over the whole
+ * manifest.
  */
 
 import type {
@@ -11,6 +12,7 @@ import type {
     ManifestMethod,
     MethodManifest,
     PluginDefinition,
+    Role,
 } from '@/types/index';
 import { resolveTestConfig } from '@tests/harness';
 import { describe, expect, it } from 'vitest';
@@ -19,8 +21,9 @@ import {
     generateMethodManifest,
     serialiseMethodManifest,
 } from '@/codegen/method-manifest';
+import { annotateManifest } from '@/policies/annotate-manifest';
 
-/** Plugin with an entry type and three service methods covering the access forms. */
+/** Plugin with an entry type and a service method for each access form. */
 const testPlugin: PluginDefinition = {
     package: '@test/my-plugin',
     entries: [
@@ -51,6 +54,25 @@ const testPlugin: PluginDefinition = {
             access: { permission: 'manage' },
             input: z.object({}),
             mutates: true,
+            handler: async () => undefined,
+        },
+        coreForm: {
+            // The bare core form: a full permission string, not namespaced.
+            access: 'entry:posts:read',
+            input: z.object({}),
+            mutates: false,
+            handler: async () => undefined,
+        },
+        perInput: {
+            access: (input: { id: string }) => `plugin:test_my_plugin:item:${input.id}`,
+            input: z.object({ id: z.string() }),
+            mutates: false,
+            handler: async () => undefined,
+        },
+        whoami: {
+            access: 'authenticated',
+            input: z.object({}),
+            mutates: false,
             handler: async () => undefined,
         },
     },
@@ -110,15 +132,15 @@ function properties(schema: JsonSchemaObject | null | undefined): JsonSchemaObje
 }
 
 describe('the manifest document', () => {
-    it('is version 3', () => {
-        expect(manifest.version).toBe(3);
+    it('is version 4', () => {
+        expect(manifest.version).toBe(4);
     });
 
     it('serialises to the manifest as JSON, with a trailing newline', () => {
         const serialised = serialiseMethodManifest(manifest);
 
         expect(serialised.endsWith('}\n')).toBe(true);
-        expect(serialised.startsWith('{\n  "version": 3,\n  "methods": [\n')).toBe(true);
+        expect(serialised.startsWith('{\n  "version": 4,\n  "methods": [\n')).toBe(true);
         expect(JSON.parse(serialised)).toEqual(manifest);
     });
 });
@@ -139,13 +161,19 @@ describe('what each method declares', () => {
         labelled([
             {
                 name: 'users.create',
-                declares: { source: 'core', permission: 'users:create', mutates: true },
+                declares: {
+                    source: 'core',
+                    access: 'permission',
+                    permissions: ['users:create'],
+                    dynamic: false,
+                    mutates: true,
+                },
             },
             { name: 'users.delete', declares: { destructive: true } },
             { name: 'users.query', declares: { mutates: false } },
             {
                 name: 'globals.update',
-                declares: { permission: null, permissionDynamic: true },
+                declares: { access: 'permission', permissions: [], dynamic: true },
             },
             { name: 'globals.get', declares: { mutates: false } },
             { name: 'globals.versions', declares: { mutates: false } },
@@ -155,14 +183,16 @@ describe('what each method declares', () => {
                 typeId: 'posts',
                 declares: {
                     source: 'entries',
-                    permission: 'entry:posts:read',
+                    access: 'permission',
+                    permissions: ['entry:posts:read'],
+                    dynamic: false,
                     mutates: false,
                 },
             },
             {
                 name: 'entries.get',
                 typeId: 'posts',
-                declares: { permission: 'entry:posts:read' },
+                declares: { permissions: ['entry:posts:read'] },
             },
             {
                 name: 'entries.delete',
@@ -174,48 +204,48 @@ describe('what each method declares', () => {
             {
                 name: 'entries.publish',
                 typeId: 'posts',
-                declares: { permission: 'entry:posts:publish' },
+                declares: { permissions: ['entry:posts:publish'] },
             },
             // Publish needs `statuses`, not `versioning`, so an unversioned type has it.
             {
                 name: 'entries.publish',
                 typeId: 'pages',
-                declares: { permission: 'entry:pages:publish' },
+                declares: { permissions: ['entry:pages:publish'] },
             },
             {
                 name: 'entries.publish',
                 typeId: 'articles',
-                declares: { permission: 'entry:articles:publish' },
+                declares: { permissions: ['entry:articles:publish'] },
             },
             {
                 name: 'entries.createStaged',
                 typeId: 'articles',
-                declares: { permission: 'entry:articles:update', mutates: true },
+                declares: { permissions: ['entry:articles:update'], mutates: true },
             },
             {
                 name: 'entries.getStaged',
                 typeId: 'articles',
-                declares: { permission: 'entry:articles:read', mutates: false },
+                declares: { permissions: ['entry:articles:read'], mutates: false },
             },
             {
                 name: 'entries.mergeStaged',
                 typeId: 'articles',
-                declares: { permission: 'entry:articles:publish', mutates: true },
+                declares: { permissions: ['entry:articles:publish'], mutates: true },
             },
             {
                 name: 'entries.deleteStaged',
                 typeId: 'articles',
-                declares: { permission: 'entry:articles:update', mutates: true },
+                declares: { permissions: ['entry:articles:update'], mutates: true },
             },
             {
                 name: 'entries.issuePreviewToken',
                 typeId: 'articles',
-                declares: { permission: 'entry:articles:update', mutates: true },
+                declares: { permissions: ['entry:articles:update'], mutates: true },
             },
             {
                 name: 'entries.revokePreviewToken',
                 typeId: 'articles',
-                declares: { permission: 'entry:articles:update', mutates: true },
+                declares: { permissions: ['entry:articles:update'], mutates: true },
             },
             {
                 name: 'entries.query',
@@ -225,30 +255,51 @@ describe('what each method declares', () => {
             {
                 name: 'entries.create',
                 typeId: 'test_my_plugin/widget',
-                declares: { permission: 'plugin:test_my_plugin:entry:widget:create' },
+                declares: { permissions: ['plugin:test_my_plugin:entry:widget:create'] },
             },
             {
                 name: 'entries.get',
                 typeId: 'test_my_plugin/widget',
-                declares: { permission: 'plugin:test_my_plugin:entry:widget:read' },
+                declares: { permissions: ['plugin:test_my_plugin:entry:widget:read'] },
             },
             {
                 name: 'plugins.testMyPlugin.doSomething',
                 declares: {
                     source: 'plugin',
                     access: 'permission',
-                    permission: 'plugins:x:do',
+                    permissions: ['plugins:x:do'],
+                    dynamic: false,
                     mutates: true,
                     summary: 'Do something.',
                 },
             },
             {
                 name: 'plugins.testMyPlugin.readOnly',
-                declares: { access: 'public', permission: null, mutates: false },
+                declares: { access: 'public', permissions: [], mutates: false },
             },
             {
                 name: 'plugins.testMyPlugin.scoped',
-                declares: { permission: 'plugin:test_my_plugin:manage' },
+                declares: { permissions: ['plugin:test_my_plugin:manage'] },
+            },
+            {
+                name: 'plugins.testMyPlugin.coreForm',
+                declares: {
+                    access: 'permission',
+                    permissions: ['entry:posts:read'],
+                    dynamic: false,
+                },
+            },
+            {
+                name: 'plugins.testMyPlugin.perInput',
+                declares: { access: 'permission', permissions: [], dynamic: true },
+            },
+            {
+                name: 'plugins.testMyPlugin.whoami',
+                declares: { access: 'authenticated', permissions: [], dynamic: false },
+            },
+            {
+                name: 'notifications.list',
+                declares: { access: 'authenticated', permissions: [], dynamic: false },
             },
         ])
     )('$label', ({ name, typeId, declares }) => {
@@ -257,6 +308,39 @@ describe('what each method declares', () => {
 
     it('leaves the site’s own entry methods without a plugin', () => {
         expect(method('entries.query', 'posts')).not.toHaveProperty('plugin');
+    });
+});
+
+describe('what a role may call, read off the manifest', () => {
+    /** What `annotateManifest` says of `name` for `role`. */
+    function allowed(name: string, role: Role | null): boolean | null | undefined {
+        return annotateManifest([method(name)], role)[0]?.allowed;
+    }
+
+    const reader: Role = {
+        slug: 'reader',
+        name: 'Reader',
+        permissions: ['entry:pages:read'],
+        isBuiltIn: false,
+    };
+
+    it('refuses a plugin’s core-form permission to a role without it', () => {
+        expect(allowed('plugins.testMyPlugin.coreForm', reader)).toBe(false);
+        expect(
+            allowed('plugins.testMyPlugin.coreForm', {
+                ...reader,
+                permissions: ['entry:posts:read'],
+            })
+        ).toBe(true);
+    });
+
+    it('leaves a plugin’s per-input permission to the call', () => {
+        expect(allowed('plugins.testMyPlugin.perInput', reader)).toBeNull();
+    });
+
+    it('refuses an authenticated core method to a caller with no role', () => {
+        expect(allowed('notifications.list', null)).toBe(false);
+        expect(allowed('notifications.list', reader)).toBe(true);
     });
 });
 
@@ -331,6 +415,23 @@ describe('which methods it holds', () => {
 });
 
 describe('the rules every method of a kind keeps', () => {
+    it('gives every method one access shape, whatever its source', () => {
+        const sources = new Set(manifest.methods.map((m) => m.source));
+        expect([...sources].sort()).toEqual(['core', 'entries', 'plugin']);
+
+        for (const m of manifest.methods) {
+            expect(['public', 'authenticated', 'permission'], m.id).toContain(m.access);
+            expect(m.permissions, m.id).toEqual(expect.any(Array));
+            expect(typeof m.dynamic, m.id).toBe('boolean');
+            // Only a permission rule names permissions, and a dynamic one names none.
+            if (m.access !== 'permission' || m.dynamic) {
+                expect(m.permissions, m.id).toEqual([]);
+            }
+            expect(m, m.id).not.toHaveProperty('permission');
+            expect(m, m.id).not.toHaveProperty('permissionDynamic');
+        }
+    });
+
     it('gives every core method an input schema', () => {
         const core = manifest.methods.filter((m) => m.source === 'core');
         expect(core.length).toBeGreaterThan(0);

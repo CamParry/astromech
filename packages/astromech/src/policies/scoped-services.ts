@@ -4,6 +4,7 @@
  * handed that handle instead of the raw services, so authority is a property
  * of the handle, not of checks each caller remembered to write. Fails CLOSED.
  */
+import type { ResolvedAccess } from '@/permissions/access';
 import type { Permissions } from '@/permissions/permissions-for';
 import type { PluginServiceNamespace, ServiceMethodContract, User } from '@/types/index';
 import { PermissionDeniedError } from '@/errors/permission';
@@ -28,6 +29,22 @@ type ServiceFn = (...args: unknown[]) => unknown;
 
 /** Who a scoped handle acts for: the role's guard, and the signed-in user if any. */
 export type ScopedCaller = { permissions: Permissions; user: User | null };
+
+/**
+ * The error for a call of `id` that `permissions` refuses: the missing
+ * permission, or a signed-in caller for an `authenticated` method.
+ */
+function refusal(
+    id: string,
+    resolved: ResolvedAccess,
+    permissions: Permissions
+): PermissionDeniedError {
+    // `public` always passes, so the other kind refused here is `authenticated`.
+    if (resolved.kind !== 'permission') {
+        return new PermissionDeniedError(id, null, 'requires a signed-in caller.');
+    }
+    return new PermissionDeniedError(id, deniedPermission(resolved, permissions.allows));
+}
 
 /**
  * Wrap every method of `service` in its declared permission check. A denied
@@ -59,10 +76,7 @@ export function scopeMethods<S extends object>(
             const input = args[0];
             const resolved = resolveAccess(contract.access, input);
             if (!permissions.allowsAccess(resolved)) {
-                throw new PermissionDeniedError(
-                    id,
-                    deniedPermission(resolved, permissions.allows)
-                );
+                throw refusal(id, resolved, permissions);
             }
             if (contract.sessionScoped === true && caller.user === null) {
                 throw new PermissionDeniedError(
@@ -110,10 +124,7 @@ export function scopePlugins(
                     identity.permissionNamespace
                 );
                 if (!permissions.allowsAccess(resolved)) {
-                    throw new PermissionDeniedError(
-                        id,
-                        deniedPermission(resolved, permissions.allows)
-                    );
+                    throw refusal(id, resolved, permissions);
                 }
                 const invoke = services[identity.serviceKey]?.[key];
                 if (invoke === undefined) throw new PermissionDeniedError(id, null);

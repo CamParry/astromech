@@ -73,9 +73,8 @@ export function resolveAccess(
  * demands none the caller lacks. What a refusal names as the missing grant.
  */
 export function deniedPermission(
-    access: ResolvedAccess,
+    access: Extract<ResolvedAccess, { kind: 'permission' }>,
     allows: (permission: Permission) => boolean
 ): Permission | null {
-    if (access.kind !== 'permission') return null;
     return access.permissions.find((permission) => !allows(permission)) ?? null;
 }

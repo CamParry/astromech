@@ -5,7 +5,7 @@
  */
 
 import type { AppContext } from './app-context';
-import type { AccessRule } from '@/permissions/access';
+import type { AccessRule, ResolvedAccess } from '@/permissions/access';
 import type { z } from '@hono/zod-openapi';
 
 /**
@@ -195,14 +195,36 @@ export type ServiceDefinition<S> = {
 export type JsonSchemaObject = Record<string, unknown>;
 
 /**
- * A plugin service method's access level, flattened for serialisation.
- * `'permission'` is the object form — the concrete string travels in
- * `ManifestMethodBase['permission']`.
+ * The kind of rule a manifest method declares, as `resolveAccess` reports it.
+ * `'permission'` covers a permission string, a plugin's `{ permission }` and a
+ * function of the input.
  */
-export type ManifestAccess = 'public' | 'authenticated' | 'permission';
+export type ManifestAccess = ResolvedAccess['kind'];
+
+/**
+ * What a manifest method demands of its caller. Core, entry and plugin methods
+ * all carry it, read from their `AccessRule` through `resolveAccess`.
+ */
+export type ManifestMethodAccess = {
+    access: ManifestAccess;
+    /**
+     * Every permission a call demands, and a call needs all of them. Empty for
+     * `public` and `authenticated`, and for a dynamic method. An entry write's
+     * arguments can add `publish` (a status or date), and a read's can add the
+     * full-shape permission, as each method's summary says; those are left out.
+     */
+    permissions: string[];
+    /**
+     * True when the permission depends on the call's input, so it cannot be
+     * listed ahead of time: a `globals` method's depends on the global its `key`
+     * names, and a plugin's function form is only called with an input.
+     * `permissions` is then empty.
+     */
+    dynamic: boolean;
+};
 
 /** The facts every manifest method carries, whatever its origin. */
-type ManifestMethodBase = {
+type ManifestMethodBase = ManifestMethodAccess & {
     /**
      * Globally unique, stable, sortable address for this method.
      *
@@ -215,13 +237,6 @@ type ManifestMethodBase = {
     name: string;
     /** One-line human summary. */
     summary?: string | undefined;
-    /**
-     * Static permission string, or null when the permission is dynamic
-     * (resolved at call time from the input — see `permissionDynamic`).
-     */
-    permission: string | null;
-    /** True when `permission` is null because it is input-derived, not absent. */
-    permissionDynamic?: true;
     /** Does the method change persisted state? */
     mutates: boolean;
     /** Irreversible or data-losing? */
@@ -278,7 +293,6 @@ export type PluginManifestMethod = ManifestMethodBase & {
     serviceKey: string;
     /** Key on the plugin's `service` object. */
     method: string;
-    access: ManifestAccess;
 };
 
 /** One entry in the manifest's methods array, discriminated by `source`. */
@@ -303,8 +317,18 @@ export type ToolAnnotations = {
     idempotentHint: boolean;
 };
 
-/** A single tool: its declaration, plus the handler that runs it. */
-export type ToolDefinition = {
+/**
+ * A single tool: its declaration, plus the handler that runs it. Its `access`,
+ * `permissions` and `dynamic` are its method's, as the manifest records them.
+ *
+ * Those three are carried, NOT enforced, and deliberately unread today: this MCP
+ * server is dev-only and trusted, runs with no role, and enforces a method's
+ * permission no more than the CLI does. They exist so the seam is already in
+ * place when a remote transport, which does carry a role, dispatches through
+ * here; that transport enforces via `policies/scoped-services.ts`, and reads
+ * them only to say up front what it would refuse.
+ */
+export type ToolDefinition = ManifestMethodAccess & {
     name: string;
     /**
      * The manifest method id this tool projects, e.g. `entries.page.publish`.
@@ -315,20 +339,6 @@ export type ToolDefinition = {
     description: string;
     inputSchema: JsonSchemaObject;
     annotations: ToolAnnotations;
-    /**
-     * The permission this tool's method declares — null when it is ungated, or
-     * when it is input-derived (see `permissionDynamic`).
-     *
-     * Carried, NOT enforced, and deliberately unread today: this MCP server is
-     * dev-only and trusted, runs with no role, and enforces a method's
-     * permission no more than the CLI does. It exists so the seam is already in
-     * place when a remote transport — which does carry a role — dispatches
-     * through here; that transport enforces via `policies/scoped-services.ts`,
-     * and reads this only to say up front what it would refuse.
-     */
-    permission: string | null;
-    /** True when `permission` is null because the method derives it from the input. */
-    permissionDynamic: boolean;
     /**
      * The question to put to a human before running this method with these
      * arguments. Core owns the wording so a transport that pauses on a mutating

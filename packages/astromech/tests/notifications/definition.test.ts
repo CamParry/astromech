@@ -46,11 +46,11 @@ describe('the catalogue', () => {
         }
     });
 
-    it('marks every method session-scoped and gated by no permission', () => {
+    it('marks every method session-scoped, needing a signed-in caller and no permission', () => {
         for (const key of METHODS) {
             const method = notificationsDefinition.catalogue[key];
             expect(method.sessionScoped, key).toBe(true);
-            expect(method.access, key).toBe('public');
+            expect(method.access, key).toBe('authenticated');
         }
     });
 });

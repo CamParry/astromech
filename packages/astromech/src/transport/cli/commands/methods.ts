@@ -34,6 +34,21 @@ function accessMarker(method: ManifestMethod | AnnotatedManifestMethod): string 
     return method.allowed ? '' : 'denied';
 }
 
+/**
+ * What a method demands, rendered for a human: its permissions, `dynamic` when
+ * only the call input can name them, `signed in` for an authenticated method,
+ * and `none` for a public one.
+ */
+function accessLabel(method: ManifestMethod): string {
+    if (method.dynamic) return 'permission: dynamic';
+    if (method.access === 'authenticated') return 'permission: none, signed in';
+    if (method.access === 'public' || method.permissions.length === 0) {
+        return 'permission: none';
+    }
+    const noun = method.permissions.length === 1 ? 'permission' : 'permissions';
+    return `${noun}: ${method.permissions.join(', ')}`;
+}
+
 export default defineCommand({
     meta: { name: 'methods', description: 'List the manifest methods' },
     args: {
@@ -119,15 +134,8 @@ export default defineCommand({
                 }
                 const effectPart = effects.length > 0 ? `  [${effects.join(' ')}]` : '';
 
-                const permission =
-                    m.permission !== null
-                        ? m.permission
-                        : m.permissionDynamic === true
-                          ? 'dynamic'
-                          : 'none';
-
                 // The id, as `call` takes it and the MCP server titles its tools.
-                console.log(`${m.id}${effectPart}  (permission: ${permission})`);
+                console.log(`${m.id}${effectPart}  (${accessLabel(m)})`);
             }
 
             printExclusionSummary(filtered.excluded);

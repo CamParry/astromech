@@ -10,7 +10,7 @@ export const listNotifications = defineServiceMethod({
     summary: 'List your own notifications, newest first.',
     input: z.strictObject({}),
     output: z.array(notificationSchema),
-    access: 'public',
+    access: 'authenticated',
     sessionScoped: true,
     mutates: false,
     async handler(_params, ctx): Promise<Notification[]> {

@@ -3,6 +3,7 @@ import { noMigrations, noopStorage } from '@tests/fixtures';
 import { describe, expect, it } from 'vitest';
 import { generateMethodManifest } from '@/codegen/method-manifest';
 import { resolveConfig } from '@/config/resolve';
+import { availableEntryMethods } from '@/entries/catalogue';
 import { isGlobalCapability } from '@/globals/capabilities';
 import { globalsDefinition } from '@/globals/service';
 import { resolveAccess } from '@/permissions/access';
@@ -171,7 +172,7 @@ describe('buildPermissionCatalogue', () => {
         const demanded: string[] = [];
         for (const method of generateMethodManifest(resolved, [pluginDefinition])
             .methods) {
-            if (method.permission !== null) demanded.push(method.permission);
+            demanded.push(...method.permissions);
         }
         // The manifest names `globals.*` once for every global, so its
         // permission is dynamic: resolve each method per global it can serve.
@@ -196,6 +197,43 @@ describe('buildPermissionCatalogue', () => {
 
         const missing = new Set(demanded.filter((permission) => !listed.has(permission)));
         expect([...missing]).toEqual([]);
+    });
+
+    it('lists both permissions a write that sets a status demands', () => {
+        const listed = new Set(catalogue.map((p) => p.permission));
+        const demanded: string[] = [];
+        // A type or global without statuses refuses a status whatever the role
+        // holds, so only one with statuses can be granted the second permission.
+        for (const entryType of Object.values(resolved.entryTypes)) {
+            if (entryType.capabilities.statuses !== true) continue;
+            const { update } = availableEntryMethods(entryType);
+            if (update === undefined) throw new Error(`${entryType.id} has no update`);
+            const access = resolveAccess(update.access, {
+                type: entryType.id,
+                id: 'e1',
+                data: { status: 'published' },
+            });
+            expect(
+                access.kind === 'permission' && access.permissions,
+                entryType.id
+            ).toHaveLength(2);
+            if (access.kind === 'permission') demanded.push(...access.permissions);
+        }
+        for (const global of Object.values(resolved.globals)) {
+            if (global.capabilities.statuses !== true) continue;
+            const access = resolveAccess(globalsDefinition.catalogue.update.access, {
+                key: global.id,
+                data: { status: 'published' },
+            });
+            expect(
+                access.kind === 'permission' && access.permissions,
+                global.id
+            ).toHaveLength(2);
+            if (access.kind === 'permission') demanded.push(...access.permissions);
+        }
+
+        expect(demanded.length).toBeGreaterThanOrEqual(12);
+        expect(demanded.filter((permission) => !listed.has(permission))).toEqual([]);
     });
 
     // `permissions/roles.ts` writes the built-in grants as literals, since the

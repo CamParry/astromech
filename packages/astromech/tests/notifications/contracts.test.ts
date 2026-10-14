@@ -20,10 +20,13 @@ import {
     setupTestConfig,
 } from '@tests/harness';
 import { beforeEach, describe, expect, it } from 'vitest';
+import { setMethodManifest } from '@/codegen/manifest-registry';
 import { generateMethodManifest } from '@/codegen/method-manifest';
 import { resolveConfig } from '@/config/resolve';
+import { PermissionDeniedError } from '@/errors/permission';
 import { notificationsDefinition, notify } from '@/notifications/service';
 import { buildDispatch, buildScopedDispatch } from '@/transport/tools/dispatch';
+import { buildScopedTools } from '@/transport/tools/scoped-tools';
 
 let db: Kysely<DB>;
 let alice: string;
@@ -74,11 +77,14 @@ describe('the manifest', () => {
         expect(Object.keys(notificationsDefinition.catalogue).length).toBe(4);
     });
 
-    it('marks every method session-scoped and gated by no permission', () => {
+    it('marks every method session-scoped, needing a signed-in caller and no permission', () => {
         for (const method of notificationMethods()) {
             expect(method.sessionScoped).toBe(true);
-            expect(method.permission).toBeNull();
-            expect(method.permissionDynamic).toBeUndefined();
+            expect(method).toMatchObject({
+                access: 'authenticated',
+                permissions: [],
+                dynamic: false,
+            });
         }
     });
 
@@ -151,5 +157,24 @@ describe('the scoped handle', () => {
 
     it('refuses a context with no user to act as', async () => {
         await expect(tool('list').invoke({})).rejects.toThrow('session-scoped');
+    });
+
+    it('refuses an anonymous caller before the method runs', async () => {
+        const anonymous = contextAs(null);
+        for (const method of notificationMethods()) {
+            const result = buildScopedDispatch(method, anonymous);
+            if (!result.ok) throw new Error(`expected a tool: ${result.reason}`);
+            const call = result.tool.invoke({ id: 'n' });
+            await expect(call, method.id).rejects.toThrow(PermissionDeniedError);
+            // Refused by the access check, ahead of the session-scoped one.
+            await expect(call, method.id).rejects.toThrow('requires a signed-in caller');
+        }
+    });
+
+    it('offers an anonymous caller no notifications tool', () => {
+        setMethodManifest(generateMethodManifest(resolveConfig(makeTestConfig())));
+
+        const ids = buildScopedTools(contextAs(null)).map((t) => t.id);
+        expect(ids.filter((id) => id.startsWith('notifications.'))).toEqual([]);
     });
 });

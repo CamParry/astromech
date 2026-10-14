@@ -61,8 +61,9 @@ function toolFor(name: string, readOnly: boolean): ToolDefinition {
             destructiveHint: false,
             idempotentHint: false,
         },
-        permission: null,
-        permissionDynamic: false,
+        access: 'public',
+        permissions: [],
+        dynamic: false,
         confirmMessage: () => `Run "${name}"?`,
         invoke: vi.fn(async () => ({ ok: true })),
     };

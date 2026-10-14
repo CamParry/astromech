@@ -612,19 +612,19 @@ function coreMethod(
     permission: string | null,
     dynamic = false
 ): CoreManifestMethod {
-    const method: CoreManifestMethod = {
+    return {
         id: `users.${name}`,
         name: `users.${name}`,
         source: 'core',
         module: 'users',
         method: name,
-        permission,
+        access: dynamic || permission !== null ? 'permission' : 'public',
+        permissions: permission === null ? [] : [permission],
+        dynamic,
         mutates: false,
         destructive: false,
         idempotent: false,
     };
-    if (dynamic) method.permissionDynamic = true;
-    return method;
 }
 
 const manifestMethods: ManifestMethod[] = [
@@ -653,6 +653,18 @@ describe('annotateManifest', () => {
         expect(annotated.map((m) => m.allowed)).toEqual([false, false, true, null]);
     });
 
+    it('needs every permission a method demands, not only the first', () => {
+        const both: CoreManifestMethod = {
+            ...coreMethod('both', 'users:read'),
+            permissions: ['users:read', 'users:update'],
+        };
+
+        expect(annotateManifest([both], role('users:read'))[0]?.allowed).toBe(false);
+        expect(
+            annotateManifest([both], role('users:read', 'users:update'))[0]?.allowed
+        ).toBe(true);
+    });
+
     it('denies an authenticated plugin method with no role, and allows it for any role', () => {
         const whoami: ManifestMethod = {
             id: 'plugins.probe.whoami',
@@ -662,7 +674,8 @@ describe('annotateManifest', () => {
             serviceKey: 'probe',
             method: 'whoami',
             access: 'authenticated',
-            permission: null,
+            permissions: [],
+            dynamic: false,
             mutates: false,
             destructive: false,
             idempotent: false,
