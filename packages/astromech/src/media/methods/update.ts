@@ -6,6 +6,7 @@ import { propagateSharedFields } from '@/content/translatable';
 import { changesVersionedContent, snapshotVersion } from '@/content/versions';
 import { transaction } from '@/database/transaction';
 import { ResourceNotFoundError } from '@/errors/resource';
+import { mediaPermission } from '@/media/permissions';
 import { defineServiceMethod } from '@/services/define-service-method';
 import { syncMediaRelationships } from '../relationships';
 import { mediaRepository } from '../repository';
@@ -25,7 +26,7 @@ export const updateMedia = defineServiceMethod({
         data: updateMediaSchema,
     }),
     output: mediaSchema,
-    access: 'media:update',
+    access: mediaPermission('update'),
     mutates: true,
     idempotent: true,
     async handler(params, ctx): Promise<MediaResource> {

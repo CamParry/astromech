@@ -3,6 +3,7 @@ import { z } from '@hono/zod-openapi';
 import { getResourceInLocale } from '@/content/locale';
 import { versionMetadataSchema } from '@/content/schema';
 import { listVersions } from '@/content/versions';
+import { mediaPermission } from '@/media/permissions';
 import { defineServiceMethod } from '@/services/define-service-method';
 import { mediaRepository } from '../../repository';
 
@@ -14,7 +15,7 @@ export const listMediaVersions = defineServiceMethod({
     summary: 'List the saved versions of one locale of a media item.',
     input: z.strictObject({ id: z.string(), locale: z.string().optional() }),
     output: z.array(versionMetadataSchema),
-    access: 'media:read',
+    access: mediaPermission('read'),
     mutates: false,
     async handler(params, ctx): Promise<VersionMetadata[]> {
         const { config } = ctx;

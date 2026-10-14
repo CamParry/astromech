@@ -10,10 +10,10 @@ import { useUsersQuery } from './users';
 
 /** Names by user id, empty when the current user may not read users. */
 export function useAuthorNames(): Map<string, string> {
-    const { hasPermission } = usePermissions();
+    const { users } = usePermissions();
     const { data: usersResult } = useUsersQuery(
         { limit: 'all' },
-        { enabled: hasPermission('users:read') }
+        { enabled: users.can('read') }
     );
 
     return useMemo(() => {

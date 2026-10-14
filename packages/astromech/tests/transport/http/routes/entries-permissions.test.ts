@@ -6,7 +6,7 @@
  * route, the cross-type `POST /query` included.
  */
 
-import type { EntryAction } from '@/permissions/entry-permission';
+import type { EntryAction } from '@/entries/permissions';
 import type { AstromechConfig } from '@/types/index';
 import { roleWith } from '@tests/fixtures';
 import {

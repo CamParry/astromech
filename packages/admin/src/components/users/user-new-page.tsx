@@ -33,8 +33,8 @@ import { requiredValidator, UserRoleField, UserTextField } from './user-profile-
 type UserFormExtras = { name: string; email: string; role: string };
 
 export function UserNewPage(): React.ReactElement {
-    const { canCreateUsers } = usePermissions();
-    if (!canCreateUsers()) return <ForbiddenPage />;
+    const { users } = usePermissions();
+    if (!users.can('create')) return <ForbiddenPage />;
     return <UserNewBody />;
 }
 

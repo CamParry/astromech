@@ -13,14 +13,6 @@ export const QUALIFIED_SEPARATOR = '/';
  */
 export const ID_SEPARATORS = /[/:]/;
 
-/**
- * The one name an entry type, global key, role slug or field name may not take.
- * The resolved maps and a field's value objects are plain objects, and
- * assigning `__proto__` sets the object's prototype rather than adding a key;
- * the admin config, emitted as an object literal, would do the same.
- */
-export const PROTOTYPE_KEY = '__proto__';
-
 /** Build the id a plugin's entry type or global is addressed by: `{plugin}/{name}`. */
 export function qualifyEntryType(plugin: string, type: string): string {
     return `${plugin}${QUALIFIED_SEPARATOR}${type}`;

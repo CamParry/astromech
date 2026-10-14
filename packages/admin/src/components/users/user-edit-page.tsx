@@ -51,9 +51,9 @@ export type UserEditPageProps = {
 
 export function UserEditPage({ id }: UserEditPageProps): React.ReactElement {
     const { user: currentUser } = useAuth();
-    const { canReadUsers } = usePermissions();
+    const { users } = usePermissions();
     const isSelf = currentUser?.id === id;
-    if (!canReadUsers() && !isSelf) return <ForbiddenPage />;
+    if (!users.can('read') && !isSelf) return <ForbiddenPage />;
     return <UserEdit id={id} isSelf={isSelf} />;
 }
 
@@ -103,14 +103,14 @@ function UserEditBody({
     const confirm = useConfirm();
     const { t } = useTranslation();
     const navigate = useNavigate();
-    const { canUpdateUsers, canDeleteUsers } = usePermissions();
+    const { users } = usePermissions();
     const namespace = labelNamespace(undefined);
 
     const isTranslatable =
         adminConfig.users.translatable && adminConfig.locales.length > 1;
     const fieldDefinitions = adminConfig.users.fields;
-    const canEditRole = canUpdateUsers() && !isSelf;
-    const canSave = canUpdateUsers() || isSelf;
+    const canEditRole = users.can('update') && !isSelf;
+    const canSave = users.can('update') || isSelf;
 
     // Declare the user in view. A blank name falls back to the email, which
     // every user has.
@@ -189,7 +189,7 @@ function UserEditBody({
                                 {t('common.save')}
                             </SaveButton>
                         )}
-                        {canDeleteUsers() && (
+                        {users.can('delete') && (
                             <MoreActionsMenu
                                 items={[
                                     {
@@ -308,7 +308,7 @@ function UserEditBody({
                                     versions={versions.data ?? []}
                                     isLoading={versions.isLoading}
                                     isError={versions.isError}
-                                    canUpdate={canUpdateUsers()}
+                                    canUpdate={users.can('update')}
                                     onRestore={(version) =>
                                         restoreVersionMutation.mutate({
                                             id,

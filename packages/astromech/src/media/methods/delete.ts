@@ -1,5 +1,6 @@
 import { z } from '@hono/zod-openapi';
 import { transaction } from '@/database/transaction';
+import { mediaPermission } from '@/media/permissions';
 import { defineServiceMethod } from '@/services/define-service-method';
 import { getStorageDriver } from '@/storage/registry';
 import { originalKey } from '../internal/keys';
@@ -14,7 +15,7 @@ export const deleteMedia = defineServiceMethod({
     summary: 'Delete a media item.',
     input: z.strictObject({ id: z.string() }),
     output: z.void(),
-    access: 'media:delete',
+    access: mediaPermission('delete'),
     mutates: true,
     destructive: true,
     idempotent: true,

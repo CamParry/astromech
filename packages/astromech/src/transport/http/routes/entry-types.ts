@@ -11,7 +11,7 @@ import type { ResolvedEntryType } from '@/types/index';
 import { OpenAPIHono, z } from '@hono/zod-openapi';
 import { getConfig } from '@/config/registry';
 import { resolveEntryType } from '@/entries/entry-types';
-import { entryPermission } from '@/permissions/entry-permission';
+import { entryPermission } from '@/entries/permissions';
 import { permissionsFor } from '@/permissions/permissions-for';
 import { forbidden, notFound } from '@/transport/http/middleware/errors';
 import { errorResponses } from './error-responses';

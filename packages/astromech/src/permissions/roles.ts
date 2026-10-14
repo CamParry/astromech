@@ -12,23 +12,21 @@ import type { AstromechConfig, ResolvedConfig } from '@/types/config';
 import type { Role } from '@/types/domain';
 import { z } from '@hono/zod-openapi';
 import { getConfig } from '@/config/registry';
-import { PROTOTYPE_KEY } from '@/entries/entry-types';
 import { ValidationError } from '@/errors/validation';
-import { corePermissions } from '@/permissions/core-permissions';
+import { PROTOTYPE_KEY } from '@/utilities/is-record';
 
 type ConfigWithRoles = Pick<AstromechConfig, 'roles'> | Pick<ResolvedConfig, 'roles'>;
 
-// Wildcards are matcher features, not grantable units, so they are literals
-// here rather than members of CORE_PERMISSIONS. The `entry:*` wildcard covers
+// Literals, since the resources that declare them sit above `permissions/`;
+// `tests/policies/permission-catalogue.test.ts` checks each one is declared. The `entry:*`
+// wildcard is a matcher feature rather than a declared permission, and covers
 // all entry types and actions, including `entry:read:full`.
 const EDITOR_PERMISSIONS: Permission[] = [
-    ...corePermissions(
-        'admin:access',
-        'media:read',
-        'media:upload',
-        'media:update',
-        'media:delete'
-    ),
+    'admin:access',
+    'media:read',
+    'media:upload',
+    'media:update',
+    'media:delete',
     'entry:*',
 ];
 

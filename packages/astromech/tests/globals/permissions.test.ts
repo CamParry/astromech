@@ -1,11 +1,11 @@
-import type { GlobalAction } from '@/permissions/global-permission';
+import type { GlobalAction } from '@/globals/permissions';
 import { describe, expect, it } from 'vitest';
 import {
     globalPermission,
     globalPermissions,
     pluginGlobalPermission,
     rootGlobalPermission,
-} from '@/permissions/global-permission';
+} from '@/globals/permissions';
 import { hasPermission } from '@/permissions/permission';
 
 const ACTIONS: GlobalAction[] = ['read', 'update', 'publish'];

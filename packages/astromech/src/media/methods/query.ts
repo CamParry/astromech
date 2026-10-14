@@ -2,6 +2,7 @@ import type { MediaResource } from '../repository';
 import type { QueryResult } from '@/types/index';
 import { queryPage, queryResultSchema } from '@/content/list';
 import { resolveResourceLocale } from '@/content/locale';
+import { mediaPermission } from '@/media/permissions';
 import { defineServiceMethod } from '@/services/define-service-method';
 import { mediaRepository } from '../repository';
 import { mediaSchema, queryMediaSchema } from '../schema';
@@ -14,7 +15,7 @@ export const queryMedia = defineServiceMethod({
     summary: 'List media items.',
     input: queryMediaSchema,
     output: queryResultSchema(mediaSchema),
-    access: 'media:read',
+    access: mediaPermission('read'),
     mutates: false,
     async handler(params, ctx): Promise<QueryResult<MediaResource>> {
         const { search, where, sort } = params;

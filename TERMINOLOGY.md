@@ -10,8 +10,9 @@ delivered.
 
 **Action.** The verb a permission ends with: `read`, `create`, `update`,
 `delete`, `publish`, and a few of a resource's own (`media:upload`,
-`security:manage`, `admin:access`). `ENTRY_ACTIONS` and `GLOBAL_ACTIONS` list an
-entry type's and a global's. A CAPTCHA action (`CAPTCHA_ACTIONS`) is a different
+`security:manage`, `admin:access`). Each resource's `permissions.ts` lists its
+own (`ENTRY_ACTIONS`, `GLOBAL_ACTIONS`, `MEDIA_ACTIONS`, `USER_ACTIONS`,
+`SECURITY_ACTIONS`), and the admin checks one with `can(action)`. A CAPTCHA action (`CAPTCHA_ACTIONS`) is a different
 thing: the operation a CAPTCHA token is issued for.
 
 **Adapter.** Code that reshapes one internal interface into another. A driver
@@ -103,8 +104,10 @@ named groups, repeaters, blocks, trees. A field neither nested nor layout is a l
 `entry:post:publish`, `global:site:read`, `media:upload`, `plugin:seo:read`.
 `*` alone grants everything, a `*` segment matches one segment, and a trailing
 `*` matches the rest. `hasPermission` is the bare matcher; on the server
-`permissionsFor(role).allows` checks one. Entry and global permissions are
-derived from the config; a plugin declares its own with `definePermissions`.
+`permissionsFor(role).allows` checks one. Core's sit beside each resource, in
+its `permissions.ts`, with `admin:access` in `permissions/core-permissions.ts`.
+Entry and global permissions are derived from the config; a plugin declares its
+own with `definePermissions`.
 
 **Plugin, plugin context.** A plugin is a separate package that extends a site.
 Its plugin context is the app context plus its identity, prefixed storage, other

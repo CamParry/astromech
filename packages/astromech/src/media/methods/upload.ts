@@ -3,6 +3,7 @@ import { z } from '@hono/zod-openapi';
 import { ulid } from 'ulidx';
 import { prepareFields } from '@/content/prepare-fields';
 import { transaction } from '@/database/transaction';
+import { mediaPermission } from '@/media/permissions';
 import { defineServiceMethod } from '@/services/define-service-method';
 import { jsonObject } from '@/services/json';
 import { getStorageDriver } from '@/storage/registry';
@@ -27,7 +28,7 @@ export const uploadMedia = defineServiceMethod({
     }),
     binaryInput: true,
     output: mediaSchema,
-    access: 'media:upload',
+    access: mediaPermission('upload'),
     mutates: true,
     async handler(params, ctx): Promise<MediaResource> {
         const { file, data } = params;

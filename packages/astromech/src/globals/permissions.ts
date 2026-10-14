@@ -1,7 +1,9 @@
 /**
- * Global permission helpers — the single source for `global:{key}:{action}`
- * and `plugin:{ns}:global:{key}:{action}` strings, imported by both the HTTP
- * route mounts and the method manifest so the two can never drift.
+ * Global permissions: the actions, the builder that is the single source for
+ * `global:{key}:{action}` and `plugin:{ns}:global:{key}:{action}` strings, and
+ * the label each one is declared with. The HTTP route mounts and the method
+ * manifest both build their strings here, so the two can never drift. Pure, so
+ * the admin reaches the builder through `astromech/shared`.
  */
 
 import { QUALIFIED_SEPARATOR } from '@/entries/entry-types';
@@ -56,4 +58,14 @@ export function globalPermissions(
         );
     }
     return actions.map((action) => globalPermission(globalId, action));
+}
+
+/**
+ * What a matrix view shows for one global's permission, e.g. 'Update "site"
+ * global'. Core declares no global permission of its own: each global's are
+ * derived from the config.
+ */
+export function globalPermissionLabel(action: GlobalAction, key: string): string {
+    const verb = action.charAt(0).toUpperCase() + action.slice(1);
+    return `${verb} "${key}" global`;
 }

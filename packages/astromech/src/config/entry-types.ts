@@ -13,11 +13,12 @@ import type {
     ResolvedEntryType,
 } from '@/types/index';
 import { sortableColumns } from '@/content/resources';
-import { ID_SEPARATORS, PROTOTYPE_KEY, qualifyEntryType } from '@/entries/entry-types';
+import { ID_SEPARATORS, qualifyEntryType } from '@/entries/entry-types';
 import { sortableFieldNames } from '@/entries/sort-fields';
 import { assertUniqueDataNames, validateFieldTree } from '@/fields/field-tree';
 import { flattenEntryFields } from '@/fields/flatten';
 import { resolvePluginIdentity } from '@/plugins/runtime/plugin-identity';
+import { PROTOTYPE_KEY } from '@/utilities/is-record';
 
 /**
  * Resolve the site's entry types under their own `type` and each plugin's

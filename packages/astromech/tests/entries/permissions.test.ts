@@ -1,10 +1,10 @@
-import type { EntryAction } from '@/permissions/entry-permission';
+import type { EntryAction } from '@/entries/permissions';
 import { describe, expect, it } from 'vitest';
 import {
     entryPermission,
     pluginEntryPermission,
     rootEntryPermission,
-} from '@/permissions/entry-permission';
+} from '@/entries/permissions';
 import { hasPermission } from '@/permissions/permission';
 
 describe('rootEntryPermission', () => {

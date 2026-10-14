@@ -1,6 +1,7 @@
 import type { UserResource } from '../repository';
 import { z } from '@hono/zod-openapi';
 import { defineServiceMethod } from '@/services/define-service-method';
+import { userPermission } from '@/users/permissions';
 import { createUserRows } from '../create-user-rows';
 import { asEmailTakenError, assertEmailFree } from '../internal/unique-email';
 import { createUserSchema, userSchema } from '../schema';
@@ -14,7 +15,7 @@ export const createUser = defineServiceMethod({
     summary: 'Create a new CMS user.',
     input: z.strictObject({ data: createUserSchema }),
     output: userSchema,
-    access: 'users:create',
+    access: userPermission('create'),
     mutates: true,
     async handler(params, ctx): Promise<UserResource> {
         const { data } = params;

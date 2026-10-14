@@ -4,6 +4,7 @@ import { getResourceInLocale } from '@/content/locale';
 import { versionMetadataSchema } from '@/content/schema';
 import { listVersions } from '@/content/versions';
 import { defineServiceMethod } from '@/services/define-service-method';
+import { userPermission } from '@/users/permissions';
 import { userRepository } from '../../repository';
 
 /**
@@ -14,7 +15,7 @@ export const listUserVersions = defineServiceMethod({
     summary: 'List the saved versions of one locale of a user’s fields.',
     input: z.strictObject({ id: z.string(), locale: z.string().optional() }),
     output: z.array(versionMetadataSchema),
-    access: 'users:read',
+    access: userPermission('read'),
     mutates: false,
     async handler(params, ctx): Promise<VersionMetadata[]> {
         const { config } = ctx;

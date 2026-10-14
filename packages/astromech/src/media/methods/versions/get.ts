@@ -2,6 +2,7 @@ import type { MediaVersion } from '@/types/index';
 import { z } from '@hono/zod-openapi';
 import { getResourceInLocale } from '@/content/locale';
 import { readVersion } from '@/content/versions';
+import { mediaPermission } from '@/media/permissions';
 import { defineServiceMethod } from '@/services/define-service-method';
 import { mediaRepository } from '../../repository';
 import { mediaVersionSchema } from '../../schema';
@@ -18,7 +19,7 @@ export const getMediaVersion = defineServiceMethod({
         version: z.number().int(),
     }),
     output: mediaVersionSchema,
-    access: 'media:read',
+    access: mediaPermission('read'),
     mutates: false,
     async handler(params, ctx): Promise<MediaVersion> {
         const { id, version } = params;

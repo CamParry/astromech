@@ -1,6 +1,7 @@
 import { z } from '@hono/zod-openapi';
 import { transaction } from '@/database/transaction';
 import { defineServiceMethod } from '@/services/define-service-method';
+import { userPermission } from '@/users/permissions';
 import { assertKeepsAnAdmin, lastAdminError } from '../internal/last-admin';
 import { userRepository } from '../repository';
 
@@ -13,7 +14,7 @@ export const deleteUser = defineServiceMethod({
     summary: 'Delete a CMS user.',
     input: z.strictObject({ id: z.string() }),
     output: z.void(),
-    access: 'users:delete',
+    access: userPermission('delete'),
     mutates: true,
     destructive: true,
     idempotent: true,

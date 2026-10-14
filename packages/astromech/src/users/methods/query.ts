@@ -3,6 +3,7 @@ import type { QueryResult } from '@/types/index';
 import { queryPage, queryResultSchema } from '@/content/list';
 import { resolveResourceLocale } from '@/content/locale';
 import { defineServiceMethod } from '@/services/define-service-method';
+import { userPermission } from '@/users/permissions';
 import { userRepository } from '../repository';
 import { queryUsersSchema, userSchema } from '../schema';
 
@@ -14,7 +15,7 @@ export const queryUsers = defineServiceMethod({
     summary: 'List CMS users.',
     input: queryUsersSchema,
     output: queryResultSchema(userSchema),
-    access: 'users:read',
+    access: userPermission('read'),
     mutates: false,
     async handler(params, ctx): Promise<QueryResult<UserResource>> {
         const { search, sort } = params;

@@ -7,7 +7,13 @@
 import type { Label, PluginNavItem } from 'astromech';
 import type { TFunction } from 'i18next';
 import type { LucideIcon } from 'lucide-react';
-import { globalPermission, hasPermission } from 'astromech/shared';
+import {
+    globalPermission,
+    hasPermission,
+    mediaPermission,
+    securityPermission,
+    userPermission,
+} from 'astromech/shared';
 import {
     Database,
     Globe,
@@ -70,7 +76,7 @@ function buildAdminNav(permissions: string[], t: TFunction): AdminNav {
 
     const primary: AdminNavLink[] = [
         { to: '/', label: t('nav.dashboard'), Icon: LayoutDashboard },
-        ...(allowed('media:read')
+        ...(allowed(mediaPermission('read'))
             ? [{ to: '/media', label: t('nav.media'), Icon: Image }]
             : []),
     ];
@@ -116,10 +122,10 @@ function buildAdminNav(permissions: string[], t: TFunction): AdminNav {
         }))
         .filter((plugin) => plugin.items.length > 0);
     const system: AdminNavLink[] = [
-        ...(allowed('users:read')
+        ...(allowed(userPermission('read'))
             ? [{ to: '/users', label: t('nav.users'), Icon: Users }]
             : []),
-        ...(allowed('security:manage')
+        ...(allowed(securityPermission('manage'))
             ? [{ to: '/security', label: t('nav.security'), Icon: ShieldCheck }]
             : []),
     ];

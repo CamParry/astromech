@@ -10,9 +10,10 @@ import type {
     ResolvedGlobalCapabilities,
 } from '@/types/index';
 import { toResolvedFields } from '@/config/entry-types';
-import { ID_SEPARATORS, PROTOTYPE_KEY, qualifyEntryType } from '@/entries/entry-types';
+import { ID_SEPARATORS, qualifyEntryType } from '@/entries/entry-types';
 import { assertUniqueDataNames, validateFieldTree } from '@/fields/field-tree';
 import { resolvePluginIdentity } from '@/plugins/runtime/plugin-identity';
+import { PROTOTYPE_KEY } from '@/utilities/is-record';
 
 /**
  * Resolve the site's globals under their own keys and each plugin's under

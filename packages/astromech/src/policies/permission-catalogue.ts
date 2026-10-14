@@ -1,22 +1,46 @@
 /**
  * Permission catalogue — every grantable permission a resolved config
- * produces, in one flat list. Four sources: `core`, `entry` and `global` (what
+ * produces, in one flat list. Four sources: `core` (what each resource's
+ * `permissions.ts` declares, plus `admin:access`), `entry` and `global` (what
  * each declared resource's methods demand) and `plugin` (its declaration).
  */
 
-import type { EntryAction } from '@/permissions/entry-permission';
-import type { GlobalAction } from '@/permissions/global-permission';
 import type { PermissionDeclarations } from '@/permissions/permission';
 import type { PluginDefinition, ResolvedConfig } from '@/types/index';
 import { entryMethodPermissions } from '@/entries/catalogue';
+import {
+    ENTRY_ACTIONS,
+    ENTRY_PERMISSIONS,
+    entryPermission,
+    entryPermissionLabel,
+} from '@/entries/permissions';
 import { globalMethodPermissions } from '@/globals/catalogue';
-import { CORE_PERMISSIONS } from '@/permissions/core-permissions';
-import { ENTRY_ACTIONS, entryPermission } from '@/permissions/entry-permission';
-import { GLOBAL_ACTIONS, globalPermission } from '@/permissions/global-permission';
+import {
+    GLOBAL_ACTIONS,
+    globalPermission,
+    globalPermissionLabel,
+} from '@/globals/permissions';
+import { MEDIA_PERMISSIONS } from '@/media/permissions';
+import { ADMIN_PERMISSIONS } from '@/permissions/core-permissions';
 import {
     resolvePluginIdentity,
     resolvePluginPermission,
 } from '@/plugins/runtime/plugin-identity';
+import { SECURITY_PERMISSIONS } from '@/security/permissions';
+import { USER_PERMISSIONS } from '@/users/permissions';
+
+/**
+ * Every permission core declares, from each resource's `permissions.ts`: the
+ * core half of the catalogue. Its keys are already full strings (core is the
+ * root namespace), so nothing namespaces them as `definePermissions` keys are.
+ */
+export const CORE_PERMISSIONS = {
+    ...ADMIN_PERMISSIONS,
+    ...ENTRY_PERMISSIONS,
+    ...MEDIA_PERMISSIONS,
+    ...SECURITY_PERMISSIONS,
+    ...USER_PERMISSIONS,
+} satisfies PermissionDeclarations;
 
 export type PermissionCatalogueEntry = {
     /** Fully-qualified, grantable permission string. */
@@ -27,18 +51,6 @@ export type PermissionCatalogueEntry = {
     /** Resource id for `entry`/`global`, plugin namespace for `plugin`. Absent for core. */
     owner?: string;
 };
-
-/** e.g. action='update', type='posts' → 'Update "posts" entries'. */
-function entryPermissionLabel(action: EntryAction, type: string): string {
-    const verb = action.charAt(0).toUpperCase() + action.slice(1);
-    return `${verb} "${type}" entries`;
-}
-
-/** e.g. action='update', key='site' → 'Update "site" global'. */
-function globalPermissionLabel(action: GlobalAction, key: string): string {
-    const verb = action.charAt(0).toUpperCase() + action.slice(1);
-    return `${verb} "${key}" global`;
-}
 
 const SOURCE_ORDER: Record<PermissionCatalogueEntry['source'], number> = {
     core: 0,

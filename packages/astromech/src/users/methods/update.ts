@@ -7,6 +7,7 @@ import { changesVersionedContent, snapshotVersion } from '@/content/versions';
 import { transaction } from '@/database/transaction';
 import { ResourceNotFoundError } from '@/errors/resource';
 import { defineServiceMethod } from '@/services/define-service-method';
+import { userPermission } from '@/users/permissions';
 import { defaultContentLocale } from '@/utilities/locale';
 import { assertKeepsAnAdmin, lastAdminError } from '../internal/last-admin';
 import { asEmailTakenError, assertEmailFree } from '../internal/unique-email';
@@ -30,7 +31,7 @@ export const updateUser = defineServiceMethod({
         data: updateUserSchema,
     }),
     output: userSchema,
-    access: 'users:update',
+    access: userPermission('update'),
     mutates: true,
     idempotent: true,
     async handler(params, ctx): Promise<UserResource> {

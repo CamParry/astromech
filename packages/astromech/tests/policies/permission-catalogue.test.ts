@@ -6,10 +6,13 @@ import { resolveConfig } from '@/config/resolve';
 import { isGlobalCapability } from '@/globals/capabilities';
 import { globalsDefinition } from '@/globals/service';
 import { resolveAccess } from '@/permissions/access';
-import { CORE_PERMISSIONS } from '@/permissions/core-permissions';
 import { definePermissions } from '@/permissions/permission';
+import { BUILT_IN_ROLES } from '@/permissions/roles';
 import { definePlugin } from '@/plugins/define-plugin';
-import { buildPermissionCatalogue } from '@/policies/permission-catalogue';
+import {
+    buildPermissionCatalogue,
+    CORE_PERMISSIONS,
+} from '@/policies/permission-catalogue';
 
 describe('buildPermissionCatalogue', () => {
     const driver: DatabaseDriver = {
@@ -193,6 +196,18 @@ describe('buildPermissionCatalogue', () => {
 
         const missing = new Set(demanded.filter((permission) => !listed.has(permission)));
         expect([...missing]).toEqual([]);
+    });
+
+    // `permissions/roles.ts` writes the built-in grants as literals, since the
+    // resources that declare them sit above it; this is what catches a typo.
+    it('declares every permission a built-in role grants, wildcards aside', () => {
+        const granted = Object.values(BUILT_IN_ROLES).flatMap((role) =>
+            role.permissions.filter((permission) => !permission.includes('*'))
+        );
+        expect(granted.length).toBeGreaterThan(0);
+        expect(granted.filter((permission) => !(permission in CORE_PERMISSIONS))).toEqual(
+            []
+        );
     });
 
     it('sorts by source group, then by permission string within the group', () => {

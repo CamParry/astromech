@@ -2,6 +2,7 @@ import type { AllowedAddress } from '@/types/index';
 import { z } from '@hono/zod-openapi';
 import { ApiError } from '@/errors/api-error';
 import { clearAddressListCache } from '@/security/address-lists';
+import { securityPermission } from '@/security/permissions';
 import { allowedAddressRepository } from '@/security/repository/allowed-addresses';
 import { addressRangeInput, allowedAddressSchema } from '@/security/schema';
 import { defineServiceMethod } from '@/services/define-service-method';
@@ -16,7 +17,7 @@ export const allowAddress = defineServiceMethod({
         }),
     }),
     output: allowedAddressSchema,
-    access: 'security:manage',
+    access: securityPermission('manage'),
     mutates: true,
     async handler(params, ctx): Promise<AllowedAddress> {
         const { data } = params;

@@ -1,9 +1,12 @@
 /**
- * Entry permission helpers — the single source for `entry:{type}:{action}`
- * and `plugin:{ns}:entry:{type}:{action}` strings, imported by both the
- * HTTP route mounts and the method manifest so the two can never drift.
+ * Entry permissions: the actions, the builder that is the single source for
+ * `entry:{type}:{action}` and `plugin:{ns}:entry:{type}:{action}` strings, and
+ * the declarations. The HTTP route mounts and the method manifest both build
+ * their strings here, so the two can never drift. Pure, so the admin reaches
+ * the builder through `astromech/shared`.
  */
 
+import type { Permission, PermissionDeclarations } from '@/permissions/permission';
 import { QUALIFIED_SEPARATOR } from '@/entries/entry-types';
 
 /** The CRUD+publish actions an entry permission gates. */
@@ -49,4 +52,29 @@ export function entryPermissions(typeId: string, ...actions: EntryAction[]): str
         );
     }
     return actions.map((action) => entryPermission(typeId, action));
+}
+
+/**
+ * Cross-cutting permission: request the full (admin/editor) shape on any
+ * entry read. Covered by `entry:*` (editor) and `*` (admin) via the
+ * trailing-wildcard matcher.
+ */
+export const PERMISSION_ENTRY_READ_FULL = 'entry:read:full' as Permission;
+
+/**
+ * The entry permission core declares. Each type's own permissions are derived
+ * from the config, and {@link entryPermissionLabel} names them.
+ */
+export const ENTRY_PERMISSIONS = {
+    'entry:read:full': {
+        label: 'Read full entry shape',
+        description:
+            'Read the admin/editor shape of any entry — drafts and unpublished fields included — rather than the public shape.',
+    },
+} satisfies PermissionDeclarations;
+
+/** What a matrix view shows for one type's permission, e.g. 'Update "posts" entries'. */
+export function entryPermissionLabel(action: EntryAction, type: string): string {
+    const verb = action.charAt(0).toUpperCase() + action.slice(1);
+    return `${verb} "${type}" entries`;
 }

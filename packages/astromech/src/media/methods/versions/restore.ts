@@ -2,6 +2,7 @@ import type { MediaResource } from '../../repository';
 import { z } from '@hono/zod-openapi';
 import { getResourceInLocale } from '@/content/locale';
 import { restoreVersion } from '@/content/versions';
+import { mediaPermission } from '@/media/permissions';
 import { defineServiceMethod } from '@/services/define-service-method';
 import { syncMediaRelationships } from '../../relationships';
 import { mediaRepository } from '../../repository';
@@ -19,7 +20,7 @@ export const restoreMediaVersion = defineServiceMethod({
         version: z.number().int(),
     }),
     output: mediaSchema,
-    access: 'media:update',
+    access: mediaPermission('update'),
     mutates: true,
     async handler(params, ctx): Promise<MediaResource> {
         const { id, version } = params;

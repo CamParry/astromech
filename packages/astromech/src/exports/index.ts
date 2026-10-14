@@ -32,13 +32,17 @@ export {
     type EntryAction,
     entryPermission,
     entryPermissions,
-} from '@/permissions/entry-permission';
+} from '@/entries/permissions';
 /** Global permissions are derived the same way, from a global's key. */
 export {
     type GlobalAction,
     globalPermission,
     globalPermissions,
-} from '@/permissions/global-permission';
+} from '@/globals/permissions';
+/** The actions core's media, user and security permissions end with. */
+export type { MediaAction } from '@/media/permissions';
+export type { SecurityAction } from '@/security/permissions';
+export type { UserAction } from '@/users/permissions';
 /**
  * The key a per-client rate limit counts an address under, grouped the way
  * core's sign-in limits group addresses, and the key HTTP requests with no
