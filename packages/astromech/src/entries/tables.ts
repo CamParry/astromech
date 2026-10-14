@@ -1,12 +1,31 @@
 /**
  * The entries tables — source of truth for row types and the codec. `entries`
  * is the resource row, `entry_content` holds one row per locale of what editors
- * author, and `entry_versions` snapshots a content row.
+ * author, `entry_versions` snapshots a content row, and `entry_drafts` holds the
+ * pending changes to a published locale, at most one per entry and locale.
  */
 
-import type { Table, TableInsert, TableSelect } from '@/database/define-table';
+import type {
+    ColFactory,
+    Table,
+    TableInsert,
+    TableSelect,
+} from '@/database/define-table';
 import { defineTable } from '@/database/define-table';
 import { ENTRY_STATUSES } from '@/types/domain';
+
+/**
+ * What editors author in one locale of an entry: the columns the content,
+ * versions and drafts rows all carry, so a version or a draft copies a content
+ * row column for column.
+ */
+function entryContentColumns(col: ColFactory) {
+    return {
+        title: col.text({ notNull: true }),
+        slug: col.text(),
+        fields: col.json(),
+    };
+}
 
 export const entriesTable = defineTable(
     'entries',
@@ -41,9 +60,7 @@ export const entryContentTable = defineTable(
         // cannot reach across the join.
         type: col.text({ notNull: true }),
         locale: col.text({ notNull: true }),
-        title: col.text({ notNull: true }),
-        slug: col.text(),
-        fields: col.json(),
+        ...entryContentColumns(col),
         status: col.enum(ENTRY_STATUSES, {
             notNull: true,
             default: 'unpublished',
@@ -87,13 +104,34 @@ export const entryVersionsTable = defineTable(
             onDelete: 'cascade',
         }),
         version: col.integer({ notNull: true }),
-        title: col.text({ notNull: true }),
-        slug: col.text(),
-        fields: col.json(),
+        ...entryContentColumns(col),
         createdAt: col.timestamp({ notNull: true, defaultNow: true }),
         createdBy: col.reference('users', { onDelete: 'set null' }),
     }),
     ({ index }) => [index('idx_entry_versions_content', ['contentId', 'version'])]
+);
+
+/**
+ * The pending changes to one published locale of an entry, keyed the way a
+ * content row is. No status and no pointer to the content row: a draft is
+ * published by copying it into that locale's live row. No `type` either: the
+ * draft's slug is checked in code against live rows, so no index here needs it.
+ */
+export const entryDraftsTable = defineTable(
+    'entry_drafts',
+    ({ col }) => ({
+        entryId: col.reference(() => entriesTable, {
+            notNull: true,
+            onDelete: 'cascade',
+        }),
+        locale: col.text({ notNull: true }),
+        ...entryContentColumns(col),
+        createdAt: col.timestamp({ notNull: true, defaultNow: true }),
+        updatedAt: col.timestamp({ notNull: true, defaultNow: true, onUpdate: true }),
+        createdBy: col.reference('users', { onDelete: 'set null' }),
+        updatedBy: col.reference('users', { onDelete: 'set null' }),
+    }),
+    { primaryKey: ['entryId', 'locale'] }
 );
 
 export type EntryTableRow = TableSelect<typeof entriesTable>;
@@ -104,3 +142,6 @@ export type NewEntryContentRow = TableInsert<typeof entryContentTable>;
 
 export type EntryVersionRow = TableSelect<typeof entryVersionsTable>;
 export type NewEntryVersionRow = TableInsert<typeof entryVersionsTable>;
+
+export type EntryDraftRow = TableSelect<typeof entryDraftsTable>;
+export type NewEntryDraftRow = TableInsert<typeof entryDraftsTable>;

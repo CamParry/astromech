@@ -11,8 +11,18 @@ import {
 } from '@/auth/tables';
 import { RESOURCE_TYPES, TARGET_TYPES } from '@/content/resource-types';
 import { defineTable } from '@/database/define-table';
-import { entriesTable, entryContentTable, entryVersionsTable } from '@/entries/tables';
-import { globalContentTable, globalsTable, globalVersionsTable } from '@/globals/tables';
+import {
+    entriesTable,
+    entryContentTable,
+    entryDraftsTable,
+    entryVersionsTable,
+} from '@/entries/tables';
+import {
+    globalContentTable,
+    globalDraftsTable,
+    globalsTable,
+    globalVersionsTable,
+} from '@/globals/tables';
 import { mediaContentTable, mediaTable, mediaVersionsTable } from '@/media/tables';
 import { notificationsTable } from '@/notifications/tables';
 import { rolesTable } from '@/permissions/tables';
@@ -61,24 +71,30 @@ export {
     entriesTable,
     entryContentTable,
     entryVersionsTable,
+    entryDraftsTable,
     type EntryTableRow,
     type NewEntryTableRow,
     type EntryContentRow,
     type NewEntryContentRow,
     type EntryVersionRow,
     type NewEntryVersionRow,
+    type EntryDraftRow,
+    type NewEntryDraftRow,
 } from '@/entries/tables';
 
 export {
     globalsTable,
     globalContentTable,
     globalVersionsTable,
+    globalDraftsTable,
     type GlobalTableRow,
     type NewGlobalTableRow,
     type GlobalContentRow,
     type NewGlobalContentRow,
     type GlobalVersionRow,
     type NewGlobalVersionRow,
+    type GlobalDraftRow,
+    type NewGlobalDraftRow,
 } from '@/globals/tables';
 
 export {
@@ -216,9 +232,11 @@ export const CORE_TABLES: Table[] = [
     entriesTable,
     entryContentTable,
     entryVersionsTable,
+    entryDraftsTable,
     globalsTable,
     globalContentTable,
     globalVersionsTable,
+    globalDraftsTable,
     mediaTable,
     mediaContentTable,
     mediaVersionsTable,

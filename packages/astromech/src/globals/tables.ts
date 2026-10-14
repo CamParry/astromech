@@ -1,13 +1,27 @@
 /**
  * The globals tables — source of truth for row types and the codec. `globals`
  * is the resource row, one per declared global, `global_content` holds one row
- * per locale of what editors author, and `global_versions` snapshots a content
- * row. The same three-table shape as entries, without slug or trash.
+ * per locale of what editors author, `global_versions` snapshots a content row,
+ * and `global_drafts` holds the pending changes to a published locale. The same
+ * shape as entries, without slug or trash.
  */
 
-import type { Table, TableInsert, TableSelect } from '@/database/define-table';
+import type {
+    ColFactory,
+    Table,
+    TableInsert,
+    TableSelect,
+} from '@/database/define-table';
 import { defineTable } from '@/database/define-table';
 import { ENTRY_STATUSES } from '@/types/domain';
+
+/**
+ * What editors author in one locale of a global: the columns the content,
+ * versions and drafts rows all carry.
+ */
+function globalContentColumns(col: ColFactory) {
+    return { fields: col.json() };
+}
 
 export const globalsTable = defineTable('globals', ({ col }) => ({
     id: col.id(),
@@ -29,7 +43,7 @@ export const globalContentTable = defineTable(
             onDelete: 'cascade',
         }),
         locale: col.text({ notNull: true }),
-        fields: col.json(),
+        ...globalContentColumns(col),
         status: col.enum(ENTRY_STATUSES, {
             notNull: true,
             default: 'unpublished',
@@ -65,11 +79,32 @@ export const globalVersionsTable = defineTable(
             onDelete: 'cascade',
         }),
         version: col.integer({ notNull: true }),
-        fields: col.json(),
+        ...globalContentColumns(col),
         createdAt: col.timestamp({ notNull: true, defaultNow: true }),
         createdBy: col.reference('users', { onDelete: 'set null' }),
     }),
     ({ index }) => [index('idx_global_versions_content', ['contentId', 'version'])]
+);
+
+/**
+ * The pending changes to one published locale of a global, keyed the way a
+ * content row is, with no status and no pointer to the content row.
+ */
+export const globalDraftsTable = defineTable(
+    'global_drafts',
+    ({ col }) => ({
+        globalId: col.reference(() => globalsTable, {
+            notNull: true,
+            onDelete: 'cascade',
+        }),
+        locale: col.text({ notNull: true }),
+        ...globalContentColumns(col),
+        createdAt: col.timestamp({ notNull: true, defaultNow: true }),
+        updatedAt: col.timestamp({ notNull: true, defaultNow: true, onUpdate: true }),
+        createdBy: col.reference('users', { onDelete: 'set null' }),
+        updatedBy: col.reference('users', { onDelete: 'set null' }),
+    }),
+    { primaryKey: ['globalId', 'locale'] }
 );
 
 export type GlobalTableRow = TableSelect<typeof globalsTable>;
@@ -80,3 +115,6 @@ export type NewGlobalContentRow = TableInsert<typeof globalContentTable>;
 
 export type GlobalVersionRow = TableSelect<typeof globalVersionsTable>;
 export type NewGlobalVersionRow = TableInsert<typeof globalVersionsTable>;
+
+export type GlobalDraftRow = TableSelect<typeof globalDraftsTable>;
+export type NewGlobalDraftRow = TableInsert<typeof globalDraftsTable>;

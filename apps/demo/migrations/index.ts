@@ -16,6 +16,7 @@ import * as m0012 from './0012_sign-in-failures';
 import * as m0013 from './0013_address-lists';
 import * as m0014 from './0014_relationships-locale';
 import * as m0015 from './0015_relationships-type-subtype';
+import * as m0016 from './0016_drafts';
 
 export const migrationProvider: MigrationProvider = {
     async getMigrations() {
@@ -36,6 +37,7 @@ export const migrationProvider: MigrationProvider = {
             '0013_address-lists': m0013,
             '0014_relationships-locale': m0014,
             '0015_relationships-type-subtype': m0015,
+            '0016_drafts': m0016,
         };
     },
 };

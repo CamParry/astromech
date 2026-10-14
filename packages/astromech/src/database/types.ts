@@ -15,8 +15,10 @@ import type {
     cronTable,
     entriesTable,
     entryContentTable,
+    entryDraftsTable,
     entryVersionsTable,
     globalContentTable,
+    globalDraftsTable,
     globalsTable,
     globalVersionsTable,
     mediaContentTable,
@@ -68,9 +70,11 @@ export interface DB extends AstromechPluginTables {
     entries: KyselyOf<typeof entriesTable>;
     entryContent: KyselyOf<typeof entryContentTable>;
     entryVersions: KyselyOf<typeof entryVersionsTable>;
+    entryDrafts: KyselyOf<typeof entryDraftsTable>;
     globals: KyselyOf<typeof globalsTable>;
     globalContent: KyselyOf<typeof globalContentTable>;
     globalVersions: KyselyOf<typeof globalVersionsTable>;
+    globalDrafts: KyselyOf<typeof globalDraftsTable>;
     media: KyselyOf<typeof mediaTable>;
     mediaContent: KyselyOf<typeof mediaContentTable>;
     mediaVersions: KyselyOf<typeof mediaVersionsTable>;

@@ -666,6 +666,105 @@
                 }
             ]
         },
+        "entry_drafts": {
+            "name": "entry_drafts",
+            "columns": [
+                {
+                    "key": "entryId",
+                    "name": "entry_id",
+                    "kind": "reference",
+                    "type": "text",
+                    "notNull": true,
+                    "primaryKey": false
+                },
+                {
+                    "key": "locale",
+                    "name": "locale",
+                    "kind": "text",
+                    "type": "text",
+                    "notNull": true,
+                    "primaryKey": false
+                },
+                {
+                    "key": "title",
+                    "name": "title",
+                    "kind": "text",
+                    "type": "text",
+                    "notNull": true,
+                    "primaryKey": false
+                },
+                {
+                    "key": "slug",
+                    "name": "slug",
+                    "kind": "text",
+                    "type": "text",
+                    "notNull": false,
+                    "primaryKey": false
+                },
+                {
+                    "key": "fields",
+                    "name": "fields",
+                    "kind": "json",
+                    "type": "text",
+                    "notNull": false,
+                    "primaryKey": false
+                },
+                {
+                    "key": "createdAt",
+                    "name": "created_at",
+                    "kind": "timestamp",
+                    "type": "text",
+                    "notNull": true,
+                    "primaryKey": false
+                },
+                {
+                    "key": "updatedAt",
+                    "name": "updated_at",
+                    "kind": "timestamp",
+                    "type": "text",
+                    "notNull": true,
+                    "primaryKey": false
+                },
+                {
+                    "key": "createdBy",
+                    "name": "created_by",
+                    "kind": "reference",
+                    "type": "text",
+                    "notNull": false,
+                    "primaryKey": false
+                },
+                {
+                    "key": "updatedBy",
+                    "name": "updated_by",
+                    "kind": "reference",
+                    "type": "text",
+                    "notNull": false,
+                    "primaryKey": false
+                }
+            ],
+            "primaryKey": ["entry_id", "locale"],
+            "fks": [
+                {
+                    "column": "entry_id",
+                    "targetTable": "entries",
+                    "targetColumn": "id",
+                    "onDelete": "cascade"
+                },
+                {
+                    "column": "created_by",
+                    "targetTable": "users",
+                    "targetColumn": "id",
+                    "onDelete": "set null"
+                },
+                {
+                    "column": "updated_by",
+                    "targetTable": "users",
+                    "targetColumn": "id",
+                    "onDelete": "set null"
+                }
+            ],
+            "indexes": []
+        },
         "entry_versions": {
             "name": "entry_versions",
             "columns": [
@@ -894,6 +993,89 @@
                     "where": "staged_for IS NULL"
                 }
             ]
+        },
+        "global_drafts": {
+            "name": "global_drafts",
+            "columns": [
+                {
+                    "key": "globalId",
+                    "name": "global_id",
+                    "kind": "reference",
+                    "type": "text",
+                    "notNull": true,
+                    "primaryKey": false
+                },
+                {
+                    "key": "locale",
+                    "name": "locale",
+                    "kind": "text",
+                    "type": "text",
+                    "notNull": true,
+                    "primaryKey": false
+                },
+                {
+                    "key": "fields",
+                    "name": "fields",
+                    "kind": "json",
+                    "type": "text",
+                    "notNull": false,
+                    "primaryKey": false
+                },
+                {
+                    "key": "createdAt",
+                    "name": "created_at",
+                    "kind": "timestamp",
+                    "type": "text",
+                    "notNull": true,
+                    "primaryKey": false
+                },
+                {
+                    "key": "updatedAt",
+                    "name": "updated_at",
+                    "kind": "timestamp",
+                    "type": "text",
+                    "notNull": true,
+                    "primaryKey": false
+                },
+                {
+                    "key": "createdBy",
+                    "name": "created_by",
+                    "kind": "reference",
+                    "type": "text",
+                    "notNull": false,
+                    "primaryKey": false
+                },
+                {
+                    "key": "updatedBy",
+                    "name": "updated_by",
+                    "kind": "reference",
+                    "type": "text",
+                    "notNull": false,
+                    "primaryKey": false
+                }
+            ],
+            "primaryKey": ["global_id", "locale"],
+            "fks": [
+                {
+                    "column": "global_id",
+                    "targetTable": "globals",
+                    "targetColumn": "id",
+                    "onDelete": "cascade"
+                },
+                {
+                    "column": "created_by",
+                    "targetTable": "users",
+                    "targetColumn": "id",
+                    "onDelete": "set null"
+                },
+                {
+                    "column": "updated_by",
+                    "targetTable": "users",
+                    "targetColumn": "id",
+                    "onDelete": "set null"
+                }
+            ],
+            "indexes": []
         },
         "global_versions": {
             "name": "global_versions",
