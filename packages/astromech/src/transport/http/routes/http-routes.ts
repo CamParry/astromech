@@ -281,6 +281,12 @@ export const ENTRIES_ROUTE_SPECS = [
         queryArgs: ['locale'],
         refusals: ENTRY_TRASHED,
     },
+    {
+        verb: 'delete',
+        path: '/:type/:id/draft',
+        id: 'entries.discardDraft',
+        refusals: ENTRY_TRASHED,
+    },
     { verb: 'get', path: '/:type/:id/used-by', id: 'entries.usedBy' },
     {
         verb: 'post',

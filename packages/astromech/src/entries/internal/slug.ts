@@ -1,4 +1,5 @@
 import type { Entry, ResolvedEntryType } from '@/types/index';
+import { ResourceValidationError } from '@/errors/resource';
 import { slugify } from '@/utilities/strings';
 import { entryRepository } from '../repository/entries-table';
 
@@ -33,4 +34,24 @@ export async function uniqueSlugIfChanged(params: {
     const { type, entry, slug } = params;
     if (!slug || slug === entry.slug) return slug;
     return entryRepository.uniqueSlug(type, entry.locale, slug, entry.id);
+}
+
+/**
+ * Refuses a slug another live entry of the type holds in the entry's locale,
+ * where `uniqueSlugIfChanged` would rename it. A draft's slug is checked this
+ * way when it is saved and when it is published: the published URL is the one
+ * the editor chose, or the write fails. The entry's own live slug always passes.
+ */
+export async function assertSlugFree(params: {
+    type: string;
+    entry: Entry;
+    slug: string | null | undefined;
+}): Promise<void> {
+    const { type, entry, slug } = params;
+    if (!slug || slug === entry.slug) return;
+    const free = await entryRepository.uniqueSlug(type, entry.locale, slug, entry.id);
+    if (free === slug) return;
+    throw new ResourceValidationError([], {
+        slug: [`Another entry in this locale already uses the slug "${slug}".`],
+    });
 }

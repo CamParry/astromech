@@ -12,6 +12,7 @@ import { typeOf } from './internal/access';
 import { countEntries } from './methods/count';
 import { createEntry } from './methods/create';
 import { deleteEntries } from './methods/delete';
+import { discardEntryDraft } from './methods/discard-draft';
 import { duplicateEntry } from './methods/duplicate';
 import { emptyTrash } from './methods/empty-trash';
 import { getEntry } from './methods/get';
@@ -52,6 +53,7 @@ export const entriesDefinition = defineService<EntriesService>(
         publish: publishEntries,
         unpublish: unpublishEntries,
         schedule: scheduleEntries,
+        discardDraft: discardEntryDraft,
         usedBy: listEntryUsage,
         createStaged: createStagedEntry,
         getStaged: getStagedEntry,

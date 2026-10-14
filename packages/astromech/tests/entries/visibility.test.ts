@@ -22,6 +22,7 @@ function publishedEntry(overrides: Partial<Entry> = {}): Entry {
         locale: 'en',
         locales: ['en'],
         staged: false,
+        hasDraft: false,
         slug: 'test-post',
         title: 'Test Post',
         fields: {},

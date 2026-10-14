@@ -20,8 +20,9 @@ const LABELS: Record<ResourceType, string> = {
 /**
  * Thrown for an id (a global's key) no row or declaration holds, for a locale of
  * one with no content row where an operation requires one, with `staged` for a
- * locale with no staged change, and with `version` for a version number that
- * locale does not have. A `get` answers null rather than throwing.
+ * locale with no staged change, with `draft` for a locale with no draft, and
+ * with `version` for a version number that locale does not have. A `get`
+ * answers null rather than throwing.
  */
 export class ResourceNotFoundError extends ApiError {
     public readonly type: ResourceType;
@@ -35,6 +36,7 @@ export class ResourceNotFoundError extends ApiError {
             id: string;
             locale?: string | undefined;
             staged?: boolean;
+            draft?: boolean;
             version?: number;
         }
     ) {
@@ -95,14 +97,24 @@ export class StagedChangeExistsError extends ApiError {
  * holds the condition the write depends on. `trashed`: the entry is in the
  * trash, which only `restore` writes to. `not-trashed`: a restore found it live.
  * `not-scheduled`: a scheduled publish found the row unscheduled or moved.
+ * `not-published`: a draft save found the locale no longer published.
+ * `draft-changed`: the locale's draft was saved, made or discarded after the
+ * write read it.
  */
-export type ConflictReason = 'trashed' | 'not-trashed' | 'not-scheduled';
+export type ConflictReason =
+    | 'trashed'
+    | 'not-trashed'
+    | 'not-scheduled'
+    | 'not-published'
+    | 'draft-changed';
 
 /** How a conflict message words each reason, after the resource's name. */
 const CONFLICT_MESSAGES: Record<ConflictReason, string> = {
     trashed: 'is in the trash; restore it before changing it',
     'not-trashed': 'is not in the trash',
     'not-scheduled': 'is not scheduled for the time this publish was due',
+    'not-published': 'is no longer published, so it takes no draft',
+    'draft-changed': 'has a draft that changed after this write read it; read it again',
 };
 
 /**
@@ -140,14 +152,19 @@ export class ResourceConflictError extends ApiError {
 
 function notFoundMessage(
     subject: string,
-    args: { locale?: string | undefined; staged?: boolean; version?: number }
+    args: {
+        locale?: string | undefined;
+        staged?: boolean;
+        draft?: boolean;
+        version?: number;
+    }
 ): string {
+    const inLocale = `in locale '${args.locale ?? ''}'`;
     if (args.version !== undefined) {
-        return `${subject} has no version ${args.version} in locale '${args.locale ?? ''}'`;
+        return `${subject} has no version ${args.version} ${inLocale}`;
     }
-    if (args.staged === true) {
-        return `${subject} has no staged change in locale '${args.locale ?? ''}'`;
-    }
+    if (args.staged === true) return `${subject} has no staged change ${inLocale}`;
+    if (args.draft === true) return `${subject} has no draft ${inLocale}`;
     return args.locale === undefined
         ? `${subject} not found`
         : `${subject} not found in locale '${args.locale}'`;

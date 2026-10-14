@@ -96,6 +96,11 @@ export type EntriesService = {
         previewToken?: string;
         /** With a valid `previewToken`, preview the staged change instead. */
         staged?: boolean;
+        /**
+         * Read the locale's draft where it has one, and the live entry where it
+         * has none. Needs `entry:read:full`.
+         */
+        draft?: boolean;
     }): Promise<Entry | null>;
 
     create(params: EntryCreateParams): Promise<Entry>;
@@ -216,4 +221,10 @@ export type EntriesService = {
     }): Promise<{ token: string }>;
     /** Revoke the entry's preview token. */
     revokePreviewToken(params: { type: string; id: string }): Promise<void>;
+
+    /**
+     * Discard this locale's draft, leaving the live entry as it is, and answer
+     * the entry as it is live. Throws when the locale has no draft.
+     */
+    discardDraft(params: { type: string; id: string; locale?: string }): Promise<Entry>;
 };

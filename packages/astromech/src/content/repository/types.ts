@@ -42,6 +42,12 @@ export type ContentShape<
     /** The content table's FK column to the resource row: `entryId`, `globalId`. */
     resourceIdColumn: string;
     /**
+     * The pending changes to a published locale, keyed by `resourceIdColumn`
+     * and `locale`: `entry_drafts`. With it, every read reports whether its
+     * locale has a draft, and a guard can name the draft it read.
+     */
+    draftsTable?: Table | undefined;
+    /**
      * Content columns derived from the resource row when a content row is
      * inserted and the write does not name them: entries' copied `type` and
      * `trashed`.
@@ -210,6 +216,12 @@ export type ContentRepository<
     update(ref: ContentRef, data: ContentWrite, guard: WriteGuard): Promise<R | null>;
     /** Why a guarded write changed nothing: see `GuardedRepository`. */
     explainConflict(guard: WriteGuard): Promise<GuardFailure | null>;
+    /**
+     * The guard as one condition, an `EXISTS` over the content row it names,
+     * for a write to another table to carry: a draft save holds only while the
+     * live row does. It reads no column of the outer query.
+     */
+    guardHolds(guard: WriteGuard): JoinedWhere;
     /** Hard-delete the resource row; content rows and versions cascade. */
     delete(id: string): Promise<void>;
     /** The canonical locales of each id, sorted. */
@@ -287,6 +299,12 @@ export type ContentRepository<
     };
 };
 
+/** What a joined read knows about a content row beyond its columns. */
+export type ContentRowState = {
+    /** True when the row's locale has a draft; always false without `draftsTable`. */
+    hasDraft: boolean;
+};
+
 /** Resource rows and their content rows, each as its table stores it. */
 export type StoredRows = {
     resourceRows: Record<string, unknown>[];
@@ -355,7 +373,8 @@ export type ContentRepositoryOptions<
     decode: (
         resourceRow: TableSelect<O>,
         contentRow: TableSelect<C>,
-        locales: string[]
+        locales: string[],
+        state: ContentRowState
     ) => R;
     resourceFilter?: ResourceFilter | undefined;
 };

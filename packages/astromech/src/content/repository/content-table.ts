@@ -48,6 +48,9 @@ import { createVersionsRepository } from './versions';
  */
 const RESOURCE_PREFIX = 'resource';
 
+/** The alias a joined read reports whether its locale has a draft under. */
+const HAS_DRAFT = 'hasDraft';
+
 function resourceAlias(column: string): string {
     return `${RESOURCE_PREFIX}${column.charAt(0).toUpperCase()}${column.slice(1)}`;
 }
@@ -85,6 +88,10 @@ export function createContentRepository<
     const resourceKey = kyselyTableKey(shape.table.name);
     const contentKey = kyselyTableKey(shape.contentTable.name);
     const versionsKey = kyselyTableKey(shape.versionsTable.name);
+    const draftsKey =
+        shape.draftsTable === undefined
+            ? undefined
+            : kyselyTableKey(shape.draftsTable.name);
     const resourceColumns = Object.keys(shape.table.columns);
     const contentColumns = Object.keys(shape.contentTable.columns);
     const snapshotColumns = Object.keys(shape.versionsTable.columns).filter(
@@ -98,6 +105,7 @@ export function createContentRepository<
         }
     }
     const hasStagedFor = contentColumns.includes('stagedFor');
+    const hasStatus = contentColumns.includes('status');
     const resourceHasUpdatedBy = resourceColumns.includes('updatedBy');
     const resourceFilter: ResourceFilter = opts.resourceFilter ?? (() => []);
 
@@ -200,7 +208,26 @@ export function createContentRepository<
                 `${resourceKey}.${column} as ${resourceAlias(column)}` as never
             );
         }
+        if (draftsKey !== undefined) {
+            query = query.select((eb) => eb.exists(draftOf(eb)).as(HAS_DRAFT) as never);
+        }
         return query;
+    }
+
+    /**
+     * The draft of the content row's locale, as a subquery for `EXISTS`.
+     * Aliased, so it reads the same inside a write to the drafts table itself.
+     */
+    function draftOf(eb: Parameters<JoinedWhere>[0]) {
+        return eb
+            .selectFrom(`${draftsKey} as draft`)
+            .select('draft.locale')
+            .whereRef(
+                `draft.${resourceIdColumn}`,
+                '=',
+                `${contentKey}.${resourceIdColumn}`
+            )
+            .whereRef('draft.locale', '=', `${contentKey}.locale`);
     }
 
     async function count(where: JoinedWhere): Promise<number> {
@@ -308,13 +335,15 @@ export function createContentRepository<
             new Set(split_.map(({ contentRow }) => String(contentRow[resourceIdColumn])))
         );
         const byId = await locales(ids);
-        return split_.map(({ resourceRow, contentRow }) =>
+        return split_.map(({ resourceRow, contentRow }, index) =>
             opts.decode(
                 resourceRow as never,
                 contentRow as never,
                 byId.get(String(contentRow[resourceIdColumn])) ?? [
                     String(contentRow['locale']),
-                ]
+                ],
+                // SQLite answers `EXISTS` as 0 or 1.
+                { hasDraft: Boolean(raw[index]?.[HAS_DRAFT]) }
             )
         );
     }
@@ -534,7 +563,43 @@ export function createContentRepository<
         if (guard.stagedAbsent === true && hasStagedFor) {
             conditions.push(eb.not(hasStagedChange(eb)));
         }
+        if (guard.published === true) {
+            conditions.push(eb(`${contentKey}.status`, '=', 'published'));
+        }
+        conditions.push(...draftConditions(eb, guard));
         return conditions;
+    }
+
+    /**
+     * The guard's `draft`: the locale has no draft, or has the one last saved
+     * at that time. Compared as an instant, as `scheduleConditions` compares.
+     */
+    function draftConditions(
+        eb: Parameters<JoinedWhere>[0],
+        guard: WriteGuard
+    ): Expression<SqlBool>[] {
+        if (guard.draft === undefined) return [];
+        if (draftsKey === undefined) {
+            throw new AstromechError(
+                `${shape.contentTable.name}: a guard names a draft, but the shape has no drafts table`
+            );
+        }
+        if (guard.draft === null) return [eb.not(eb.exists(draftOf(eb)))];
+        return [
+            eb.exists(
+                draftOf(eb).where(compareTimestamps('draft.updatedAt', '=', guard.draft))
+            ),
+        ];
+    }
+
+    function guardHolds(guard: WriteGuard): JoinedWhere {
+        return (eb) =>
+            eb.exists(
+                eb
+                    .selectFrom(contentKey)
+                    .select(`${contentKey}.id`)
+                    .where((inner) => inner.and(guardConditions(inner, guard)))
+            );
     }
 
     /** True when the content row has a staged change. */
@@ -627,6 +692,10 @@ export function createContentRepository<
                 isLive(eb).as('live'),
                 eb.and(scheduleConditions(eb, guard)).as('scheduled'),
                 ...(hasStagedFor ? [hasStagedChange(eb).as('hasStaged')] : []),
+                ...(hasStatus
+                    ? [eb(`${contentKey}.status`, '=', 'published').as('published')]
+                    : []),
+                eb.and(draftConditions(eb, guard)).as('draftAsRead'),
             ])
             .where(`${contentKey}.id`, '=', guard.contentId)
             .executeTakeFirst();
@@ -634,7 +703,9 @@ export function createContentRepository<
         return (
             trashConflict(guard, !row['live']) ??
             (row['scheduled'] ? null : 'not-scheduled') ??
-            stagedConflict(guard, Boolean(row['hasStaged']))
+            stagedConflict(guard, Boolean(row['hasStaged'])) ??
+            (guard.published === true && !row['published'] ? 'not-published' : null) ??
+            (row['draftAsRead'] ? null : 'draft-changed')
         );
     }
 
@@ -933,6 +1004,7 @@ export function createContentRepository<
         createContentRow,
         update,
         explainConflict,
+        guardHolds,
         delete: del,
         locales,
         findStoredRows,

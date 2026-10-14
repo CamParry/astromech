@@ -39,6 +39,7 @@ const PERMISSIONS: Record<keyof EntriesService, string> = {
     publish: 'entry:posts:publish',
     unpublish: 'entry:posts:publish',
     schedule: 'entry:posts:publish',
+    discardDraft: 'entry:posts:update',
     createStaged: 'entry:posts:update',
     getStaged: 'entry:posts:read',
     // Merging a staged change is what makes it live — enforced as a publish even

@@ -8,7 +8,8 @@ import { entryPermission } from '@/permissions/entry-permission';
 /**
  * The permissions an entries method needs: `action` on each type the call names,
  * plus `publish` when a create's or update's `data` or `overrides` sets a status
- * or date (`needsPublish`), and `entry:read:full` when it asks for `full`.
+ * or date (`needsPublish`), and `entry:read:full` when it asks for `full` or
+ * for a `draft`, which is not public.
  */
 export function entryAccess(action: EntryAction): AccessRule {
     return (input) => {
@@ -17,7 +18,7 @@ export function entryAccess(action: EntryAction): AccessRule {
         if (setsPublishState(input, action)) {
             demanded.push(...types.map((type) => entryPermission(type, 'publish')));
         }
-        if (wantsFullShape(input)) demanded.push(PERMISSION_ENTRY_READ_FULL);
+        if (needsFullRead(input)) demanded.push(PERMISSION_ENTRY_READ_FULL);
         return demanded;
     };
 }
@@ -55,8 +56,9 @@ function setsPublishState(input: unknown, action: EntryAction): boolean {
     return [data, overrides].some((payload) => needsPublish(payload, action));
 }
 
-/** Whether the call asks for the full (admin) shape rather than the public one. */
-function wantsFullShape(input: unknown): boolean {
+/** Whether the call asks for the full (admin) shape, or for a draft's content. */
+function needsFullRead(input: unknown): boolean {
     if (typeof input !== 'object' || input === null) return false;
-    return (input as { full?: unknown }).full === true;
+    const { full, draft } = input as { full?: unknown; draft?: unknown };
+    return full === true || draft === true;
 }

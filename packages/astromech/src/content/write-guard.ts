@@ -33,6 +33,15 @@ export type WriteGuard = {
     scheduledFor?: Date | undefined;
     /** Staging create: the row must have no staged change yet. */
     stagedAbsent?: true | undefined;
+    /** A draft save: the row must still be published, since only then it takes a draft. */
+    published?: true | undefined;
+    /**
+     * The locale's draft must be as the write read it: null for none, else
+     * that draft's `updatedAt`. Set by every write that reads the draft, so two
+     * saves from one read conflict, and a publish never folds in or deletes a
+     * draft it did not read.
+     */
+    draft?: Date | null | undefined;
 };
 
 /**
@@ -161,5 +170,7 @@ const TRASH_CONFLICTS = {
 function guardedFailure(guard: WriteGuard): GuardFailure {
     if (guard.trash !== undefined) return TRASH_CONFLICTS[guard.trash];
     if (guard.scheduledFor !== undefined) return 'not-scheduled';
-    return guard.stagedAbsent === true ? 'staged-change-exists' : 'gone';
+    if (guard.stagedAbsent === true) return 'staged-change-exists';
+    if (guard.published === true) return 'not-published';
+    return guard.draft === undefined ? 'gone' : 'draft-changed';
 }

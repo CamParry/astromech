@@ -66,6 +66,7 @@ const ROWS: Record<ResourceType, Row> = {
             publish: 'statuses',
             unpublish: 'statuses',
             schedule: 'statuses',
+            discardDraft: 'statuses',
             createStaged: 'staging',
             getStaged: 'staging',
             mergeStaged: 'staging',

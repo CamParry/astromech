@@ -6,7 +6,9 @@
 
 import type { Db } from '@/database/types';
 import type { JsonObject } from '@/types/index';
+import type { SqlBool } from 'kysely';
 import { createTestDb, createTestUser, setupTestConfig } from '@tests/harness';
+import { sql } from 'kysely';
 import { beforeEach, describe, expect, it } from 'vitest';
 import { createRepository } from '@/database/repository/create-repository';
 import { entriesTable, globalsTable } from '@/database/tables';
@@ -166,5 +168,82 @@ describe.each(Object.entries(ADAPTERS))('%s drafts', (_name, adapter) => {
         await adapter.remove(id);
 
         expect(await adapter.findMany(id)).toEqual([]);
+    });
+});
+
+describe('a guarded save', () => {
+    const holds = () => sql<SqlBool>`1 = 1`;
+    const fails = () => sql<SqlBool>`1 = 0`;
+
+    async function entryId(): Promise<string> {
+        return (
+            await entryRepository.create({
+                type: 'post',
+                title: 'Live',
+                slug: `guarded-${++created}`,
+            })
+        ).id;
+    }
+
+    function draft(id: string, title: string, by: string | null = null) {
+        return {
+            entryId: id,
+            locale: 'en',
+            title,
+            fields: {},
+            createdBy: by,
+            updatedBy: by,
+        };
+    }
+
+    it('makes the first draft only while the condition holds', async () => {
+        const id = await entryId();
+
+        expect(
+            await entryDraftRepository.save(draft(id, 'Refused'), {
+                replaces: false,
+                holds: fails,
+            })
+        ).toBeNull();
+        expect(await entryDraftRepository.findOne(id, 'en')).toBeNull();
+
+        expect(
+            await entryDraftRepository.save(draft(id, 'First'), {
+                replaces: false,
+                holds,
+            })
+        ).toMatchObject({ title: 'First' });
+    });
+
+    it('makes no first draft over one that exists, and keeps that one', async () => {
+        const id = await entryId();
+        await entryDraftRepository.save(draft(id, 'Theirs'));
+
+        expect(
+            await entryDraftRepository.save(draft(id, 'Mine'), { replaces: false, holds })
+        ).toBeNull();
+        expect(await entryDraftRepository.findOne(id, 'en')).toMatchObject({
+            title: 'Theirs',
+        });
+    });
+
+    it('replaces a draft only while the condition holds, keeping its first save', async () => {
+        const id = await entryId();
+        const author = await createTestUser(db);
+        const editor = await createTestUser(db);
+        await entryDraftRepository.save(draft(id, 'First', author.id));
+
+        expect(
+            await entryDraftRepository.save(draft(id, 'Refused', editor.id), {
+                replaces: true,
+                holds: fails,
+            })
+        ).toBeNull();
+        expect(
+            await entryDraftRepository.save(draft(id, 'Second', editor.id), {
+                replaces: true,
+                holds,
+            })
+        ).toMatchObject({ title: 'Second', createdBy: author.id, updatedBy: editor.id });
     });
 });

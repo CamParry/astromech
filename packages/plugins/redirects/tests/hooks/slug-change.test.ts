@@ -6,7 +6,7 @@
  */
 
 import type { RedirectMatch, RedirectsOptions } from '../../src/index';
-import type { AstromechConfig } from '@/types/index';
+import type { AstromechConfig, JsonValue } from '@/types/index';
 import type { PluginTestApp } from '@tests/plugin-app';
 import { getEntryType, makeTestConfig, withEntryTypes } from '@tests/harness';
 import { createPluginTestApp } from '@tests/plugin-app';
@@ -15,6 +15,24 @@ import { beforeEach, describe, expect, it } from 'vitest';
 import { redirects } from '../../src/index';
 
 let app: PluginTestApp<'redirects'>;
+
+/**
+ * An update to a published entry saves a draft and moves no path; publishing
+ * the draft is the write the hook records. So each edit here does both.
+ */
+async function publishEdit(params: {
+    type: string;
+    id: string;
+    locale?: string;
+    data: { slug?: string; title?: string; fields?: Record<string, JsonValue> };
+}): Promise<void> {
+    await app.entries.update(params);
+    await app.entries.publish({
+        type: params.type,
+        id: params.id,
+        ...(params.locale === undefined ? {} : { locale: params.locale }),
+    });
+}
 
 function lookup(from: string): Promise<RedirectMatch | null> {
     return app.service.lookup({ from });
@@ -82,7 +100,7 @@ describe('slug-change hook on a slug url template', () => {
             data: { title: 'Hello', status: 'published' },
         });
 
-        await app.entries.update({
+        await publishEdit({
             type: 'post',
             id: post.id,
             data: { slug: 'goodbye' },
@@ -101,8 +119,8 @@ describe('slug-change hook on a slug url template', () => {
             data: { title: 'A', status: 'published' },
         });
 
-        await app.entries.update({ type: 'post', id: post.id, data: { slug: 'b' } });
-        await app.entries.update({ type: 'post', id: post.id, data: { slug: 'c' } });
+        await publishEdit({ type: 'post', id: post.id, data: { slug: 'b' } });
+        await publishEdit({ type: 'post', id: post.id, data: { slug: 'c' } });
 
         // Exactly two rules: repointing a rule records nothing for the rule itself.
         expect(await rules()).toEqual([
@@ -119,8 +137,8 @@ describe('slug-change hook on a slug url template', () => {
             data: { title: 'A', status: 'published' },
         });
 
-        await app.entries.update({ type: 'post', id: post.id, data: { slug: 'b' } });
-        await app.entries.update({ type: 'post', id: post.id, data: { slug: 'a' } });
+        await publishEdit({ type: 'post', id: post.id, data: { slug: 'b' } });
+        await publishEdit({ type: 'post', id: post.id, data: { slug: 'a' } });
 
         expect(await rules()).toEqual([['/blog/b', '/blog/a']]);
         expect(await lookup('/blog/a')).toBeNull();
@@ -134,7 +152,7 @@ describe('slug-change hook on a slug url template', () => {
         });
         await addRule({ from: '/blog/a', to: '/blog/b', enabled: true });
 
-        await app.entries.update({ type: 'post', id: post.id, data: { slug: 'b' } });
+        await publishEdit({ type: 'post', id: post.id, data: { slug: 'b' } });
 
         expect(await rules()).toEqual([['/blog/a', '/blog/b']]);
     });
@@ -146,7 +164,7 @@ describe('slug-change hook on a slug url template', () => {
         });
         await addRule({ from: '/blog/a', to: '/elsewhere', enabled: true });
 
-        await app.entries.update({ type: 'post', id: post.id, data: { slug: 'b' } });
+        await publishEdit({ type: 'post', id: post.id, data: { slug: 'b' } });
 
         expect(await rules()).toEqual([['/blog/a', '/elsewhere']]);
         expect(await lookup('/blog/a')).toEqual({ to: '/elsewhere', status: '301' });
@@ -160,7 +178,7 @@ describe('slug-change hook on a slug url template', () => {
         await addRule({ from: '/blog/b', to: '/elsewhere', enabled: false });
         await addRule({ from: '/older', to: '/blog/a', enabled: false });
 
-        await app.entries.update({ type: 'post', id: post.id, data: { slug: 'b' } });
+        await publishEdit({ type: 'post', id: post.id, data: { slug: 'b' } });
 
         expect(await disabledRules()).toEqual([
             ['/blog/b', '/elsewhere'],
@@ -179,7 +197,7 @@ describe('slug-change hook on a slug url template', () => {
             data: { title: 'Note', status: 'published' },
         });
 
-        await app.entries.update({
+        await publishEdit({
             type: 'note',
             id: note.id,
             data: { slug: 'renamed' },
@@ -200,7 +218,7 @@ describe('slug-change hook on a slug url template', () => {
             enabled: false,
         });
 
-        await app.entries.update({ type: 'post', id: post.id, data: { slug: 'b' } });
+        await publishEdit({ type: 'post', id: post.id, data: { slug: 'b' } });
 
         expect(await rules()).toEqual([['/blog/a', '/blog/b']]);
         expect(await disabledRules()).toEqual([]);
@@ -222,7 +240,7 @@ describe('slug-change hook with generateOnSlugChange off', () => {
             data: { title: 'Hello', status: 'published' },
         });
 
-        await app.entries.update({
+        await publishEdit({
             type: 'post',
             id: post.id,
             data: { slug: 'goodbye' },
@@ -243,7 +261,7 @@ describe('slug-change hook on a url template that names a field', () => {
             data: { title: 'Hello', status: 'published', fields: { category: 'news' } },
         });
 
-        await app.entries.update({
+        await publishEdit({
             type: 'post',
             id: post.id,
             data: { fields: { category: 'guides' } },
@@ -258,7 +276,7 @@ describe('slug-change hook on a url template that names a field', () => {
             data: { title: 'Hello', status: 'published' },
         });
 
-        await app.entries.update({
+        await publishEdit({
             type: 'post',
             id: post.id,
             data: { fields: { category: 'news' } },
@@ -335,6 +353,14 @@ describe('slug-change hook and what was live', () => {
         await app.entries.update({ type: 'note', id: note.id, data: { slug: 'b' } });
 
         expect(await rules()).toEqual([['/notes/a', '/notes/b']]);
+    });
+
+    it('records nothing when a live write names neither the slug nor the fields', async () => {
+        const note = await app.entries.create({ type: 'note', data: { title: 'A' } });
+
+        await app.entries.update({ type: 'note', id: note.id, data: { title: 'B' } });
+
+        expect(await rules()).toEqual([]);
     });
 
     it('records nothing for a staged slug change, whatever status the staged row holds', async () => {
@@ -436,7 +462,7 @@ describe('slug-change hook in a locale other than the default', () => {
             data: { slug: 'hallo', status: 'published' },
         });
 
-        await app.entries.update({
+        await publishEdit({
             type: 'post',
             id: post.id,
             locale: 'de',

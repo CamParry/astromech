@@ -8,6 +8,7 @@ import { ValidationError } from '@/errors/validation';
 import { flattenEntryFields } from '@/fields/flatten';
 import { defineServiceMethod } from '@/services/define-service-method';
 import { entryAccess } from '../internal/access';
+import { readDraft } from '../internal/drafts';
 import { getPreviewEntry } from '../internal/preview';
 import { entryRepository } from '../repository/entries-table';
 import { entryReadKeys, entrySchema } from '../schema';
@@ -16,7 +17,9 @@ import { entryReadKeys, entrySchema } from '../schema';
  * Filtered to the caller's visibility shape, and null when that hides it or the
  * locale has no row of this type; there is no fallback to another locale. A
  * `previewToken` reads past the publish gate, and no cache may store the
- * response to the request it serves; `staged` needs one.
+ * response to the request it serves; `staged` needs one. `draft` reads the
+ * locale's draft over the entry where it has one, and the live entry where it
+ * has none; it needs `entry:read:full`, as `full` does.
  */
 export const getEntry = defineServiceMethod({
     summary: 'Read an entry.',
@@ -24,12 +27,13 @@ export const getEntry = defineServiceMethod({
         type: z.string(),
         id: z.string(),
         ...entryReadKeys,
+        draft: z.boolean().optional(),
     }),
     output: entrySchema.nullable(),
     access: entryAccess('read'),
     mutates: false,
     async handler(params, ctx): Promise<EntryResource | null> {
-        const { type, id, full, previewToken, staged } = params;
+        const { type, id, full, previewToken, staged, draft } = params;
         const { config } = ctx;
         const shape: VisibilityShape = full ? 'full' : 'public';
 
@@ -45,8 +49,9 @@ export const getEntry = defineServiceMethod({
             ]);
         }
 
-        const record = await entryRepository.findOne({ type, id, locale: params.locale });
-        if (!record) return null;
+        const live = await entryRepository.findOne({ type, id, locale: params.locale });
+        if (!live) return null;
+        const record = draft === true ? await readDraft(live) : live;
 
         const entryType = resolveEntryType(config, type);
         const fields = entryType ? flattenEntryFields(entryType.fields) : [];

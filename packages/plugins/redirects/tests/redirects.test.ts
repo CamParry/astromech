@@ -298,6 +298,8 @@ describe('redirects — slug-change hook', () => {
             id: post.id,
             data: { slug: 'goodbye' },
         });
+        // The update saves a draft; publishing it moves the live path.
+        await app.entries.publish({ type: 'post', id: post.id });
 
         expect(await storedRules()).toEqual([
             expect.objectContaining({ from: '/hello', to: '/goodbye' }),
@@ -314,6 +316,7 @@ describe('redirects — slug-change hook', () => {
             id: post.id,
             data: { title: 'Stable Renamed' },
         });
+        await app.entries.publish({ type: 'post', id: post.id });
         expect(await storedRules()).toEqual([]);
     });
 });
